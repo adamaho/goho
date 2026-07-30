@@ -1,7 +1,7 @@
-# monorepo
+# Goho
 
-`monorepo` is a template repository for starting future projects with a shared
-development environment and project structure.
+Goho is organized as a pnpm and Turborepo workspace with a shared, reproducible
+development environment.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow,
 verification commands, workspace conventions, and commit guidelines.
@@ -13,26 +13,28 @@ Before developing in this repository, install:
 - [Nix](https://nixos.org/download/)
 - [Docker](https://docs.docker.com/get-docker/)
 
-## Usage
-
-Use this prompt with your coding agent to configure the template for a new
-project:
+You can give the following prompt to a coding agent running on your machine:
 
 ```text
-Configure this repository for a new project. Rename the project from `monorepo`
-to the new project name, update package names, documentation, configuration
-files, and references across the repo. Preserve the existing Nix and Docker
-development setup unless a change is required for the new project.
+Configure this machine to work on the Goho project. Read README.md,
+CONTRIBUTING.md, and flake.nix first. Check whether Nix and Docker are installed
+and working; install or enable them when possible, but ask before running
+commands that need administrator access. Preserve and use the repository's
+existing Nix and Docker setup rather than installing a separate Node.js or pnpm
+toolchain. Enter the Nix development shell, install dependencies with pnpm, and
+run the documented verification command. Report any manual steps or failures
+clearly, and don't change project files unless machine-specific setup requires
+it.
 ```
 
 ## Development
 
-This repo includes a Nix flake for the local development toolchain.
-Run `nix develop` before working in this repository to enter the required
-development shell.
+Enter the Nix development shell to use the project's pinned toolchain, then
+install dependencies:
 
 ```bash
 nix develop
+pnpm install
 ```
 
 Start coding agents from inside the Nix development shell so their commands use

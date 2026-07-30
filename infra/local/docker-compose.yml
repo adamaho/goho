@@ -1,14 +1,14 @@
-name: monorepo-local
+name: goho-local
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: monorepo-local-postgres
+    container_name: goho-local-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: monorepo
-      POSTGRES_USER: monorepo
-      POSTGRES_PASSWORD: monorepo
+      POSTGRES_DB: goho
+      POSTGRES_USER: goho
+      POSTGRES_PASSWORD: goho
     ports:
       - "5432:5432"
     volumes:

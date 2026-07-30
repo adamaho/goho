@@ -1,13 +1,13 @@
-# @monorepo/infra-local
+# @goho/infra-local
 
 Shared local runtime dependencies for development.
 
 ## Scripts
 
-- `pnpm --filter=@monorepo/infra-local run infra:up`
-- `pnpm --filter=@monorepo/infra-local run infra:down`
-- `pnpm --filter=@monorepo/infra-local run infra:logs`
-- `pnpm --filter=@monorepo/infra-local run infra:reset`
+- `pnpm --filter=@goho/infra-local run infra:up`
+- `pnpm --filter=@goho/infra-local run infra:down`
+- `pnpm --filter=@goho/infra-local run infra:logs`
+- `pnpm --filter=@goho/infra-local run infra:reset`
 
 ## Scope
 
