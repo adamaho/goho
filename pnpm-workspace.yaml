@@ -17,6 +17,7 @@ catalog:
   "@types/node": 24.13.3
   effect: 4.0.0-beta.102
   eslint-plugin-jsdoc: 63.0.13
+  google-auth-library: 10.9.1
   oxfmt: 0.59.0
   oxlint: 1.74.0
   rimraf: 6.1.3

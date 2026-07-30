@@ -15,7 +15,8 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "google-auth-library": "catalog:"
   },
   "devDependencies": {
     "@goho/tool-oxfmt-config": "workspace:*",
