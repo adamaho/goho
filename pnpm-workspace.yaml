@@ -14,6 +14,8 @@ allowBuilds:
 
 catalog:
   "@effect/tsgo": 0.22.0
+  "@types/node": 24.13.3
+  effect: 4.0.0-beta.102
   eslint-plugin-jsdoc: 63.0.13
   oxfmt: 0.59.0
   oxlint: 1.74.0
