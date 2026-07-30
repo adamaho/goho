@@ -155,7 +155,7 @@ export const make = Effect.gen(function* () {
 
     do {
       const response = yield* Effect.tryPromise({
-        try: () =>
+        try: (signal) =>
           client.files.list(
             {
               q: childrenQuery(options.folderId, "folders"),
@@ -167,7 +167,7 @@ export const make = Effect.gen(function* () {
               includeItemsFromAllDrives: true,
               supportsAllDrives: true,
             },
-            { headers },
+            { headers, signal },
           ),
         catch: (error) => clientError("listFolders", error),
       });
@@ -195,7 +195,7 @@ export const make = Effect.gen(function* () {
 
     do {
       const response = yield* Effect.tryPromise({
-        try: () =>
+        try: (signal) =>
           client.files.list(
             {
               q: childrenQuery(options.folderId, "files"),
@@ -207,7 +207,7 @@ export const make = Effect.gen(function* () {
               includeItemsFromAllDrives: true,
               supportsAllDrives: true,
             },
-            { headers },
+            { headers, signal },
           ),
         catch: (error) => clientError("listFiles", error),
       });
@@ -217,6 +217,11 @@ export const make = Effect.gen(function* () {
         if (metadata instanceof DriveError) {
           return yield* metadata;
         }
+
+        if (metadata.mimeType.startsWith("application/vnd.google-apps.")) {
+          continue;
+        }
+
         files.push(metadata);
       }
 
@@ -238,15 +243,16 @@ export const make = Effect.gen(function* () {
         const headers = yield* auth
           .getRequestHeaders()
           .pipe(Effect.mapError((error) => clientError("downloadFile", error)));
+
         const response = yield* Effect.tryPromise({
-          try: () =>
+          try: (signal) =>
             client.files.get(
               {
                 fileId: options.fileId,
                 alt: "media",
                 supportsAllDrives: true,
               },
-              { headers, responseType: "stream" },
+              { headers, responseType: "stream", signal },
             ),
           catch: (error) => clientError("downloadFile", error),
         });
@@ -274,8 +280,9 @@ export const make = Effect.gen(function* () {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("moveFile", error)));
+
     const response = yield* Effect.tryPromise({
-      try: () =>
+      try: (signal) =>
         client.files.update(
           {
             fileId: options.fileId,
@@ -284,7 +291,7 @@ export const make = Effect.gen(function* () {
             supportsAllDrives: true,
             fields: "id,name,mimeType",
           },
-          { headers },
+          { headers, signal },
         ),
       catch: (error) => clientError("moveFile", error),
     });
