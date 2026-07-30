@@ -1,31 +1,14 @@
 #!/usr/bin/env node
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 
-import { AiLive } from "./services/ai.ts";
-import { GoogleAuthLive } from "./services/auth.ts";
-
-import { GoogleAuth } from "@goho/lib-core";
-
-const program = Effect.fn("Receipts.program")(function* () {
-  const googleAuth = yield* GoogleAuth.Service;
-
-  yield* googleAuth.authenticate;
-  yield* Effect.logInfo("Receipts program authenticated with Google");
-});
-
-const MainLive = Layer.merge(GoogleAuthLive, AiLive);
-
-const process = Command.make("process").pipe(
-  Command.withDescription("Runs one receipt-processing pass"),
-  Command.withHandler(() => program().pipe(Effect.provide(MainLive))),
-);
+import { processCommand } from "./commands/process.ts";
 
 const command = Command.make("receipts").pipe(
   Command.withDescription("Processes receipts from Google services"),
-  Command.withSubcommands([process]),
+  Command.withSubcommands([processCommand]),
 );
 
 Command.run(command, { version: "0.0.0" }).pipe(
