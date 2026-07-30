@@ -1,6 +1,7 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 
-import { GoogleAuthLive } from "./services/google-auth.ts";
+import { AiLive } from "./services/ai.ts";
+import { GoogleAuthLive } from "./services/auth.ts";
 
 import { GoogleAuth } from "@goho/lib-core";
 
@@ -11,4 +12,6 @@ const program = Effect.fn("Receipts.program")(function* () {
   yield* Effect.logInfo("Receipts program authenticated with Google");
 });
 
-await program().pipe(Effect.provide(GoogleAuthLive), Effect.runPromise);
+const MainLive = Layer.merge(GoogleAuthLive, AiLive);
+
+await program().pipe(Effect.provide(MainLive), Effect.runPromise);

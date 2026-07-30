@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@effect/ai-openai':
+      specifier: 4.0.0-beta.102
+      version: 4.0.0-beta.102
     '@effect/tsgo':
       specifier: 0.22.0
       version: 0.22.0
@@ -104,6 +107,9 @@ importers:
 
   programs/receipts:
     dependencies:
+      '@effect/ai-openai':
+        specifier: 'catalog:'
+        version: 4.0.0-beta.102(effect@4.0.0-beta.102)
       '@goho/lib-core':
         specifier: workspace:*
         version: link:../../libs/core
@@ -167,6 +173,11 @@ importers:
         version: 7.0.2
 
 packages:
+
+  '@effect/ai-openai@4.0.0-beta.102':
+    resolution: {integrity: sha512-XqoNFJpx+/vLCStPAGPk651eRUJKu7lQ8XHLqJI77j6ZCUvEDlpH2SARQjfk+Ul1np0H7RM5o6m0C572cjvQow==}
+    peerDependencies:
+      effect: ^4.0.0-beta.102
 
   '@effect/tsgo-darwin-arm64@0.22.0':
     resolution: {integrity: sha512-ECdPNAQZ6aAOASzjyCEfjB2fR0G3TSe+x4F7ZIbxnbDDd8mFEQbylZNXXyjW9f1Di5H+UkrO6oGc1hGXvIsiFQ==}
@@ -1381,6 +1392,10 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@effect/ai-openai@4.0.0-beta.102(effect@4.0.0-beta.102)':
+    dependencies:
+      effect: 4.0.0-beta.102
 
   '@effect/tsgo-darwin-arm64@0.22.0':
     optional: true
