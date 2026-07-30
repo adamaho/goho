@@ -7,7 +7,7 @@ import { GoogleAuthLive } from "../services/auth.ts";
 
 const ProcessLive = Layer.merge(GoogleAuthLive, AiLive);
 
-const processReceipts = Effect.fn("Receipts.process")(function* () {
+const process = Effect.fn("Receipts.process")(function* () {
   const googleAuth = yield* GoogleAuth.Service;
 
   yield* googleAuth.authenticate;
@@ -16,5 +16,5 @@ const processReceipts = Effect.fn("Receipts.process")(function* () {
 
 export const processCommand = Command.make("process").pipe(
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
-  Command.withHandler(() => processReceipts().pipe(Effect.provide(ProcessLive))),
+  Command.withHandler(() => process().pipe(Effect.provide(ProcessLive))),
 );
