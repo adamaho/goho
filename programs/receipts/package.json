@@ -1,22 +1,21 @@
 {
-  "name": "@goho/lib-core",
+  "name": "@goho/program-receipts",
   "version": "0.0.0",
   "private": true,
-  "description": "Shared core logic for Goho programs.",
+  "description": "Processes receipts from Google services.",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
+    "dev": "node --env-file-if-exists=.env --watch src/main.ts",
+    "start": "node --env-file-if-exists=.env src/main.ts",
     "fmt": "oxfmt --config ../../tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ../../tools/oxfmt-config/src/base.json .",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "catalog:",
-    "google-auth-library": "catalog:"
+    "@goho/lib-core": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@goho/tool-oxfmt-config": "workspace:*",

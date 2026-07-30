@@ -54,8 +54,8 @@ Useful focused commands:
 Use the existing top-level workspace directories consistently:
 
 - `shells/*` for deployable application hosts that compose product features
-- `services/*` for deployable backend services and workers
-- `features/*` for vertical product features shared across shells or services
+- `programs/*` for runnable backend programs and workers
+- `features/*` for vertical product features shared across shells or programs
 - `libs/*` for reusable libraries
 - `clients/*` for generated or hand-written external service api clients
 - `tools/*` for internal tooling packages
