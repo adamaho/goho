@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { Config, Context, Effect, Layer, Schema } from "effect";
 import { JWT, type AuthClient } from "google-auth-library";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -120,24 +120,41 @@ export interface ServiceAccountOptions {
 }
 
 /**
- * Provides Google authentication backed by service-account credentials.
+ * Creates the service implementation for concrete service-account options.
  *
- * The resulting client obtains and refreshes short-lived access tokens without
- * interactive user authentication.
+ * @param options - The service-account credentials and OAuth scopes.
+ * @returns The configured Google authentication service.
+ */
+function makeServiceAccount(options: ServiceAccountOptions): Interface {
+  const client = new JWT({
+    email: options.clientEmail,
+    key: options.privateKey,
+    scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
+    ...(options.privateKeyId === undefined ? {} : { keyId: options.privateKeyId }),
+    ...(options.subject === undefined ? {} : { subject: options.subject }),
+  });
+
+  return make(client);
+}
+
+/**
+ * Provides Google authentication backed by concrete service-account credentials.
  *
  * @param options - The service-account credentials and OAuth scopes.
  * @returns A layer that provides the strategy-independent Google auth service.
  */
 export function serviceAccountLayer(options: ServiceAccountOptions): Layer.Layer<Service> {
-  return Layer.sync(Service, () => {
-    const client = new JWT({
-      email: options.clientEmail,
-      key: options.privateKey,
-      scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
-      ...(options.privateKeyId === undefined ? {} : { keyId: options.privateKeyId }),
-      ...(options.subject === undefined ? {} : { subject: options.subject }),
-    });
+  return Layer.sync(Service, () => makeServiceAccount(options));
+}
 
-    return make(client);
-  });
+/**
+ * Provides Google authentication backed by effect configuration.
+ *
+ * @param config - Config recipes that produce the service-account options.
+ * @returns A layer that loads its credentials while being built.
+ */
+export function serviceAccountLayerConfig(
+  config: Config.Wrap<ServiceAccountOptions>,
+): Layer.Layer<Service, Config.ConfigError> {
+  return Layer.effect(Service, Config.unwrap(config).pipe(Effect.map(makeServiceAccount)));
 }
