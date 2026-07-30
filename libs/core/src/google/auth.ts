@@ -1,4 +1,4 @@
-import { Config, Context, Effect, Layer, Schema } from "effect";
+import { Config, Context, Effect, Layer, Redacted, Schema } from "effect";
 import { JWT, type AuthClient } from "google-auth-library";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -112,11 +112,8 @@ export function make(client: AuthClient): Interface {
 
 export interface ServiceAccountOptions {
   readonly clientEmail: string;
-  readonly privateKey: string;
-  readonly privateKeyId?: string;
+  readonly privateKey: Redacted.Redacted<string>;
   readonly scopes: string | ReadonlyArray<string>;
-  /** A Workspace user to impersonate through domain-wide delegation. */
-  readonly subject?: string;
 }
 
 /**
@@ -128,10 +125,8 @@ export interface ServiceAccountOptions {
 function makeServiceAccount(options: ServiceAccountOptions): Interface {
   const client = new JWT({
     email: options.clientEmail,
-    key: options.privateKey,
+    key: Redacted.value(options.privateKey),
     scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
-    ...(options.privateKeyId === undefined ? {} : { keyId: options.privateKeyId }),
-    ...(options.subject === undefined ? {} : { subject: options.subject }),
   });
 
   return make(client);

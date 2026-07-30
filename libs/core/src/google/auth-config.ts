@@ -1,4 +1,4 @@
-import { Config, Option, Redacted } from "effect";
+import { Config, Effect, Redacted, Schema } from "effect";
 
 import * as GoogleAuth from "./auth.ts";
 
@@ -6,9 +6,13 @@ import * as GoogleAuth from "./auth.ts";
 // Environment keys
 // ---------------------------------------------------------------------------------------------------------------------
 
-const clientEmail = Config.string("GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL");
-const privateKey = Config.redacted("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY");
-const privateKeyId = Config.option(Config.string("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID"));
+const nonEmptyTrimmedString = Schema.Trim.check(Schema.isMinLength(1));
+
+const clientEmail = Config.schema(nonEmptyTrimmedString, "GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL");
+const privateKey = Config.schema(
+  Schema.Redacted(Schema.NonEmptyString),
+  "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+);
 const scopes = Config.string("GOOGLE_AUTH_SCOPES").pipe(
   Config.map((value) =>
     value
@@ -16,8 +20,12 @@ const scopes = Config.string("GOOGLE_AUTH_SCOPES").pipe(
       .map((scope) => scope.trim())
       .filter((scope) => scope.length > 0),
   ),
+  Config.mapOrFail((values) =>
+    Schema.decodeUnknownEffect(Schema.NonEmptyArray(Schema.NonEmptyString))(values).pipe(
+      Effect.mapError((error) => new Config.ConfigError(error)),
+    ),
+  ),
 );
-const subject = Config.option(Config.string("GOOGLE_SERVICE_ACCOUNT_SUBJECT"));
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Service account config
@@ -32,15 +40,11 @@ const subject = Config.option(Config.string("GOOGLE_SERVICE_ACCOUNT_SUBJECT"));
 export const serviceAccount: Config.Config<GoogleAuth.ServiceAccountOptions> = Config.all({
   clientEmail,
   privateKey,
-  privateKeyId,
   scopes,
-  subject,
 }).pipe(
   Config.map((config) => ({
     clientEmail: config.clientEmail,
-    privateKey: Redacted.value(config.privateKey).replaceAll("\\n", "\n"),
+    privateKey: Redacted.make(Redacted.value(config.privateKey).replaceAll("\\n", "\n")),
     scopes: config.scopes,
-    ...(Option.isSome(config.privateKeyId) ? { privateKeyId: config.privateKeyId.value } : {}),
-    ...(Option.isSome(config.subject) ? { subject: config.subject.value } : {}),
   })),
 );
