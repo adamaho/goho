@@ -35,7 +35,7 @@ export class Service extends Context.Service<Service, Interface>()("@goho/Ai") {
 export const make = Effect.gen(function* () {
   const model = yield* LanguageModel.LanguageModel;
 
-  const generateObject = Effect.fn("Ai.generate")(function* (options) {
+  const generateObject: Interface["generateObject"] = Effect.fn("Ai.generate")(function* (options) {
     const response = yield* model.generateObject({
       prompt: options.prompt,
       schema: options.schema,
