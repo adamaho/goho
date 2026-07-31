@@ -2,6 +2,7 @@ import { GoogleDrive } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
 import { Argument, Command } from "effect/unstable/cli";
 
+import { toCommandError } from "../errors.ts";
 import { AiLive } from "../services/ai.ts";
 import { GoogleAuthLive } from "../services/auth.ts";
 
@@ -62,7 +63,7 @@ const processCommand = Command.make("process", {
 }).pipe(
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
   Command.withHandler(({ rootFolderId }) =>
-    process(rootFolderId).pipe(Effect.provide(ProcessLive)),
+    process(rootFolderId).pipe(Effect.provide(ProcessLive), Effect.mapError(toCommandError)),
   ),
 );
 

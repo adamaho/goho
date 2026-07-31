@@ -1,5 +1,5 @@
 import { Config, Context, Effect, Layer, Schema } from "effect";
-import { JWT, type AuthClient } from "google-auth-library";
+import { GoogleAuth, type AuthClient } from "google-auth-library";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Errors
@@ -8,7 +8,12 @@ import { JWT, type AuthClient } from "google-auth-library";
 export class AuthenticationError extends Schema.TaggedErrorClass<AuthenticationError>()(
   "GoogleAuth.AuthenticationError",
   {
-    operation: Schema.Literals(["authenticate", "getAccessToken", "getRequestHeaders"]),
+    operation: Schema.Literals([
+      "initialize",
+      "authenticate",
+      "getAccessToken",
+      "getRequestHeaders",
+    ]),
     message: Schema.String,
   },
 ) {}
@@ -18,7 +23,6 @@ export class AuthenticationError extends Schema.TaggedErrorClass<AuthenticationE
 // ---------------------------------------------------------------------------------------------------------------------
 
 export interface Interface {
-  readonly client: AuthClient;
   readonly authenticate: Effect.Effect<AuthClient, AuthenticationError>;
   readonly getAccessToken: Effect.Effect<string, AuthenticationError>;
   readonly getRequestHeaders: (url?: string | URL) => Effect.Effect<Headers, AuthenticationError>;
@@ -99,7 +103,6 @@ export function make(client: AuthClient): Interface {
   });
 
   return Service.of({
-    client,
     authenticate: authenticate(),
     getAccessToken: getAccessToken(),
     getRequestHeaders,
@@ -121,14 +124,24 @@ export interface ServiceAccountOptions {
  * @param options - The service-account JSON key file and OAuth scopes.
  * @returns The configured Google authentication service.
  */
-function makeServiceAccount(options: ServiceAccountOptions): Interface {
-  const client = new JWT({
-    keyFile: options.jsonKeyFile,
-    scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
+const makeServiceAccount = Effect.fn("GoogleAuth.initialize")(function* (
+  options: ServiceAccountOptions,
+) {
+  const client = yield* Effect.tryPromise({
+    try: () =>
+      new GoogleAuth({
+        keyFilename: options.jsonKeyFile,
+        scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
+      }).getClient(),
+    catch: (error) =>
+      new AuthenticationError({
+        operation: "initialize",
+        message: errorMessage(error),
+      }),
   });
 
   return make(client);
-}
+});
 
 /**
  * Provides Google authentication backed by concrete service-account credentials.
@@ -136,8 +149,10 @@ function makeServiceAccount(options: ServiceAccountOptions): Interface {
  * @param options - The service-account JSON key file and OAuth scopes.
  * @returns A layer that provides the strategy-independent Google auth service.
  */
-export function serviceAccountLayer(options: ServiceAccountOptions): Layer.Layer<Service> {
-  return Layer.sync(Service, () => makeServiceAccount(options));
+export function serviceAccountLayer(
+  options: ServiceAccountOptions,
+): Layer.Layer<Service, AuthenticationError> {
+  return Layer.effect(Service, makeServiceAccount(options));
 }
 
 /**
@@ -148,6 +163,6 @@ export function serviceAccountLayer(options: ServiceAccountOptions): Layer.Layer
  */
 export function serviceAccountLayerConfig(
   config: Config.Wrap<ServiceAccountOptions>,
-): Layer.Layer<Service, Config.ConfigError> {
-  return Layer.effect(Service, Config.unwrap(config).pipe(Effect.map(makeServiceAccount)));
+): Layer.Layer<Service, Config.ConfigError | AuthenticationError> {
+  return Layer.effect(Service, Config.unwrap(config).pipe(Effect.flatMap(makeServiceAccount)));
 }
