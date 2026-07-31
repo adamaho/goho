@@ -18,6 +18,7 @@ export interface ReadRowsOptions {
 export interface AppendRowsOptions {
   readonly spreadsheetId: string;
   readonly range: string;
+  readonly valueInputOption: "RAW" | "USER_ENTERED";
   readonly rows: ReadonlyArray<Row>;
 }
 
@@ -121,7 +122,7 @@ export const make = Effect.gen(function* () {
           {
             spreadsheetId: options.spreadsheetId,
             range: options.range,
-            valueInputOption: "RAW",
+            valueInputOption: options.valueInputOption,
             insertDataOption: "INSERT_ROWS",
             fields: "spreadsheetId,updates(updatedRange,updatedRows,updatedCells)",
             requestBody: {
