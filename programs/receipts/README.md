@@ -16,7 +16,7 @@ Share the required Google Drive files with the configured service-account email,
 then run:
 
 ```bash
-pnpm --filter @goho/program-receipts start process
+pnpm --filter @goho/program-receipts start process <root-folder-id>
 ```
 
 Display the CLI help without running a processing pass:
