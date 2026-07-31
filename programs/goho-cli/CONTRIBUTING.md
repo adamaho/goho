@@ -37,7 +37,9 @@ Keep this shell open for the remaining setup and local development steps.
    `programs/goho-cli/.secrets/google-service-account.json`. The `.secrets`
    directory is ignored by Git and must not be committed.
 6. Share the Google Drive root folder used for receipt processing with the
-   `client_email` address from the JSON key.
+   `client_email` address from the JSON key and grant it **Editor** access.
+   Limit the service account's access by sharing only the workflow root rather
+   than broader Drive resources.
 
 Service-account keys are long-lived credentials. Revoke and replace the key if
 it is ever exposed.
