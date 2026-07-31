@@ -55,7 +55,9 @@ const process = Effect.fn("Receipts.process")(function* (rootFolderId: string) {
 
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
-    Argument.withDescription("Google Drive folder containing the receipt workflow folders"),
+    Argument.withDescription(
+      `Google Drive folder containing the receipt workflow folders. This folder must contain ${requiredFolders.join(",")}.`,
+    ),
   ),
 }).pipe(
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
