@@ -18,11 +18,11 @@ const RequiredFolder = Schema.Literals(requiredFolders);
 // ---------------------------------------------------------------------------------------------------------------------
 
 class MissingFoldersError extends Schema.TaggedErrorClass<MissingFoldersError>()(
-  "Receipts.MissingFoldersError",
+  "GohoCli.Receipts.MissingFoldersError",
   { folders: Schema.Array(RequiredFolder) },
 ) {
   override get message(): string {
-    return `Missing required Google Drive folders: ${this.folders.join(", ")}`;
+    return `Missing required Google Drive folders. Please ensure the ${this.folders.join(", ")} have been created in the root folder.`;
   }
 }
 
@@ -36,8 +36,7 @@ const ProcessLive = Layer.merge(GoogleDriveLive, AiLive);
 // ---------------------------------------------------------------------------------------------------------------------
 // Workflow
 // ---------------------------------------------------------------------------------------------------------------------
-
-const process = Effect.fn("Receipts.process")(function* (rootFolderId: string) {
+const process = Effect.fn("GohoCli.Receipts.process")(function* (rootFolderId: string) {
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
   const folderNames = new Set(folders.map((folder) => folder.name));

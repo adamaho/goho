@@ -17,7 +17,7 @@ export function toCommandError(
     | Config.ConfigError
     | GoogleAuth.AuthenticationError
     | GoogleDrive.DriveError
-    | { readonly _tag: "Receipts.MissingFoldersError"; readonly message: string },
+    | { readonly _tag: "GohoCli.Receipts.MissingFoldersError"; readonly message: string },
 ): CommandError {
   switch (cause._tag) {
     case "GoogleAuth.AuthenticationError":
@@ -34,7 +34,7 @@ export function toCommandError(
           "Unable to access the Google Drive receipt workflow. Verify that the folder is shared with the service account.",
         cause,
       });
-    case "Receipts.MissingFoldersError":
+    case "GohoCli.Receipts.MissingFoldersError":
       return new CommandError({ message: cause.message, cause });
     case "ConfigError":
       return new CommandError({
