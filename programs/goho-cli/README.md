@@ -5,8 +5,8 @@ Command-line interface for Goho. Receipt operations are grouped under the
 
 ## Local development
 
-Copy the environment template and fill in the Google service-account and OpenAI
-credentials:
+Copy the environment template and fill in the Google service-account JSON key
+file path and OpenAI credentials:
 
 ```bash
 cp programs/goho-cli/.env.example programs/goho-cli/.env

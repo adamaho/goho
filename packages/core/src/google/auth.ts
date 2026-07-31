@@ -1,4 +1,4 @@
-import { Config, Context, Effect, Layer, Redacted, Schema } from "effect";
+import { Config, Context, Effect, Layer, Schema } from "effect";
 import { JWT, type AuthClient } from "google-auth-library";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -111,21 +111,19 @@ export function make(client: AuthClient): Interface {
 // ---------------------------------------------------------------------------------------------------------------------
 
 export interface ServiceAccountOptions {
-  readonly clientEmail: string;
-  readonly privateKey: Redacted.Redacted<string>;
+  readonly jsonKeyFile: string;
   readonly scopes: string | ReadonlyArray<string>;
 }
 
 /**
  * Creates the service implementation for concrete service-account options.
  *
- * @param options - The service-account credentials and OAuth scopes.
+ * @param options - The service-account JSON key file and OAuth scopes.
  * @returns The configured Google authentication service.
  */
 function makeServiceAccount(options: ServiceAccountOptions): Interface {
   const client = new JWT({
-    email: options.clientEmail,
-    key: Redacted.value(options.privateKey),
+    keyFile: options.jsonKeyFile,
     scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
   });
 
@@ -135,7 +133,7 @@ function makeServiceAccount(options: ServiceAccountOptions): Interface {
 /**
  * Provides Google authentication backed by concrete service-account credentials.
  *
- * @param options - The service-account credentials and OAuth scopes.
+ * @param options - The service-account JSON key file and OAuth scopes.
  * @returns A layer that provides the strategy-independent Google auth service.
  */
 export function serviceAccountLayer(options: ServiceAccountOptions): Layer.Layer<Service> {
