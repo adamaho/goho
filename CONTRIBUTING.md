@@ -51,24 +51,24 @@ Useful focused commands:
 
 ## Workspace Layout
 
-Use the existing top-level workspace directories consistently:
+Use the top-level workspace directories consistently:
 
-- `shells/*` for deployable application hosts that compose product features
-- `programs/*` for runnable backend programs and workers
-- `features/*` for vertical product features shared across shells or programs
-- `libs/*` for reusable libraries
-- `clients/*` for generated or hand-written external service api clients
-- `tools/*` for internal tooling packages
-- `infra/*` for local and shared infrastructure helpers
+- `programs/*` contains all runnable and deployable applications, APIs, workers,
+  scheduled jobs, and other executables
+- `packages/*` contains shared features, reusable libraries, clients, and other
+  importable code
+- `tools/*` contains internal tooling packages
+- `infra/*` contains infrastructure helpers
 
-Shell packages should stay thin. Use them for routing, layouts, providers,
-runtime wiring, deploy configuration, and feature composition. Put product
-behavior in `features/*`, and move reusable primitives that are not tied to a
-feature into `libs/*`.
+Programs should remain thin deployable entry points. Code used by only one
+program can remain local to it. Shared capabilities, or code that needs a public
+API and dependency boundary, belong in `packages/*`.
 
-Package names should use the `@goho` npm scope and a clear package suffix,
-for example `@goho/shell-web`, `@goho/feature-billing`,
-`@goho/service-api`, or `@goho/lib-dates`.
+Package names should use the `@goho` npm scope. Packages under `packages/*` do
+not require category-based names. Each directory directly under `packages/*`
+must match its `package.json` name after removing the npm scope. For example,
+`@goho/billing` belongs in `packages/billing`, while `@goho/core` belongs in
+`packages/core`.
 
 ## Dependency Management
 
@@ -107,8 +107,8 @@ Examples:
 
 ```text
 chore(goho): add contributor documentation
-feat(shell-web): add account settings page
-fix(service-api): validate missing request body
+feat(web): add account settings page
+fix(api): validate missing request body
 ```
 
 ## Coding Agents

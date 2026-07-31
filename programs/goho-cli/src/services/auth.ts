@@ -1,4 +1,4 @@
-import { GoogleAuth } from "@goho/lib-core";
+import { GoogleAuth } from "@goho/core";
 import { Config, Redacted } from "effect";
 
 export const GoogleAuthLive = GoogleAuth.serviceAccountLayerConfig({

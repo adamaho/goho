@@ -1,4 +1,4 @@
-# @goho/lib-core
+# @goho/core
 
 Shared, framework-independent core logic for Goho programs.
 

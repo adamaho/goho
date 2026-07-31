@@ -1,4 +1,4 @@
-import { GoogleDrive } from "@goho/lib-core";
+import { GoogleDrive } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
 import { Argument, Command } from "effect/unstable/cli";
 
@@ -53,7 +53,7 @@ const process = Effect.fn("Receipts.process")(function* (rootFolderId: string) {
 // Command
 // ---------------------------------------------------------------------------------------------------------------------
 
-export const processCommand = Command.make("process", {
+const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
     Argument.withDescription("Google Drive folder containing the receipt workflow folders"),
   ),
@@ -62,4 +62,9 @@ export const processCommand = Command.make("process", {
   Command.withHandler(({ rootFolderId }) =>
     process(rootFolderId).pipe(Effect.provide(ProcessLive)),
   ),
+);
+
+export const receiptsCommand = Command.make("receipts").pipe(
+  Command.withDescription("Manage receipts"),
+  Command.withSubcommands([processCommand]),
 );

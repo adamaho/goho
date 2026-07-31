@@ -1,9 +1,6 @@
 packages:
-  - shells/*
   - programs/*
-  - features/*
-  - libs/*
-  - clients/*
+  - packages/*
   - tools/*
   - infra/*
 

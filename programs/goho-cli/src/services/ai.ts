@@ -1,5 +1,5 @@
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai";
-import { Ai } from "@goho/lib-core";
+import { Ai } from "@goho/core";
 import { Config, Effect, Layer } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 

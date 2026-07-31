@@ -1,10 +1,10 @@
 {
-  "name": "@goho/program-receipts",
+  "name": "@goho/goho-cli",
   "version": "0.0.0",
   "private": true,
-  "description": "Processes receipts from Google services.",
+  "description": "Command-line interface for Goho.",
   "bin": {
-    "receipts": "./src/main.ts"
+    "goho": "./src/main.ts"
   },
   "type": "module",
   "scripts": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "@effect/ai-openai": "catalog:",
     "@effect/platform-node": "catalog:",
-    "@goho/lib-core": "workspace:*",
+    "@goho/core": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
