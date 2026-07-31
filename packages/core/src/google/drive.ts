@@ -33,8 +33,8 @@ export interface DownloadFileOptions {
 
 export interface MoveFileOptions {
   readonly fileId: string;
-  readonly sourceAddress: string;
-  readonly destinationAddress: string;
+  readonly sourceFolderId: string;
+  readonly destinationFolderId: string;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -286,8 +286,8 @@ export const make = Effect.gen(function* () {
         client.files.update(
           {
             fileId: options.fileId,
-            addParents: options.destinationAddress,
-            removeParents: options.sourceAddress,
+            addParents: options.destinationFolderId,
+            removeParents: options.sourceFolderId,
             supportsAllDrives: true,
             fields: "id,name,mimeType",
           },
