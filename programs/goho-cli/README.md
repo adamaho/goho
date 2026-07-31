@@ -1,32 +1,35 @@
 # @goho/goho-cli
 
-Command-line interface for Goho. Receipt operations are grouped under the
-`receipts` subcommand.
+Command-line interface for Goho.
 
-## Local development
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for credential provisioning and local
+development setup.
 
-Copy the environment template and fill in the Google service-account JSON key
-file path and OpenAI credentials:
+## Commands
 
-```bash
-cp programs/goho-cli/.env.example programs/goho-cli/.env
-```
+### Process receipts
 
-Share the required Google Drive files with the configured service-account email,
-then run:
+Process receipts from the `todo` folder in a Google Drive receipt workflow:
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts process <root-folder-id>
+goho receipts process <root-folder-id>
 ```
 
-Display the CLI help without running a processing pass:
+The root folder must contain `todo`, `processing`, `processed`, and `failed`
+subfolders.
+
+Display all commands and global options:
 
 ```bash
-pnpm --filter @goho/goho-cli start --help
+goho --help
 ```
 
-Use watch mode while developing:
+## Configuration
 
-```bash
-pnpm --filter @goho/goho-cli dev
-```
+The CLI reads the following environment variables:
+
+- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: path to a Google service-account JSON
+  key file
+- `GOOGLE_AUTH_SCOPES`: comma-separated Google OAuth scopes
+- `OPENAI_API_KEY`: OpenAI API key
+- `OPENAI_MODEL`: OpenAI model used for receipt processing
