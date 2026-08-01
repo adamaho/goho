@@ -1,6 +1,6 @@
 import { GoogleDrive } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command, Flag } from "effect/unstable/cli";
 
 import { toCommandError } from "../errors.ts";
 import { AiLive } from "../services/ai.ts";
@@ -12,6 +12,9 @@ import { GoogleAuthLive } from "../services/auth.ts";
 
 const requiredFolders = ["todo", "processing", "processed", "failed"] as const;
 const RequiredFolder = Schema.Literals(requiredFolders);
+const Concurrency = Schema.Int.check(
+  Schema.isBetween({ minimum: 1, maximum: 5 }, { expected: "an integer from 1 through 5" }),
+);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Errors
@@ -36,7 +39,14 @@ const ProcessLive = Layer.merge(GoogleDriveLive, AiLive);
 // ---------------------------------------------------------------------------------------------------------------------
 // Workflow
 // ---------------------------------------------------------------------------------------------------------------------
-const process = Effect.fn("GohoCli.Receipts.process")(function* (rootFolderId: string) {
+const process = Effect.fn("GohoCli.Receipts.process")(function* (
+  rootFolderId: string,
+  spreadsheetId: string,
+  concurrency: number,
+) {
+  void spreadsheetId;
+  void concurrency;
+
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
   const folderNames = new Set(folders.map((folder) => folder.name));
@@ -59,10 +69,23 @@ const processCommand = Command.make("process", {
       `Google Drive folder containing the receipt workflow folders. This folder must contain ${requiredFolders.join(",")}.`,
     ),
   ),
+  spreadsheetId: Argument.string("spreadsheet-id").pipe(
+    Argument.withDescription("Google Sheets spreadsheet that contains the RAW worksheet."),
+  ),
+  concurrency: Flag.integer("concurrency").pipe(
+    Flag.withSchema(Concurrency),
+    Flag.withDefault(5),
+    Flag.withDescription(
+      "Maximum number of receipts to process concurrently, from 1 through 5 (default: 5).",
+    ),
+  ),
 }).pipe(
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
-  Command.withHandler(({ rootFolderId }) =>
-    process(rootFolderId).pipe(Effect.provide(ProcessLive), Effect.mapError(toCommandError)),
+  Command.withHandler(({ concurrency, rootFolderId, spreadsheetId }) =>
+    process(rootFolderId, spreadsheetId, concurrency).pipe(
+      Effect.provide(ProcessLive),
+      Effect.mapError(toCommandError),
+    ),
   ),
 );
 
