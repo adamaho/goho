@@ -7,9 +7,12 @@ import { Effect, Result, Schema, Stream } from "effect";
 const Name = Schema.Trim.check(Schema.isNonEmpty());
 
 const ReceiptDate = Schema.String.check(
-  Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/),
   Schema.makeFilter(
     (value) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return false;
+      }
+
       const year = Number(value.slice(0, 4));
       const month = Number(value.slice(5, 7));
       const day = Number(value.slice(8, 10));
@@ -243,6 +246,12 @@ const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
     });
   }
 
+  yield* Effect.logDebug("Downloading receipt image", {
+    fileId: file.id,
+    fileName: file.name,
+    mimeType: file.mimeType,
+  });
+
   const googleDrive = yield* GoogleDrive.Service;
   const imageBytes = yield* googleDrive.downloadFile({ fileId: file.id }).pipe(
     Stream.mkUint8Array,
@@ -250,6 +259,12 @@ const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
   );
 
   const ai = yield* Ai.Service;
+
+  yield* Effect.logDebug("Parsing receipt image", {
+    fileId: file.id,
+    fileName: file.name,
+    byteLength: imageBytes.byteLength,
+  });
 
   return yield* ai
     .generateObject({
@@ -286,13 +301,20 @@ const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(functi
   spreadsheetId: string,
 ) {
   const googleSheets = yield* GoogleSheets.Service;
+  const rows = mapReceiptRows(receipt, sourceFileId);
+
+  yield* Effect.logDebug("Appending receipt rows", {
+    sourceFileId,
+    spreadsheetId,
+    rowCount: rows.length,
+  });
 
   return yield* googleSheets
     .appendRows({
       spreadsheetId,
       range: "RAW!A:F",
       valueInputOption: "RAW",
-      rows: mapReceiptRows(receipt, sourceFileId),
+      rows,
     })
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
@@ -302,6 +324,8 @@ const completeReceipt = Effect.fn("GohoCli.Receipts.completeReceipt")(function* 
   folders: WorkflowFolders,
 ) {
   const googleDrive = yield* GoogleDrive.Service;
+
+  yield* Effect.logDebug("Moving receipt to processed", { fileId });
 
   return yield* googleDrive
     .moveFile({
@@ -323,6 +347,9 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   GoogleDrive.Service | GoogleSheets.Service | Ai.Service
 > {
   const googleDrive = yield* GoogleDrive.Service;
+
+  yield* Effect.logDebug("Claiming receipt", { fileId: file.id, fileName: file.name });
+
   const claim = yield* googleDrive
     .moveFile({
       fileId: file.id,
@@ -341,8 +368,14 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
     });
   }
 
+  yield* Effect.logDebug("Receipt claimed", { fileId: file.id, fileName: file.name });
+
   const processing = yield* Effect.gen(function* () {
     if (processedSourceIds.has(file.id)) {
+      yield* Effect.logDebug("Receipt source already exists; skipping extraction", {
+        fileId: file.id,
+        fileName: file.name,
+      });
       yield* completeReceipt(file.id, folders);
       return AlreadyProcessed.make({ fileId: file.id, fileName: file.name });
     }
@@ -354,8 +387,19 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   }).pipe(Effect.result);
 
   if (Result.isSuccess(processing)) {
+    yield* Effect.logDebug("Receipt processing finished", {
+      fileId: file.id,
+      fileName: file.name,
+      outcome: processing.success._tag,
+    });
     return processing.success;
   }
+
+  yield* Effect.logDebug("Compensating failed receipt", {
+    fileId: file.id,
+    fileName: file.name,
+    stage: processing.failure.stage,
+  });
 
   const compensation = yield* googleDrive
     .moveFile({
@@ -392,11 +436,24 @@ export const process = Effect.fn("GohoCli.Receipts.process")(function* (
   spreadsheetId: string,
   concurrency: number,
 ) {
+  yield* Effect.logDebug("Starting receipt batch", {
+    rootFolderId,
+    spreadsheetId,
+    concurrency,
+  });
+
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
   const workflowFolders = yield* resolveWorkflowFolders(folders);
+  yield* Effect.logDebug("Resolved receipt workflow folders", workflowFolders);
+
   const processedSourceIds = yield* readProcessedSourceIds(spreadsheetId);
+  yield* Effect.logDebug("Loaded processed receipt source IDs", {
+    count: processedSourceIds.size,
+  });
+
   const files = yield* googleDrive.listFiles({ folderId: workflowFolders.todo });
+  yield* Effect.logDebug("Loaded todo receipts", { count: files.length });
 
   return yield* Effect.forEach(
     files,

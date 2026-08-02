@@ -47,10 +47,13 @@ const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportResults")
         yield* Console.log(
           `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
         );
+        yield* Effect.logDebug("Receipt failure cause", result.cause);
         break;
       case "Stranded":
         stranded += 1;
         yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
+        yield* Effect.logDebug("Receipt failure cause", result.cause);
+        yield* Effect.logDebug("Receipt compensation cause", result.compensationCause);
         break;
     }
   }
@@ -95,6 +98,7 @@ const processCommand = Command.make("process", {
       Effect.provide(ProcessLive),
       Effect.mapError(toCommandError),
       Effect.andThen(reportProcessResults),
+      Effect.tapError((error) => Effect.logDebug("Receipt process command failed", error.cause)),
     ),
   ),
 );

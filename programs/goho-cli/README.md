@@ -20,6 +20,15 @@ goho receipts process <root-folder-id> <spreadsheet-id> [--concurrency <count>]
 - `--concurrency` controls the maximum number of active receipt workers. It
   defaults to `5` and accepts integers from `1` through `5`.
 
+Use Effect CLI's global log-level flag to print lifecycle checkpoints and
+retained internal failure causes while troubleshooting:
+
+```bash
+goho --log-level debug receipts process <root-folder-id> <spreadsheet-id>
+```
+
+Review debug output for sensitive provider details before sharing it.
+
 The root folder must contain exactly one immediate child folder with each of
 these names:
 
