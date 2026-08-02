@@ -387,6 +387,10 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   }).pipe(Effect.result);
 
   if (Result.isSuccess(processing)) {
+    yield* Effect.logInfo(
+      processing.success._tag === "Processed" ? "Receipt processed" : "Receipt already processed",
+      { fileId: file.id, fileName: file.name },
+    );
     yield* Effect.logDebug("Receipt processing finished", {
       fileId: file.id,
       fileName: file.name,
