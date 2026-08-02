@@ -1,4 +1,4 @@
-import { Ai, GoogleDrive } from "@goho/core";
+import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Effect, Schema, Stream } from "effect";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -49,6 +49,17 @@ const Receipt = Schema.Struct({
     total: Schema.Finite,
   }),
 });
+
+interface Receipt extends Schema.Schema.Type<typeof Receipt> {}
+
+type ReceiptRow = readonly [
+  store: string,
+  date: string,
+  category: string,
+  item: string,
+  price: number,
+  sourceFileId: string,
+];
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Constants
@@ -105,6 +116,25 @@ class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingEr
 // ---------------------------------------------------------------------------------------------------------------------
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Maps a parsed receipt to the RAW worksheet's A-F rows.
+ *
+ * @param receipt - The validated receipt data.
+ * @param sourceFileId - The source Google Drive file ID.
+ * @returns One six-cell row for each receipt item.
+ */
+function mapReceiptRows(receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> {
+  return receipt.transaction.items.map((item) => [
+    receipt.store.name,
+    receipt.date,
+    receipt.transaction.category,
+    item.name,
+    Math.round(item.price * 100) / 100,
+    sourceFileId,
+  ]);
+}
+
 const _parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
 ) {
@@ -152,7 +182,25 @@ const _parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
+const _appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(function* (
+  receipt: Receipt,
+  sourceFileId: string,
+  spreadsheetId: string,
+) {
+  const googleSheets = yield* GoogleSheets.Service;
+
+  return yield* googleSheets
+    .appendRows({
+      spreadsheetId,
+      range: "RAW!A:F",
+      valueInputOption: "USER_ENTERED",
+      rows: mapReceiptRows(receipt, sourceFileId),
+    })
+    .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
+});
+
 void _parseReceipt;
+void _appendReceiptRows;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
