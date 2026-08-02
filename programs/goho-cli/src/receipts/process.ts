@@ -117,14 +117,7 @@ class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingEr
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
 
-/**
- * Maps a parsed receipt to the RAW worksheet's A-F rows.
- *
- * @param receipt - The validated receipt data.
- * @param sourceFileId - The source Google Drive file ID.
- * @returns One six-cell row for each receipt item.
- */
-function mapReceiptRows(receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> {
+const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> => {
   return receipt.transaction.items.map((item) => [
     receipt.store.name,
     receipt.date,
@@ -133,7 +126,7 @@ function mapReceiptRows(receipt: Receipt, sourceFileId: string): ReadonlyArray<R
     Math.round(item.price * 100) / 100,
     sourceFileId,
   ]);
-}
+};
 
 const _parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,

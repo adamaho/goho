@@ -70,6 +70,18 @@ must match its `package.json` name after removing the npm scope. For example,
 `@goho/billing` belongs in `packages/billing`, while `@goho/core` belongs in
 `packages/core`.
 
+## Documentation Comments
+
+Use JSDoc where it helps a consumer understand an exported API, or where code
+has non-obvious behavior, invariants, side effects, failure semantics, or
+lifecycle requirements. Private helpers with clear names and types do not need
+documentation comments.
+
+Comments should explain intent and tradeoffs rather than restating the code.
+Do not add `@param` or `@returns` tags when they only repeat TypeScript names
+and types. Tests, fixtures, and straightforward transformations generally do
+not need JSDoc.
+
 ## Dependency Management
 
 Prefer centralizing shared dependency versions in `pnpm-workspace.yaml` using
