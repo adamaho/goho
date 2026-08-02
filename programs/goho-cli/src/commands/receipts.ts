@@ -1,63 +1,26 @@
-import { GoogleDrive } from "@goho/core";
+import { GoogleDrive, GoogleSheets } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
 import { toCommandError } from "../errors.ts";
+import { process, requiredFolders } from "../receipts/process.ts";
 import { AiLive } from "../services/ai.ts";
 import { GoogleAuthLive } from "../services/auth.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------------------------------------------------
-
-const requiredFolders = ["todo", "processing", "processed", "failed"] as const;
-const RequiredFolder = Schema.Literals(requiredFolders);
 const Concurrency = Schema.Int.check(
   Schema.isBetween({ minimum: 1, maximum: 5 }, { expected: "an integer from 1 through 5" }),
 );
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Errors
-// ---------------------------------------------------------------------------------------------------------------------
-
-class MissingFoldersError extends Schema.TaggedErrorClass<MissingFoldersError>()(
-  "GohoCli.Receipts.MissingFoldersError",
-  { folders: Schema.Array(RequiredFolder) },
-) {
-  override get message(): string {
-    return `Missing required Google Drive folders. Please ensure the ${this.folders.join(", ")} have been created in the root folder.`;
-  }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
 // Layers
 // ---------------------------------------------------------------------------------------------------------------------
-
-const GoogleDriveLive = GoogleDrive.layer.pipe(Layer.provide(GoogleAuthLive));
-const ProcessLive = Layer.merge(GoogleDriveLive, AiLive);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Workflow
-// ---------------------------------------------------------------------------------------------------------------------
-const process = Effect.fn("GohoCli.Receipts.process")(function* (
-  rootFolderId: string,
-  spreadsheetId: string,
-  concurrency: number,
-) {
-  void spreadsheetId;
-  void concurrency;
-
-  const googleDrive = yield* GoogleDrive.Service;
-  const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
-  const folderNames = new Set(folders.map((folder) => folder.name));
-  const missingFolders = requiredFolders.filter((folder) => !folderNames.has(folder));
-
-  if (missingFolders.length > 0) {
-    return yield* new MissingFoldersError({ folders: missingFolders });
-  }
-
-  yield* Effect.logInfo("Required Google Drive folders are available");
-});
+const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
+  Layer.provide(GoogleAuthLive),
+);
+const ProcessLive = Layer.merge(GoogleLive, AiLive);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
