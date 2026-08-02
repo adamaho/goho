@@ -99,11 +99,11 @@ interface WorkflowFolders {
   readonly failed: string;
 }
 
-interface Processed extends Schema.Schema.Type<typeof Processed> {}
-interface AlreadyProcessed extends Schema.Schema.Type<typeof AlreadyProcessed> {}
-interface Failed extends Schema.Schema.Type<typeof Failed> {}
-interface Stranded extends Schema.Schema.Type<typeof Stranded> {}
-type ReceiptProcessingResult = Processed | AlreadyProcessed | Failed | Stranded;
+export interface Processed extends Schema.Schema.Type<typeof Processed> {}
+export interface AlreadyProcessed extends Schema.Schema.Type<typeof AlreadyProcessed> {}
+export interface Failed extends Schema.Schema.Type<typeof Failed> {}
+export interface Stranded extends Schema.Schema.Type<typeof Stranded> {}
+export type ReceiptProcessingResult = Processed | AlreadyProcessed | Failed | Stranded;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Constants
@@ -384,8 +384,6 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   });
 });
 
-void processReceipt;
-
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
 // ---------------------------------------------------------------------------------------------------------------------
@@ -394,14 +392,15 @@ export const process = Effect.fn("GohoCli.Receipts.process")(function* (
   spreadsheetId: string,
   concurrency: number,
 ) {
-  void concurrency;
-
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
   const workflowFolders = yield* resolveWorkflowFolders(folders);
   const processedSourceIds = yield* readProcessedSourceIds(spreadsheetId);
-  void workflowFolders;
-  void processedSourceIds;
+  const files = yield* googleDrive.listFiles({ folderId: workflowFolders.todo });
 
-  yield* Effect.logInfo("Required Google Drive folders are available");
+  return yield* Effect.forEach(
+    files,
+    (file) => processReceipt(file, workflowFolders, spreadsheetId, processedSourceIds),
+    { concurrency },
+  );
 });

@@ -1,9 +1,9 @@
 import { GoogleDrive, GoogleSheets } from "@goho/core";
-import { Effect, Layer, Schema } from "effect";
+import { Console, Effect, Layer, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
-import { toCommandError } from "../errors.ts";
-import { process, requiredFolders } from "../receipts/process.ts";
+import { CommandError, toCommandError } from "../errors.ts";
+import { process, type ReceiptProcessingResult, requiredFolders } from "../receipts/process.ts";
 import { AiLive } from "../services/ai.ts";
 import { GoogleAuthLive } from "../services/auth.ts";
 
@@ -23,8 +23,54 @@ const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
 const ProcessLive = Layer.merge(GoogleLive, AiLive);
 
 // ---------------------------------------------------------------------------------------------------------------------
-// Command
+// Process Command
 // ---------------------------------------------------------------------------------------------------------------------
+
+const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportResults")(function* (
+  results: ReadonlyArray<ReceiptProcessingResult>,
+) {
+  let processed = 0;
+  let alreadyProcessed = 0;
+  let failed = 0;
+  let stranded = 0;
+
+  for (const result of results) {
+    switch (result._tag) {
+      case "Processed":
+        processed += 1;
+        break;
+      case "AlreadyProcessed":
+        alreadyProcessed += 1;
+        break;
+      case "Failed":
+        failed += 1;
+        yield* Console.log(
+          `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
+        );
+        break;
+      case "Stranded":
+        stranded += 1;
+        yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
+        break;
+    }
+  }
+
+  yield* Console.log(
+    [
+      `Processed: ${processed}`,
+      `Already processed: ${alreadyProcessed}`,
+      `Failed: ${failed}`,
+      `Stranded: ${stranded}`,
+    ].join("\n"),
+  );
+
+  if (failed > 0 || stranded > 0) {
+    return yield* new CommandError({
+      message: "Receipt processing completed with failures. Review the summary above.",
+      cause: results,
+    });
+  }
+});
 
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
@@ -48,6 +94,7 @@ const processCommand = Command.make("process", {
     process(rootFolderId, spreadsheetId, concurrency).pipe(
       Effect.provide(ProcessLive),
       Effect.mapError(toCommandError),
+      Effect.andThen(reportProcessResults),
     ),
   ),
 );
