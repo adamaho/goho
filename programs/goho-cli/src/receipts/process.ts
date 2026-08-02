@@ -55,6 +55,11 @@ const Processed = Schema.TaggedStruct("Processed", {
   fileName: Schema.String,
 });
 
+const AlreadyProcessed = Schema.TaggedStruct("AlreadyProcessed", {
+  fileId: Schema.String,
+  fileName: Schema.String,
+});
+
 const FailureDisposition = Schema.Literals(["MovedToFailed", "ClaimNotConfirmed"]);
 const ReceiptProcessingStage = Schema.Literals([
   "Claim",
@@ -95,9 +100,10 @@ interface WorkflowFolders {
 }
 
 interface Processed extends Schema.Schema.Type<typeof Processed> {}
+interface AlreadyProcessed extends Schema.Schema.Type<typeof AlreadyProcessed> {}
 interface Failed extends Schema.Schema.Type<typeof Failed> {}
 interface Stranded extends Schema.Schema.Type<typeof Stranded> {}
-type ReceiptProcessingResult = Processed | Failed | Stranded;
+type ReceiptProcessingResult = Processed | AlreadyProcessed | Failed | Stranded;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Constants
@@ -154,7 +160,7 @@ class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingEr
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
 
-const _resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolders")(function* (
+const resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolders")(function* (
   folders: ReadonlyArray<GoogleDrive.FolderMetadata>,
 ) {
   const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
@@ -185,6 +191,28 @@ const _resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolde
   } satisfies WorkflowFolders;
 });
 
+const readProcessedSourceIds = Effect.fn("GohoCli.Receipts.readProcessedSourceIds")(function* (
+  spreadsheetId: string,
+) {
+  const googleSheets = yield* GoogleSheets.Service;
+  const rows = yield* googleSheets.readRows({ spreadsheetId, range: "RAW!F:F" });
+  const sourceIds = new Set<string>();
+
+  for (const row of rows.slice(1)) {
+    const value = row.at(0);
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const sourceId = value.trim();
+    if (sourceId.length > 0) {
+      sourceIds.add(sourceId);
+    }
+  }
+
+  return sourceIds;
+});
+
 type ReceiptRow = readonly [
   store: string,
   date: string,
@@ -205,7 +233,7 @@ const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<R
   ]);
 };
 
-const _parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
+const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
 ) {
   if (!supportedImageMimeTypes.has(file.mimeType)) {
@@ -252,7 +280,7 @@ const _parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
-const _appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(function* (
+const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(function* (
   receipt: Receipt,
   sourceFileId: string,
   spreadsheetId: string,
@@ -269,10 +297,26 @@ const _appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(funct
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
 
-const _processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
+const completeReceipt = Effect.fn("GohoCli.Receipts.completeReceipt")(function* (
+  fileId: string,
+  folders: WorkflowFolders,
+) {
+  const googleDrive = yield* GoogleDrive.Service;
+
+  return yield* googleDrive
+    .moveFile({
+      fileId,
+      sourceFolderId: folders.processing,
+      destinationFolderId: folders.processed,
+    })
+    .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
+});
+
+const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   file: GoogleDrive.FileMetadata,
   folders: WorkflowFolders,
   spreadsheetId: string,
+  processedSourceIds: ReadonlySet<string>,
 ): Effect.fn.Return<
   ReceiptProcessingResult,
   never,
@@ -298,19 +342,19 @@ const _processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   }
 
   const processing = yield* Effect.gen(function* () {
-    const receipt = yield* _parseReceipt(file);
-    yield* _appendReceiptRows(receipt, file.id, spreadsheetId);
-    yield* googleDrive
-      .moveFile({
-        fileId: file.id,
-        sourceFolderId: folders.processing,
-        destinationFolderId: folders.processed,
-      })
-      .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
+    if (processedSourceIds.has(file.id)) {
+      yield* completeReceipt(file.id, folders);
+      return AlreadyProcessed.make({ fileId: file.id, fileName: file.name });
+    }
+
+    const receipt = yield* parseReceipt(file);
+    yield* appendReceiptRows(receipt, file.id, spreadsheetId);
+    yield* completeReceipt(file.id, folders);
+    return Processed.make({ fileId: file.id, fileName: file.name });
   }).pipe(Effect.result);
 
   if (Result.isSuccess(processing)) {
-    return Processed.make({ fileId: file.id, fileName: file.name });
+    return processing.success;
   }
 
   const compensation = yield* googleDrive
@@ -340,7 +384,7 @@ const _processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
   });
 });
 
-void _processReceipt;
+void processReceipt;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
@@ -350,13 +394,14 @@ export const process = Effect.fn("GohoCli.Receipts.process")(function* (
   spreadsheetId: string,
   concurrency: number,
 ) {
-  void spreadsheetId;
   void concurrency;
 
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
-  const workflowFolders = yield* _resolveWorkflowFolders(folders);
+  const workflowFolders = yield* resolveWorkflowFolders(folders);
+  const processedSourceIds = yield* readProcessedSourceIds(spreadsheetId);
   void workflowFolders;
+  void processedSourceIds;
 
   yield* Effect.logInfo("Required Google Drive folders are available");
 });

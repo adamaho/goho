@@ -1,4 +1,4 @@
-import { GoogleAuth, GoogleDrive } from "@goho/core";
+import { GoogleAuth, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Config, Schema } from "effect";
 
 export class CommandError extends Schema.TaggedErrorClass<CommandError>()("GohoCli.CommandError", {
@@ -17,6 +17,7 @@ export function toCommandError(
     | Config.ConfigError
     | GoogleAuth.AuthenticationError
     | GoogleDrive.DriveError
+    | GoogleSheets.SheetsError
     | { readonly _tag: "GohoCli.Receipts.MissingFoldersError"; readonly message: string },
 ): CommandError {
   switch (cause._tag) {
@@ -32,6 +33,12 @@ export function toCommandError(
       return new CommandError({
         message:
           "Unable to access the Google Drive receipt workflow. Verify that the folder is shared with the service account.",
+        cause,
+      });
+    case "GoogleSheets.SheetsError":
+      return new CommandError({
+        message:
+          "Unable to read the Google Sheets receipt data. Verify that the spreadsheet is shared with the service account.",
         cause,
       });
     case "GohoCli.Receipts.MissingFoldersError":
