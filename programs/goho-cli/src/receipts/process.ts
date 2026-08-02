@@ -121,7 +121,11 @@ const supportedImageMimeTypes: ReadonlySet<string> = new Set([
 
 const receiptSystemPrompt = `Extract the receipt into the required structured receipt object.
 - Expand recognizable abbreviations in store names and item names.
-- Represent discounts and TPD/<item number> adjustments as negative item prices.
+- Expand purchases with a quantity greater than one into one item entry per unit.
+- Exclude purchased quantities such as (2) from each expanded item name.
+- Associate item-specific sale, discount, coupon, and TPD/<item number> adjustment lines with the referenced item and subtract the adjustment from that item's price.
+- Do not return sale, discount, coupon, or adjustment lines as separate item entries. Ignore them when they cannot be associated with a specific item.
+- Apply item-specific adjustments before expanding quantities. When a quantity line shows a combined price, divide the adjusted total evenly across the expanded item entries so their prices sum to the adjusted line total.
 - Infer one transaction category from the purchased items.
 - Format the receipt date as YYYY-MM-DD.
 - Return all prices, subtotal, tax, and total as numeric values without currency symbols.
@@ -230,7 +234,7 @@ const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<R
     receipt.store.name,
     receipt.date,
     receipt.transaction.category,
-    item.name,
+    item.name.replace(/\s+\(\d+\)$/, ""),
     item.price,
     sourceFileId,
   ]);
@@ -313,7 +317,7 @@ const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(functi
     .appendRows({
       spreadsheetId,
       range: "RAW!A:F",
-      valueInputOption: "RAW",
+      valueInputOption: "USER_ENTERED",
       rows,
     })
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
