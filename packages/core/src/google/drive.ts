@@ -218,10 +218,6 @@ export const make = Effect.gen(function* () {
           return yield* metadata;
         }
 
-        if (metadata.mimeType.startsWith("application/vnd.google-apps.")) {
-          continue;
-        }
-
         files.push(metadata);
       }
 

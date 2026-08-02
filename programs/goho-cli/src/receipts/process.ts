@@ -228,7 +228,7 @@ const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<R
     receipt.date,
     receipt.transaction.category,
     item.name,
-    Math.round(item.price * 100) / 100,
+    item.price,
     sourceFileId,
   ]);
 };
@@ -291,7 +291,7 @@ const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(functi
     .appendRows({
       spreadsheetId,
       range: "RAW!A:F",
-      valueInputOption: "USER_ENTERED",
+      valueInputOption: "RAW",
       rows: mapReceiptRows(receipt, sourceFileId),
     })
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));

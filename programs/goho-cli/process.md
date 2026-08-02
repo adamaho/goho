@@ -216,12 +216,12 @@ Append all rows for one receipt in a single Sheets request. Use:
 
 ```text
 range: RAW!A:F
-valueInputOption: USER_ENTERED
+valueInputOption: RAW
 majorDimension: ROWS
 ```
 
-Extend `GoogleSheets.appendRows` so callers can choose `RAW` or `USER_ENTERED`
-instead of hardcoding `RAW`.
+Pass `RAW` explicitly so receipt text and source file IDs are stored without
+formula evaluation or automatic type coercion.
 
 ## Single-Receipt Pipeline
 
@@ -346,7 +346,7 @@ layers, invoke the batch workflow, and map the final error to `CommandError`.
 
 1. Add the receipt schema and revised system prompt.
 2. Extend Drive metadata and move option names as needed.
-3. Extend Sheets append options with `USER_ENTERED` support.
+3. Keep the Sheets append input option explicit and use `RAW` for receipt rows.
 4. Update the writable Drive scope in `.env.example` and contributor guidance.
 5. Add the spreadsheet ID argument and bounded concurrency flag.
 6. Add Google Sheets to the command's runtime layer graph.
