@@ -40,6 +40,8 @@ Keep this shell open for the remaining setup and local development steps.
    `client_email` address from the JSON key and grant it **Editor** access.
    Limit the service account's access by sharing only the workflow root rather
    than broader Drive resources.
+7. Share the destination spreadsheet with the same `client_email` address and
+   grant it **Editor** access.
 
 Service-account keys are long-lived credentials. Revoke and replace the key if
 it is ever exposed.
@@ -67,8 +69,12 @@ package-local JSON key. Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed
 Run a receipt-processing pass:
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts process <root-folder-id>
+pnpm --filter @goho/goho-cli start receipts process <root-folder-id> <spreadsheet-id>
 ```
+
+Use `--concurrency <count>` to override the default of `5`; valid values are
+integers from `1` through `5`. Do not run concurrent commands against the same
+Drive root.
 
 Display the CLI help without running a processing pass:
 
@@ -89,3 +95,20 @@ Run the repository checks before submitting changes:
 ```bash
 pnpm check
 ```
+
+Follow the authoritative
+[failure outcomes and recovery procedure](./README.md#failure-outcomes-and-recovery)
+when a validation run fails or is interrupted. In particular, locate uncertain
+files by Drive ID and inspect their current parent before moving them.
+
+Complete this manual validation checklist after changes to receipt processing:
+
+- [ ] Process one supported receipt successfully and confirm its item rows,
+      source file ID, move to `processed`, zero failure counts, and status `0`.
+- [ ] Process one unsupported MIME type and confirm its move to `failed`, safe
+      `MovedToFailed` diagnostic, nonzero failed count, and status `1`.
+- [ ] Run with missing or invalid required configuration and confirm a safe
+      startup message and status `1` without provider details or a stack trace.
+- [ ] Return a file whose real Drive ID already exists in `RAW!F:F` to `todo`,
+      then confirm no rows are appended, the file moves to `processed`, and the
+      `Already processed` count increases.

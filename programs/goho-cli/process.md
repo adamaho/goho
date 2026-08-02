@@ -22,7 +22,7 @@ goho receipts process <root-folder-id> <spreadsheet-id> --concurrency 5
 The `--concurrency` flag must:
 
 - default to `5`
-- accept values from `1` through `20`
+- accept values from `1` through `5`
 - control the maximum number of receipts processed concurrently
 
 The worksheet name is fixed as `RAW`. The implementation must derive these
@@ -94,7 +94,8 @@ The configured scopes must permit file movement:
 GOOGLE_AUTH_SCOPES=https://www.googleapis.com/auth/spreadsheets,https://www.googleapis.com/auth/drive
 ```
 
-The current `drive.readonly` scope is insufficient and must be replaced.
+Read-only Drive access is insufficient; receipt processing requires the full
+Drive scope shown above.
 
 ## Supported Files
 
