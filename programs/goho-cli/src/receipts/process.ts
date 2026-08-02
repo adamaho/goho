@@ -1,5 +1,5 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import { Effect, Schema, Stream } from "effect";
+import { Effect, Result, Schema, Stream } from "effect";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Schemas
@@ -50,16 +50,54 @@ const Receipt = Schema.Struct({
   }),
 });
 
+const Processed = Schema.TaggedStruct("Processed", {
+  fileId: Schema.String,
+  fileName: Schema.String,
+});
+
+const FailureDisposition = Schema.Literals(["MovedToFailed", "ClaimNotConfirmed"]);
+const ReceiptProcessingStage = Schema.Literals([
+  "Claim",
+  "ValidateFile",
+  "DownloadFile",
+  "ParseReceipt",
+  "AppendRows",
+  "Complete",
+]);
+
+const Failed = Schema.TaggedStruct("Failed", {
+  fileId: Schema.String,
+  fileName: Schema.String,
+  stage: ReceiptProcessingStage,
+  disposition: FailureDisposition,
+  cause: Schema.Defect(),
+});
+
+const Stranded = Schema.TaggedStruct("Stranded", {
+  fileId: Schema.String,
+  fileName: Schema.String,
+  stage: ReceiptProcessingStage,
+  cause: Schema.Defect(),
+  compensationCause: Schema.Defect(),
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------------------------------------------------
+
 interface Receipt extends Schema.Schema.Type<typeof Receipt> {}
 
-type ReceiptRow = readonly [
-  store: string,
-  date: string,
-  category: string,
-  item: string,
-  price: number,
-  sourceFileId: string,
-];
+interface WorkflowFolders {
+  readonly todo: string;
+  readonly processing: string;
+  readonly processed: string;
+  readonly failed: string;
+}
+
+interface Processed extends Schema.Schema.Type<typeof Processed> {}
+interface Failed extends Schema.Schema.Type<typeof Failed> {}
+interface Stranded extends Schema.Schema.Type<typeof Stranded> {}
+type ReceiptProcessingResult = Processed | Failed | Stranded;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Constants
@@ -86,24 +124,23 @@ const receiptSystemPrompt = `Extract the receipt into the required structured re
 // ---------------------------------------------------------------------------------------------------------------------
 
 const RequiredFolder = Schema.Literals(requiredFolders);
+const isRequiredFolder = Schema.is(RequiredFolder);
 
 class MissingFoldersError extends Schema.TaggedErrorClass<MissingFoldersError>()(
   "GohoCli.Receipts.MissingFoldersError",
-  { folders: Schema.Array(RequiredFolder) },
+  {
+    folders: Schema.Array(RequiredFolder),
+    reason: Schema.Literals(["Missing", "Ambiguous"]),
+  },
 ) {
   override get message(): string {
+    if (this.reason === "Ambiguous") {
+      return `Duplicate required Google Drive folders found: ${this.folders.join(", ")}. Each required folder name must be unique.`;
+    }
+
     return `Missing required Google Drive folders. Please ensure the ${this.folders.join(", ")} have been created in the root folder.`;
   }
 }
-
-const ReceiptProcessingStage = Schema.Literals([
-  "ClaimFile",
-  "ValidateFile",
-  "DownloadFile",
-  "ParseReceipt",
-  "AppendRows",
-  "Complete",
-]);
 
 class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingError>()(
   "GohoCli.Receipts.ReceiptProcessingError",
@@ -116,6 +153,46 @@ class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingEr
 // ---------------------------------------------------------------------------------------------------------------------
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
+
+const _resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolders")(function* (
+  folders: ReadonlyArray<GoogleDrive.FolderMetadata>,
+) {
+  const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
+    requiredFolders.map((name) => [name, []]),
+  );
+
+  for (const folder of folders) {
+    if (isRequiredFolder(folder.name)) {
+      matches.get(folder.name)?.push(folder.id);
+    }
+  }
+
+  const ambiguousFolders = requiredFolders.filter((name) => (matches.get(name)?.length ?? 0) > 1);
+  if (ambiguousFolders.length > 0) {
+    return yield* new MissingFoldersError({ folders: ambiguousFolders, reason: "Ambiguous" });
+  }
+
+  const missingFolders = requiredFolders.filter((name) => matches.get(name)?.length === 0);
+  if (missingFolders.length > 0) {
+    return yield* new MissingFoldersError({ folders: missingFolders, reason: "Missing" });
+  }
+
+  return {
+    todo: matches.get("todo")?.[0] ?? "",
+    processing: matches.get("processing")?.[0] ?? "",
+    processed: matches.get("processed")?.[0] ?? "",
+    failed: matches.get("failed")?.[0] ?? "",
+  } satisfies WorkflowFolders;
+});
+
+type ReceiptRow = readonly [
+  store: string,
+  date: string,
+  category: string,
+  item: string,
+  price: number,
+  sourceFileId: string,
+];
 
 const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> => {
   return receipt.transaction.items.map((item) => [
@@ -192,13 +269,82 @@ const _appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(funct
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
 
-void _parseReceipt;
-void _appendReceiptRows;
+const _processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
+  file: GoogleDrive.FileMetadata,
+  folders: WorkflowFolders,
+  spreadsheetId: string,
+): Effect.fn.Return<
+  ReceiptProcessingResult,
+  never,
+  GoogleDrive.Service | GoogleSheets.Service | Ai.Service
+> {
+  const googleDrive = yield* GoogleDrive.Service;
+  const claim = yield* googleDrive
+    .moveFile({
+      fileId: file.id,
+      sourceFolderId: folders.todo,
+      destinationFolderId: folders.processing,
+    })
+    .pipe(Effect.result);
+
+  if (Result.isFailure(claim)) {
+    return Failed.make({
+      fileId: file.id,
+      fileName: file.name,
+      stage: "Claim",
+      disposition: "ClaimNotConfirmed",
+      cause: claim.failure,
+    });
+  }
+
+  const processing = yield* Effect.gen(function* () {
+    const receipt = yield* _parseReceipt(file);
+    yield* _appendReceiptRows(receipt, file.id, spreadsheetId);
+    yield* googleDrive
+      .moveFile({
+        fileId: file.id,
+        sourceFolderId: folders.processing,
+        destinationFolderId: folders.processed,
+      })
+      .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
+  }).pipe(Effect.result);
+
+  if (Result.isSuccess(processing)) {
+    return Processed.make({ fileId: file.id, fileName: file.name });
+  }
+
+  const compensation = yield* googleDrive
+    .moveFile({
+      fileId: file.id,
+      sourceFolderId: folders.processing,
+      destinationFolderId: folders.failed,
+    })
+    .pipe(Effect.result);
+
+  if (Result.isFailure(compensation)) {
+    return Stranded.make({
+      fileId: file.id,
+      fileName: file.name,
+      stage: processing.failure.stage,
+      cause: processing.failure.cause,
+      compensationCause: compensation.failure,
+    });
+  }
+
+  return Failed.make({
+    fileId: file.id,
+    fileName: file.name,
+    stage: processing.failure.stage,
+    disposition: "MovedToFailed",
+    cause: processing.failure.cause,
+  });
+});
+
+void _processReceipt;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
 // ---------------------------------------------------------------------------------------------------------------------
-
 export const process = Effect.fn("GohoCli.Receipts.process")(function* (
   rootFolderId: string,
   spreadsheetId: string,
@@ -209,12 +355,8 @@ export const process = Effect.fn("GohoCli.Receipts.process")(function* (
 
   const googleDrive = yield* GoogleDrive.Service;
   const folders = yield* googleDrive.listFolders({ folderId: rootFolderId });
-  const folderNames = new Set(folders.map((folder) => folder.name));
-  const missingFolders = requiredFolders.filter((folder) => !folderNames.has(folder));
-
-  if (missingFolders.length > 0) {
-    return yield* new MissingFoldersError({ folders: missingFolders });
-  }
+  const workflowFolders = yield* _resolveWorkflowFolders(folders);
+  void workflowFolders;
 
   yield* Effect.logInfo("Required Google Drive folders are available");
 });
