@@ -5,7 +5,7 @@ import { GoogleAuth, type AuthClient } from "google-auth-library";
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
-export class AuthenticationError extends Schema.TaggedErrorClass<AuthenticationError>()(
+export class AuthenticationError extends Schema.TaggedError<AuthenticationError>()(
   "GoogleAuth.AuthenticationError",
   {
     operation: Schema.Literals([

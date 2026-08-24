@@ -139,7 +139,7 @@ const receiptSystemPrompt = `Extract the receipt into the required structured re
 const RequiredFolder = Schema.Literals(requiredFolders);
 const isRequiredFolder = Schema.is(RequiredFolder);
 
-class MissingFoldersError extends Schema.TaggedErrorClass<MissingFoldersError>()(
+class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
   "GohoCli.Receipts.MissingFoldersError",
   {
     folders: Schema.Array(RequiredFolder),
@@ -155,7 +155,7 @@ class MissingFoldersError extends Schema.TaggedErrorClass<MissingFoldersError>()
   }
 }
 
-class ReceiptProcessingError extends Schema.TaggedErrorClass<ReceiptProcessingError>()(
+class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>()(
   "GohoCli.Receipts.ReceiptProcessingError",
   {
     stage: ReceiptProcessingStage,

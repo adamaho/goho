@@ -28,13 +28,10 @@ export type AppendRowsResult = sheets_v4.Schema$AppendValuesResponse;
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
-export class SheetsError extends Schema.TaggedErrorClass<SheetsError>()(
-  "GoogleSheets.SheetsError",
-  {
-    operation: Schema.Literals(["readRows", "appendRows"]),
-    message: Schema.String,
-  },
-) {}
+export class SheetsError extends Schema.TaggedError<SheetsError>()("GoogleSheets.SheetsError", {
+  operation: Schema.Literals(["readRows", "appendRows"]),
+  message: Schema.String,
+}) {}
 
 type Operation = "readRows" | "appendRows";
 

@@ -41,7 +41,7 @@ export interface MoveFileOptions {
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
-export class DriveError extends Schema.TaggedErrorClass<DriveError>()("GoogleDrive.DriveError", {
+export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.DriveError", {
   operation: Schema.Literals(["listFolders", "listFiles", "downloadFile", "moveFile"]),
   message: Schema.String,
 }) {}

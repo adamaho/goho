@@ -1,7 +1,7 @@
 import { GoogleAuth, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Config, Schema } from "effect";
 
-export class CommandError extends Schema.TaggedErrorClass<CommandError>()("GohoCli.CommandError", {
+export class CommandError extends Schema.TaggedError<CommandError>()("GohoCli.CommandError", {
   message: Schema.String,
   cause: Schema.Defect(),
 }) {}
