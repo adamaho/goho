@@ -1,5 +1,5 @@
-import { GoogleDrive, GoogleSheets } from "@goho/core";
-import { Console, Effect, Layer, Schema } from "effect";
+import { type Ai, type GoogleAuth, GoogleDrive, GoogleSheets } from "@goho/core";
+import { type Config, Console, Effect, Layer, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
 import { CommandError, toCommandError } from "../errors.ts";
@@ -20,7 +20,10 @@ const Concurrency = Schema.Int.check(
 const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
   Layer.provide(GoogleAuthLive),
 );
-const ProcessLive = Layer.merge(GoogleLive, AiLive);
+export const receiptsLayer: Layer.Layer<
+  Ai.Service | GoogleDrive.Service | GoogleSheets.Service,
+  Config.ConfigError | GoogleAuth.AuthenticationError
+> = Layer.merge(GoogleLive, AiLive);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Process Command
@@ -95,7 +98,6 @@ const processCommand = Command.make("process", {
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
   Command.withHandler(({ concurrency, rootFolderId, spreadsheetId }) =>
     process(rootFolderId, spreadsheetId, concurrency).pipe(
-      Effect.provide(ProcessLive),
       Effect.mapError(toCommandError),
       Effect.andThen(reportProcessResults),
       Effect.tapError((error) => Effect.logDebug("Receipt process command failed", error.cause)),

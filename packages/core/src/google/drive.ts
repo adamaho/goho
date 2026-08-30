@@ -174,7 +174,7 @@ export const make = Effect.gen(function* () {
 
       for (const folder of response.data.files ?? []) {
         const metadata = fileMetadata("listFolders", folder);
-        if (metadata instanceof DriveError) {
+        if (Schema.is(DriveError)(metadata)) {
           return yield* metadata;
         }
         folders.push(metadata);
@@ -214,7 +214,7 @@ export const make = Effect.gen(function* () {
 
       for (const file of response.data.files ?? []) {
         const metadata = fileMetadata("listFiles", file);
-        if (metadata instanceof DriveError) {
+        if (Schema.is(DriveError)(metadata)) {
           return yield* metadata;
         }
 
@@ -293,7 +293,7 @@ export const make = Effect.gen(function* () {
     });
     const metadata = fileMetadata("moveFile", response.data);
 
-    if (metadata instanceof DriveError) {
+    if (Schema.is(DriveError)(metadata)) {
       return yield* metadata;
     }
 

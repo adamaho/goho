@@ -7,10 +7,19 @@
     "./base": "./src/base.json"
   },
   "scripts": {
-    "clean": "rimraf node_modules"
+    "clean": "rimraf node_modules dist build .turbo coverage",
+    "test:unit": "node --import tsx src/anti-slop/rules/no-conditional-empty-object-spread.test.ts && node --import tsx src/anti-slop/rules/no-unsafe-dictionary-type.test.ts && node --import tsx src/anti-slop/rules/no-known-value-widening.test.ts && node --import tsx src/anti-slop/rules/no-object-parameters.test.ts && node --import tsx src/anti-slop/rules/no-runtime-typeof.test.ts && node --import tsx src/anti-slop/rules/no-unknown-parameters.test.ts && node --import tsx src/anti-slop/rules/no-unknown-returns.test.ts && node --import tsx src/anti-slop/rules/no-unknown-type-aliases.test.ts && node --import tsx src/anti-slop/rules/no-widen-then-assert.test.ts && node --import tsx src/anti-slop/rules/no-reflect-get.test.ts && node --import tsx src/anti-slop/rules/no-reflect-apply.test.ts && node --import tsx src/anti-slop/rules/no-module-mocking.test.ts && node --import tsx src/anti-slop/rules/require-safety-comment-for-type-assertion.test.ts && node --import tsx src/anti-slop/effect/rules/no-service-constructor-imports.test.ts && node --import tsx src/anti-slop/effect/rules/require-effect-fn-name.test.ts && node --import tsx src/anti-slop/effect/rules/require-service-key-prefix.test.ts",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@oxlint/plugins": "catalog:"
   },
   "devDependencies": {
+    "@goho/tool-tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "oxlint": "catalog:",
-    "rimraf": "catalog:"
+    "rimraf": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
   }
 }

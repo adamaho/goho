@@ -229,8 +229,8 @@ type ReceiptRow = readonly [
   sourceFileId: string,
 ];
 
-const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> => {
-  return receipt.transaction.items.map((item) => [
+const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> =>
+  receipt.transaction.items.map((item) => [
     receipt.store.name,
     receipt.date,
     receipt.transaction.category,
@@ -238,7 +238,6 @@ const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<R
     item.price,
     sourceFileId,
   ]);
-};
 
 const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
