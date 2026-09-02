@@ -5,6 +5,12 @@ import { GoogleAuth, type AuthClient } from "google-auth-library";
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Describes a failed Google authentication operation.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
 export class AuthenticationError extends Schema.TaggedError<AuthenticationError>()(
   "GoogleAuth.AuthenticationError",
   {
@@ -22,12 +28,24 @@ export class AuthenticationError extends Schema.TaggedError<AuthenticationError>
 // Service contract
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Authentication operations used by Google API services.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export interface Interface {
   readonly authenticate: Effect.Effect<AuthClient, AuthenticationError>;
   readonly getAccessToken: Effect.Effect<string, AuthenticationError>;
   readonly getRequestHeaders: (url?: string | URL) => Effect.Effect<Headers, AuthenticationError>;
 }
 
+/**
+ * Service identifier for Google authentication.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Auth") {}
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -49,13 +67,15 @@ function errorMessage(error: unknown): string {
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * Adapts a Google authentication client to the application authentication service.
+ * Adapts a configured Google client to the application authentication service.
  *
- * Credential-specific layers construct their client and use this function to create
- * the strategy-independent service implementation.
+ * **Details**
  *
- * @param client - A configured Google authentication client.
- * @returns The strategy-independent authentication service implementation.
+ * Credential-specific layers use this constructor to share one strategy-independent
+ * service implementation.
+ *
+ * @category constructors
+ * @since 0.1.0
  */
 export function make(client: AuthClient): Interface {
   const accessToken = Effect.fn("GoogleAuth.accessToken")(function* (
@@ -113,9 +133,15 @@ export function make(client: AuthClient): Interface {
 // Service account layer
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Credentials and OAuth scopes used by service-account authentication.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ServiceAccountOptions {
   readonly jsonKeyFile: string;
-  readonly scopes: string | ReadonlyArray<string>;
+  readonly scopes: ReadonlyArray<string>;
 }
 
 /**
@@ -124,14 +150,14 @@ export interface ServiceAccountOptions {
  * @param options - The service-account JSON key file and OAuth scopes.
  * @returns The configured Google authentication service.
  */
-const makeServiceAccount = Effect.fn("GoogleAuth.initialize")(function* (
+const makeServiceAccount = Effect.fn("GoogleAuth.makeServiceAccount")(function* (
   options: ServiceAccountOptions,
 ) {
   const client = yield* Effect.tryPromise({
     try: () =>
       new GoogleAuth({
         keyFilename: options.jsonKeyFile,
-        scopes: typeof options.scopes === "string" ? options.scopes : Array.from(options.scopes),
+        scopes: Array.from(options.scopes),
       }).getClient(),
     catch: (error) =>
       new AuthenticationError({
@@ -146,8 +172,8 @@ const makeServiceAccount = Effect.fn("GoogleAuth.initialize")(function* (
 /**
  * Provides Google authentication backed by concrete service-account credentials.
  *
- * @param options - The service-account JSON key file and OAuth scopes.
- * @returns A layer that provides the strategy-independent Google auth service.
+ * @category layers
+ * @since 0.1.0
  */
 export function serviceAccountLayer(
   options: ServiceAccountOptions,
@@ -156,10 +182,10 @@ export function serviceAccountLayer(
 }
 
 /**
- * Provides Google authentication backed by effect configuration.
+ * Provides Google authentication backed by Effect configuration.
  *
- * @param config - Config recipes that produce the service-account options.
- * @returns A layer that loads its credentials while being built.
+ * @category layers
+ * @since 0.1.0
  */
 export function serviceAccountLayerConfig(
   config: Config.Wrap<ServiceAccountOptions>,

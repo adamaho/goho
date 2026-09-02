@@ -7,14 +7,38 @@ import * as GoogleAuth from "./auth.ts";
 // Models
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Scalar value stored in a spreadsheet cell.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type CellValue = string | number | boolean;
+/**
+ * Immutable row returned from or appended to a spreadsheet.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type Row = ReadonlyArray<CellValue>;
 
+/**
+ * Options for reading rows from a spreadsheet range.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ReadRowsOptions {
   readonly spreadsheetId: string;
   readonly range: string;
 }
 
+/**
+ * Options for appending rows to a spreadsheet range.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface AppendRowsOptions {
   readonly spreadsheetId: string;
   readonly range: string;
@@ -22,12 +46,24 @@ export interface AppendRowsOptions {
   readonly rows: ReadonlyArray<Row>;
 }
 
+/**
+ * Response returned after rows are appended.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type AppendRowsResult = sheets_v4.Schema$AppendValuesResponse;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Describes a failed Google Sheets operation.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
 export class SheetsError extends Schema.TaggedError<SheetsError>()("GoogleSheets.SheetsError", {
   operation: Schema.Literals(["readRows", "appendRows"]),
   message: Schema.String,
@@ -67,13 +103,31 @@ function clientError(operation: Operation, error: unknown): SheetsError {
 // Service
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Row operations exposed by the Google Sheets service.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export interface Interface {
   readonly readRows: (options: ReadRowsOptions) => Effect.Effect<ReadonlyArray<Row>, SheetsError>;
   readonly appendRows: (options: AppendRowsOptions) => Effect.Effect<AppendRowsResult, SheetsError>;
 }
 
+/**
+ * Service identifier for Google Sheets operations.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Sheets") {}
 
+/**
+ * Constructs the Google Sheets service.
+ *
+ * @category constructors
+ * @since 0.1.0
+ */
 export const make = Effect.gen(function* () {
   const auth = yield* GoogleAuth.Service;
   const client = sheets("v4");
@@ -138,4 +192,10 @@ export const make = Effect.gen(function* () {
   return Service.of({ readRows, appendRows });
 });
 
+/**
+ * Provides Google Sheets operations using the configured authentication service.
+ *
+ * @category layers
+ * @since 0.1.0
+ */
 export const layer = Layer.effect(Service, make);

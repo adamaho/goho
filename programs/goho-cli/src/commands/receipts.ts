@@ -26,7 +26,7 @@ const ProcessLive = Layer.merge(GoogleLive, AiLive);
 // Process Command
 // ---------------------------------------------------------------------------------------------------------------------
 
-const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportResults")(function* (
+const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
   let processed = 0;
@@ -103,6 +103,12 @@ const processCommand = Command.make("process", {
   ),
 );
 
+/**
+ * Command group for receipt-processing operations.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
   Command.withSubcommands([processCommand]),
