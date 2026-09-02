@@ -15,12 +15,16 @@ runs:
         package_json_file: package.json
         run_install: false
 
-    - name: Setup pnpm cache
+    - name: Setup pnpm cache and registry
       uses: actions/setup-node@v7
       with:
         node-version-file: package.json
         cache: pnpm
+        registry-url: https://npm.pkg.github.com
+        scope: "@adamaho"
 
     - name: Install dependencies
       shell: bash
+      env:
+        NODE_AUTH_TOKEN: ${{ github.token }}
       run: pnpm install --frozen-lockfile
