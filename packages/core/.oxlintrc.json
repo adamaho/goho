@@ -1,3 +1,0 @@
-{
-  "extends": ["../../tools/oxlint-config/src/base.json"]
-}

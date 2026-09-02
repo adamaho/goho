@@ -102,16 +102,54 @@ interface WorkflowFolders {
   readonly failed: string;
 }
 
+/**
+ * Receipt that completed the workflow successfully.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface Processed extends Schema.Schema.Type<typeof Processed> {}
+/**
+ * Receipt skipped because its source was already recorded.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface AlreadyProcessed extends Schema.Schema.Type<typeof AlreadyProcessed> {}
+/**
+ * Receipt whose failure was moved into the failed workflow folder.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface Failed extends Schema.Schema.Type<typeof Failed> {}
+/**
+ * Receipt left stranded after processing and compensation both failed.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface Stranded extends Schema.Schema.Type<typeof Stranded> {}
+/**
+ * Outcome of processing one receipt file.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type ReceiptProcessingResult = Processed | AlreadyProcessed | Failed | Stranded;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------------------------------------------------
+/**
+ * Folder names required by the receipt workflow.
+ *
+ * @category constants
+ * @since 0.1.0
+ */
 export const requiredFolders = ["todo", "processing", "processed", "failed"] as const;
+
+const isString = Schema.is(Schema.String);
 
 const supportedImageMimeTypes: ReadonlySet<string> = new Set([
   "image/jpeg",
@@ -207,7 +245,7 @@ const readProcessedSourceIds = Effect.fn("GohoCli.Receipts.readProcessedSourceId
 
   for (const row of rows.slice(1)) {
     const value = row.at(0);
-    if (typeof value !== "string") {
+    if (!isString(value)) {
       continue;
     }
 
@@ -439,6 +477,12 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
 // ---------------------------------------------------------------------------------------------------------------------
 // Command
 // ---------------------------------------------------------------------------------------------------------------------
+/**
+ * Processes every pending receipt and records its terminal outcome.
+ *
+ * @category workflows
+ * @since 0.1.0
+ */
 export const process = Effect.fn("GohoCli.Receipts.process")(function* (
   rootFolderId: string,
   spreadsheetId: string,

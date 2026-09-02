@@ -11,4 +11,10 @@ const OpenAiLanguageModelLive = Layer.unwrap(
   Config.string("OPENAI_MODEL").pipe(Effect.map(OpenAiLanguageModel.model)),
 ).pipe(Layer.provide(OpenAiClientLive));
 
+/**
+ * Provides AI generation backed by the configured OpenAI model.
+ *
+ * @category layers
+ * @since 0.1.0
+ */
 export const AiLive = Ai.layer.pipe(Layer.provide(OpenAiLanguageModelLive));

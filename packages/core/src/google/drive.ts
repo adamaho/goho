@@ -7,30 +7,66 @@ import * as GoogleAuth from "./auth.ts";
 // Models
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Metadata for a file returned by Google Drive.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface FileMetadata {
   readonly id: string;
   readonly name: string;
   readonly mimeType: string;
 }
 
+/**
+ * Metadata for a folder returned by Google Drive.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface FolderMetadata {
   readonly id: string;
   readonly name: string;
   readonly mimeType: string;
 }
 
+/**
+ * Options for listing immediate child folders.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ListFoldersOptions {
   readonly folderId: string;
 }
 
+/**
+ * Options for listing immediate child files.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ListFilesOptions {
   readonly folderId: string;
 }
 
+/**
+ * Options for downloading a Drive file.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface DownloadFileOptions {
   readonly fileId: string;
 }
 
+/**
+ * Options for moving a file between Drive folders.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface MoveFileOptions {
   readonly fileId: string;
   readonly sourceFolderId: string;
@@ -41,6 +77,12 @@ export interface MoveFileOptions {
 // Errors
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * Describes a failed Google Drive operation.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
 export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.DriveError", {
   operation: Schema.Literals(["listFolders", "listFiles", "downloadFile", "moveFile"]),
   message: Schema.String,
@@ -85,9 +127,12 @@ function clientError(operation: Operation, error: unknown): DriveError {
  */
 function fileMetadata(operation: Operation, file: drive_v3.Schema$File): FileMetadata | DriveError {
   if (
-    typeof file.id !== "string" ||
-    typeof file.name !== "string" ||
-    typeof file.mimeType !== "string"
+    file.id === null ||
+    file.id === undefined ||
+    file.name === null ||
+    file.name === undefined ||
+    file.mimeType === null ||
+    file.mimeType === undefined
   ) {
     return new DriveError({
       operation,
@@ -128,6 +173,12 @@ function childrenQuery(folderId: string, kind: "files" | "folders"): string {
 // Service
 // ---------------------------------------------------------------------------------------------------------------------
 
+/**
+ * File and folder operations exposed by the Google Drive service.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export interface Interface {
   readonly listFolders: (
     options: ListFoldersOptions,
@@ -139,8 +190,20 @@ export interface Interface {
   readonly moveFile: (options: MoveFileOptions) => Effect.Effect<FileMetadata, DriveError>;
 }
 
+/**
+ * Service identifier for Google Drive operations.
+ *
+ * @category services
+ * @since 0.1.0
+ */
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Drive") {}
 
+/**
+ * Constructs the Google Drive service.
+ *
+ * @category constructors
+ * @since 0.1.0
+ */
 export const make = Effect.gen(function* () {
   const auth = yield* GoogleAuth.Service;
   const client = drive("v3");
@@ -155,20 +218,21 @@ export const make = Effect.gen(function* () {
 
     do {
       const response = yield* Effect.tryPromise({
-        try: (signal) =>
-          client.files.list(
-            {
-              q: childrenQuery(options.folderId, "folders"),
-              pageSize: 1000,
-              ...(pageToken === undefined ? {} : { pageToken }),
-              orderBy: "name",
-              fields: "nextPageToken,files(id,name,mimeType)",
-              spaces: "drive",
-              includeItemsFromAllDrives: true,
-              supportsAllDrives: true,
-            },
-            { headers, signal },
-          ),
+        try: (signal) => {
+          const params: drive_v3.Params$Resource$Files$List = {
+            q: childrenQuery(options.folderId, "folders"),
+            pageSize: 1000,
+            orderBy: "name",
+            fields: "nextPageToken,files(id,name,mimeType)",
+            spaces: "drive",
+            includeItemsFromAllDrives: true,
+            supportsAllDrives: true,
+          };
+          if (pageToken !== undefined) {
+            params.pageToken = pageToken;
+          }
+          return client.files.list(params, { headers, signal });
+        },
         catch: (error) => clientError("listFolders", error),
       });
 
@@ -195,20 +259,21 @@ export const make = Effect.gen(function* () {
 
     do {
       const response = yield* Effect.tryPromise({
-        try: (signal) =>
-          client.files.list(
-            {
-              q: childrenQuery(options.folderId, "files"),
-              pageSize: 1000,
-              ...(pageToken === undefined ? {} : { pageToken }),
-              orderBy: "name",
-              fields: "nextPageToken,files(id,name,mimeType)",
-              spaces: "drive",
-              includeItemsFromAllDrives: true,
-              supportsAllDrives: true,
-            },
-            { headers, signal },
-          ),
+        try: (signal) => {
+          const params: drive_v3.Params$Resource$Files$List = {
+            q: childrenQuery(options.folderId, "files"),
+            pageSize: 1000,
+            orderBy: "name",
+            fields: "nextPageToken,files(id,name,mimeType)",
+            spaces: "drive",
+            includeItemsFromAllDrives: true,
+            supportsAllDrives: true,
+          };
+          if (pageToken !== undefined) {
+            params.pageToken = pageToken;
+          }
+          return client.files.list(params, { headers, signal });
+        },
         catch: (error) => clientError("listFiles", error),
       });
 
@@ -303,4 +368,10 @@ export const make = Effect.gen(function* () {
   return Service.of({ listFolders, listFiles, downloadFile, moveFile });
 });
 
+/**
+ * Provides Google Drive operations using the configured authentication service.
+ *
+ * @category layers
+ * @since 0.1.0
+ */
 export const layer = Layer.effect(Service, make);

@@ -10,6 +10,8 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
+  "@adamaho/nopeus-oxlint-config": 0.1.2
+  "@adamaho/nopeus-oxlint-plugin": 0.1.2
   "@effect/ai-openai": 4.0.0-rc.111
   "@effect/platform-node": 4.0.0-rc.111
   "@effect/tsgo": 0.36.5
@@ -27,3 +29,7 @@ catalog:
 catalogMode: strict
 
 minimumReleaseAge: 1440
+
+minimumReleaseAgeExclude:
+  - "@adamaho/nopeus-oxlint-config"
+  - "@adamaho/nopeus-oxlint-plugin"
