@@ -53,6 +53,7 @@ exec /usr/bin/flock \
   "$LOCK_FILE" \
   "$NIX" develop --no-write-lock-file --command \
   pnpm --filter @goho/goho-cli start \
+  --log-level debug \
   receipts process \
   "$GOHO_RECEIPTS_ROOT_FOLDER_ID" \
   "$GOHO_RECEIPTS_SPREADSHEET_ID" \
