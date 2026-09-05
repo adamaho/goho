@@ -1,6 +1,15 @@
 {
-  "extends": "@goho/tool-tsconfig/service",
+  "extends": "@adamaho/nopeus-tsconfig/effect",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rewriteRelativeImportExtensions": false,
+    "types": ["node"],
+    "incremental": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "rootDir": "src"
   },
   "include": ["src/**/*.ts"]
