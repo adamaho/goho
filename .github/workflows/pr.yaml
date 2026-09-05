@@ -163,3 +163,16 @@ jobs:
 
       - name: Build
         run: pnpm turbo run build
+
+  package-metadata:
+    name: package-metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm and install
+        uses: ./.github/actions/setup-pnpm
+      - name: Read published plugin metadata
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: pnpm view @adamaho/nopeus-oxlint-plugin@0.3.0 --json
