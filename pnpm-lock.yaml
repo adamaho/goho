@@ -59,6 +59,9 @@ importers:
 
   .:
     devDependencies:
+      '@effect/tsgo':
+        specifier: 'catalog:'
+        version: 0.41.0
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:tools/oxfmt-config
@@ -71,6 +74,9 @@ importers:
       turbo:
         specifier: 'catalog:'
         version: 2.10.11
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   infra/local: {}
 
@@ -95,12 +101,12 @@ importers:
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
         version: 0.3.0(oxlint@1.79.0)
+      '@adamaho/nopeus-tsconfig':
+        specifier: 'catalog:'
+        version: 0.1.0
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
-      '@goho/tool-tsconfig':
-        specifier: workspace:*
-        version: link:../../tools/tsconfig
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -138,12 +144,12 @@ importers:
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
         version: 0.3.0(oxlint@1.79.0)
+      '@adamaho/nopeus-tsconfig':
+        specifier: 'catalog:'
+        version: 0.1.0
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
-      '@goho/tool-tsconfig':
-        specifier: workspace:*
-        version: link:../../tools/tsconfig
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -165,21 +171,6 @@ importers:
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
-
-  tools/tsconfig:
-    devDependencies:
-      '@adamaho/nopeus-tsconfig':
-        specifier: 'catalog:'
-        version: 0.1.0
-      '@effect/tsgo':
-        specifier: 'catalog:'
-        version: 0.41.0
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.1.3
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
 
 packages:
 
