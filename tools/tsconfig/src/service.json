@@ -5,9 +5,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "rewriteRelativeImportExtensions": false,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "incremental": true,
     "composite": true,
     "declaration": true,
