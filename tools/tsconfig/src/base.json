@@ -12,11 +12,6 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "skipLibCheck": true,
-    "plugins": [
-      {
-        "name": "@effect/language-service"
-      }
-    ]
+    "skipLibCheck": true
   }
 }

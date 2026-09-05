@@ -175,7 +175,7 @@ const makeServiceAccount = Effect.fn("GoogleAuth.makeServiceAccount")(function* 
  * @category layers
  * @since 0.1.0
  */
-export function serviceAccountLayer(
+export function layerServiceAccount(
   options: ServiceAccountOptions,
 ): Layer.Layer<Service, AuthenticationError> {
   return Layer.effect(Service, makeServiceAccount(options));
@@ -187,7 +187,7 @@ export function serviceAccountLayer(
  * @category layers
  * @since 0.1.0
  */
-export function serviceAccountLayerConfig(
+export function layerServiceAccountConfig(
   config: Config.Wrap<ServiceAccountOptions>,
 ): Layer.Layer<Service, Config.ConfigError | AuthenticationError> {
   return Layer.effect(Service, Config.unwrap(config).pipe(Effect.flatMap(makeServiceAccount)));

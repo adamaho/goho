@@ -5,7 +5,8 @@ Shared TypeScript configurations for this Turborepo.
 ## Exports
 
 - `@goho/tool-tsconfig/base`: strict baseline compiler defaults.
-- `@goho/tool-tsconfig/service`: NodeNext service defaults for backend workspaces.
+- `@goho/tool-tsconfig/service`: NodeNext defaults and Effect diagnostics for services.
+- `@goho/tool-tsconfig/app-vite`: bundler and React defaults for Vite workspaces.
 
 ## Usage in a workspace package
 

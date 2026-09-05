@@ -7,7 +7,7 @@ import { Config } from "effect";
  * @category layers
  * @since 0.1.0
  */
-export const GoogleAuthLive = GoogleAuth.serviceAccountLayerConfig({
+export const layer = GoogleAuth.layerServiceAccountConfig({
   jsonKeyFile: Config.string("GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE"),
   scopes: Config.string("GOOGLE_AUTH_SCOPES").pipe(
     Config.map((value) =>
