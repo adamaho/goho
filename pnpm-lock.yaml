@@ -12,6 +12,9 @@ catalogs:
     '@adamaho/nopeus-oxlint-plugin':
       specifier: 0.3.0
       version: 0.3.0
+    '@adamaho/nopeus-tsconfig':
+      specifier: 0.1.0
+      version: 0.1.0
     '@effect/ai-openai':
       specifier: 4.0.0-rc.111
       version: 4.0.0-rc.111
@@ -165,6 +168,9 @@ importers:
 
   tools/tsconfig:
     devDependencies:
+      '@adamaho/nopeus-tsconfig':
+        specifier: 'catalog:'
+        version: 0.1.0
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.41.0
@@ -188,6 +194,9 @@ packages:
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
+
+  '@adamaho/nopeus-tsconfig@0.1.0':
+    resolution: {integrity: sha512-nqQDQvUcbpqAP2Cp/9/QQ8feh5qmwTQcjkikWwkKjyFoc2++iDG2u7wj+U9rRE3/fRrqSCDY1vjI/+4XjMAl6Q==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-tsconfig/0.1.0/d6766749462054991164ca9f64cece9f7cb61d81}
 
   '@effect/ai-openai@4.0.0-rc.111':
     resolution: {integrity: sha512-y9+w4RWISaRm7p9A+FC2gFD2gHRiznTBqBLXTmpXZQ8yL4CGMHXYEd3FMlSuRTWL3HN/yx98kmqroL2zm5xMVA==}
@@ -1188,6 +1197,8 @@ snapshots:
     dependencies:
       '@oxlint/plugins': 1.79.0
       oxlint: 1.79.0
+
+  '@adamaho/nopeus-tsconfig@0.1.0': {}
 
   '@effect/ai-openai@4.0.0-rc.111(effect@4.0.0-rc.111)':
     dependencies:
