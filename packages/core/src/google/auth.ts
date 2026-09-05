@@ -46,6 +46,7 @@ export interface Interface {
  * @category services
  * @since 0.1.0
  */
+// oxlint-disable-next-line nopeus/require-service-make-layer -- Credential-dependent layer factories below construct this service; the rule only recognizes direct layer exports.
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Auth") {}
 
 // ---------------------------------------------------------------------------------------------------------------------
