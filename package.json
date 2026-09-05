@@ -9,16 +9,13 @@
     "lint": "turbo run lint",
     "fmt": "oxfmt --config ./tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ./tools/oxfmt-config/src/base.json .",
-    "tsc": "turbo run tsc",
-    "prepare": "effect-tsgo patch"
+    "tsc": "turbo run tsc"
   },
   "devDependencies": {
-    "@effect/tsgo": "catalog:",
     "@goho/tool-oxfmt-config": "workspace:*",
     "oxfmt": "catalog:",
     "rimraf": "catalog:",
-    "turbo": "catalog:",
-    "typescript": "catalog:"
+    "turbo": "catalog:"
   },
   "engines": {
     "node": "^24.15.0",
