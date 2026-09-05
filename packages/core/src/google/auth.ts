@@ -40,7 +40,6 @@ export interface Interface {
   readonly getRequestHeaders: (url?: string | URL) => Effect.Effect<Headers, AuthenticationError>;
 }
 
-/* oxlint-disable nopeus/require-service-make-layer -- Credential-dependent layer factories below construct this service; the rule only recognizes direct layer exports. */
 /**
  * Service identifier for Google authentication.
  *
@@ -48,7 +47,6 @@ export interface Interface {
  * @since 0.1.0
  */
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Auth") {}
-/* oxlint-enable nopeus/require-service-make-layer */
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -69,17 +67,30 @@ function errorMessage(error: unknown): string {
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * Adapts a configured Google client to the application authentication service.
- *
- * **Details**
- *
- * Credential-specific layers use this constructor to share one strategy-independent
- * service implementation.
+ * Constructs Google authentication from the configured service-account key and scopes.
  *
  * @category constructors
  * @since 0.1.0
  */
-export function make(client: AuthClient): Interface {
+export const make = Effect.gen(function* () {
+  const jsonKeyFile = yield* Config.string("GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE");
+  const scopes = yield* Config.string("GOOGLE_AUTH_SCOPES").pipe(
+    Config.map((value) =>
+      value
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter((scope) => scope.length > 0),
+    ),
+  );
+  const client = yield* Effect.tryPromise({
+    try: () => new GoogleAuth({ keyFilename: jsonKeyFile, scopes }).getClient(),
+    catch: (error) =>
+      new AuthenticationError({
+        operation: "initialize",
+        message: errorMessage(error),
+      }),
+  });
+
   const accessToken = Effect.fn("GoogleAuth.accessToken")(function* (
     operation: "authenticate" | "getAccessToken",
   ) {
@@ -129,68 +140,12 @@ export function make(client: AuthClient): Interface {
     getAccessToken: getAccessToken(),
     getRequestHeaders,
   });
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Service account layer
-// ---------------------------------------------------------------------------------------------------------------------
-
-/**
- * Credentials and OAuth scopes used by service-account authentication.
- *
- * @category models
- * @since 0.1.0
- */
-export interface ServiceAccountOptions {
-  readonly jsonKeyFile: string;
-  readonly scopes: ReadonlyArray<string>;
-}
-
-/**
- * Creates the service implementation for concrete service-account options.
- *
- * @param options - The service-account JSON key file and OAuth scopes.
- * @returns The configured Google authentication service.
- */
-const makeServiceAccount = Effect.fn("GoogleAuth.makeServiceAccount")(function* (
-  options: ServiceAccountOptions,
-) {
-  const client = yield* Effect.tryPromise({
-    try: () =>
-      new GoogleAuth({
-        keyFilename: options.jsonKeyFile,
-        scopes: Array.from(options.scopes),
-      }).getClient(),
-    catch: (error) =>
-      new AuthenticationError({
-        operation: "initialize",
-        message: errorMessage(error),
-      }),
-  });
-
-  return make(client);
 });
 
 /**
- * Provides Google authentication backed by concrete service-account credentials.
+ * Provides Google authentication from the configured service-account key and scopes.
  *
  * @category layers
  * @since 0.1.0
  */
-export function serviceAccountLayer(
-  options: ServiceAccountOptions,
-): Layer.Layer<Service, AuthenticationError> {
-  return Layer.effect(Service, makeServiceAccount(options));
-}
-
-/**
- * Provides Google authentication backed by Effect configuration.
- *
- * @category layers
- * @since 0.1.0
- */
-export function serviceAccountLayerConfig(
-  config: Config.Wrap<ServiceAccountOptions>,
-): Layer.Layer<Service, Config.ConfigError | AuthenticationError> {
-  return Layer.effect(Service, Config.unwrap(config).pipe(Effect.flatMap(makeServiceAccount)));
-}
+export const layer = Layer.effect(Service, make);

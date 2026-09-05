@@ -5,9 +5,8 @@ Shared TypeScript configurations for this Turborepo.
 ## Exports
 
 - `@goho/tool-tsconfig/base`: strict baseline compiler defaults.
-- `@goho/tool-tsconfig/service`: NodeNext service defaults for backend workspaces.
+- `@goho/tool-tsconfig/service`: NodeNext defaults and Effect diagnostics for services.
 - `@goho/tool-tsconfig/app-vite`: bundler and React defaults for Vite workspaces.
-- `@goho/tool-tsconfig/effect`: optional Effect compiler diagnostics.
 
 ## Usage in a workspace package
 
@@ -34,24 +33,17 @@ Shared TypeScript configurations for this Turborepo.
 }
 ```
 
-## Effect projects
+## Effect diagnostics
 
-Core and the CLI opt into the Effect overlay after the service defaults:
-
-```json
-{
-  "extends": ["@goho/tool-tsconfig/service", "@goho/tool-tsconfig/effect"]
-}
-```
-
-The overlay promotes eight official Effect diagnostics to errors, including
-discarded Effects, nested Promises, and leaking service requirements. They fail
-`tsc` and `pnpm check`. General tooling can use service or base without it.
+All Goho services use Effect, so the service config includes eight official
+Effect diagnostics as errors. Core and the CLI inherit them automatically;
+there is no second config to extend. These errors fail `tsc` and `pnpm check`.
+The base and app-vite configs remain independent of Effect diagnostics.
 
 Installation runs `effect-tsgo patch` through this tool package's preparation
 script. Keep `@effect/tsgo@0.41.0` paired with `typescript@7.0.2`; an unpatched
-compiler does not enforce the overlay. Configure editor support separately with
-`pnpm --filter @goho/tool-tsconfig exec effect-tsgo setup`.
+compiler does not enforce the diagnostics. Configure editor support separately
+with `pnpm --filter @goho/tool-tsconfig exec effect-tsgo setup`.
 
-The Oxlint Effect preset is independent of the compiler overlay. Its existing
-CLI runtime entry point remains `src/main.ts`.
+The Oxlint Effect preset is independent of the compiler configuration. Its
+existing CLI runtime entry point remains `src/main.ts`.
