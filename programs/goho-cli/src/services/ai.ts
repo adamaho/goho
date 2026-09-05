@@ -17,4 +17,4 @@ const OpenAiLanguageModelLive = Layer.unwrap(
  * @category layers
  * @since 0.1.0
  */
-export const AiLive = Ai.layer.pipe(Layer.provide(OpenAiLanguageModelLive));
+export const layer = Ai.layer.pipe(Layer.provide(OpenAiLanguageModelLive));

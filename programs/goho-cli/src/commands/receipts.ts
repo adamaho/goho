@@ -1,10 +1,11 @@
-import { GoogleAuth, GoogleDrive, GoogleSheets } from "@goho/core";
+import { GoogleDrive, GoogleSheets } from "@goho/core";
 import { Console, Effect, Layer, Schema } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
 import { CommandError, toCommandError } from "../errors.ts";
 import { process, type ReceiptProcessingResult, requiredFolders } from "../receipts/process.ts";
-import { AiLive } from "../services/ai.ts";
+import * as Ai from "../services/ai.ts";
+import * as GoogleAuth from "../services/auth.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Models
@@ -19,7 +20,7 @@ const Concurrency = Schema.Int.check(
 const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
   Layer.provide(GoogleAuth.layer),
 );
-const ProcessLive = Layer.merge(GoogleLive, AiLive);
+const ProcessLive = Layer.merge(GoogleLive, Ai.layer);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Process Command
