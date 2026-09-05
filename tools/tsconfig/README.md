@@ -32,18 +32,3 @@ Shared TypeScript configurations for this Turborepo.
   "include": ["src/**/*.ts"]
 }
 ```
-
-## Effect diagnostics
-
-All Goho services use Effect, so the service config includes eight official
-Effect diagnostics as errors. Core and the CLI inherit them automatically;
-there is no second config to extend. These errors fail `tsc` and `pnpm check`.
-The base and app-vite configs remain independent of Effect diagnostics.
-
-Installation runs `effect-tsgo patch` through this tool package's preparation
-script. Keep `@effect/tsgo@0.41.0` paired with `typescript@7.0.2`; an unpatched
-compiler does not enforce the diagnostics. Configure editor support separately
-with `pnpm --filter @goho/tool-tsconfig exec effect-tsgo setup`.
-
-The Oxlint Effect preset is independent of the compiler configuration. Its
-existing CLI runtime entry point remains `src/main.ts`.
