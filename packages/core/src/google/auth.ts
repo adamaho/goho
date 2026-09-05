@@ -40,14 +40,15 @@ export interface Interface {
   readonly getRequestHeaders: (url?: string | URL) => Effect.Effect<Headers, AuthenticationError>;
 }
 
+/* oxlint-disable nopeus/require-service-make-layer -- Credential-dependent layer factories below construct this service; the rule only recognizes direct layer exports. */
 /**
  * Service identifier for Google authentication.
  *
  * @category services
  * @since 0.1.0
  */
-// oxlint-disable-next-line nopeus/require-service-make-layer -- Credential-dependent layer factories below construct this service; the rule only recognizes direct layer exports.
 export class Service extends Context.Service<Service, Interface>()("@goho/google/Auth") {}
+/* oxlint-enable nopeus/require-service-make-layer */
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
