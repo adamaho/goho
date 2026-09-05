@@ -10,11 +10,11 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
-  "@adamaho/nopeus-oxlint-config": 0.1.2
-  "@adamaho/nopeus-oxlint-plugin": 0.1.2
+  "@adamaho/nopeus-oxlint-config": 0.2.0
+  "@adamaho/nopeus-oxlint-plugin": 0.2.0
   "@effect/ai-openai": 4.0.0-rc.111
   "@effect/platform-node": 4.0.0-rc.111
-  "@effect/tsgo": 0.36.5
+  "@effect/tsgo": 0.41.0
   "@googleapis/drive": 21.0.0
   "@googleapis/sheets": 14.0.0
   "@types/node": 24.13.3

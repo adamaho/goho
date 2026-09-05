@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnostics": true,
+        "ignoreEffectErrorsInTscExitCode": false,
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "returnEffectInGen": "error",
+          "effectInVoidSuccess": "error",
+          "lazyPromiseInEffectSync": "error",
+          "promiseInEffectSuccess": "error",
+          "schemaSyncInEffect": "error",
+          "leakingRequirements": "error",
+          "floatingEffectInVitest": "error"
+        }
+      }
+    ]
+  }
+}
