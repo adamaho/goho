@@ -78,3 +78,25 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
     ]);
   }),
 );
+
+it.effect("keeps the lock until work finishes after client interruption", () =>
+  Effect.gen(function* () {
+    const started = yield* Deferred.make<void>();
+    const release = yield* Deferred.make<void>();
+    const service = yield* make(() =>
+      Deferred.succeed(started, undefined).pipe(
+        Effect.andThen(Deferred.await(release)),
+        Effect.as([]),
+      ),
+    );
+    const first = yield* service.process(request).pipe(Effect.forkChild);
+    yield* Deferred.await(started);
+    const interrupt = yield* Fiber.interrupt(first).pipe(Effect.forkChild);
+    yield* Effect.yieldNow;
+    const overlapping = yield* Effect.result(service.process(request));
+    expect(Result.isFailure(overlapping) && overlapping.failure._tag).toBe("Conflict");
+    yield* Deferred.succeed(release, undefined);
+    yield* Fiber.join(interrupt);
+    expect(yield* service.process(request)).toEqual([]);
+  }),
+);

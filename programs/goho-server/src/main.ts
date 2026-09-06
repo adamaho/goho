@@ -15,9 +15,10 @@ const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
 );
 const ReceiptsLive = Receipts.layer.pipe(Layer.provide(Layer.merge(GoogleLive, Ai.layer)));
 const AuthorizationLive = Layer.unwrap(
-  Config.schema(Schema.NonEmptyString, "GOHO_SERVER_TOKEN")
-    .pipe(Config.map(Redacted.make))
-    .pipe(Effect.map(Http.layerAuthorization)),
+  Config.schema(Schema.NonEmptyString, "GOHO_SERVER_TOKEN").pipe(
+    Config.map(Redacted.make),
+    Effect.map(Http.layerAuthorization),
+  ),
 );
 const ServerLive = HttpRouter.serve(
   Http.layer.pipe(Layer.provide([ReceiptsLive, AuthorizationLive])),

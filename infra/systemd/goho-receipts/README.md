@@ -3,7 +3,7 @@
 The existing timer runs the CLI against a separately running Goho server.
 It no longer loads Google or OpenAI credentials.
 
-1. Configure and start [goho-server](../../../../programs/goho-server/README.md).
+1. Configure and start [goho-server](../../../programs/goho-server/README.md).
    Use `infra/systemd/goho-server/goho-server.service` for this host's persistent server.
 2. Run `sudo infra/systemd/goho-receipts/install.sh` from the repository root.
 3. Set the folder ID, spreadsheet ID, URL, and matching token in `/etc/goho/receipts.env`.
