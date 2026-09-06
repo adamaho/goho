@@ -1,11 +1,13 @@
 {
-  "name": "@goho/core",
+  "name": "@goho/goho-server-client",
   "version": "0.0.0",
   "private": true,
-  "description": "Shared core logic for Goho programs.",
+  "description": "Shared Goho server API and typed client.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    "./api": "./src/api.ts",
+    "./client": "./src/client.ts",
+    "./receipts": "./src/receipts.ts"
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
@@ -13,10 +15,7 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@googleapis/drive": "catalog:",
-    "@googleapis/sheets": "catalog:",
-    "effect": "catalog:",
-    "google-auth-library": "catalog:"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@adamaho/nopeus-oxlint-config": "catalog:",

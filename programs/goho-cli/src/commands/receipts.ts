@@ -1,31 +1,10 @@
-import { GoogleDrive, GoogleSheets } from "@goho/core";
-import { Console, Effect, Layer, Schema } from "effect";
+import * as GohoServer from "@goho/goho-server-client/client";
+import { Concurrency, type ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
+import { Config, Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
+import { FetchHttpClient } from "effect/unstable/http";
 
-import { CommandError, toCommandError } from "../errors.ts";
-import { process, type ReceiptProcessingResult, requiredFolders } from "../receipts/process.ts";
-import * as Ai from "../services/ai.ts";
-import * as GoogleAuth from "../services/auth.ts";
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Models
-// ---------------------------------------------------------------------------------------------------------------------
-const Concurrency = Schema.Int.check(
-  Schema.isBetween({ minimum: 1, maximum: 5 }, { expected: "an integer from 1 through 5" }),
-);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Layers
-// ---------------------------------------------------------------------------------------------------------------------
-const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
-  Layer.provide(GoogleAuth.layer),
-);
-const ProcessLive = Layer.merge(GoogleLive, Ai.layer);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Process Command
-// ---------------------------------------------------------------------------------------------------------------------
-
+import { CommandError } from "../errors.ts";
 const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
@@ -47,13 +26,10 @@ const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessRe
         yield* Console.log(
           `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
         );
-        yield* Effect.logDebug("Receipt failure cause", result.cause);
         break;
       case "Stranded":
         stranded += 1;
         yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
-        yield* Effect.logDebug("Receipt failure cause", result.cause);
-        yield* Effect.logDebug("Receipt compensation cause", result.compensationCause);
         break;
     }
   }
@@ -78,7 +54,7 @@ const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessRe
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
     Argument.withDescription(
-      `Google Drive folder containing the receipt workflow folders. This folder must contain ${requiredFolders.join(",")}.`,
+      `Google Drive folder containing the receipt workflow folders. This folder must contain todo, processing, processed, failed.`,
     ),
   ),
   spreadsheetId: Argument.string("spreadsheet-id").pipe(
@@ -94,11 +70,29 @@ const processCommand = Command.make("process", {
 }).pipe(
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
   Command.withHandler(({ concurrency, rootFolderId, spreadsheetId }) =>
-    process(rootFolderId, spreadsheetId, concurrency).pipe(
-      Effect.provide(ProcessLive),
-      Effect.mapError(toCommandError),
+    Effect.gen(function* () {
+      const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
+        Config.withDefault("http://127.0.0.1:3000"),
+      );
+      const client = yield* GohoServer.make(baseUrl);
+      return yield* client.receipts.process({
+        payload: { rootFolderId, spreadsheetId, concurrency },
+      });
+    }).pipe(
+      Effect.provide(FetchHttpClient.layer),
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "Conflict"
+                ? "Another receipt batch is running. Wait for it to finish."
+                : cause._tag === "ConfigError"
+                  ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
+                  : "Receipt processing could not be confirmed. Work may have completed. Check server logs and Drive folders before running again.",
+            cause,
+          }),
+      ),
       Effect.andThen(reportProcessResults),
-      Effect.tapError((error) => Effect.logDebug("Receipt process command failed", error.cause)),
     ),
   ),
 );

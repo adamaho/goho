@@ -178,7 +178,7 @@ const RequiredFolder = Schema.Literals(requiredFolders);
 const isRequiredFolder = Schema.is(RequiredFolder);
 
 class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
-  "GohoCli.Receipts.MissingFoldersError",
+  "GohoServer.Receipts.MissingFoldersError",
   {
     folders: Schema.Array(RequiredFolder),
     reason: Schema.Literals(["Missing", "Ambiguous"]),
@@ -194,7 +194,7 @@ class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
 }
 
 class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>()(
-  "GohoCli.Receipts.ReceiptProcessingError",
+  "GohoServer.Receipts.ReceiptProcessingError",
   {
     stage: ReceiptProcessingStage,
     cause: Schema.Defect(),
@@ -205,7 +205,7 @@ class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>(
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
 
-const resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolders")(function* (
+const resolveWorkflowFolders = Effect.fn("GohoServer.Receipts.resolveWorkflowFolders")(function* (
   folders: ReadonlyArray<GoogleDrive.FolderMetadata>,
 ) {
   const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
@@ -236,7 +236,7 @@ const resolveWorkflowFolders = Effect.fn("GohoCli.Receipts.resolveWorkflowFolder
   } satisfies WorkflowFolders;
 });
 
-const readProcessedSourceIds = Effect.fn("GohoCli.Receipts.readProcessedSourceIds")(function* (
+const readProcessedSourceIds = Effect.fn("GohoServer.Receipts.readProcessedSourceIds")(function* (
   spreadsheetId: string,
 ) {
   const googleSheets = yield* GoogleSheets.Service;
@@ -278,7 +278,7 @@ const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<R
   ]);
 };
 
-const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
+const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
 ) {
   if (!supportedImageMimeTypes.has(file.mimeType)) {
@@ -337,7 +337,7 @@ const parseReceipt = Effect.fn("GohoCli.Receipts.parseReceipt")(function* (
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
-const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(function* (
+const appendReceiptRows = Effect.fn("GohoServer.Receipts.appendReceiptRows")(function* (
   receipt: Receipt,
   sourceFileId: string,
   spreadsheetId: string,
@@ -361,7 +361,7 @@ const appendReceiptRows = Effect.fn("GohoCli.Receipts.appendReceiptRows")(functi
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
 
-const completeReceipt = Effect.fn("GohoCli.Receipts.completeReceipt")(function* (
+const completeReceipt = Effect.fn("GohoServer.Receipts.completeReceipt")(function* (
   fileId: string,
   folders: WorkflowFolders,
 ) {
@@ -378,7 +378,7 @@ const completeReceipt = Effect.fn("GohoCli.Receipts.completeReceipt")(function* 
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
 });
 
-const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
+const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function* (
   file: GoogleDrive.FileMetadata,
   folders: WorkflowFolders,
   spreadsheetId: string,
@@ -483,7 +483,7 @@ const processReceipt = Effect.fn("GohoCli.Receipts.processReceipt")(function* (
  * @category workflows
  * @since 0.1.0
  */
-export const process = Effect.fn("GohoCli.Receipts.process")(function* (
+export const process = Effect.fn("GohoServer.Receipts.process")(function* (
   rootFolderId: string,
   spreadsheetId: string,
   concurrency: number,

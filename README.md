@@ -48,3 +48,9 @@ opencode
 Agents should run verification commands from inside the Nix shell. If an agent
 was not started from `nix develop`, run commands through `nix develop --command`
 instead.
+
+## Receipt processing
+
+Start the [Goho server](programs/goho-server/README.md), then use the
+[CLI](programs/goho-cli/README.md) to process a batch. The shared contract and client
+live in [clients/goho-server](clients/goho-server/README.md).

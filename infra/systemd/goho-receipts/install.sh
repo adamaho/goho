@@ -52,11 +52,6 @@ else
   printf 'Preserved existing %s.\n' "$CONFIG_DIR/receipts.env"
 fi
 
-if [[ -e "$CONFIG_DIR/google-service-account.json" ]]; then
-  chown root:adam "$CONFIG_DIR/google-service-account.json"
-  chmod 0640 "$CONFIG_DIR/google-service-account.json"
-fi
-
 install -o root -g root -m 0644 \
   "$SOURCE_DIR/$SERVICE_UNIT" \
   "$SYSTEMD_DIR/$SERVICE_UNIT"
@@ -74,7 +69,7 @@ Installed $SERVICE_UNIT and $TIMER_UNIT.
 
 The timer has not been enabled. Next:
   1. Configure $CONFIG_DIR/receipts.env.
-  2. Install $CONFIG_DIR/google-service-account.json.
+  2. Configure and start goho-server (see infra/systemd/goho-server/README.md).
   3. Test with: sudo systemctl start $SERVICE_UNIT
   4. Inspect with: journalctl -u $SERVICE_UNIT
   5. Enable with: sudo systemctl enable --now $TIMER_UNIT
