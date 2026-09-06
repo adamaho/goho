@@ -1,3 +1,4 @@
+import type { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
 import type { ProcessRequest, ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
 import { Context, Effect, Layer, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
@@ -83,10 +84,16 @@ export const make = Effect.fn("GohoServer.Receipts.make")(function* (
  * @category layers
  * @since 0.1.0
  */
-export const layer = Layer.effect(
+export const layer: Layer.Layer<
+  Service,
+  never,
+  Ai.Service | GoogleDrive.Service | GoogleSheets.Service
+> = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const services = yield* Effect.context<Effect.Services<ReturnType<typeof Workflow.process>>>();
+    const services = yield* Effect.context<
+      Ai.Service | GoogleDrive.Service | GoogleSheets.Service
+    >();
     return yield* make((request) =>
       Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
         Effect.provide(services),

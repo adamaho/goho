@@ -80,7 +80,7 @@ with this A-F layout:
 | F      | `source_file_id` | Original Google Drive file ID       |
 
 Cell F1 must contain `source_file_id`. Hide column F manually after setup; the
-CLI does not change worksheet formatting. Every item row created from a receipt
+server does not change worksheet formatting. Every item row created from a receipt
 contains the same real Drive file ID in column F.
 
 Before parsing, the server reads `RAW!F:F` once and uses the IDs as an
@@ -94,29 +94,17 @@ protection. Historical receipts without IDs can be duplicated if their source
 files are returned to `todo`; existing historical rows are never modified by
 the server.
 
-### Completion and exit status
+### Completion
 
-After all receipt workers finish, the server prints safe diagnostics for
-failed receipts followed by this summary:
-
-```text
-Processed: <count>
-Already processed: <count>
-Failed: <count>
-Stranded: <count>
-```
-
-An empty `todo` folder prints zero for all four counts. The command exits with
-status `0` when both `Failed` and `Stranded` are zero, and status `1` otherwise.
-Normal output includes filenames, Drive IDs, stages, and dispositions where
-applicable, but not provider errors or stack traces.
+The server returns public receipt outcomes. The [CLI](../goho-cli/README.md)
+prints the four counts and sets its exit status. An empty batch returns an empty array.
 
 ### Failure outcomes and recovery
 
 - `MovedToFailed` means processing failed after a successful claim and the
   compensating move succeeded. The file is known to be in `failed`.
 - `ClaimNotConfirmed` means the initial `todo` to `processing` move failed. The
-  CLI does not know the file's current parent and does not attempt a blind
+  server does not know the file's current parent and does not attempt a blind
   compensating move.
 - `Stranded` means processing failed after a successful claim and the move to
   `failed` also failed. The file's final location is not confirmed.
