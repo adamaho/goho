@@ -163,3 +163,23 @@ jobs:
 
       - name: Build
         run: pnpm turbo run build
+
+  prepare-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          registry-url: https://npm.pkg.github.com
+          scope: "@adamaho"
+      - run: pnpm install --no-frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+      - run: node -e 'process.stdout.write("LOCKFILE_BASE64=" + require("node:fs").readFileSync("pnpm-lock.yaml").toString("base64") + "\n")'
+      - run: pnpm turbo run lint tsc test:unit --force

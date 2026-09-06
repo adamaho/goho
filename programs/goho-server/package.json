@@ -1,11 +1,8 @@
 {
-  "name": "@goho/goho-cli",
+  "name": "@goho/goho-server",
   "version": "0.0.0",
   "private": true,
-  "description": "Command-line interface for Goho.",
-  "bin": {
-    "goho": "./src/main.ts"
-  },
+  "description": "Receipt processing HTTP server for Goho.",
   "type": "module",
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
@@ -14,22 +11,27 @@
     "fmt": "oxfmt --config ../../tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ../../tools/oxfmt-config/src/base.json .",
     "lint": "oxlint .",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
+    "@effect/ai-openai": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@goho/core": "workspace:*",
     "@goho/goho-server-client": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@adamaho/nopeus-oxlint-config": "catalog:",
     "@adamaho/nopeus-oxlint-plugin": "catalog:",
+    "@effect/vitest": "catalog:",
     "@goho/tool-oxfmt-config": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

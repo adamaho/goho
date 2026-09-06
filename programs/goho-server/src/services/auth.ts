@@ -2,7 +2,7 @@ import { GoogleAuth } from "@goho/core";
 import { Config } from "effect";
 
 /**
- * Provides Google authentication from command-line environment configuration.
+ * Provides Google authentication from server environment configuration.
  *
  * @category layers
  * @since 0.1.0

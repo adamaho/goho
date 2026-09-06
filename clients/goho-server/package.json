@@ -1,24 +1,22 @@
 {
-  "name": "@goho/goho-cli",
+  "name": "@goho/goho-server-client",
   "version": "0.0.0",
   "private": true,
-  "description": "Command-line interface for Goho.",
-  "bin": {
-    "goho": "./src/main.ts"
-  },
+  "description": "Shared Goho server API and typed client.",
   "type": "module",
+  "exports": {
+    "./api": "./src/api.ts",
+    "./client": "./src/client.ts",
+    "./receipts": "./src/receipts.ts"
+  },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
-    "dev": "node --env-file-if-exists=.env --watch src/main.ts",
-    "start": "node --env-file-if-exists=.env src/main.ts",
     "fmt": "oxfmt --config ../../tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ../../tools/oxfmt-config/src/base.json .",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@effect/platform-node": "catalog:",
-    "@goho/goho-server-client": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
