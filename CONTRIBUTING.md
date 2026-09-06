@@ -139,3 +139,7 @@ through Nix explicitly:
 ```bash
 nix develop --command pnpm check
 ```
+
+Server API contracts and clients live in `clients/<server-name>`. Server-specific
+receipt orchestration stays in `programs/goho-server`; shared Google and AI
+integrations stay in `packages/core`.

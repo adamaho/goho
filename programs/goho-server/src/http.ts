@@ -20,9 +20,10 @@ export function layerAuthorization(token: Redacted.Redacted<string>) {
 }
 
 const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
-  handlers.handle("process", ({ payload }) =>
-    Effect.flatMap(Receipts.Service, (receipts) => receipts.process(payload)),
-  ),
+  Effect.gen(function* () {
+    const receipts = yield* Receipts.Service;
+    return handlers.handle("process", ({ payload }) => receipts.process(payload));
+  }),
 );
 
 /**

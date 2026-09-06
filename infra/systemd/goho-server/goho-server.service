@@ -1,0 +1,29 @@
+[Unit]
+Description=Goho receipt API server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=adam
+Group=adam
+WorkingDirectory=/home/adam/github.com/adamaho/goho
+Environment=HOME=/home/adam
+EnvironmentFile=/etc/goho/server.env
+ExecStart=/nix/var/nix/profiles/default/bin/nix develop --no-write-lock-file --command pnpm --filter @goho/goho-server start
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

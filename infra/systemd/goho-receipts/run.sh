@@ -17,22 +17,13 @@ require_environment_variable() {
 
 require_environment_variable GOHO_RECEIPTS_ROOT_FOLDER_ID
 require_environment_variable GOHO_RECEIPTS_SPREADSHEET_ID
-require_environment_variable GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE
-require_environment_variable GOOGLE_AUTH_SCOPES
-require_environment_variable OPENAI_API_KEY
-require_environment_variable OPENAI_MODEL
+require_environment_variable GOHO_SERVER_TOKEN
 
 readonly CONCURRENCY="${GOHO_RECEIPTS_CONCURRENCY:-5}"
 
 if [[ ! "$CONCURRENCY" =~ ^[1-5]$ ]]; then
   printf 'GOHO_RECEIPTS_CONCURRENCY must be an integer from 1 through 5.\n' >&2
   exit 64
-fi
-
-if [[ ! -r "$GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE" ]]; then
-  printf 'Google service-account key file is not readable: %s\n' \
-    "$GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE" >&2
-  exit 66
 fi
 
 if [[ ! -d "$REPOSITORY_DIR" ]]; then

@@ -39,7 +39,7 @@ export const make = Effect.fn("GohoServer.Receipts.make")(function* (
     if (!acquired) return yield* new HttpApiError.Conflict();
     return yield* run(request).pipe(
       Effect.flatMap((results) =>
-        Effect.forEach(results, (result) => {
+        Effect.forEach(results, (result): Effect.Effect<ReceiptProcessingResult> => {
           switch (result._tag) {
             case "Failed":
               return Effect.logError("Receipt failed", result).pipe(
