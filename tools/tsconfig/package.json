@@ -13,6 +13,7 @@
     "prepare": "effect-tsgo patch"
   },
   "devDependencies": {
+    "@adamaho/nopeus-tsconfig": "catalog:",
     "@effect/tsgo": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:"
