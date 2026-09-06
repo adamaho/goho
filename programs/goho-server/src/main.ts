@@ -17,7 +17,7 @@ const ReceiptsLive = Receipts.layer.pipe(Layer.provide(Layer.merge(GoogleLive, A
 const ServerLive = HttpRouter.serve(Http.layer.pipe(Layer.provide(ReceiptsLive))).pipe(
   Layer.provide(
     NodeHttpServer.layerConfig(createServer, {
-      host: "127.0.0.1",
+      host: Config.succeed("127.0.0.1"),
       port: Config.schema(
         Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
         "GOHO_SERVER_PORT",
