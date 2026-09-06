@@ -15,19 +15,17 @@ pnpm --filter @goho/goho-server start
 
 Configure the environment file before starting:
 
-- `GOHO_SERVER_TOKEN`: required, nonempty shared bearer secret. Use the same value in the CLI.
-- `GOHO_SERVER_HOST`: defaults to `127.0.0.1`.
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
 - `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
 - `OPENAI_API_KEY`: OpenAI secret.
 - `OPENAI_MODEL`: extraction model.
 
-Keep the server on loopback for this slice. Remote access requires a separate deployment decision, including HTTPS.
+The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
 
 ## API
 
-`POST /receipts/process` requires `Authorization: Bearer <token>` and JSON:
+`POST /receipts/process` accepts JSON:
 
 ```json
 { "rootFolderId": "drive-root", "spreadsheetId": "sheet-id", "concurrency": 5 }
@@ -35,7 +33,7 @@ Keep the server on loopback for this slice. Remote access requires a separate de
 
 IDs must be nonempty and concurrency must be an integer from 1 through 5.
 The response is an array of receipt outcomes after the batch finishes.
-HTTP 401 means unauthorized, 400 means invalid input, 409 means another batch is
+HTTP 400 means invalid input, 409 means another batch is
 running, and 500 means the batch could not complete. Individual failed receipts
 remain successful HTTP responses with `Failed` or `Stranded` outcomes.
 Provider causes are logged on the server and omitted from API responses.

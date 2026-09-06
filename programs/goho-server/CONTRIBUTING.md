@@ -66,7 +66,7 @@ cp programs/goho-server/.env.example programs/goho-server/.env
 The example already points `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE` at the
 package-local JSON key. Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
 
-Set a nonempty `GOHO_SERVER_TOKEN`, then start the server:
+Start the server:
 
 ```bash
 pnpm --filter @goho/goho-server start

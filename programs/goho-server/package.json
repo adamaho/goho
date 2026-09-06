@@ -8,8 +8,6 @@
     "clean": "rimraf node_modules dist build .turbo coverage",
     "dev": "node --env-file-if-exists=.env --watch src/main.ts",
     "start": "node --env-file-if-exists=.env src/main.ts",
-    "fmt": "oxfmt --config ../../tools/oxfmt-config/src/base.json .",
-    "fmt:check": "oxfmt --check --config ../../tools/oxfmt-config/src/base.json .",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
     "test:unit": "vitest run"

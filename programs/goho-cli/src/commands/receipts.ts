@@ -74,8 +74,7 @@ const processCommand = Command.make("process", {
       const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
         Config.withDefault("http://127.0.0.1:3000"),
       );
-      const token = yield* Config.redacted("GOHO_SERVER_TOKEN");
-      const client = yield* GohoServer.make(baseUrl, token);
+      const client = yield* GohoServer.make(baseUrl);
       return yield* client.receipts.process({
         payload: { rootFolderId, spreadsheetId, concurrency },
       });
@@ -85,13 +84,11 @@ const processCommand = Command.make("process", {
         (cause) =>
           new CommandError({
             message:
-              cause._tag === "Unauthorized"
-                ? "Goho server authentication failed. Check GOHO_SERVER_TOKEN."
-                : cause._tag === "Conflict"
-                  ? "Another receipt batch is running. Wait for it to finish."
-                  : cause._tag === "ConfigError"
-                    ? "Invalid CLI configuration. Check GOHO_SERVER_URL and GOHO_SERVER_TOKEN."
-                    : "Receipt processing could not be confirmed. Work may have completed. Check server logs and Drive folders before running again.",
+              cause._tag === "Conflict"
+                ? "Another receipt batch is running. Wait for it to finish."
+                : cause._tag === "ConfigError"
+                  ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
+                  : "Receipt processing could not be confirmed. Work may have completed. Check server logs and Drive folders before running again.",
             cause,
           }),
       ),

@@ -1,4 +1,4 @@
-# Goho server on this host
+# Goho server
 
 This unit targets the existing `adam` user and checkout at
 `/home/adam/github.com/adamaho/goho`. Install dependencies in its Nix shell first.
@@ -12,7 +12,7 @@ sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.servi
 The environment install command is for first setup; preserve an existing file.
 Configure `/etc/goho/server.env` and install the Google JSON key at
 `/etc/goho/google-service-account.json`, owned by `root:adam` with mode `0640`.
-Use a nonempty bearer token shared with `/etc/goho/receipts.env` and keep the loopback host.
+The server listens on `127.0.0.1` without authentication.
 
 ```bash
 sudo systemctl daemon-reload

@@ -9,8 +9,6 @@
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
-    "fmt": "oxfmt --config ../../tools/oxfmt-config/src/base.json .",
-    "fmt:check": "oxfmt --check --config ../../tools/oxfmt-config/src/base.json .",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit"
   },

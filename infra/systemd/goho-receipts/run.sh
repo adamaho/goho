@@ -17,7 +17,6 @@ require_environment_variable() {
 
 require_environment_variable GOHO_RECEIPTS_ROOT_FOLDER_ID
 require_environment_variable GOHO_RECEIPTS_SPREADSHEET_ID
-require_environment_variable GOHO_SERVER_TOKEN
 
 readonly CONCURRENCY="${GOHO_RECEIPTS_CONCURRENCY:-5}"
 

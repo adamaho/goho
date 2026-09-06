@@ -11,7 +11,6 @@ From the repository root inside `nix develop`:
 cp programs/goho-cli/.env.example programs/goho-cli/.env
 ```
 
-Set `GOHO_SERVER_TOKEN` to the server's shared bearer secret.
 `GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`.
 Start the server before invoking the CLI.
 
