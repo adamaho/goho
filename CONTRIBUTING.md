@@ -97,9 +97,9 @@ exception only when a reviewed update cannot wait, prefer a version-specific
 entry, explain it in the PR, and remove it after the version is 24 hours old.
 
 Private `@adamaho` dependencies use pnpm's `gh:` registry alias so their source
-is recorded in the lockfile. Authenticate to `npm.pkg.github.com` in a user-level
-auth file with a classic personal access token that has `read:packages`. Do not
-commit credentials or a project `.npmrc`.
+is recorded in the lockfile. Follow the root README's one-time Amp secret and
+package Actions-access setup. The committed `.npmrc` contains safe references
+only; never commit a credential value.
 
 ## Commit Messages
 

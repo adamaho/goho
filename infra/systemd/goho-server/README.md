@@ -6,12 +6,11 @@ installer's `PNPM_VERSION` option, use it to install Node.js `24.15.0`, and run
 `pnpm install --frozen-lockfile` as `adam` before starting or restarting the
 service. Frozen installation validates both the lockfile and the repository's
 release-age policy; do not use `--trust-lockfile` or disable the frozen lockfile.
-The private `@adamaho` packages require a user-level GitHub Packages token with
-`read:packages`; keep that credential out of the checkout and remove temporary
-auth files after installation.
+The private `@adamaho` packages require `NODE_AUTH_TOKEN` to contain a classic
+GitHub personal access token with `read:packages`. The committed `.npmrc` safely
+references that environment variable and contains no credential value.
 
-Run the bootstrap as `adam`. The prompt keeps the token out of shell history,
-and the trap removes the temporary auth file even if installation fails.
+Run the bootstrap as `adam`. The prompt keeps the token out of shell history.
 
 ```bash
 cd /home/adam/github.com/adamaho/goho
@@ -21,14 +20,10 @@ curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=12.3.4 ENV="$HOME/.
 pnpm runtime set node 24.15.0 --global
 read -rsp 'GitHub Packages token: ' NODE_AUTH_TOKEN && printf '\n'
 export NODE_AUTH_TOKEN
-npm_user_config="$(mktemp)"
-trap 'rm -f "$npm_user_config"; unset NODE_AUTH_TOKEN' EXIT
-chmod 0600 "$npm_user_config"
-printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_user_config"
-NPM_CONFIG_USERCONFIG="$npm_user_config" pnpm install --frozen-lockfile
-rm -f "$npm_user_config"
+export PNPM_CONFIG_NPMRC_AUTH_FILE="$PWD/.npmrc"
+pnpm install --frozen-lockfile
 unset NODE_AUTH_TOKEN
-trap - EXIT
+unset PNPM_CONFIG_NPMRC_AUTH_FILE
 ```
 
 ```bash

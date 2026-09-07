@@ -35,9 +35,18 @@ pnpm install --frozen-lockfile
 ```
 
 The `@adamaho` development packages come from GitHub Packages, which requires a
-token even when a package is public. Authenticate in your user configuration
-with a classic personal access token that has `read:packages`; never commit the
-token or a project `.npmrc`.
+token even when a package is public. Before the first Amp setup, add the Amp
+project secret `NODE_AUTH_TOKEN` using a classic GitHub personal access token
+with `read:packages`. A personal token per developer is preferred. Use a
+read-only machine-user classic PAT as a workspace secret only for shared,
+unattended access. The committed `.npmrc` contains only registry and environment
+variable references; never put a credential value in it.
+
+In each package's GitHub **Package settings → Manage Actions access**, grant this
+repository read access. CI retains `packages: read` and supplies its scoped
+`${{ github.token }}` as `NODE_AUTH_TOKEN`. Amp setup also marks this trusted
+repository's `.npmrc` as the pnpm auth file; that setting and the Amp secret stay
+available in later shells, so `pnpm add` and `pnpm update` continue to work.
 
 ## Receipt processing
 

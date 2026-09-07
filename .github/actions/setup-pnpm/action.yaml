@@ -16,9 +16,5 @@ runs:
       shell: bash
       env:
         NODE_AUTH_TOKEN: ${{ github.token }}
-      run: |
-        npm_user_config="$(mktemp)"
-        trap 'rm -f "$npm_user_config"' EXIT
-        chmod 0600 "$npm_user_config"
-        printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_user_config"
-        NPM_CONFIG_USERCONFIG="$npm_user_config" pnpm install --frozen-lockfile
+        PNPM_CONFIG_NPMRC_AUTH_FILE: ${{ github.workspace }}/.npmrc
+      run: pnpm install --frozen-lockfile
