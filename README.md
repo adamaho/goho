@@ -34,9 +34,6 @@ Install dependencies with the versions declared in `package.json`:
 pnpm install
 ```
 
-Amp orbs run `.agents/setup`, which installs the pinned pnpm and Node.js versions
-and configures GitHub Packages authentication from `NODE_AUTH_TOKEN`.
-
 ## Receipt processing
 
 Start the [Goho server](programs/goho-server/README.md), then use the
