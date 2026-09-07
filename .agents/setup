@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+SECONDS=0
+
+echo "Installing Nix if missing..."
+if [[ ! -x "$HOME/.nix-profile/bin/nix" ]]; then
+  missing=()
+  for package in ca-certificates curl xz-utils; do
+    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'install ok installed'; then
+      missing+=("$package")
+    fi
+  done
+  if (( ${#missing[@]} )); then
+    sudo apt-get update
+    sudo apt-get install -y "${missing[@]}"
+  fi
+  sudo install -d -o "$(id -u)" -g "$(id -g)" /nix
+  installer="$(mktemp)"
+  trap 'rm -f "$installer"' EXIT
+  curl --fail --location --retry 3 https://releases.nixos.org/nix/nix-2.34.1/install -o "$installer"
+  sh "$installer" --no-daemon --no-modify-profile
+  rm -f "$installer"
+  trap - EXIT
+fi
+
+# Activate the installer in this process; future shells use the hook below.
+source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+export NIX_CONFIG="${NIX_CONFIG:-}
+experimental-features = nix-command flakes"
+
+echo "Realizing the locked Nix development environment (${SECONDS}s elapsed)..."
+dev_env="$(nix print-dev-env --no-update-lock-file "$repo_root")"
+eval "$dev_env"
+
+mkdir -p "$HOME/.config/amp"
+cat > "$HOME/.config/amp/goho-env.bash" <<EOF
+if [[ -z "\${IN_NIX_SHELL:-}" && ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) ]]; then
+  source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+  export NIX_CONFIG="\${NIX_CONFIG:-}
+experimental-features = nix-command flakes"
+  if goho_dev_env="\$("$HOME/.nix-profile/bin/nix" print-dev-env --no-update-lock-file "$repo_root")"; then
+    eval "\$goho_dev_env"
+    unset goho_dev_env
+  else
+    return 1
+  fi
+fi
+EOF
+marker="# Goho orb development environment"
+if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
+  printf '\n%s\n%s\n' "$marker" 'source "$HOME/.config/amp/goho-env.bash"' >> "$HOME/.bash_profile"
+fi
+
+echo "Installing locked workspace dependencies (${SECONDS}s elapsed)..."
+# GitHub Packages requires authentication even for these public packages. Keep
+# credentials out of the snapshot and leave the user's npm configuration intact.
+: "${NODE_AUTH_TOKEN:?Set the Amp project NODE_AUTH_TOKEN secret to a token with read:packages access to @adamaho packages.}"
+export NODE_AUTH_TOKEN
+npm_config_userconfig="$(mktemp)"
+export npm_config_userconfig
+trap 'rm -f "$npm_config_userconfig"' EXIT
+printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_config_userconfig"
+pnpm install --frozen-lockfile
+rm -f "$npm_config_userconfig"
+trap - EXIT
+
+for program in goho-server goho-cli; do
+  env_file="programs/$program/.env"
+  if [[ ! -f "$env_file" ]]; then
+    cp -- "$env_file.example" "$env_file"
+  fi
+done
+
+echo "Orb setup completed in ${SECONDS}s."
