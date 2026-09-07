@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Temporary Amp orb workaround for https://github.com/oxc-project/oxc/issues/20331:
-# Oxlint's JavaScript-plugin transfer reserves a multi-GiB virtual buffer without
-# using that much physical RAM. Small no-swap orbs may reject it under heuristic
-# overcommit accounting. This is not a general host requirement; upstream needs
-# to fix the allocator. Orb kernel settings can reset on wake, so restore it here.
-if [[ "$(cat /proc/sys/vm/overcommit_memory)" != 1 ]]; then
-  sudo -n /usr/sbin/sysctl -w vm.overcommit_memory=1
-fi
-
 # Restore the pinned toolchain and repository auth-file trust on every wake.
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export PATH="$PNPM_HOME/bin:$PATH"
