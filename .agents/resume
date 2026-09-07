@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# The login-shell hook restores the Nix environment. Dependencies live in the
-# snapshot; no per-wake installs or authenticated application services are needed.
+# The login-shell hook restores the pinned Node.js and pnpm environment.
+# Dependencies live in the snapshot; no per-wake install is needed.
 echo "Goho orb ready; configure server credentials before processing receipts."
