@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Ref, Result } from "effect";
 import { expect } from "vitest";
 
-import { make } from "./service.ts";
+import { make } from "../../src/receipts/service.ts";
 
 const request = { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 };
 
