@@ -10,44 +10,32 @@ verification commands, workspace conventions, and commit guidelines.
 
 Before developing in this repository, install:
 
-- [Nix](https://nixos.org/download/)
+- [Node.js 24](https://nodejs.org/en/download)
+- [pnpm 12.3.4](https://pnpm.io/installation)
 - [Docker](https://docs.docker.com/get-docker/)
 
 You can give the following prompt to a coding agent running on your machine:
 
 ```text
 Configure this machine to work on the Goho project. Read README.md,
-CONTRIBUTING.md, and flake.nix first. Check whether Nix and Docker are installed
-and working; install or enable them when possible, but ask before running
-commands that need administrator access. Preserve and use the repository's
-existing Nix and Docker setup rather than installing a separate Node.js or pnpm
-toolchain. Enter the Nix development shell, install dependencies with pnpm, and
-run the documented verification command. Report any manual steps or failures
-clearly, and don't change project files unless machine-specific setup requires
-it.
+CONTRIBUTING.md, and package.json first. Check whether the required Node.js,
+pnpm, and Docker versions are installed and working; install or enable them when
+possible, but ask before running commands that need administrator access.
+Install dependencies with pnpm and run the documented verification command.
+Report any manual steps or failures clearly, and don't change project files
+unless machine-specific setup requires it.
 ```
 
 ## Development
 
-Enter the Nix development shell to use the project's pinned toolchain, then
-install dependencies:
+Install dependencies with the versions declared in `package.json`:
 
 ```bash
-nix develop
 pnpm install
 ```
 
-Start coding agents from inside the Nix development shell so their commands use
-the same toolchain as local development.
-
-```bash
-nix develop
-opencode
-```
-
-Agents should run verification commands from inside the Nix shell. If an agent
-was not started from `nix develop`, run commands through `nix develop --command`
-instead.
+Amp orbs run `.agents/setup`, which installs the pinned pnpm and Node.js versions
+and configures GitHub Packages authentication from `NODE_AUTH_TOKEN`.
 
 ## Receipt processing
 

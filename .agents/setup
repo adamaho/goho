@@ -4,68 +4,67 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 SECONDS=0
+readonly node_version="24.15.0"
+readonly pnpm_version="12.3.4"
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
 
-echo "Installing Nix if missing..."
-if [[ ! -x "$HOME/.nix-profile/bin/nix" ]]; then
-  missing=()
-  for package in ca-certificates curl xz-utils; do
-    if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'install ok installed'; then
-      missing+=("$package")
-    fi
-  done
-  if (( ${#missing[@]} )); then
-    sudo apt-get update
-    sudo apt-get install -y "${missing[@]}"
-  fi
-  sudo install -d -o "$(id -u)" -g "$(id -g)" /nix
+: "${NODE_AUTH_TOKEN:?Set the Amp project NODE_AUTH_TOKEN secret to a token with read:packages access to @adamaho packages.}"
+export NODE_AUTH_TOKEN
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "Installing the Docker Compose plugin..."
+  sudo apt-get update
+  sudo apt-get install -y docker-compose-plugin
+fi
+
+installed_pnpm_version=""
+if [[ -x "$PNPM_HOME/bin/pnpm" ]]; then
+  installed_pnpm_version="$(cd "$HOME" && "$PNPM_HOME/bin/pnpm" --version 2>/dev/null || true)"
+fi
+if [[ "$installed_pnpm_version" != "$pnpm_version" ]]; then
+  echo "Installing pnpm $pnpm_version..."
   installer="$(mktemp)"
   trap 'rm -f "$installer"' EXIT
-  curl --fail --location --retry 3 https://releases.nixos.org/nix/nix-2.34.1/install -o "$installer"
-  sh "$installer" --no-daemon --no-modify-profile
+  curl --fail --location --retry 3 https://get.pnpm.io/install.sh -o "$installer"
+  PNPM_VERSION="$pnpm_version" ENV="$HOME/.bashrc" SHELL=/bin/bash sh "$installer"
   rm -f "$installer"
   trap - EXIT
 fi
 
-# Activate the installer in this process; future shells use the hook below.
-source "$HOME/.nix-profile/etc/profile.d/nix.sh"
-export NIX_CONFIG="${NIX_CONFIG:-}
-experimental-features = nix-command flakes"
-
-echo "Realizing the locked Nix development environment (${SECONDS}s elapsed)..."
-dev_env="$(nix print-dev-env --no-update-lock-file "$repo_root")"
-eval "$dev_env"
+if [[ ! -x "$PNPM_HOME/bin/node" ]] || [[ "$("$PNPM_HOME/bin/node" --version)" != "v$node_version" ]]; then
+  echo "Installing Node.js $node_version through pnpm (${SECONDS}s elapsed)..."
+  "$PNPM_HOME/bin/pnpm" runtime set node "$node_version" --global
+fi
 
 mkdir -p "$HOME/.config/amp"
 cat > "$HOME/.config/amp/goho-env.bash" <<EOF
-if [[ -z "\${IN_NIX_SHELL:-}" && ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) ]]; then
-  source "$HOME/.nix-profile/etc/profile.d/nix.sh"
-  export NIX_CONFIG="\${NIX_CONFIG:-}
-experimental-features = nix-command flakes"
-  if goho_dev_env="\$("$HOME/.nix-profile/bin/nix" print-dev-env --no-update-lock-file "$repo_root")"; then
-    eval "\$goho_dev_env"
-    unset goho_dev_env
-  else
-    return 1
-  fi
-fi
+export PNPM_HOME="$PNPM_HOME"
+case ":\$PATH:" in
+  *":\$PNPM_HOME/bin:"*) ;;
+  *) export PATH="\$PNPM_HOME/bin:\$PATH" ;;
+esac
 EOF
-marker="# Goho orb development environment"
-if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
-  printf '\n%s\n%s\n' "$marker" 'source "$HOME/.config/amp/goho-env.bash"' >> "$HOME/.bash_profile"
-fi
+marker="# Goho orb Node.js and pnpm environment"
+touch "$HOME/.bash_profile"
+sed -i \
+  -e '\|^# Goho orb development environment$|d' \
+  -e '\|^# Goho orb Node.js and pnpm environment$|d' \
+  -e '\|^source "\$HOME/.config/amp/goho-env.bash"$|d' \
+  "$HOME/.bash_profile"
+printf '\n%s\n%s\n' "$marker" 'source "$HOME/.config/amp/goho-env.bash"' >> "$HOME/.bash_profile"
 
+echo "Using Node.js $(node --version) and pnpm $(pnpm --version)."
 echo "Installing locked workspace dependencies (${SECONDS}s elapsed)..."
 # GitHub Packages requires authentication even for these public packages. Keep
-# credentials out of the snapshot and leave the user's npm configuration intact.
-: "${NODE_AUTH_TOKEN:?Set the Amp project NODE_AUTH_TOKEN secret to a token with read:packages access to @adamaho packages.}"
-export NODE_AUTH_TOKEN
-npm_config_userconfig="$(mktemp)"
-export npm_config_userconfig
-trap 'rm -f "$npm_config_userconfig"' EXIT
-printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_config_userconfig"
+# the credential out of the snapshot: npm expands this reference from the Amp
+# project secret at runtime. pnpm ignores auth references in committed npmrc files.
+touch "$HOME/.npmrc"
+chmod 0600 "$HOME/.npmrc"
+if ! grep -Fqx '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' "$HOME/.npmrc"; then
+  printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' >> "$HOME/.npmrc"
+fi
 pnpm install --frozen-lockfile
-rm -f "$npm_config_userconfig"
-trap - EXIT
 
 for program in goho-server goho-cli; do
   env_file="programs/$program/.env"

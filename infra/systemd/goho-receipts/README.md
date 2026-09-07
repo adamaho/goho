@@ -5,10 +5,12 @@ It no longer loads Google or OpenAI credentials.
 
 1. Configure and start [goho-server](../../../programs/goho-server/README.md).
    Use `infra/systemd/goho-server/goho-server.service` for this host's persistent server.
-2. Run `sudo infra/systemd/goho-receipts/install.sh` from the repository root.
-3. Set the folder ID, spreadsheet ID, and URL in `/etc/goho/receipts.env`.
-4. Test with `sudo systemctl start goho-receipts.service` and inspect `journalctl -u goho-receipts.service`.
-5. Enable scheduling with `sudo systemctl enable --now goho-receipts.timer`.
+2. Install the repository's declared Node.js and pnpm versions and run
+   `pnpm install --frozen-lockfile` as `adam`.
+3. Run `sudo infra/systemd/goho-receipts/install.sh` from the repository root.
+4. Set the folder ID, spreadsheet ID, and URL in `/etc/goho/receipts.env`.
+5. Test with `sudo systemctl start goho-receipts.service` and inspect `journalctl -u goho-receipts.service`.
+6. Enable scheduling with `sudo systemctl enable --now goho-receipts.timer`.
 
 For an existing installation, move Google/OpenAI settings to `/etc/goho/server.env`
 and remove them from `receipts.env`.

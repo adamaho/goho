@@ -5,7 +5,7 @@ credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
-From the repository root inside `nix develop`:
+From the repository root:
 
 ```bash
 cp programs/goho-cli/.env.example programs/goho-cli/.env

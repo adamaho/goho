@@ -19,7 +19,7 @@ if ! getent passwd adam >/dev/null; then
   exit 1
 fi
 
-if [[ ! -f "$REPOSITORY_DIR/flake.nix" ]]; then
+if [[ ! -f "$REPOSITORY_DIR/package.json" ]]; then
   printf 'Goho repository was not found at %s.\n' "$REPOSITORY_DIR" >&2
   exit 1
 fi
@@ -29,8 +29,8 @@ if [[ ! -x "$SOURCE_DIR/run.sh" ]]; then
   exit 1
 fi
 
-if [[ ! -x /nix/var/nix/profiles/default/bin/nix ]]; then
-  printf 'Nix is not installed at the path expected by the service.\n' >&2
+if [[ ! -x /home/adam/.local/share/pnpm/bin/pnpm ]]; then
+  printf 'pnpm is not installed at the path expected by the service.\n' >&2
   exit 1
 fi
 
