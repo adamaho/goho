@@ -5,8 +5,8 @@ import { Effect, Layer } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { expect } from "vitest";
 
-import * as Http from "./http.ts";
-import * as Receipts from "./receipts/service.ts";
+import * as Http from "../src/http.ts";
+import * as Receipts from "../src/receipts/service.ts";
 
 const TestLive = HttpRouter.serve(
   Http.layer.pipe(
