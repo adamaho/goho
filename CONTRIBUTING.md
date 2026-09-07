@@ -15,7 +15,7 @@ Install these before working in the repo:
 Install dependencies:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 Start local infrastructure when a package needs shared runtime services:
@@ -83,8 +83,23 @@ Prefer centralizing shared dependency versions in `pnpm-workspace.yaml` using
 the catalog. This keeps package manifests small and makes upgrades easier to
 review.
 
-Use exact versions. The root `.npmrc` sets `save-exact=true` and
-`engine-strict=true`.
+Use exact versions. The workspace config sets `saveExact: true` and
+`engineStrict: true`.
+
+Goho applies a strict 24-hour minimum release age to direct and transitive
+dependencies and rechecks the policy during frozen installs. This delay reduces
+exposure to compromised releases while preserving reproducible installs through
+the committed lockfile. The three named `@adamaho` tooling packages are the only
+exceptions: they are deliberately first-party releases, and GitHub Packages does
+not provide the publication timestamps needed by the strict policy. Keep this
+list package-specific rather than excluding the whole scope. Add any other
+exception only when a reviewed update cannot wait, prefer a version-specific
+entry, explain it in the PR, and remove it after the version is 24 hours old.
+
+Private `@adamaho` dependencies use pnpm's `gh:` registry alias so their source
+is recorded in the lockfile. Authenticate to `npm.pkg.github.com` in a user-level
+auth file with a classic personal access token that has `read:packages`. Do not
+commit credentials or a project `.npmrc`.
 
 ## Commit Messages
 

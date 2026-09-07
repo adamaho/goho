@@ -1,30 +1,24 @@
 name: setup-pnpm
-description: Setup Node.js, pnpm, and install dependencies.
+description: Setup the pinned Node.js and pnpm versions and install locked dependencies.
 
 runs:
   using: composite
   steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v7
+    - name: Setup pnpm and Node.js
+      uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
       with:
-        node-version-file: package.json
-
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v6
-      with:
-        package_json_file: package.json
-        run_install: false
-
-    - name: Setup pnpm cache and registry
-      uses: actions/setup-node@v7
-      with:
-        node-version-file: package.json
+        runtime: node@24.15.0
         cache: pnpm
-        registry-url: https://npm.pkg.github.com
-        scope: "@adamaho"
+        require-lockfile: true
+        install: false
 
     - name: Install dependencies
       shell: bash
       env:
         NODE_AUTH_TOKEN: ${{ github.token }}
-      run: pnpm install --frozen-lockfile
+      run: |
+        npm_user_config="$(mktemp)"
+        trap 'rm -f "$npm_user_config"' EXIT
+        chmod 0600 "$npm_user_config"
+        printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_user_config"
+        NPM_CONFIG_USERCONFIG="$npm_user_config" pnpm install --frozen-lockfile

@@ -108,14 +108,14 @@ settings:
 catalogs:
   default:
     '@adamaho/nopeus-oxlint-config':
-      specifier: 0.3.0
-      version: 0.3.0
+      specifier: gh:0.3.0
+      version: gh:0.3.0
     '@adamaho/nopeus-oxlint-plugin':
-      specifier: 0.4.0
-      version: 0.4.0
+      specifier: gh:0.4.0
+      version: gh:0.4.0
     '@adamaho/nopeus-tsconfig':
-      specifier: 0.2.0
-      version: 0.2.0
+      specifier: gh:0.2.0
+      version: gh:0.2.0
     '@effect/ai-openai':
       specifier: 4.0.0-rc.111
       version: 4.0.0-rc.111
@@ -187,10 +187,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.3.0(oxlint@1.79.0)
+        version: gh:0.3.0(oxlint@1.79.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.4.0(oxlint@1.79.0)
+        version: gh:0.4.0(oxlint@1.79.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -232,10 +232,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.3.0(oxlint@1.79.0)
+        version: gh:0.3.0(oxlint@1.79.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.4.0(oxlint@1.79.0)
+        version: gh:0.4.0(oxlint@1.79.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -272,10 +272,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.3.0(oxlint@1.79.0)
+        version: gh:0.3.0(oxlint@1.79.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.4.0(oxlint@1.79.0)
+        version: gh:0.4.0(oxlint@1.79.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -318,10 +318,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.3.0(oxlint@1.79.0)
+        version: gh:0.3.0(oxlint@1.79.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.4.0(oxlint@1.79.0)
+        version: gh:0.4.0(oxlint@1.79.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0-rc.111(effect@4.0.0-rc.111)(vitest@4.1.11(@types/node@24.13.3)(vite@8.2.2(@types/node@24.13.3)))
@@ -360,7 +360,7 @@ importers:
     devDependencies:
       '@adamaho/nopeus-tsconfig':
         specifier: 'catalog:'
-        version: 0.2.0
+        version: gh:0.2.0
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.41.0
@@ -373,19 +373,19 @@ importers:
 
 packages:
 
-  '@adamaho/nopeus-oxlint-config@0.3.0':
+  '@adamaho/nopeus-oxlint-config@gh:0.3.0':
     resolution: {integrity: sha512-ZYwgjMYq2sY9zvCtMxmqkm15z8v1UnwFhj48olekHLnzAtt8N5t/RphJ77oLdLN0/L/yE9m0iSrhT4JpGM6bOQ==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-oxlint-config/0.3.0/8557ed20c53527a27b40d8def1db4769caf5fef2}
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-oxlint-plugin@0.4.0':
+  '@adamaho/nopeus-oxlint-plugin@gh:0.4.0':
     resolution: {integrity: sha512-YUFct4ZtBwNLFrL3y+mf00+xh53BZjBMoXuy18Ulb2xUAFmZN+olSMV56XK8/fqRHRwxtD4bXKK6boI2r9KfQA==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-oxlint-plugin/0.4.0/7e1104a5920f438d6e47a0e464968ae66950f1d9}
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-tsconfig@0.2.0':
+  '@adamaho/nopeus-tsconfig@gh:0.2.0':
     resolution: {integrity: sha512-HGLN8GcVBguKogCrXIYft3DEDjWEJ4U3kmFKDziv/Hzd05220dtK7msNwibw2XznhzzwKd4dBX0lZB76LcenJA==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-tsconfig/0.2.0/21ef79da8bbbec584116aee49f64c2fcac097a0c}
 
   '@effect/ai-openai@4.0.0-rc.111':
@@ -1913,17 +1913,17 @@ packages:
 
 snapshots:
 
-  '@adamaho/nopeus-oxlint-config@0.3.0(oxlint@1.79.0)':
+  '@adamaho/nopeus-oxlint-config@gh:0.3.0(oxlint@1.79.0)':
     dependencies:
       oxlint: 1.79.0
 
-  '@adamaho/nopeus-oxlint-plugin@0.4.0(oxlint@1.79.0)':
+  '@adamaho/nopeus-oxlint-plugin@gh:0.4.0(oxlint@1.79.0)':
     dependencies:
       '@oxlint/plugins': 1.79.0
       oxc-resolver: 11.24.2
       oxlint: 1.79.0
 
-  '@adamaho/nopeus-tsconfig@0.2.0': {}
+  '@adamaho/nopeus-tsconfig@gh:0.2.0': {}
 
   '@effect/ai-openai@4.0.0-rc.111(effect@4.0.0-rc.111)':
     dependencies:

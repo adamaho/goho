@@ -1,8 +1,35 @@
 # Goho server
 
 This unit targets the existing `adam` user and checkout at
-`/home/adam/github.com/adamaho/goho`. Install the repository's declared Node.js
-and pnpm versions and run `pnpm install --frozen-lockfile` as `adam` first.
+`/home/adam/github.com/adamaho/goho`. Install pnpm `12.3.4` with the standalone
+installer's `PNPM_VERSION` option, use it to install Node.js `24.15.0`, and run
+`pnpm install --frozen-lockfile` as `adam` before starting or restarting the
+service. Frozen installation validates both the lockfile and the repository's
+release-age policy; do not use `--trust-lockfile` or disable the frozen lockfile.
+The private `@adamaho` packages require a user-level GitHub Packages token with
+`read:packages`; keep that credential out of the checkout and remove temporary
+auth files after installation.
+
+Run the bootstrap as `adam`. The prompt keeps the token out of shell history,
+and the trap removes the temporary auth file even if installation fails.
+
+```bash
+cd /home/adam/github.com/adamaho/goho
+export PNPM_HOME="$HOME/.local/share/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
+curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=12.3.4 ENV="$HOME/.bashrc" SHELL=/bin/bash sh -
+pnpm runtime set node 24.15.0 --global
+read -rsp 'GitHub Packages token: ' NODE_AUTH_TOKEN && printf '\n'
+export NODE_AUTH_TOKEN
+npm_user_config="$(mktemp)"
+trap 'rm -f "$npm_user_config"; unset NODE_AUTH_TOKEN' EXIT
+chmod 0600 "$npm_user_config"
+printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_user_config"
+NPM_CONFIG_USERCONFIG="$npm_user_config" pnpm install --frozen-lockfile
+rm -f "$npm_user_config"
+unset NODE_AUTH_TOKEN
+trap - EXIT
+```
 
 ```bash
 sudo install -d -o root -g adam -m 0750 /etc/goho

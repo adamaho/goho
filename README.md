@@ -31,8 +31,13 @@ unless machine-specific setup requires it.
 Install dependencies with the versions declared in `package.json`:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
+
+The `@adamaho` development packages come from GitHub Packages, which requires a
+token even when a package is public. Authenticate in your user configuration
+with a classic personal access token that has `read:packages`; never commit the
+token or a project `.npmrc`.
 
 ## Receipt processing
 

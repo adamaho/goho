@@ -56,15 +56,16 @@ printf '\n%s\n%s\n' "$marker" 'source "$HOME/.config/amp/goho-env.bash"' >> "$HO
 
 echo "Using Node.js $(node --version) and pnpm $(pnpm --version)."
 echo "Installing locked workspace dependencies (${SECONDS}s elapsed)..."
-# GitHub Packages requires authentication even for these public packages. Keep
-# the credential out of the snapshot: npm expands this reference from the Amp
-# project secret at runtime. pnpm ignores auth references in committed npmrc files.
-touch "$HOME/.npmrc"
-chmod 0600 "$HOME/.npmrc"
-if ! grep -Fqx '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' "$HOME/.npmrc"; then
-  printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' >> "$HOME/.npmrc"
-fi
-pnpm install --frozen-lockfile
+# GitHub Packages requires authentication even for public packages. pnpm only
+# expands token references in trusted user auth files, so use a temporary one
+# and leave both the repository and the user's normal npm configuration intact.
+npm_user_config="$(mktemp)"
+trap 'rm -f "$npm_user_config"' EXIT
+chmod 0600 "$npm_user_config"
+printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$npm_user_config"
+NPM_CONFIG_USERCONFIG="$npm_user_config" pnpm install --frozen-lockfile
+rm -f "$npm_user_config"
+trap - EXIT
 
 for program in goho-server goho-cli; do
   env_file="programs/$program/.env"
