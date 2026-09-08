@@ -1,0 +1,46 @@
+name: verify-pnpm-refresh
+
+on:
+  pull_request:
+    branches: [dev]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  refresh:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'chore/pnpm-12-dependency-refresh'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+          registry-url: https://npm.pkg.github.com
+          scope: "@adamaho"
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Verify locked Nix toolchain
+        run: |
+          test "$(nix develop --no-write-lock-file --command pnpm --version)" = "12.3.4"
+          for system in aarch64-darwin aarch64-linux x86_64-darwin x86_64-linux; do
+            nix eval --no-write-lock-file ".#devShells.$system.default.name"
+          done
+      - name: Refresh dependency lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: nix develop --no-write-lock-file --command pnpm -r update --lockfile-only --ignore-scripts
+      - name: Verify current Nopeus releases
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: |
+          for package in nopeus-oxlint-config nopeus-oxlint-plugin nopeus-tsconfig; do
+            nix develop --no-write-lock-file --command pnpm view "@adamaho/$package" dist-tags --json
+          done
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: refreshed-lockfile
+          path: pnpm-lock.yaml
+          retention-days: 1
+          if-no-files-found: error

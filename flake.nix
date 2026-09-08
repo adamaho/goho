@@ -20,6 +20,7 @@
       devShells = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
+          pnpm12 = pkgs.callPackage ./nix/pnpm.nix { };
         in
         {
           default = pkgs.mkShell {
@@ -28,7 +29,7 @@
               docker-compose
               git
               nodejs_24
-              pnpm_11
+              pnpm12
             ];
           };
         });
