@@ -4,7 +4,6 @@ set -euo pipefail
 
 readonly REPOSITORY_DIR="/home/adam/github.com/adamaho/goho"
 readonly LOCK_FILE="/run/goho/receipts.lock"
-readonly NIX="/nix/var/nix/profiles/default/bin/nix"
 
 require_environment_variable() {
   local name="$1"
@@ -30,10 +29,12 @@ if [[ ! -d "$REPOSITORY_DIR" ]]; then
   exit 72
 fi
 
-if [[ ! -x "$NIX" ]]; then
-  printf 'Nix executable does not exist: %s\n' "$NIX" >&2
-  exit 69
-fi
+for tool in node pnpm; do
+  if ! command -v "$tool" >/dev/null; then
+    printf 'Required executable is not on PATH: %s\n' "$tool" >&2
+    exit 69
+  fi
+done
 
 cd "$REPOSITORY_DIR"
 
@@ -41,7 +42,6 @@ exec /usr/bin/flock \
   --nonblock \
   --conflict-exit-code 75 \
   "$LOCK_FILE" \
-  "$NIX" develop --no-write-lock-file --command \
   pnpm --filter @goho/goho-cli start \
   --log-level debug \
   receipts process \

@@ -3,12 +3,17 @@
 The existing timer runs the CLI against a separately running Goho server.
 It no longer loads Google or OpenAI credentials.
 
-1. Configure and start [goho-server](../../../programs/goho-server/README.md).
+1. Complete the [service runtime setup](../goho-server/README.md#runtime-setup)
+   and configure and start [goho-server](../../../programs/goho-server/README.md).
    Use `infra/systemd/goho-server/goho-server.service` for this host's persistent server.
 2. Run `sudo infra/systemd/goho-receipts/install.sh` from the repository root.
 3. Set the folder ID, spreadsheet ID, and URL in `/etc/goho/receipts.env`.
 4. Test with `sudo systemctl start goho-receipts.service` and inspect `journalctl -u goho-receipts.service`.
 5. Enable scheduling with `sudo systemctl enable --now goho-receipts.timer`.
+
+After updating an existing checkout, reinstall both service units and reload
+systemd using the documented install steps. Stop the timer and let any active
+batch finish before restarting the server. Preserve existing environment files.
 
 For an existing installation, move Google/OpenAI settings to `/etc/goho/server.env`
 and remove them from `receipts.env`.

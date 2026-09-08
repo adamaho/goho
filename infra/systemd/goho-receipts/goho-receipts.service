@@ -9,6 +9,7 @@ User=adam
 Group=adam
 WorkingDirectory=/home/adam/github.com/adamaho/goho
 Environment=HOME=/home/adam
+Environment="PATH=/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/etc/goho/receipts.env
 RuntimeDirectory=goho
 RuntimeDirectoryMode=0750

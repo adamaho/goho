@@ -1,7 +1,6 @@
 # Goho
 
-Goho is organized as a pnpm and Turborepo workspace with a shared, reproducible
-development environment.
+Goho is organized as a pnpm and Turborepo workspace.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow,
 verification commands, workspace conventions, and commit guidelines.
@@ -10,44 +9,32 @@ verification commands, workspace conventions, and commit guidelines.
 
 Before developing in this repository, install:
 
-- [Nix](https://nixos.org/download/)
-- [Docker](https://docs.docker.com/get-docker/)
+- [Node.js](https://nodejs.org/en/download) 24, matching `engines.node` in `package.json`
+- [pnpm](https://pnpm.io/installation) at the version pinned in `packageManager`
+- [Docker with Compose](https://docs.docker.com/get-docker/) when using local services
 
 You can give the following prompt to a coding agent running on your machine:
 
 ```text
 Configure this machine to work on the Goho project. Read README.md,
-CONTRIBUTING.md, and flake.nix first. Check whether Nix and Docker are installed
-and working; install or enable them when possible, but ask before running
-commands that need administrator access. Preserve and use the repository's
-existing Nix and Docker setup rather than installing a separate Node.js or pnpm
-toolchain. Enter the Nix development shell, install dependencies with pnpm, and
-run the documented verification command. Report any manual steps or failures
-clearly, and don't change project files unless machine-specific setup requires
-it.
+CONTRIBUTING.md, and package.json first. Use existing Node.js and pnpm
+installations when they match the declared versions; install missing tools
+directly without Corepack. Set up Docker only if local services are needed.
+Install dependencies with pnpm and run the documented verification command.
+Report any manual steps or failures clearly.
 ```
 
 ## Development
 
-Enter the Nix development shell to use the project's pinned toolchain, then
-install dependencies:
+Follow the [development setup](./CONTRIBUTING.md#development-setup) to install
+the required tools, then run from the repository root:
 
 ```bash
-nix develop
-pnpm install
+pnpm install --frozen-lockfile
+pnpm check
 ```
 
-Start coding agents from inside the Nix development shell so their commands use
-the same toolchain as local development.
-
-```bash
-nix develop
-opencode
-```
-
-Agents should run verification commands from inside the Nix shell. If an agent
-was not started from `nix develop`, run commands through `nix develop --command`
-instead.
+Coding agents use these same commands with Node.js and pnpm on `PATH`.
 
 ## Receipt processing
 
