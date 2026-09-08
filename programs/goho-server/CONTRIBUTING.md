@@ -93,3 +93,15 @@ Complete this manual validation checklist after changes to receipt processing:
 - [ ] Return a file whose real Drive ID already exists in `RAW!F:F` to `todo`,
       then confirm no rows are appended, the file moves to `processed`, and the
       `Already processed` count increases.
+
+## Database changes
+
+Use the shared Postgres layer from `@goho/core`. Keep receipt tables, migrations,
+and repository behavior in this server. Apply migrations explicitly with
+`pnpm --filter @goho/goho-server db:migrate`; `DATABASE_URL` is read from the
+server environment file. See [receipt database](./README.md#receipt-database).
+
+For integration tests, start the isolated test database documented in
+[local infrastructure](../../infra/local/README.md), supply `TEST_DATABASE_URL`,
+and run `pnpm --filter @goho/goho-server test:integration`. These tests apply the
+same migrations as the migration command. Unit tests do not need a database.

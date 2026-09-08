@@ -48,6 +48,11 @@
       "dependsOn": ["@goho/infra-local#infra:up"],
       "outputs": []
     },
+    "db:migrate": {
+      "cache": false,
+      "env": ["DATABASE_URL"],
+      "outputs": []
+    },
     "db:push": {
       "cache": false,
       "dependsOn": ["db:create"],

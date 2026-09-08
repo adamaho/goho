@@ -124,3 +124,40 @@ while files may be in `processing`:
 Retrying is safe when spreadsheet rows may already have been appended: the
 real Drive ID in column F causes the retry to skip another append and finish by
 moving the file to `processed`.
+
+## Receipt database
+
+PostgreSQL stores receipt headers and ordered items. The schema belongs to this
+server; `@goho/core` supplies the connection layer. Configure `DATABASE_URL` in
+the server environment file, then initialize the schema:
+
+```bash
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
+```
+
+Migrations are numbered and committed under `src/database/migrations`, with an
+explicit registry in `src/database/migrations.ts`. Add a new migration for schema
+changes; do not edit a migration that has already been applied. The migration
+command records completed migrations and can be run again safely. It never
+starts infrastructure itself. Run it against the configured database before
+starting a server version that depends on a new schema.
+
+`receipts` retains the source provider/file identity, original file name, store,
+receipt date, category, subtotal, tax, total, nullable currency, extraction
+version, validated extraction JSON, and creation time. `receipt_items` stores
+ordered item names and amounts, linked to a receipt. Dates use `date`, creation
+times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
+Currency remains unknown with the current extraction contract. Decimal strings
+preserve the finite numeric values supplied by the parser; they cannot recover
+precision already lost upstream.
+
+The repository inserts a receipt and all its items in one transaction. The
+first successful save for a source provider/file ID wins; subsequent saves
+return the existing receipt ID without replacing data or duplicating items.
+Repeated item names are allowed because identity uses position within a receipt.
+
+Run persistence integration tests against a dedicated test database using the
+[local infrastructure instructions](../../infra/local/README.md). Each server
+test applies real migrations in its own temporary schema and removes that schema
+when it finishes. No Google or OpenAI credentials are needed for these tests.
