@@ -4,9 +4,11 @@
   "private": true,
   "description": "Shared local runtime dependencies for development.",
   "scripts": {
-    "infra:up": "docker compose up -d",
+    "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f",
-    "infra:reset": "docker compose down -v"
+    "infra:reset": "docker compose down -v",
+    "infra:test:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "infra:test:down": "docker compose -f docker-compose.test.yml down -v"
   }
 }

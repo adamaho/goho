@@ -64,7 +64,8 @@
     },
     "test:integration": {
       "cache": false,
-      "dependsOn": ["transit", "db:create"],
+      "env": ["TEST_DATABASE_URL"],
+      "dependsOn": ["transit"],
       "outputs": []
     },
     "test:component": {

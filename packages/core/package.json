@@ -10,9 +10,11 @@
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
     "lint": "oxlint .",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test:integration": "vitest run test/*.integration.test.ts"
   },
   "dependencies": {
+    "@effect/sql-pg": "catalog:",
     "@googleapis/drive": "catalog:",
     "@googleapis/sheets": "catalog:",
     "effect": "catalog:",
@@ -21,12 +23,14 @@
   "devDependencies": {
     "@adamaho/nopeus-oxlint-config": "catalog:",
     "@adamaho/nopeus-oxlint-plugin": "catalog:",
+    "@effect/vitest": "catalog:",
     "@goho/tool-oxfmt-config": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

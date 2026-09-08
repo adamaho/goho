@@ -5,8 +5,6 @@ on:
     branches:
       - dev
   pull_request:
-    branches:
-      - dev
     types:
       - opened
       - synchronize
@@ -113,13 +111,13 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_DB: agent
-          POSTGRES_USER: agent
-          POSTGRES_PASSWORD: agent
+          POSTGRES_DB: goho_test
+          POSTGRES_USER: goho_test
+          POSTGRES_PASSWORD: goho_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U agent -d agent"
+          --health-cmd "pg_isready -U goho_test -d goho_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -140,8 +138,8 @@ jobs:
 
       - name: Integration tests
         env:
-          TEST_DATABASE_URL: postgresql://agent:agent@127.0.0.1:5432/agent
-        run: pnpm turbo run test:integration --only
+          TEST_DATABASE_URL: postgresql://goho_test:goho_test@127.0.0.1:5432/goho_test
+        run: pnpm turbo run test:integration
 
   build:
     name: build
