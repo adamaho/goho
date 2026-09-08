@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs-darwin-x64.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
   };
 
-  outputs = { nixpkgs, ... }:
+  outputs = { nixpkgs, nixpkgs-darwin-x64, ... }:
     let
       systems = [
         "aarch64-darwin"
@@ -19,7 +20,9 @@
     {
       devShells = forAllSystems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          nixpkgsForSystem =
+            if system == "x86_64-darwin" then nixpkgs-darwin-x64 else nixpkgs;
+          pkgs = import nixpkgsForSystem { inherit system; };
           pnpm12 = pkgs.callPackage ./nix/pnpm.nix { };
         in
         {
