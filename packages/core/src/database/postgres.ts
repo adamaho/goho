@@ -30,7 +30,8 @@ export const layer = (options: Options) =>
 /**
  * Reads caller-supplied Effect configuration before constructing the pool.
  *
- * @example
+ * **Example** (Configure a server database)
+ *
  * ```ts
  * import { Postgres } from "@goho/core";
  * import { Config } from "effect";
