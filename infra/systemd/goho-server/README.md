@@ -1,7 +1,24 @@
 # Goho server
 
 This unit targets the existing `adam` user and checkout at
-`/home/adam/github.com/adamaho/goho`. Install dependencies in its Nix shell first.
+`/home/adam/github.com/adamaho/goho`.
+
+## Runtime setup
+
+Install Node.js and pnpm at the versions required by the root `package.json`,
+then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
+Both service units use this explicit `PATH`:
+
+```text
+/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
+Ensure both executables are available to `adam` on that path. The services do
+not load interactive shell profiles. If your tools live elsewhere, set
+`Environment="PATH=..."` with the complete path in a systemd override for each
+service. Check the versions with that same path before starting the services.
+
+## Install the service
 
 ```bash
 sudo install -d -o root -g adam -m 0750 /etc/goho

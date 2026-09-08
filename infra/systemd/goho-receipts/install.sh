@@ -8,6 +8,7 @@ readonly CONFIG_DIR="/etc/goho"
 readonly SYSTEMD_DIR="/etc/systemd/system"
 readonly SERVICE_UNIT="goho-receipts.service"
 readonly TIMER_UNIT="goho-receipts.timer"
+readonly TOOLCHAIN_PATH="/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
 if [[ $EUID -ne 0 ]]; then
   printf 'Run this installer with sudo.\n' >&2
@@ -19,7 +20,7 @@ if ! getent passwd adam >/dev/null; then
   exit 1
 fi
 
-if [[ ! -f "$REPOSITORY_DIR/flake.nix" ]]; then
+if [[ ! -f "$REPOSITORY_DIR/pnpm-workspace.yaml" ]]; then
   printf 'Goho repository was not found at %s.\n' "$REPOSITORY_DIR" >&2
   exit 1
 fi
@@ -29,8 +30,9 @@ if [[ ! -x "$SOURCE_DIR/run.sh" ]]; then
   exit 1
 fi
 
-if [[ ! -x /nix/var/nix/profiles/default/bin/nix ]]; then
-  printf 'Nix is not installed at the path expected by the service.\n' >&2
+if ! runuser -u adam -- env PATH="$TOOLCHAIN_PATH" sh -c \
+  'command -v node >/dev/null && command -v pnpm >/dev/null'; then
+  printf 'Install Node.js and pnpm for adam on the service PATH before installing.\n' >&2
   exit 1
 fi
 

@@ -8,14 +8,8 @@ setup.
 
 ### Development environment
 
-Enter the repository's Nix development shell before installing dependencies or
-running server commands:
-
-```bash
-nix develop
-```
-
-Keep this shell open for the remaining setup and local development steps.
+Follow the root [development setup](../../CONTRIBUTING.md#development-setup)
+to install Node.js, pnpm, and workspace dependencies before running server commands.
 
 ### Google service account
 
@@ -72,7 +66,7 @@ Start the server:
 pnpm --filter @goho/goho-server start
 ```
 
-In a second Nix shell, configure and run the [CLI](../goho-cli/README.md).
+In a second terminal, configure and run the [CLI](../goho-cli/README.md).
 Use `pnpm --filter @goho/goho-server dev` for watch mode; avoid restarting during a real batch.
 
 ## Verification
