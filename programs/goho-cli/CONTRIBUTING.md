@@ -1,7 +1,7 @@
 # Contributing to @goho/goho-cli
 
 Follow the root [CONTRIBUTING.md](../../CONTRIBUTING.md).
-Follow the [CLI setup](./README.md#setup).
+Enter `nix develop`, then follow the [CLI setup](./README.md#setup).
 The [server setup](../goho-server/CONTRIBUTING.md) owns provider credentials and
 receipt workflow validation.
 
