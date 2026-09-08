@@ -11,28 +11,32 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
-  "@effect/vitest": 4.0.0-rc.111
+  "@effect/vitest": 4.0.0-rc.112
   vitest: 4.1.11
   "@adamaho/nopeus-oxlint-config": 0.3.0
   "@adamaho/nopeus-oxlint-plugin": 0.4.0
   "@adamaho/nopeus-tsconfig": 0.2.0
-  "@effect/ai-openai": 4.0.0-rc.111
-  "@effect/platform-node": 4.0.0-rc.111
+  "@effect/ai-openai": 4.0.0-rc.112
+  "@effect/platform-node": 4.0.0-rc.112
   "@effect/tsgo": 0.41.0
-  "@googleapis/drive": 21.0.0
+  "@googleapis/drive": 22.0.0
   "@googleapis/sheets": 14.0.0
   "@types/node": 24.13.3
-  effect: 4.0.0-rc.111
+  effect: 4.0.0-rc.112
   google-auth-library: 11.0.2
-  oxfmt: 0.64.0
-  oxlint: 1.79.0
+  oxfmt: 0.66.0
+  oxlint: 1.81.0
   rimraf: 6.1.3
-  turbo: 2.10.11
+  turbo: 2.10.12
   typescript: 7.0.2
 
 catalogMode: strict
 
+saveExact: true
+engineStrict: true
+
 minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
 
 minimumReleaseAgeExclude:
   - "@adamaho/nopeus-oxlint-config"

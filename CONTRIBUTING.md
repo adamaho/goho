@@ -88,8 +88,8 @@ Prefer centralizing shared dependency versions in `pnpm-workspace.yaml` using
 the catalog. This keeps package manifests small and makes upgrades easier to
 review.
 
-Use exact versions. The root `.npmrc` sets `save-exact=true` and
-`engine-strict=true`.
+The Nix shell provides pnpm 12 directly from the checksum-pinned binaries in
+`nix/pnpm.nix`. Keep its version aligned with `packageManager` in `package.json`.
 
 ## Commit Messages
 
