@@ -11,6 +11,7 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
+  "@effect/sql-pg": 4.0.0-rc.112
   "@effect/vitest": 4.0.0-rc.112
   vitest: 4.1.11
   "@adamaho/nopeus-oxlint-config": 0.3.0

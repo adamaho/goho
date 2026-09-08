@@ -4,7 +4,7 @@
   "private": true,
   "description": "Shared local runtime dependencies for development.",
   "scripts": {
-    "infra:up": "docker compose up -d",
+    "infra:up": "docker compose up -d --wait",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f",
     "infra:reset": "docker compose down -v"
