@@ -9,9 +9,8 @@ User=adam
 Group=adam
 WorkingDirectory=/home/adam/github.com/adamaho/goho
 Environment=HOME=/home/adam
-Environment=PATH=/home/adam/.local/share/pnpm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 EnvironmentFile=/etc/goho/server.env
-ExecStart=/home/adam/.local/share/pnpm/bin/pnpm --filter @goho/goho-server start
+ExecStart=/nix/var/nix/profiles/default/bin/nix develop --no-write-lock-file --command pnpm --filter @goho/goho-server start
 Restart=on-failure
 RestartSec=5
 

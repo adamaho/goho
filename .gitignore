@@ -28,5 +28,3 @@ __unconfig*
 .secrets
 
 programs/goho-cli/tickets/
-
-.amp/portals/*

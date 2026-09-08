@@ -6,7 +6,7 @@ Runs receipt processing behind one synchronous HTTP endpoint. The CLI connects t
 ## Setup
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for Google and OpenAI credentials.
-From the repository root:
+From the repository root, inside `nix develop`:
 
 ```bash
 cp programs/goho-server/.env.example programs/goho-server/.env

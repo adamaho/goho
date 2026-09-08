@@ -1,8 +1,7 @@
 # Goho server
 
 This unit targets the existing `adam` user and checkout at
-`/home/adam/github.com/adamaho/goho`. Install the repository's declared Node.js
-and pnpm versions and run `pnpm install --frozen-lockfile` as `adam` first.
+`/home/adam/github.com/adamaho/goho`. Install dependencies in its Nix shell first.
 
 ```bash
 sudo install -d -o root -g adam -m 0750 /etc/goho

@@ -6,6 +6,17 @@ setup.
 
 ## Prerequisites
 
+### Development environment
+
+Enter the repository's Nix development shell before installing dependencies or
+running server commands:
+
+```bash
+nix develop
+```
+
+Keep this shell open for the remaining setup and local development steps.
+
 ### Google service account
 
 1. Create or select a project in the
@@ -61,7 +72,7 @@ Start the server:
 pnpm --filter @goho/goho-server start
 ```
 
-In a second shell, configure and run the [CLI](../goho-cli/README.md).
+In a second Nix shell, configure and run the [CLI](../goho-cli/README.md).
 Use `pnpm --filter @goho/goho-server dev` for watch mode; avoid restarting during a real batch.
 
 ## Verification
