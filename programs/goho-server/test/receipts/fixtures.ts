@@ -1,5 +1,11 @@
 import { ParsedReceipt, prepareReceipt } from "../../src/receipts/model.ts";
 
+/**
+ * Receipt fixture with repeated items and fractional amounts.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const parsedReceipt = ParsedReceipt.make({
   store: { name: "Example Store" },
   date: "2026-09-01",
@@ -16,6 +22,12 @@ export const parsedReceipt = ParsedReceipt.make({
   },
 });
 
+/**
+ * Normalized receipt fixture for persistence tests.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const receipt = prepareReceipt(parsedReceipt, {
   provider: "google_drive",
   fileId: "receipt-1",

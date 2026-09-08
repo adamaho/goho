@@ -30,6 +30,12 @@ const ReceiptDate = Schema.String.check(
   ),
 );
 
+/**
+ * Schema of the validated AI extraction.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const ParsedReceipt = Schema.Struct({
   store: Schema.Struct({
     name: Name,
@@ -49,9 +55,27 @@ export const ParsedReceipt = Schema.Struct({
   }),
 });
 
+/**
+ * Validated receipt extraction.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> {}
 
+/**
+ * Database receipt identity.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const ReceiptId = Schema.String.check(Schema.isUUID()).pipe(Schema.brand("ReceiptId"));
+/**
+ * Validated database receipt identity.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type ReceiptId = typeof ReceiptId.Type;
 
 /**
@@ -63,15 +87,39 @@ export type ReceiptId = typeof ReceiptId.Type;
 export const DecimalString = Schema.String.check(
   Schema.isPattern(/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i),
 ).pipe(Schema.brand("DecimalString"));
+/**
+ * Decimal text accepted by the persistence boundary.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type DecimalString = typeof DecimalString.Type;
 
+/**
+ * Identity of the original receipt file.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const ReceiptSource = Schema.Struct({
   provider: Schema.Literal("google_drive"),
   fileId: Name,
   fileName: Name,
 });
+/**
+ * Source file metadata for persistence.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ReceiptSource extends Schema.Schema.Type<typeof ReceiptSource> {}
 
+/**
+ * Receipt and ordered items accepted by the repository.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export const ReceiptToSave = Schema.Struct({
   source: ReceiptSource,
   storeName: Name,
@@ -91,6 +139,12 @@ export const ReceiptToSave = Schema.Struct({
     }),
   ),
 });
+/**
+ * Normalized receipt persistence input.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface ReceiptToSave extends Schema.Schema.Type<typeof ReceiptToSave> {}
 
 /**

@@ -3,15 +3,33 @@ import { SqlClient } from "effect/unstable/sql";
 
 import { ReceiptId, ReceiptToSave } from "./model.ts";
 
+/**
+ * Expected failure while validating or saving a receipt.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
 export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
   "GohoServer.ReceiptRepository.PersistenceError",
   { operation: Schema.String, cause: Schema.Defect() },
 ) {}
 
+/**
+ * Whether the receipt was inserted or already existed.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export type SaveResult =
   | { readonly _tag: "Inserted"; readonly receiptId: ReceiptId }
   | { readonly _tag: "AlreadyExists"; readonly receiptId: ReceiptId };
 
+/**
+ * Receipt persistence operations.
+ *
+ * @category models
+ * @since 0.1.0
+ */
 export interface Interface {
   readonly save: (receipt: ReceiptToSave) => Effect.Effect<SaveResult, PersistenceError>;
 }
@@ -42,7 +60,7 @@ export const layer = Layer.effect(
     const sql = yield* SqlClient.SqlClient;
     const save = Effect.fn("ReceiptRepository.save")(
       function* (input: ReceiptToSave): Effect.fn.Return<SaveResult, unknown> {
-        const receipt = yield* Schema.decodeUnknownEffect(ReceiptToSave)(input);
+        const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const inserted = yield* sql`
