@@ -20,13 +20,17 @@ own container and volume:
 
 ```bash
 (
-  export COMPOSE_PROJECT_NAME=goho-test
+  export COMPOSE_PROJECT_NAME=goho-integration-tests
   export GOHO_POSTGRES_PORT=5433
   export TEST_DATABASE_URL=postgresql://goho:goho@127.0.0.1:5433/goho
   trap 'pnpm --filter @goho/infra-local infra:reset' EXIT
   pnpm --filter @goho/infra-local infra:up && pnpm turbo run test:integration
 )
 ```
+
+`COMPOSE_PROJECT_NAME` is Docker Compose's built-in setting for the name of a
+group of containers, networks, and volumes. `goho-integration-tests` keeps test
+resources separate from the default development project, `goho-local`.
 
 The subshell keeps these settings out of subsequent development commands.
 Cleanup removes only this project's container and volume. Use a different project
