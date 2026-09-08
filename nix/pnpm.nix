@@ -1,3 +1,5 @@
+# The pinned nixpkgs inputs provide pnpm 11, but this workspace requires pnpm 12.
+# Package the standalone binaries so the Nix shell supplies it without Corepack.
 { lib, stdenv, fetchurl, autoPatchelfHook }:
 
 let

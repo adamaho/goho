@@ -88,11 +88,6 @@ Prefer centralizing shared dependency versions in `pnpm-workspace.yaml` using
 the catalog. This keeps package manifests small and makes upgrades easier to
 review.
 
-Use exact versions. `pnpm-workspace.yaml` sets `saveExact: true` and
-`engineStrict: true`. Dependencies must be at least 24 hours old
-(`minimumReleaseAge: 1440`); strict mode rejects versions that are too new.
-The existing release-age exceptions cover only the three first-party Nopeus
-packages hosted on GitHub Packages.
 The Nix shell provides pnpm 12 directly from the checksum-pinned binaries in
 `nix/pnpm.nix`. Keep its version aligned with `packageManager` in `package.json`.
 
