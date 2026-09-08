@@ -15,6 +15,7 @@ it.effect("provides SQL and Postgres services and reuses a single pooled connect
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const pg = yield* PgClient.PgClient;
+    // PgClient.layer registers one client under both service keys; consumers share its pool.
     expect(pg).toBe(sql);
     const decode = Schema.decodeUnknownEffect(
       Schema.Array(Schema.Struct({ value: Schema.String, pid: Schema.Int })),

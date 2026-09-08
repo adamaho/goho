@@ -30,6 +30,17 @@ export const layer = (options: Options) =>
 /**
  * Reads caller-supplied Effect configuration before constructing the pool.
  *
+ * @example
+ * ```ts
+ * import { Postgres } from "@goho/core";
+ * import { Config } from "effect";
+ *
+ * const DatabaseLive = Postgres.layerConfig({
+ *   url: Config.redacted("DATABASE_URL"),
+ *   applicationName: Config.succeed("goho-server"),
+ * });
+ * ```
+ *
  * @category layers
  * @since 0.1.0
  */

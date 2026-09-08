@@ -5,6 +5,7 @@ on:
     branches:
       - dev
   pull_request:
+    # Stacked PRs target their parent branch, so checks must run beyond dev.
     types:
       - opened
       - synchronize
@@ -107,20 +108,10 @@ jobs:
   test-integration:
     name: test-integration
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_DB: goho_test
-          POSTGRES_USER: goho_test
-          POSTGRES_PASSWORD: goho_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U goho_test -d goho_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+    env:
+      COMPOSE_PROJECT_NAME: goho-ci
+      GOHO_POSTGRES_PORT: "5433"
+      TEST_DATABASE_URL: postgresql://goho:goho@127.0.0.1:5433/goho
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -136,10 +127,16 @@ jobs:
       - name: Setup pnpm and install
         uses: ./.github/actions/setup-pnpm
 
+      - name: Start infrastructure
+        run: pnpm --filter @goho/infra-local infra:up
+
       - name: Integration tests
-        env:
-          TEST_DATABASE_URL: postgresql://goho_test:goho_test@127.0.0.1:5432/goho_test
         run: pnpm turbo run test:integration
+
+      - name: Remove integration infrastructure
+        if: always()
+        working-directory: infra/local
+        run: docker compose down -v
 
   build:
     name: build
