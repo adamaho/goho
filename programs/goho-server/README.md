@@ -10,12 +10,15 @@ From the repository root after the [development setup](../../CONTRIBUTING.md#dev
 
 ```bash
 cp programs/goho-server/.env.example programs/goho-server/.env
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
 pnpm --filter @goho/goho-server start
 ```
 
 Configure the environment file before starting:
 
 - `GOHO_SERVER_PORT`: defaults to `3000`.
+- `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
 - `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
 - `OPENAI_API_KEY`: OpenAI secret.
@@ -161,3 +164,24 @@ Run persistence integration tests against a dedicated test database using the
 [local infrastructure instructions](../../infra/local/README.md). Each server
 test applies real migrations in its own temporary schema and removes that schema
 when it finishes. No Google or OpenAI credentials are needed for these tests.
+
+### Database writes during processing
+
+After parsing a new receipt, the server prepares one normalized representation,
+attempts to save the receipt and all its items, then appends the corresponding
+Sheets rows. Database saves have a five-second attempt timeout; cancellation and
+transaction cleanup finish before proceeding. Expected write failures/timeouts
+are logged with the source file ID and error type, and Sheets processing continues.
+Database failures do not add a new public API outcome. `Processed` confirms the
+existing Sheets/Drive workflow, not database persistence.
+
+A database duplicate does not suppress a Sheets append. A Sheets failure after
+successful persistence leaves that database record in place. A receipt already
+present in Sheets keeps the existing skip behavior, including skipping the
+database write. There is no historical backfill, automatic retry, export-status
+tracking, or reconciliation in this slice. Divergence is an accepted migration
+tradeoff; source file IDs in logs identify failed database writes for later review.
+
+Database configuration and initial connectivity are required at server startup.
+Migrations are an explicit setup/deployment step, not run during requests or
+server startup. Apply them before starting a new server version.

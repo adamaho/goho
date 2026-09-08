@@ -60,9 +60,11 @@ cp programs/goho-server/.env.example programs/goho-server/.env
 The example already points `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE` at the
 package-local JSON key. Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
 
-Start the server:
+Start the database, apply migrations, and start the server:
 
 ```bash
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
 pnpm --filter @goho/goho-server start
 ```
 
@@ -105,3 +107,7 @@ For integration tests, start the isolated test database documented in
 [local infrastructure](../../infra/local/README.md), supply `TEST_DATABASE_URL`,
 and run `pnpm --filter @goho/goho-server test:integration`. These tests apply the
 same migrations as the migration command. Unit tests do not need a database.
+
+After a receipt-processing change, also verify that a new receipt has one
+`receipts` row and the expected ordered `receipt_items` rows. The automated
+workflow tests cover database failure/timeout without live Google or AI calls.

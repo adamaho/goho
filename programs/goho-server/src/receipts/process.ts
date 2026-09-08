@@ -1,7 +1,8 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Effect, Result, Schema, Stream } from "effect";
 
-import { ParsedReceipt as Receipt } from "./model.ts";
+import { ParsedReceipt as Receipt, prepareReceipt, type ReceiptToSave } from "./model.ts";
+import * as ReceiptRepository from "./repository.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Schemas
@@ -218,16 +219,33 @@ type ReceiptRow = readonly [
   sourceFileId: string,
 ];
 
-const mapReceiptRows = (receipt: Receipt, sourceFileId: string): ReadonlyArray<ReceiptRow> => {
-  return receipt.transaction.items.map((item) => [
-    receipt.store.name,
-    receipt.date,
-    receipt.transaction.category,
-    item.name.replace(/\s+\(\d+\)$/, ""),
-    item.price,
-    sourceFileId,
+const mapReceiptRows = (receipt: ReceiptToSave): ReadonlyArray<ReceiptRow> =>
+  receipt.items.map((item) => [
+    receipt.storeName,
+    receipt.receiptDate,
+    receipt.category,
+    item.name,
+    Number(item.amount),
+    receipt.source.fileId,
   ]);
-};
+
+const saveReceiptBestEffort = Effect.fn("GohoServer.Receipts.saveReceiptBestEffort")(function* (
+  receipt: ReceiptToSave,
+) {
+  const repository = yield* ReceiptRepository.Service;
+  yield* repository.save(receipt).pipe(
+    Effect.timeout("5 seconds"),
+    Effect.asVoid,
+    Effect.catch((error) =>
+      Effect.logError("Receipt database save failed; continuing with Sheets", {
+        sourceProvider: receipt.source.provider,
+        fileId: receipt.source.fileId,
+        operation: "save",
+        errorType: error._tag,
+      }),
+    ),
+  );
+});
 
 const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
@@ -289,15 +307,14 @@ const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
 });
 
 const appendReceiptRows = Effect.fn("GohoServer.Receipts.appendReceiptRows")(function* (
-  receipt: Receipt,
-  sourceFileId: string,
+  receipt: ReceiptToSave,
   spreadsheetId: string,
 ) {
   const googleSheets = yield* GoogleSheets.Service;
-  const rows = mapReceiptRows(receipt, sourceFileId);
+  const rows = mapReceiptRows(receipt);
 
   yield* Effect.logDebug("Appending receipt rows", {
-    sourceFileId,
+    sourceFileId: receipt.source.fileId,
     spreadsheetId,
     rowCount: rows.length,
   });
@@ -337,7 +354,7 @@ const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function*
 ): Effect.fn.Return<
   ReceiptProcessingResult,
   never,
-  GoogleDrive.Service | GoogleSheets.Service | Ai.Service
+  GoogleDrive.Service | GoogleSheets.Service | Ai.Service | ReceiptRepository.Service
 > {
   const googleDrive = yield* GoogleDrive.Service;
 
@@ -373,8 +390,14 @@ const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function*
       return AlreadyProcessed.make({ fileId: file.id, fileName: file.name });
     }
 
-    const receipt = yield* parseReceipt(file);
-    yield* appendReceiptRows(receipt, file.id, spreadsheetId);
+    const parsed = yield* parseReceipt(file);
+    const receipt = prepareReceipt(parsed, {
+      provider: "google_drive",
+      fileId: file.id,
+      fileName: file.name,
+    });
+    yield* saveReceiptBestEffort(receipt);
+    yield* appendReceiptRows(receipt, spreadsheetId);
     yield* completeReceipt(file.id, folders);
     return Processed.make({ fileId: file.id, fileName: file.name });
   }).pipe(Effect.result);

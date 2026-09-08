@@ -29,7 +29,18 @@ sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.servi
 The environment install command is for first setup; preserve an existing file.
 Configure `/etc/goho/server.env` and install the Google JSON key at
 `/etc/goho/google-service-account.json`, owned by `root:adam` with mode `0640`.
-The server listens on `127.0.0.1` without authentication.
+Configure `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
+The database must be running when the server starts. As `adam`, from the checkout
+root, apply migrations using the same environment file before enabling or
+restarting the server:
+
+```bash
+node --env-file=/etc/goho/server.env programs/goho-server/src/database/migrate.ts
+```
+
+Use this command for upgrades too, after stopping the receipt timer and waiting
+for active work to finish. It does not provision PostgreSQL or modify the service
+environment. The server listens on `127.0.0.1` without authentication.
 
 ```bash
 sudo systemctl daemon-reload
