@@ -36,7 +36,9 @@ export const make = Effect.fn("@goho/GohoServer.Receipts.make")(function* (
   ) => Effect.Effect<ReadonlyArray<Workflow.ReceiptProcessingResult>, unknown>,
 ) {
   const busy = yield* Ref.make(false);
-  const process = Effect.fn("@goho/GohoServer.Receipts.process")(function* (request: ProcessRequest) {
+  const process = Effect.fn("@goho/GohoServer.Receipts.process")(function* (
+    request: ProcessRequest,
+  ) {
     const acquired = yield* Ref.modify(busy, (current) => [!current, true]);
     if (!acquired) return yield* new HttpApiError.Conflict();
     return yield* run(request).pipe(
@@ -102,4 +104,3 @@ export const layer: Layer.Layer<
     );
   }),
 );
-

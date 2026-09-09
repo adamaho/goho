@@ -19,7 +19,7 @@ IDs must be nonempty and concurrency must be an integer from 1 through 5.
 The response is an array of receipt outcomes after the batch finishes.
 HTTP 400 means invalid input, 409 means another batch is
 running, and 500 means the batch could not complete. Individual failed receipts
-remain successful HTTP responses with `Failed` or `Stranded` outcomes.
+remain successful HTTP responses with `@goho/Failed` or `@goho/Stranded` outcomes.
 Provider causes are logged on the server and omitted from API responses.
 
 An accepted batch continues when its client disconnects. The lock is local to this
@@ -88,7 +88,7 @@ prints the four counts and sets its exit status. An empty batch returns an empty
 - `ClaimNotConfirmed` means the initial `todo` to `processing` move failed. The
   server does not know the file's current parent and does not attempt a blind
   compensating move.
-- `Stranded` means processing failed after a successful claim and the move to
+- `@goho/Stranded` means processing failed after a successful claim and the move to
   `failed` also failed. The file's final location is not confirmed.
 
 Use this recovery procedure for any failed receipt or a process interrupted

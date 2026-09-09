@@ -100,4 +100,3 @@ it.effect("keeps the lock until work finishes after client interruption", () =>
     expect(yield* service.process(request)).toEqual([]);
   }),
 );
-

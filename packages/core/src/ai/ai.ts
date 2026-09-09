@@ -94,4 +94,3 @@ export const make = Effect.gen(function* () {
  * @since 0.1.0
  */
 export const layer = Layer.effect(Service, make);
-

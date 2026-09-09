@@ -24,4 +24,3 @@ Command.run(command, { version: "0.0.0" }).pipe(
   Effect.provide(NodeServices.layer),
   NodeRuntime.runMain,
 );
-

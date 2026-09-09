@@ -13,7 +13,9 @@ const TestLive = HttpRouter.serve(
     Layer.provide([
       Layer.succeed(Receipts.Service, {
         process: () =>
-          Effect.succeed([{ _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" }]),
+          Effect.succeed([
+            { _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" },
+          ]),
       }),
     ]),
   ),
@@ -25,7 +27,9 @@ it.effect("round-trips receipt results through the generated client without auth
     const result = yield* client.receipts.process({
       payload: { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 5 },
     });
-    expect(result).toEqual([{ _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" }]);
+    expect(result).toEqual([
+      { _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" },
+    ]);
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -44,4 +48,3 @@ it.effect("rejects invalid request inputs at the HTTP boundary", () =>
     }
   }).pipe(Effect.provide(TestLive)),
 );
-

@@ -62,4 +62,3 @@ export const ReceiptProcessingResult = Schema.Union([
  * @since 0.1.0
  */
 export type ReceiptProcessingResult = Schema.Schema.Type<typeof ReceiptProcessingResult>;
-

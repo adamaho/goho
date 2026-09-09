@@ -64,10 +64,13 @@ export type AppendRowsResult = sheets_v4.Schema$AppendValuesResponse;
  * @category errors
  * @since 0.1.0
  */
-export class SheetsError extends Schema.TaggedError<SheetsError>()("@goho/GoogleSheets.SheetsError", {
-  operation: Schema.Literals(["readRows", "appendRows"]),
-  message: Schema.String,
-}) {}
+export class SheetsError extends Schema.TaggedError<SheetsError>()(
+  "@goho/GoogleSheets.SheetsError",
+  {
+    operation: Schema.Literals(["readRows", "appendRows"]),
+    message: Schema.String,
+  },
+) {}
 
 type Operation = "readRows" | "appendRows";
 
@@ -155,7 +158,9 @@ export const make = Effect.gen(function* () {
     return response.data.values ?? [];
   });
 
-  const appendRows = Effect.fn("@goho/GoogleSheets.appendRows")(function* (options: AppendRowsOptions) {
+  const appendRows = Effect.fn("@goho/GoogleSheets.appendRows")(function* (
+    options: AppendRowsOptions,
+  ) {
     if (options.rows.length === 0) {
       return yield* new SheetsError({
         operation: "appendRows",
@@ -199,4 +204,3 @@ export const make = Effect.gen(function* () {
  * @since 0.1.0
  */
 export const layer = Layer.effect(Service, make);
-

@@ -208,7 +208,9 @@ export const make = Effect.gen(function* () {
   const auth = yield* GoogleAuth.Service;
   const client = drive("v3");
 
-  const listFolders = Effect.fn("@goho/GoogleDrive.listFolders")(function* (options: ListFoldersOptions) {
+  const listFolders = Effect.fn("@goho/GoogleDrive.listFolders")(function* (
+    options: ListFoldersOptions,
+  ) {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("listFolders", error)));
@@ -375,4 +377,3 @@ export const make = Effect.gen(function* () {
  * @since 0.1.0
  */
 export const layer = Layer.effect(Service, make);
-

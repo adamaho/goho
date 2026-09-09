@@ -123,4 +123,3 @@ it.effect("rolls back the receipt when an item insert fails", () =>
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
-

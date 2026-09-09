@@ -192,4 +192,3 @@ export function layerServiceAccountConfig(
 ): Layer.Layer<Service, Config.ConfigError | AuthenticationError> {
   return Layer.effect(Service, Config.unwrap(config).pipe(Effect.flatMap(makeServiceAccount)));
 }
-

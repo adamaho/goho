@@ -15,4 +15,3 @@ export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
     table: "goho_migrations",
   });
 });
-

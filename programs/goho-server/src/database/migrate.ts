@@ -25,4 +25,3 @@ Migrations.run().pipe(
   ),
   NodeRuntime.runMain,
 );
-

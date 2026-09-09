@@ -10,4 +10,3 @@ export class CommandError extends Schema.TaggedError<CommandError>()("@goho/Goho
   message: Schema.String,
   cause: Schema.Defect(),
 }) {}
-

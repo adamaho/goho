@@ -97,7 +97,9 @@ it.effect("saves the richer receipt before appending matching Sheets rows", () =
   Effect.gen(function* () {
     const test = yield* setup();
     const results = yield* test.service.process(request);
-    expect(results).toEqual([{ _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" }]);
+    expect(results).toEqual([
+      { _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" },
+    ]);
     expect(yield* Ref.get(test.saves)).toEqual([receipt]);
     expect(yield* Ref.get(test.appends)).toEqual([
       {
@@ -244,4 +246,3 @@ it.effect("finishes persistence and Sheets after the accepted client's interrupt
     expect(yield* Ref.get(test.events)).toContain("move:processed");
   }),
 );
-
