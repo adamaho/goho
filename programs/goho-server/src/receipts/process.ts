@@ -1,7 +1,7 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Effect, Result, Schema, Stream } from "effect";
 
-import { ParsedReceipt as Receipt, prepareReceipt, type ReceiptToSave } from "./model.ts";
+import * as ReceiptModel from "./model.ts";
 import * as ReceiptRepository from "./repository.ts";
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ type ReceiptRow = readonly [
   sourceFileId: string,
 ];
 
-const mapReceiptRows = (receipt: ReceiptToSave): ReadonlyArray<ReceiptRow> =>
+const mapReceiptRows = (receipt: ReceiptModel.ReceiptToSave): ReadonlyArray<ReceiptRow> =>
   receipt.items.map((item) => [
     receipt.storeName,
     receipt.receiptDate,
@@ -230,7 +230,7 @@ const mapReceiptRows = (receipt: ReceiptToSave): ReadonlyArray<ReceiptRow> =>
   ]);
 
 const saveReceiptBestEffort = Effect.fn("GohoServer.Receipts.saveReceiptBestEffort")(function* (
-  receipt: ReceiptToSave,
+  receipt: ReceiptModel.ReceiptToSave,
 ) {
   const repository = yield* ReceiptRepository.Service;
   yield* repository.save(receipt).pipe(
@@ -280,7 +280,7 @@ const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
   return yield* ai
     .generateObject({
       objectName: "receipt",
-      schema: Receipt,
+      schema: ReceiptModel.ParsedReceipt,
       prompt: [
         {
           role: "system",
@@ -307,7 +307,7 @@ const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
 });
 
 const appendReceiptRows = Effect.fn("GohoServer.Receipts.appendReceiptRows")(function* (
-  receipt: ReceiptToSave,
+  receipt: ReceiptModel.ReceiptToSave,
   spreadsheetId: string,
 ) {
   const googleSheets = yield* GoogleSheets.Service;
@@ -391,7 +391,7 @@ const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function*
     }
 
     const parsed = yield* parseReceipt(file);
-    const receipt = prepareReceipt(parsed, {
+    const receipt = ReceiptModel.prepareReceipt(parsed, {
       provider: "google_drive",
       fileId: file.id,
       fileName: file.name,
