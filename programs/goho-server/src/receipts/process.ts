@@ -7,12 +7,12 @@ import * as ReceiptRepository from "./repository.ts";
 // ---------------------------------------------------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------------------------------------------------
-const Processed = Schema.TaggedStruct("@goho/Processed", {
+const Processed = Schema.TaggedStruct("Processed", {
   fileId: Schema.String,
   fileName: Schema.String,
 });
 
-const AlreadyProcessed = Schema.TaggedStruct("@goho/AlreadyProcessed", {
+const AlreadyProcessed = Schema.TaggedStruct("AlreadyProcessed", {
   fileId: Schema.String,
   fileName: Schema.String,
 });
@@ -27,7 +27,7 @@ const ReceiptProcessingStage = Schema.Literals([
   "Complete",
 ]);
 
-const Failed = Schema.TaggedStruct("@goho/Failed", {
+const Failed = Schema.TaggedStruct("Failed", {
   fileId: Schema.String,
   fileName: Schema.String,
   stage: ReceiptProcessingStage,
@@ -35,7 +35,7 @@ const Failed = Schema.TaggedStruct("@goho/Failed", {
   cause: Schema.Defect(),
 });
 
-const Stranded = Schema.TaggedStruct("@goho/Stranded", {
+const Stranded = Schema.TaggedStruct("Stranded", {
   fileId: Schema.String,
   fileName: Schema.String,
   stage: ReceiptProcessingStage,
@@ -130,7 +130,7 @@ const RequiredFolder = Schema.Literals(requiredFolders);
 const isRequiredFolder = Schema.is(RequiredFolder);
 
 class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
-  "@goho/GohoServer.Receipts.MissingFoldersError",
+  "GohoServer.Receipts.MissingFoldersError",
   {
     folders: Schema.Array(RequiredFolder),
     reason: Schema.Literals(["Missing", "Ambiguous"]),
@@ -146,7 +146,7 @@ class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
 }
 
 class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>()(
-  "@goho/GohoServer.Receipts.ReceiptProcessingError",
+  "GohoServer.Receipts.ReceiptProcessingError",
   {
     stage: ReceiptProcessingStage,
     cause: Schema.Defect(),
@@ -157,58 +157,58 @@ class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>(
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
 
-const resolveWorkflowFolders = Effect.fn("@goho/GohoServer.Receipts.resolveWorkflowFolders")(
-  function* (folders: ReadonlyArray<GoogleDrive.FolderMetadata>) {
-    const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
-      requiredFolders.map((name) => [name, []]),
-    );
+const resolveWorkflowFolders = Effect.fn("@goho/Receipts.resolveWorkflowFolders")(function* (
+  folders: ReadonlyArray<GoogleDrive.FolderMetadata>,
+) {
+  const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
+    requiredFolders.map((name) => [name, []]),
+  );
 
-    for (const folder of folders) {
-      if (isRequiredFolder(folder.name)) {
-        matches.get(folder.name)?.push(folder.id);
-      }
+  for (const folder of folders) {
+    if (isRequiredFolder(folder.name)) {
+      matches.get(folder.name)?.push(folder.id);
+    }
+  }
+
+  const ambiguousFolders = requiredFolders.filter((name) => (matches.get(name)?.length ?? 0) > 1);
+  if (ambiguousFolders.length > 0) {
+    return yield* new MissingFoldersError({ folders: ambiguousFolders, reason: "Ambiguous" });
+  }
+
+  const missingFolders = requiredFolders.filter((name) => matches.get(name)?.length === 0);
+  if (missingFolders.length > 0) {
+    return yield* new MissingFoldersError({ folders: missingFolders, reason: "Missing" });
+  }
+
+  return {
+    todo: matches.get("todo")?.[0] ?? "",
+    processing: matches.get("processing")?.[0] ?? "",
+    processed: matches.get("processed")?.[0] ?? "",
+    failed: matches.get("failed")?.[0] ?? "",
+  } satisfies WorkflowFolders;
+});
+
+const readProcessedSourceIds = Effect.fn("@goho/Receipts.readProcessedSourceIds")(function* (
+  spreadsheetId: string,
+) {
+  const googleSheets = yield* GoogleSheets.Service;
+  const rows = yield* googleSheets.readRows({ spreadsheetId, range: "RAW!F:F" });
+  const sourceIds = new Set<string>();
+
+  for (const row of rows.slice(1)) {
+    const value = row.at(0);
+    if (!isString(value)) {
+      continue;
     }
 
-    const ambiguousFolders = requiredFolders.filter((name) => (matches.get(name)?.length ?? 0) > 1);
-    if (ambiguousFolders.length > 0) {
-      return yield* new MissingFoldersError({ folders: ambiguousFolders, reason: "Ambiguous" });
+    const sourceId = value.trim();
+    if (sourceId.length > 0) {
+      sourceIds.add(sourceId);
     }
+  }
 
-    const missingFolders = requiredFolders.filter((name) => matches.get(name)?.length === 0);
-    if (missingFolders.length > 0) {
-      return yield* new MissingFoldersError({ folders: missingFolders, reason: "Missing" });
-    }
-
-    return {
-      todo: matches.get("todo")?.[0] ?? "",
-      processing: matches.get("processing")?.[0] ?? "",
-      processed: matches.get("processed")?.[0] ?? "",
-      failed: matches.get("failed")?.[0] ?? "",
-    } satisfies WorkflowFolders;
-  },
-);
-
-const readProcessedSourceIds = Effect.fn("@goho/GohoServer.Receipts.readProcessedSourceIds")(
-  function* (spreadsheetId: string) {
-    const googleSheets = yield* GoogleSheets.Service;
-    const rows = yield* googleSheets.readRows({ spreadsheetId, range: "RAW!F:F" });
-    const sourceIds = new Set<string>();
-
-    for (const row of rows.slice(1)) {
-      const value = row.at(0);
-      if (!isString(value)) {
-        continue;
-      }
-
-      const sourceId = value.trim();
-      if (sourceId.length > 0) {
-        sourceIds.add(sourceId);
-      }
-    }
-
-    return sourceIds;
-  },
-);
+  return sourceIds;
+});
 
 type ReceiptRow = readonly [
   store: string,
@@ -229,25 +229,25 @@ const mapReceiptRows = (receipt: ReceiptModel.ReceiptToSave): ReadonlyArray<Rece
     receipt.source.fileId,
   ]);
 
-const saveReceiptBestEffort = Effect.fn("@goho/GohoServer.Receipts.saveReceiptBestEffort")(
-  function* (receipt: ReceiptModel.ReceiptToSave) {
-    const repository = yield* ReceiptRepository.Service;
-    yield* repository.save(receipt).pipe(
-      Effect.timeout("5 seconds"),
-      Effect.asVoid,
-      Effect.catch((error) =>
-        Effect.logError("Receipt database save failed; continuing with Sheets", {
-          sourceProvider: receipt.source.provider,
-          fileId: receipt.source.fileId,
-          operation: "save",
-          errorType: error._tag,
-        }),
-      ),
-    );
-  },
-);
+const saveReceiptBestEffort = Effect.fn("@goho/Receipts.saveReceiptBestEffort")(function* (
+  receipt: ReceiptModel.ReceiptToSave,
+) {
+  const repository = yield* ReceiptRepository.Service;
+  yield* repository.save(receipt).pipe(
+    Effect.timeout("5 seconds"),
+    Effect.asVoid,
+    Effect.catch((error) =>
+      Effect.logError("Receipt database save failed; continuing with Sheets", {
+        sourceProvider: receipt.source.provider,
+        fileId: receipt.source.fileId,
+        operation: "save",
+        errorType: error._tag,
+      }),
+    ),
+  );
+});
 
-const parseReceipt = Effect.fn("@goho/GohoServer.Receipts.parseReceipt")(function* (
+const parseReceipt = Effect.fn("@goho/Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
 ) {
   if (!supportedImageMimeTypes.has(file.mimeType)) {
@@ -306,7 +306,7 @@ const parseReceipt = Effect.fn("@goho/GohoServer.Receipts.parseReceipt")(functio
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
-const appendReceiptRows = Effect.fn("@goho/GohoServer.Receipts.appendReceiptRows")(function* (
+const appendReceiptRows = Effect.fn("@goho/Receipts.appendReceiptRows")(function* (
   receipt: ReceiptModel.ReceiptToSave,
   spreadsheetId: string,
 ) {
@@ -329,7 +329,7 @@ const appendReceiptRows = Effect.fn("@goho/GohoServer.Receipts.appendReceiptRows
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
 
-const completeReceipt = Effect.fn("@goho/GohoServer.Receipts.completeReceipt")(function* (
+const completeReceipt = Effect.fn("@goho/Receipts.completeReceipt")(function* (
   fileId: string,
   folders: WorkflowFolders,
 ) {
@@ -346,7 +346,7 @@ const completeReceipt = Effect.fn("@goho/GohoServer.Receipts.completeReceipt")(f
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
 });
 
-const processReceipt = Effect.fn("@goho/GohoServer.Receipts.processReceipt")(function* (
+const processReceipt = Effect.fn("@goho/Receipts.processReceipt")(function* (
   file: GoogleDrive.FileMetadata,
   folders: WorkflowFolders,
   spreadsheetId: string,
@@ -404,9 +404,7 @@ const processReceipt = Effect.fn("@goho/GohoServer.Receipts.processReceipt")(fun
 
   if (Result.isSuccess(processing)) {
     yield* Effect.logInfo(
-      processing.success._tag === "@goho/Processed"
-        ? "Receipt processed"
-        : "Receipt already processed",
+      processing.success._tag === "Processed" ? "Receipt processed" : "Receipt already processed",
       { fileId: file.id, fileName: file.name },
     );
     yield* Effect.logDebug("Receipt processing finished", {
@@ -459,7 +457,7 @@ const processReceipt = Effect.fn("@goho/GohoServer.Receipts.processReceipt")(fun
  * @category workflows
  * @since 0.1.0
  */
-export const process = Effect.fn("@goho/GohoServer.Receipts.process")(function* (
+export const process = Effect.fn("@goho/Receipts.process")(function* (
   rootFolderId: string,
   spreadsheetId: string,
   concurrency: number,

@@ -12,7 +12,7 @@ import { GoogleAuth, type AuthClient } from "google-auth-library";
  * @since 0.1.0
  */
 export class AuthenticationError extends Schema.TaggedError<AuthenticationError>()(
-  "@goho/GoogleAuth.AuthenticationError",
+  "GoogleAuth.AuthenticationError",
   {
     operation: Schema.Literals([
       "initialize",

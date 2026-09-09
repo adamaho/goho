@@ -206,7 +206,7 @@ attempts to save the receipt and all its items, then appends the corresponding
 Sheets rows. Database saves have a five-second attempt timeout; cancellation and
 transaction cleanup finish before proceeding. Expected write failures/timeouts
 are logged with the source file ID and error type, and Sheets processing continues.
-Database failures do not add a new public API outcome. `@goho/Processed` confirms the
+Database failures do not add a new public API outcome. `Processed` confirms the
 existing Sheets/Drive workflow, not database persistence.
 
 A database duplicate does not suppress a Sheets append. A Sheets failure after

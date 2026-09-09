@@ -12,7 +12,7 @@ const command = Command.make("goho").pipe(
 );
 
 Command.run(command, { version: "0.0.0" }).pipe(
-  Effect.catchTag("@goho/GohoCli.CommandError", (error) =>
+  Effect.catchTag("GohoCli.CommandError", (error) =>
     Console.error(error.message).pipe(
       Effect.andThen(
         Effect.sync(() => {

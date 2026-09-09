@@ -5,51 +5,51 @@ import { Argument, Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
 import { CommandError } from "../errors.ts";
-const reportProcessResults = Effect.fn("@goho/GohoCli.Receipts.Process.reportProcessResults")(
-  function* (results: ReadonlyArray<ReceiptProcessingResult>) {
-    let processed = 0;
-    let alreadyProcessed = 0;
-    let failed = 0;
-    let stranded = 0;
+const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(function* (
+  results: ReadonlyArray<ReceiptProcessingResult>,
+) {
+  let processed = 0;
+  let alreadyProcessed = 0;
+  let failed = 0;
+  let stranded = 0;
 
-    for (const result of results) {
-      switch (result._tag) {
-        case "@goho/Processed":
-          processed += 1;
-          break;
-        case "@goho/AlreadyProcessed":
-          alreadyProcessed += 1;
-          break;
-        case "@goho/Failed":
-          failed += 1;
-          yield* Console.log(
-            `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
-          );
-          break;
-        case "@goho/Stranded":
-          stranded += 1;
-          yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
-          break;
-      }
+  for (const result of results) {
+    switch (result._tag) {
+      case "Processed":
+        processed += 1;
+        break;
+      case "AlreadyProcessed":
+        alreadyProcessed += 1;
+        break;
+      case "Failed":
+        failed += 1;
+        yield* Console.log(
+          `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
+        );
+        break;
+      case "Stranded":
+        stranded += 1;
+        yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
+        break;
     }
+  }
 
-    yield* Console.log(
-      [
-        `Processed: ${processed}`,
-        `Already processed: ${alreadyProcessed}`,
-        `Failed: ${failed}`,
-        `Stranded: ${stranded}`,
-      ].join("\n"),
-    );
+  yield* Console.log(
+    [
+      `Processed: ${processed}`,
+      `Already processed: ${alreadyProcessed}`,
+      `Failed: ${failed}`,
+      `Stranded: ${stranded}`,
+    ].join("\n"),
+  );
 
-    if (failed > 0 || stranded > 0) {
-      return yield* new CommandError({
-        message: "Receipt processing completed with failures. Review the summary above.",
-        cause: results,
-      });
-    }
-  },
-);
+  if (failed > 0 || stranded > 0) {
+    return yield* new CommandError({
+      message: "Receipt processing completed with failures. Review the summary above.",
+      cause: results,
+    });
+  }
+});
 
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(

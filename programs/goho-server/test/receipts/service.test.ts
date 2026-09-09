@@ -48,7 +48,7 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
     const service = yield* make(() =>
       Effect.succeed([
         {
-          _tag: "@goho/Failed",
+          _tag: "Failed",
           fileId: "1",
           fileName: "receipt",
           stage: "ParseReceipt",
@@ -56,7 +56,7 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
           cause: "secret",
         },
         {
-          _tag: "@goho/Stranded",
+          _tag: "Stranded",
           fileId: "2",
           fileName: "receipt",
           stage: "Complete",
@@ -68,13 +68,13 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
     const results = yield* service.process(request);
     expect(results).toEqual([
       {
-        _tag: "@goho/Failed",
+        _tag: "Failed",
         fileId: "1",
         fileName: "receipt",
         stage: "ParseReceipt",
         disposition: "MovedToFailed",
       },
-      { _tag: "@goho/Stranded", fileId: "2", fileName: "receipt", stage: "Complete" },
+      { _tag: "Stranded", fileId: "2", fileName: "receipt", stage: "Complete" },
     ]);
   }),
 );

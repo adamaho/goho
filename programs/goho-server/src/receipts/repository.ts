@@ -10,7 +10,7 @@ import { ReceiptId, ReceiptToSave } from "./model.ts";
  * @since 0.1.0
  */
 export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
-  "@goho/GohoServer.ReceiptRepository.PersistenceError",
+  "GohoServer.ReceiptRepository.PersistenceError",
   { operation: Schema.String, cause: Schema.Defect() },
 ) {}
 

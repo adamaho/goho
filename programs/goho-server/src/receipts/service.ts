@@ -30,22 +30,20 @@ export class Service extends Context.Service<
  * @category models
  * @since 0.1.0
  */
-export const make = Effect.fn("@goho/GohoServer.Receipts.make")(function* (
+export const make = Effect.fn("@goho/ReceiptService.make")(function* (
   run: (
     request: ProcessRequest,
   ) => Effect.Effect<ReadonlyArray<Workflow.ReceiptProcessingResult>, unknown>,
 ) {
   const busy = yield* Ref.make(false);
-  const process = Effect.fn("@goho/GohoServer.Receipts.process")(function* (
-    request: ProcessRequest,
-  ) {
+  const process = Effect.fn("@goho/ReceiptService.process")(function* (request: ProcessRequest) {
     const acquired = yield* Ref.modify(busy, (current) => [!current, true]);
     if (!acquired) return yield* new HttpApiError.Conflict();
     return yield* run(request).pipe(
       Effect.flatMap((results) =>
         Effect.forEach(results, (result): Effect.Effect<ReceiptProcessingResult> => {
           switch (result._tag) {
-            case "@goho/Failed":
+            case "Failed":
               return Effect.logError("Receipt failed", result).pipe(
                 Effect.as({
                   _tag: result._tag,
@@ -55,7 +53,7 @@ export const make = Effect.fn("@goho/GohoServer.Receipts.make")(function* (
                   disposition: result.disposition,
                 }),
               );
-            case "@goho/Stranded":
+            case "Stranded":
               return Effect.logError("Receipt stranded", result).pipe(
                 Effect.as({
                   _tag: result._tag,

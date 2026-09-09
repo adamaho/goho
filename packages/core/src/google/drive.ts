@@ -83,7 +83,7 @@ export interface MoveFileOptions {
  * @category errors
  * @since 0.1.0
  */
-export class DriveError extends Schema.TaggedError<DriveError>()("@goho/GoogleDrive.DriveError", {
+export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.DriveError", {
   operation: Schema.Literals(["listFolders", "listFiles", "downloadFile", "moveFile"]),
   message: Schema.String,
 }) {}

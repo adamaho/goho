@@ -45,14 +45,14 @@ const Stage = Schema.Literals([
  * @since 0.1.0
  */
 export const ReceiptProcessingResult = Schema.Union([
-  Schema.TaggedStruct("@goho/Processed", File),
-  Schema.TaggedStruct("@goho/AlreadyProcessed", File),
-  Schema.TaggedStruct("@goho/Failed", {
+  Schema.TaggedStruct("Processed", File),
+  Schema.TaggedStruct("AlreadyProcessed", File),
+  Schema.TaggedStruct("Failed", {
     ...File,
     stage: Stage,
     disposition: Schema.Literals(["MovedToFailed", "ClaimNotConfirmed"]),
   }),
-  Schema.TaggedStruct("@goho/Stranded", { ...File, stage: Stage }),
+  Schema.TaggedStruct("Stranded", { ...File, stage: Stage }),
 ]);
 
 /**
