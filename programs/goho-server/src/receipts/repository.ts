@@ -58,7 +58,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const save = Effect.fn("ReceiptRepository.save")(
+    const save = Effect.fn("@goho/ReceiptRepository.save")(
       function* (input: ReceiptToSave): Effect.fn.Return<SaveResult, unknown> {
         const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
         return yield* sql.withTransaction(

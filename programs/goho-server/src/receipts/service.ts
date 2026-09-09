@@ -30,13 +30,13 @@ export class Service extends Context.Service<
  * @category models
  * @since 0.1.0
  */
-export const make = Effect.fn("GohoServer.Receipts.make")(function* (
+export const make = Effect.fn("@goho/ReceiptService.make")(function* (
   run: (
     request: ProcessRequest,
   ) => Effect.Effect<ReadonlyArray<Workflow.ReceiptProcessingResult>, unknown>,
 ) {
   const busy = yield* Ref.make(false);
-  const process = Effect.fn("GohoServer.Receipts.process")(function* (request: ProcessRequest) {
+  const process = Effect.fn("@goho/ReceiptService.process")(function* (request: ProcessRequest) {
     const acquired = yield* Ref.modify(busy, (current) => [!current, true]);
     if (!acquired) return yield* new HttpApiError.Conflict();
     return yield* run(request).pipe(

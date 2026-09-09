@@ -5,7 +5,7 @@ import { Argument, Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
 import { CommandError } from "../errors.ts";
-const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessResults")(function* (
+const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
   let processed = 0;

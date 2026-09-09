@@ -132,7 +132,7 @@ export const make = Effect.gen(function* () {
   const auth = yield* GoogleAuth.Service;
   const client = sheets("v4");
 
-  const readRows = Effect.fn("GoogleSheets.readRows")(function* (options: ReadRowsOptions) {
+  const readRows = Effect.fn("@goho/GoogleSheets.readRows")(function* (options: ReadRowsOptions) {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("readRows", error)));
@@ -155,7 +155,9 @@ export const make = Effect.gen(function* () {
     return response.data.values ?? [];
   });
 
-  const appendRows = Effect.fn("GoogleSheets.appendRows")(function* (options: AppendRowsOptions) {
+  const appendRows = Effect.fn("@goho/GoogleSheets.appendRows")(function* (
+    options: AppendRowsOptions,
+  ) {
     if (options.rows.length === 0) {
       return yield* new SheetsError({
         operation: "appendRows",
