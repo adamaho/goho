@@ -49,6 +49,17 @@ it is ever exposed.
 3. Store the key only in `programs/goho-server/.env` as `OPENAI_API_KEY`. The local
    environment file is ignored by Git.
 
+## Runtime configuration
+
+Configure the environment file before starting:
+
+- `GOHO_SERVER_PORT`: defaults to `3000`.
+- `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
+- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
+- `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
+- `OPENAI_API_KEY`: OpenAI secret.
+- `OPENAI_MODEL`: extraction model.
+
 ## Local Setup
 
 Copy the environment template:
@@ -100,6 +111,22 @@ Complete this manual validation checklist after changes to receipt processing:
 
 Use the shared Postgres layer from `@goho/core`. Keep receipt tables, migrations,
 and repository behavior in this server.
+
+### Receipt schema
+
+`receipts` retains the source provider/file identity, original file name, store,
+receipt date, category, subtotal, tax, total, nullable currency, extraction
+version, validated extraction JSON, and creation time. `receipt_items` stores
+ordered item names and amounts, linked to a receipt. Dates use `date`, creation
+times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
+Currency remains unknown with the current extraction contract. Decimal strings
+preserve the finite numeric values supplied by the parser; they cannot recover
+precision already lost upstream.
+
+The repository inserts a receipt and all its items in one transaction. The
+first successful save for a source provider/file ID wins; subsequent saves
+return the existing receipt ID without replacing data or duplicating items.
+Repeated item names are allowed because identity uses position within a receipt.
 
 ### Running migrations locally
 
@@ -171,3 +198,24 @@ schema afterward. No Google or OpenAI credentials are required.
 After a receipt-processing change, also verify that a new receipt has one
 `receipts` row and the expected ordered `receipt_items` rows. The automated
 workflow tests cover database failure/timeout without live Google or AI calls.
+
+### Database writes during processing
+
+After parsing a new receipt, the server prepares one normalized representation,
+attempts to save the receipt and all its items, then appends the corresponding
+Sheets rows. Database saves have a five-second attempt timeout; cancellation and
+transaction cleanup finish before proceeding. Expected write failures/timeouts
+are logged with the source file ID and error type, and Sheets processing continues.
+Database failures do not add a new public API outcome. `Processed` confirms the
+existing Sheets/Drive workflow, not database persistence.
+
+A database duplicate does not suppress a Sheets append. A Sheets failure after
+successful persistence leaves that database record in place. A receipt already
+present in Sheets keeps the existing skip behavior, including skipping the
+database write. There is no historical backfill, automatic retry, export-status
+tracking, or reconciliation in this slice. Divergence is an accepted migration
+tradeoff; source file IDs in logs identify failed database writes for later review.
+
+Database configuration and initial connectivity are required at server startup.
+The systemd unit applies migrations before launching the server. Direct launches
+with `start` or `dev` require the separate migration command first.

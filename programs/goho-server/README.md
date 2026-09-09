@@ -3,21 +3,9 @@
 Runs receipt processing behind one synchronous HTTP endpoint. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
-## Configuration
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup, credentials, tests, and
-authoring migrations.
-
-Configure the environment file before starting:
-
-- `GOHO_SERVER_PORT`: defaults to `3000`.
-- `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
-- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
-- `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
-- `OPENAI_API_KEY`: OpenAI secret.
-- `OPENAI_MODEL`: extraction model.
-
 The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
+
+For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## API
 
@@ -120,57 +108,3 @@ while files may be in `processing`:
 Retrying is safe when spreadsheet rows may already have been appended: the
 real Drive ID in column F causes the retry to skip another append and finish by
 moving the file to `processed`.
-
-## Receipt database
-
-PostgreSQL stores receipt headers and ordered items. The schema belongs to this
-server; `@goho/core` supplies the connection layer. `DATABASE_URL` selects the
-database used by the migration command.
-
-Apply migrations before starting a server version that depends on a new schema:
-
-```bash
-pnpm --filter @goho/goho-server db:migrate
-```
-
-This command uses the server's environment (including its optional `.env` file).
-It does not start Postgres. The [systemd service](../../infra/systemd/goho-server/README.md)
-runs this command automatically before each server start or restart and prevents
-startup if it fails. When launching the server directly, run it manually first.
-Migrations do not run during requests. The runner records completed versions in `goho_migrations` and applies
-only newer versions; rerunning it without schema changes is a no-op.
-
-`receipts` retains the source provider/file identity, original file name, store,
-receipt date, category, subtotal, tax, total, nullable currency, extraction
-version, validated extraction JSON, and creation time. `receipt_items` stores
-ordered item names and amounts, linked to a receipt. Dates use `date`, creation
-times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
-Currency remains unknown with the current extraction contract. Decimal strings
-preserve the finite numeric values supplied by the parser; they cannot recover
-precision already lost upstream.
-
-The repository inserts a receipt and all its items in one transaction. The
-first successful save for a source provider/file ID wins; subsequent saves
-return the existing receipt ID without replacing data or duplicating items.
-Repeated item names are allowed because identity uses position within a receipt.
-
-### Database writes during processing
-
-After parsing a new receipt, the server prepares one normalized representation,
-attempts to save the receipt and all its items, then appends the corresponding
-Sheets rows. Database saves have a five-second attempt timeout; cancellation and
-transaction cleanup finish before proceeding. Expected write failures/timeouts
-are logged with the source file ID and error type, and Sheets processing continues.
-Database failures do not add a new public API outcome. `Processed` confirms the
-existing Sheets/Drive workflow, not database persistence.
-
-A database duplicate does not suppress a Sheets append. A Sheets failure after
-successful persistence leaves that database record in place. A receipt already
-present in Sheets keeps the existing skip behavior, including skipping the
-database write. There is no historical backfill, automatic retry, export-status
-tracking, or reconciliation in this slice. Divergence is an accepted migration
-tradeoff; source file IDs in logs identify failed database writes for later review.
-
-Database configuration and initial connectivity are required at server startup.
-The systemd unit applies migrations before launching the server. Direct launches
-with `start` or `dev` require the separate migration command first.
