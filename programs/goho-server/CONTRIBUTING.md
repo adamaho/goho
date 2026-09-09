@@ -54,6 +54,7 @@ it is ever exposed.
 Configure the environment file before starting:
 
 - `GOHO_SERVER_PORT`: defaults to `3000`.
+- `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
 - `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
 - `OPENAI_API_KEY`: OpenAI secret.
@@ -70,9 +71,11 @@ cp programs/goho-server/.env.example programs/goho-server/.env
 The example already points `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE` at the
 package-local JSON key. Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
 
-Start the server:
+Start the database, apply migrations, and start the server:
 
 ```bash
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
 pnpm --filter @goho/goho-server start
 ```
 
@@ -138,8 +141,10 @@ pnpm --filter @goho/goho-server db:migrate
 `infra:up` starts Postgres and creates the database on its first startup.
 `db:migrate` connects to that database and creates or updates its tables. These
 are separate commands. Neither `start` nor `dev` runs migrations automatically.
-For deployment, run `db:migrate` against the target database before starting the
-new server version; CI does not migrate deployment databases.
+The [systemd unit](#systemd-service) runs `db:migrate`
+automatically before launching the server on each start or restart. For other
+deployments, run it explicitly before starting the new server version. CI does
+not migrate deployment databases.
 
 ### How the runner works
 
@@ -189,3 +194,88 @@ For integration tests, start the isolated test database documented in
 and run `pnpm --filter @goho/goho-server test:integration`. Each repository test
 creates a temporary schema, applies the real migration registry, and drops the
 schema afterward. No Google or OpenAI credentials are required.
+
+After a receipt-processing change, also verify that a new receipt has one
+`receipts` row and the expected ordered `receipt_items` rows. The automated
+workflow tests cover database failure/timeout without live Google or AI calls.
+
+### Database writes during processing
+
+After parsing a new receipt, the server prepares one normalized representation,
+attempts to save the receipt and all its items, then appends the corresponding
+Sheets rows. Database saves have a five-second attempt timeout; cancellation and
+transaction cleanup finish before proceeding. Expected write failures/timeouts
+are logged with the source file ID and error type, and Sheets processing continues.
+Database failures do not add a new public API outcome. `Processed` confirms the
+existing Sheets/Drive workflow, not database persistence.
+
+A database duplicate does not suppress a Sheets append. A Sheets failure after
+successful persistence leaves that database record in place. A receipt already
+present in Sheets keeps the existing skip behavior, including skipping the
+database write. There is no historical backfill, automatic retry, export-status
+tracking, or reconciliation in this slice. Divergence is an accepted migration
+tradeoff; source file IDs in logs identify failed database writes for later review.
+
+Database configuration and initial connectivity are required at server startup.
+The systemd unit applies migrations before launching the server. Direct launches
+with `start` or `dev` require the separate migration command first.
+
+## Systemd service
+
+Run the installation commands below from the repository root.
+
+This unit targets the existing `adam` user and checkout at
+`/home/adam/github.com/adamaho/goho`.
+
+### Runtime setup
+
+Install Node.js and pnpm at the versions required by the root `package.json`,
+then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
+Both service units use this explicit `PATH`:
+
+```text
+/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
+```
+
+Ensure both executables are available to `adam` on that path. The services do
+not load interactive shell profiles. If your tools live elsewhere, set
+`Environment="PATH=..."` with the complete path in a systemd override for each
+service. Check the versions with that same path before starting the services.
+
+### Install the service
+
+```bash
+sudo install -d -o root -g adam -m 0750 /etc/goho
+sudo install -o root -g adam -m 0640 infra/systemd/goho-server/.env.example /etc/goho/server.env
+sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.service /etc/systemd/system/goho-server.service
+```
+
+The environment install command is for first setup; preserve an existing file.
+Configure `/etc/goho/server.env` and install the Google JSON key at
+`/etc/goho/google-service-account.json`, owned by `root:adam` with mode `0640`.
+Configure `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
+The database must be running when the service starts. `ExecStartPre` runs
+`db:migrate` as `adam`, using the same working directory, PATH, and environment
+file as the server. Each start or restart applies pending migrations before
+starting the HTTP server. If migrations fail, the server does not start; the
+existing `Restart=on-failure` policy retries after five seconds, subject to
+systemd's start-rate limit. Inspect migration output in the service journal.
+The unit does not provision PostgreSQL. The server listens on `127.0.0.1`
+without authentication.
+
+```bash
+sudo systemctl daemon-reload
+sudo systemd-analyze verify /etc/systemd/system/goho-server.service
+sudo systemctl enable --now goho-server.service
+journalctl -u goho-server.service
+```
+
+For an existing installation, copy the updated unit with the `sudo install`
+command above and run `sudo systemctl daemon-reload`, then restart the service
+after draining active work. Updating the checkout alone does not update the
+installed unit.
+
+Stop the receipt timer and wait for the active batch to finish before restarting
+or upgrading the server. Forced shutdown can leave files in `processing`;
+follow the [recovery procedure](./README.md#failure-outcomes-and-recovery).
+Provider failure causes appear in the server journal; review before sharing.

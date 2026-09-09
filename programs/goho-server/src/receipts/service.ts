@@ -4,6 +4,7 @@ import { Context, Effect, Layer, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
 import * as Workflow from "./process.ts";
+import type * as ReceiptRepository from "./repository.ts";
 
 /**
  * Runs one receipt batch at a time.
@@ -87,12 +88,12 @@ export const make = Effect.fn("GohoServer.Receipts.make")(function* (
 export const layer: Layer.Layer<
   Service,
   never,
-  Ai.Service | GoogleDrive.Service | GoogleSheets.Service
+  Ai.Service | GoogleDrive.Service | GoogleSheets.Service | ReceiptRepository.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
     const services = yield* Effect.context<
-      Ai.Service | GoogleDrive.Service | GoogleSheets.Service
+      Ai.Service | GoogleDrive.Service | GoogleSheets.Service | ReceiptRepository.Service
     >();
     return yield* make((request) =>
       Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
