@@ -48,7 +48,7 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
     const service = yield* make(() =>
       Effect.succeed([
         {
-          _tag: "Failed",
+          _tag: "@goho/Failed",
           fileId: "1",
           fileName: "receipt",
           stage: "ParseReceipt",
@@ -56,7 +56,7 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
           cause: "secret",
         },
         {
-          _tag: "Stranded",
+          _tag: "@goho/Stranded",
           fileId: "2",
           fileName: "receipt",
           stage: "Complete",
@@ -68,13 +68,13 @@ it.effect("omits diagnostic causes from failed and stranded public results", () 
     const results = yield* service.process(request);
     expect(results).toEqual([
       {
-        _tag: "Failed",
+        _tag: "@goho/Failed",
         fileId: "1",
         fileName: "receipt",
         stage: "ParseReceipt",
         disposition: "MovedToFailed",
       },
-      { _tag: "Stranded", fileId: "2", fileName: "receipt", stage: "Complete" },
+      { _tag: "@goho/Stranded", fileId: "2", fileName: "receipt", stage: "Complete" },
     ]);
   }),
 );
@@ -100,3 +100,4 @@ it.effect("keeps the lock until work finishes after client interruption", () =>
     expect(yield* service.process(request)).toEqual([]);
   }),
 );
+

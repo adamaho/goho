@@ -15,7 +15,7 @@ catalog:
   "@effect/vitest": 4.0.0-rc.112
   vitest: 4.1.11
   "@adamaho/nopeus-oxlint-config": 0.3.0
-  "@adamaho/nopeus-oxlint-plugin": 0.4.0
+  "@adamaho/nopeus-oxlint-plugin": 0.5.0
   "@adamaho/nopeus-tsconfig": 0.2.0
   "@effect/ai-openai": 4.0.0-rc.112
   "@effect/platform-node": 4.0.0-rc.112
@@ -43,3 +43,4 @@ minimumReleaseAgeExclude:
   - "@adamaho/nopeus-oxlint-config"
   - "@adamaho/nopeus-oxlint-plugin"
   - "@adamaho/nopeus-tsconfig"
+

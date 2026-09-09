@@ -117,9 +117,10 @@ it.effect("rolls back the receipt when an item insert fails", () =>
     yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
     const result = yield* repo.save(receipt).pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe(
-      "GohoServer.ReceiptRepository.PersistenceError",
+      "@goho/GohoServer.ReceiptRepository.PersistenceError",
     );
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
+

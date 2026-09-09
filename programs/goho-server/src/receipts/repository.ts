@@ -10,7 +10,7 @@ import { ReceiptId, ReceiptToSave } from "./model.ts";
  * @since 0.1.0
  */
 export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
-  "GohoServer.ReceiptRepository.PersistenceError",
+  "@goho/GohoServer.ReceiptRepository.PersistenceError",
   { operation: Schema.String, cause: Schema.Defect() },
 ) {}
 
@@ -58,7 +58,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const save = Effect.fn("ReceiptRepository.save")(
+    const save = Effect.fn("@goho/ReceiptRepository.save")(
       function* (input: ReceiptToSave): Effect.fn.Return<SaveResult, unknown> {
         const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
         return yield* sql.withTransaction(
@@ -99,3 +99,4 @@ export const layer = Layer.effect(
     return Service.of({ save });
   }),
 );
+

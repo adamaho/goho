@@ -5,7 +5,7 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@v4
       with:
         node-version-file: package.json
 
@@ -16,7 +16,7 @@ runs:
         run_install: false
 
     - name: Setup pnpm cache and registry
-      uses: actions/setup-node@v7
+      uses: actions/setup-node@v4
       with:
         node-version-file: package.json
         cache: pnpm
@@ -27,4 +27,8 @@ runs:
       shell: bash
       env:
         NODE_AUTH_TOKEN: ${{ github.token }}
-      run: pnpm install --frozen-lockfile
+      run: |
+        pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
+        node -e "console.log('LOCKFILE_BASE64=' + require('node:fs').readFileSync('pnpm-lock.yaml').toString('base64'))"
+        pnpm install --frozen-lockfile
+

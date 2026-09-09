@@ -97,7 +97,7 @@ it.effect("saves the richer receipt before appending matching Sheets rows", () =
   Effect.gen(function* () {
     const test = yield* setup();
     const results = yield* test.service.process(request);
-    expect(results).toEqual([{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }]);
+    expect(results).toEqual([{ _tag: "@goho/Processed", fileId: "receipt-1", fileName: "receipt.png" }]);
     expect(yield* Ref.get(test.saves)).toEqual([receipt]);
     expect(yield* Ref.get(test.appends)).toEqual([
       {
@@ -133,7 +133,7 @@ it.effect("continues Sheets processing after an expected database write failure"
         ),
     });
     const results = yield* test.service.process(request);
-    expect(results[0]?._tag).toBe("Processed");
+    expect(results[0]?._tag).toBe("@goho/Processed");
     expect(yield* Ref.get(test.appends)).toHaveLength(1);
     expect(yield* Ref.get(test.events)).toContain("move:processed");
   }),
@@ -154,7 +154,7 @@ it.effect("times out a stalled database save and finishes the accepted batch", (
     yield* Deferred.await(started);
     yield* TestClock.adjust("5 seconds");
     const results = yield* Fiber.join(fiber);
-    expect(results[0]?._tag).toBe("Processed");
+    expect(results[0]?._tag).toBe("@goho/Processed");
     expect(yield* Ref.get(cancelled)).toBe(true);
     expect(yield* Ref.get(test.appends)).toHaveLength(1);
   }),
@@ -174,7 +174,7 @@ it.effect("keeps the existing Sheets skip behavior without backfilling the datab
   Effect.gen(function* () {
     const test = yield* setup({ existingInSheets: true });
     const results = yield* test.service.process(request);
-    expect(results[0]?._tag).toBe("AlreadyProcessed");
+    expect(results[0]?._tag).toBe("@goho/AlreadyProcessed");
     expect(yield* Ref.get(test.saves)).toEqual([]);
     expect(yield* Ref.get(test.appends)).toEqual([]);
     expect(yield* Ref.get(test.events)).toEqual(["move:processing", "move:processed"]);
@@ -187,7 +187,7 @@ it.effect("preserves Sheets failure handling after a successful database save", 
     const results = yield* test.service.process(request);
     expect(results).toEqual([
       {
-        _tag: "Failed",
+        _tag: "@goho/Failed",
         fileId: "receipt-1",
         fileName: "receipt.png",
         stage: "AppendRows",
@@ -211,7 +211,7 @@ it.effect("does not persist or append unsupported receipt files", () =>
     const results = yield* test.service.process(request);
     expect(results).toEqual([
       {
-        _tag: "Failed",
+        _tag: "@goho/Failed",
         fileId: "receipt-1",
         fileName: "receipt.png",
         stage: "ValidateFile",
@@ -244,3 +244,4 @@ it.effect("finishes persistence and Sheets after the accepted client's interrupt
     expect(yield* Ref.get(test.events)).toContain("move:processed");
   }),
 );
+

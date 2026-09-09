@@ -7,12 +7,12 @@ import * as ReceiptRepository from "./repository.ts";
 // ---------------------------------------------------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------------------------------------------------
-const Processed = Schema.TaggedStruct("Processed", {
+const Processed = Schema.TaggedStruct("@goho/Processed", {
   fileId: Schema.String,
   fileName: Schema.String,
 });
 
-const AlreadyProcessed = Schema.TaggedStruct("AlreadyProcessed", {
+const AlreadyProcessed = Schema.TaggedStruct("@goho/AlreadyProcessed", {
   fileId: Schema.String,
   fileName: Schema.String,
 });
@@ -27,7 +27,7 @@ const ReceiptProcessingStage = Schema.Literals([
   "Complete",
 ]);
 
-const Failed = Schema.TaggedStruct("Failed", {
+const Failed = Schema.TaggedStruct("@goho/Failed", {
   fileId: Schema.String,
   fileName: Schema.String,
   stage: ReceiptProcessingStage,
@@ -35,7 +35,7 @@ const Failed = Schema.TaggedStruct("Failed", {
   cause: Schema.Defect(),
 });
 
-const Stranded = Schema.TaggedStruct("Stranded", {
+const Stranded = Schema.TaggedStruct("@goho/Stranded", {
   fileId: Schema.String,
   fileName: Schema.String,
   stage: ReceiptProcessingStage,
@@ -130,7 +130,7 @@ const RequiredFolder = Schema.Literals(requiredFolders);
 const isRequiredFolder = Schema.is(RequiredFolder);
 
 class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
-  "GohoServer.Receipts.MissingFoldersError",
+  "@goho/GohoServer.Receipts.MissingFoldersError",
   {
     folders: Schema.Array(RequiredFolder),
     reason: Schema.Literals(["Missing", "Ambiguous"]),
@@ -146,7 +146,7 @@ class MissingFoldersError extends Schema.TaggedError<MissingFoldersError>()(
 }
 
 class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>()(
-  "GohoServer.Receipts.ReceiptProcessingError",
+  "@goho/GohoServer.Receipts.ReceiptProcessingError",
   {
     stage: ReceiptProcessingStage,
     cause: Schema.Defect(),
@@ -157,7 +157,7 @@ class ReceiptProcessingError extends Schema.TaggedError<ReceiptProcessingError>(
 // Utils
 // ---------------------------------------------------------------------------------------------------------------------
 
-const resolveWorkflowFolders = Effect.fn("GohoServer.Receipts.resolveWorkflowFolders")(function* (
+const resolveWorkflowFolders = Effect.fn("@goho/GohoServer.Receipts.resolveWorkflowFolders")(function* (
   folders: ReadonlyArray<GoogleDrive.FolderMetadata>,
 ) {
   const matches = new Map<(typeof requiredFolders)[number], Array<string>>(
@@ -188,7 +188,7 @@ const resolveWorkflowFolders = Effect.fn("GohoServer.Receipts.resolveWorkflowFol
   } satisfies WorkflowFolders;
 });
 
-const readProcessedSourceIds = Effect.fn("GohoServer.Receipts.readProcessedSourceIds")(function* (
+const readProcessedSourceIds = Effect.fn("@goho/GohoServer.Receipts.readProcessedSourceIds")(function* (
   spreadsheetId: string,
 ) {
   const googleSheets = yield* GoogleSheets.Service;
@@ -229,7 +229,7 @@ const mapReceiptRows = (receipt: ReceiptModel.ReceiptToSave): ReadonlyArray<Rece
     receipt.source.fileId,
   ]);
 
-const saveReceiptBestEffort = Effect.fn("GohoServer.Receipts.saveReceiptBestEffort")(function* (
+const saveReceiptBestEffort = Effect.fn("@goho/GohoServer.Receipts.saveReceiptBestEffort")(function* (
   receipt: ReceiptModel.ReceiptToSave,
 ) {
   const repository = yield* ReceiptRepository.Service;
@@ -247,7 +247,7 @@ const saveReceiptBestEffort = Effect.fn("GohoServer.Receipts.saveReceiptBestEffo
   );
 });
 
-const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
+const parseReceipt = Effect.fn("@goho/GohoServer.Receipts.parseReceipt")(function* (
   file: GoogleDrive.FileMetadata,
 ) {
   if (!supportedImageMimeTypes.has(file.mimeType)) {
@@ -306,7 +306,7 @@ const parseReceipt = Effect.fn("GohoServer.Receipts.parseReceipt")(function* (
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
-const appendReceiptRows = Effect.fn("GohoServer.Receipts.appendReceiptRows")(function* (
+const appendReceiptRows = Effect.fn("@goho/GohoServer.Receipts.appendReceiptRows")(function* (
   receipt: ReceiptModel.ReceiptToSave,
   spreadsheetId: string,
 ) {
@@ -329,7 +329,7 @@ const appendReceiptRows = Effect.fn("GohoServer.Receipts.appendReceiptRows")(fun
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "AppendRows", cause })));
 });
 
-const completeReceipt = Effect.fn("GohoServer.Receipts.completeReceipt")(function* (
+const completeReceipt = Effect.fn("@goho/GohoServer.Receipts.completeReceipt")(function* (
   fileId: string,
   folders: WorkflowFolders,
 ) {
@@ -346,7 +346,7 @@ const completeReceipt = Effect.fn("GohoServer.Receipts.completeReceipt")(functio
     .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "Complete", cause })));
 });
 
-const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function* (
+const processReceipt = Effect.fn("@goho/GohoServer.Receipts.processReceipt")(function* (
   file: GoogleDrive.FileMetadata,
   folders: WorkflowFolders,
   spreadsheetId: string,
@@ -404,7 +404,7 @@ const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function*
 
   if (Result.isSuccess(processing)) {
     yield* Effect.logInfo(
-      processing.success._tag === "Processed" ? "Receipt processed" : "Receipt already processed",
+      processing.success._tag === "@goho/Processed" ? "Receipt processed" : "Receipt already processed",
       { fileId: file.id, fileName: file.name },
     );
     yield* Effect.logDebug("Receipt processing finished", {
@@ -457,7 +457,7 @@ const processReceipt = Effect.fn("GohoServer.Receipts.processReceipt")(function*
  * @category workflows
  * @since 0.1.0
  */
-export const process = Effect.fn("GohoServer.Receipts.process")(function* (
+export const process = Effect.fn("@goho/GohoServer.Receipts.process")(function* (
   rootFolderId: string,
   spreadsheetId: string,
   concurrency: number,
@@ -487,3 +487,4 @@ export const process = Effect.fn("GohoServer.Receipts.process")(function* (
     { concurrency },
   );
 });
+

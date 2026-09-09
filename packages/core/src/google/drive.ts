@@ -83,7 +83,7 @@ export interface MoveFileOptions {
  * @category errors
  * @since 0.1.0
  */
-export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.DriveError", {
+export class DriveError extends Schema.TaggedError<DriveError>()("@goho/GoogleDrive.DriveError", {
   operation: Schema.Literals(["listFolders", "listFiles", "downloadFile", "moveFile"]),
   message: Schema.String,
 }) {}
@@ -208,7 +208,7 @@ export const make = Effect.gen(function* () {
   const auth = yield* GoogleAuth.Service;
   const client = drive("v3");
 
-  const listFolders = Effect.fn("GoogleDrive.listFolders")(function* (options: ListFoldersOptions) {
+  const listFolders = Effect.fn("@goho/GoogleDrive.listFolders")(function* (options: ListFoldersOptions) {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("listFolders", error)));
@@ -250,7 +250,7 @@ export const make = Effect.gen(function* () {
     return folders;
   });
 
-  const listFiles = Effect.fn("GoogleDrive.listFiles")(function* (options: ListFilesOptions) {
+  const listFiles = Effect.fn("@goho/GoogleDrive.listFiles")(function* (options: ListFilesOptions) {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("listFiles", error)));
@@ -337,7 +337,7 @@ export const make = Effect.gen(function* () {
     );
   }
 
-  const moveFile = Effect.fn("GoogleDrive.moveFile")(function* (options: MoveFileOptions) {
+  const moveFile = Effect.fn("@goho/GoogleDrive.moveFile")(function* (options: MoveFileOptions) {
     const headers = yield* auth
       .getRequestHeaders()
       .pipe(Effect.mapError((error) => clientError("moveFile", error)));
@@ -375,3 +375,4 @@ export const make = Effect.gen(function* () {
  * @since 0.1.0
  */
 export const layer = Layer.effect(Service, make);
+

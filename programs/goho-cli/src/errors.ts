@@ -6,7 +6,8 @@ import { Schema } from "effect";
  * @category errors
  * @since 0.1.0
  */
-export class CommandError extends Schema.TaggedError<CommandError>()("GohoCli.CommandError", {
+export class CommandError extends Schema.TaggedError<CommandError>()("@goho/GohoCli.CommandError", {
   message: Schema.String,
   cause: Schema.Defect(),
 }) {}
+

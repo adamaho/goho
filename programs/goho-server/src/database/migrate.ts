@@ -5,7 +5,7 @@ import * as Database from "./client.ts";
 import * as Migrations from "./migrations.ts";
 
 class MigrationCommandError extends Schema.TaggedError<MigrationCommandError>()(
-  "GohoServer.Database.MigrationCommandError",
+  "@goho/GohoServer.Database.MigrationCommandError",
   { message: Schema.String },
 ) {}
 
@@ -25,3 +25,4 @@ Migrations.run().pipe(
   ),
   NodeRuntime.runMain,
 );
+

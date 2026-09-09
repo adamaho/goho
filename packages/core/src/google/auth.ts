@@ -12,7 +12,7 @@ import { GoogleAuth, type AuthClient } from "google-auth-library";
  * @since 0.1.0
  */
 export class AuthenticationError extends Schema.TaggedError<AuthenticationError>()(
-  "GoogleAuth.AuthenticationError",
+  "@goho/GoogleAuth.AuthenticationError",
   {
     operation: Schema.Literals([
       "initialize",
@@ -78,7 +78,7 @@ function errorMessage(error: unknown): string {
  * @since 0.1.0
  */
 export function make(client: AuthClient): Interface {
-  const accessToken = Effect.fn("GoogleAuth.accessToken")(function* (
+  const accessToken = Effect.fn("@goho/GoogleAuth.accessToken")(function* (
     operation: "authenticate" | "getAccessToken",
   ) {
     const response = yield* Effect.tryPromise({
@@ -100,16 +100,16 @@ export function make(client: AuthClient): Interface {
     return response.token;
   });
 
-  const authenticate = Effect.fn("GoogleAuth.authenticate")(function* () {
+  const authenticate = Effect.fn("@goho/GoogleAuth.authenticate")(function* () {
     yield* accessToken("authenticate");
     return client;
   });
 
-  const getAccessToken = Effect.fn("GoogleAuth.getAccessToken")(function* () {
+  const getAccessToken = Effect.fn("@goho/GoogleAuth.getAccessToken")(function* () {
     return yield* accessToken("getAccessToken");
   });
 
-  const getRequestHeaders = Effect.fn("GoogleAuth.getRequestHeaders")(function* (
+  const getRequestHeaders = Effect.fn("@goho/GoogleAuth.getRequestHeaders")(function* (
     url?: string | URL,
   ) {
     return yield* Effect.tryPromise({
@@ -150,7 +150,7 @@ export interface ServiceAccountOptions {
  * @param options - The service-account JSON key file and OAuth scopes.
  * @returns The configured Google authentication service.
  */
-const makeServiceAccount = Effect.fn("GoogleAuth.makeServiceAccount")(function* (
+const makeServiceAccount = Effect.fn("@goho/GoogleAuth.makeServiceAccount")(function* (
   options: ServiceAccountOptions,
 ) {
   const client = yield* Effect.tryPromise({
@@ -192,3 +192,4 @@ export function layerServiceAccountConfig(
 ): Layer.Layer<Service, Config.ConfigError | AuthenticationError> {
   return Layer.effect(Service, Config.unwrap(config).pipe(Effect.flatMap(makeServiceAccount)));
 }
+

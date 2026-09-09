@@ -5,7 +5,7 @@ import { Argument, Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
 import { CommandError } from "../errors.ts";
-const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessResults")(function* (
+const reportProcessResults = Effect.fn("@goho/GohoCli.Receipts.Process.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
   let processed = 0;
@@ -15,19 +15,19 @@ const reportProcessResults = Effect.fn("GohoCli.Receipts.Process.reportProcessRe
 
   for (const result of results) {
     switch (result._tag) {
-      case "Processed":
+      case "@goho/Processed":
         processed += 1;
         break;
-      case "AlreadyProcessed":
+      case "@goho/AlreadyProcessed":
         alreadyProcessed += 1;
         break;
-      case "Failed":
+      case "@goho/Failed":
         failed += 1;
         yield* Console.log(
           `Failed: ${result.fileName} (${result.fileId}) at ${result.stage}; disposition=${result.disposition}`,
         );
         break;
-      case "Stranded":
+      case "@goho/Stranded":
         stranded += 1;
         yield* Console.log(`Stranded: ${result.fileName} (${result.fileId}) at ${result.stage}`);
         break;
@@ -107,3 +107,4 @@ export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
   Command.withSubcommands([processCommand]),
 );
+
