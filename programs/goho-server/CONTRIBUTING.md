@@ -99,14 +99,72 @@ Complete this manual validation checklist after changes to receipt processing:
 ## Database changes
 
 Use the shared Postgres layer from `@goho/core`. Keep receipt tables, migrations,
-and repository behavior in this server. Apply migrations explicitly with
-`pnpm --filter @goho/goho-server db:migrate`; `DATABASE_URL` is read from the
-server environment file. See [receipt database](./README.md#receipt-database).
+and repository behavior in this server.
+
+### Running migrations locally
+
+Set `DATABASE_URL` in `programs/goho-server/.env`. The example points to the local
+Compose database. From the repository root:
+
+```bash
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
+```
+
+`infra:up` starts Postgres and creates the database on its first startup.
+`db:migrate` connects to that database and creates or updates its tables. These
+are separate commands. Neither `start` nor `dev` runs migrations automatically.
+For deployment, run `db:migrate` against the target database before starting the
+new server version; CI does not migrate deployment databases.
+
+### How the runner works
+
+`src/database/migrate.ts` loads the connection and calls the registry in
+`src/database/migrations.ts`. The registry uses Effect's `PgMigrator.fromRecord`
+and `PgMigrator.run`.
+
+The runner creates `goho_migrations` if needed, reads the highest completed
+migration ID, and runs registered migrations with higher IDs in numeric order.
+It records their IDs, names, and completion timestamps. Pending migrations and
+their history entries run in one transaction: a failure rolls back that pending
+batch. The history table itself may remain after an unsuccessful first run.
+Rerunning a completed batch does nothing. Applied files are not checksummed or
+rerun when their contents change.
+
+### Adding a migration
+
+1. Create the next numbered file under `src/database/migrations`, for example
+   `0002-receipt-notes.ts`. Use a unique ID higher than every existing migration;
+   do not insert an older number into the sequence.
+2. Default-export an `Effect.gen` that obtains `SqlClient.SqlClient` and executes
+   the SQL changes, following `0001-receipts.ts`. Use SQL that can run inside a
+   transaction; operations such as `CREATE INDEX CONCURRENTLY` cannot run here.
+3. Import the file in `src/database/migrations.ts` and add it to the record, for
+   example `"0002_receipt_notes": receiptNotes`. The registry key uses an
+   underscore after the numeric ID; the file name uses kebab-case. Files are not
+   discovered automatically, and there is no migration generator.
+4. Run `db:migrate` locally, then run it again to confirm no migrations remain.
+   Add an integration assertion for the resulting schema or behavior. For a
+   change that transforms existing data, test upgrading a populated old schema
+   as well as creating a fresh database.
+5. Commit the new file and registry entry with the code that uses the schema.
+   Once a migration has been applied to a shared database, leave it unchanged;
+   make corrections in a new migration. There is no down/rollback command.
+
+### Tests
+
+Test selection lives in `vitest.config.ts`, with named `unit` and `integration`
+projects. Unit tests exclude `*.integration.test.ts` and do not need a database:
+
+```bash
+pnpm --filter @goho/goho-server test:unit
+```
 
 For integration tests, start the isolated test database documented in
 [local infrastructure](../../infra/local/README.md), supply `TEST_DATABASE_URL`,
-and run `pnpm --filter @goho/goho-server test:integration`. These tests apply the
-same migrations as the migration command. Unit tests do not need a database.
+and run `pnpm --filter @goho/goho-server test:integration`. Each repository test
+creates a temporary schema, applies the real migration registry, and drops the
+schema afterward. No Google or OpenAI credentials are required.
 
 After a receipt-processing change, also verify that a new receipt has one
 `receipts` row and the expected ordered `receipt_items` rows. The automated

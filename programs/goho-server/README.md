@@ -3,17 +3,10 @@
 Runs receipt processing behind one synchronous HTTP endpoint. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
-## Setup
+## Configuration
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for Google and OpenAI credentials.
-From the repository root after the [development setup](../../CONTRIBUTING.md#development-setup):
-
-```bash
-cp programs/goho-server/.env.example programs/goho-server/.env
-pnpm --filter @goho/infra-local infra:up
-pnpm --filter @goho/goho-server db:migrate
-pnpm --filter @goho/goho-server start
-```
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup, credentials, tests, and
+authoring migrations.
 
 Configure the environment file before starting:
 
@@ -131,20 +124,19 @@ moving the file to `processed`.
 ## Receipt database
 
 PostgreSQL stores receipt headers and ordered items. The schema belongs to this
-server; `@goho/core` supplies the connection layer. Configure `DATABASE_URL` in
-the server environment file, then initialize the schema:
+server; `@goho/core` supplies the connection layer. `DATABASE_URL` selects the
+database used by the migration command.
+
+Apply migrations before starting a server version that depends on a new schema:
 
 ```bash
-pnpm --filter @goho/infra-local infra:up
 pnpm --filter @goho/goho-server db:migrate
 ```
 
-Migrations are numbered and committed under `src/database/migrations`, with an
-explicit registry in `src/database/migrations.ts`. Add a new migration for schema
-changes; do not edit a migration that has already been applied. The migration
-command records completed migrations and can be run again safely. It never
-starts infrastructure itself. Run it against the configured database before
-starting a server version that depends on a new schema.
+This command uses the server's environment (including its optional `.env` file).
+It does not start Postgres. Migrations do not run on server startup or during
+requests. The runner records completed versions in `goho_migrations` and applies
+only newer versions; rerunning it without schema changes is a no-op.
 
 `receipts` retains the source provider/file identity, original file name, store,
 receipt date, category, subtotal, tax, total, nullable currency, extraction
@@ -159,11 +151,6 @@ The repository inserts a receipt and all its items in one transaction. The
 first successful save for a source provider/file ID wins; subsequent saves
 return the existing receipt ID without replacing data or duplicating items.
 Repeated item names are allowed because identity uses position within a receipt.
-
-Run persistence integration tests against a dedicated test database using the
-[local infrastructure instructions](../../infra/local/README.md). Each server
-test applies real migrations in its own temporary schema and removes that schema
-when it finishes. No Google or OpenAI credentials are needed for these tests.
 
 ### Database writes during processing
 
