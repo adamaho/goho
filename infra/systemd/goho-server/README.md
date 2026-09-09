@@ -30,17 +30,14 @@ The environment install command is for first setup; preserve an existing file.
 Configure `/etc/goho/server.env` and install the Google JSON key at
 `/etc/goho/google-service-account.json`, owned by `root:adam` with mode `0640`.
 Configure `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
-The database must be running when the server starts. As `adam`, from the checkout
-root, apply migrations using the same environment file before enabling or
-restarting the server:
-
-```bash
-node --env-file=/etc/goho/server.env programs/goho-server/src/database/migrate.ts
-```
-
-Use this command for upgrades too, after stopping the receipt timer and waiting
-for active work to finish. It does not provision PostgreSQL or modify the service
-environment. The server listens on `127.0.0.1` without authentication.
+The database must be running when the service starts. `ExecStartPre` runs
+`db:migrate` as `adam`, using the same working directory, PATH, and environment
+file as the server. Each start or restart applies pending migrations before
+starting the HTTP server. If migrations fail, the server does not start; the
+existing `Restart=on-failure` policy retries after five seconds, subject to
+systemd's start-rate limit. Inspect migration output in the service journal.
+The unit does not provision PostgreSQL. The server listens on `127.0.0.1`
+without authentication.
 
 ```bash
 sudo systemctl daemon-reload
@@ -48,6 +45,11 @@ sudo systemd-analyze verify /etc/systemd/system/goho-server.service
 sudo systemctl enable --now goho-server.service
 journalctl -u goho-server.service
 ```
+
+For an existing installation, copy the updated unit with the `sudo install`
+command above and run `sudo systemctl daemon-reload`, then restart the service
+after draining active work. Updating the checkout alone does not update the
+installed unit.
 
 Stop the receipt timer and wait for the active batch to finish before restarting
 or upgrading the server. Forced shutdown can leave files in `processing`;

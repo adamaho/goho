@@ -134,8 +134,10 @@ pnpm --filter @goho/goho-server db:migrate
 ```
 
 This command uses the server's environment (including its optional `.env` file).
-It does not start Postgres. Migrations do not run on server startup or during
-requests. The runner records completed versions in `goho_migrations` and applies
+It does not start Postgres. The [systemd service](../../infra/systemd/goho-server/README.md)
+runs this command automatically before each server start or restart and prevents
+startup if it fails. When launching the server directly, run it manually first.
+Migrations do not run during requests. The runner records completed versions in `goho_migrations` and applies
 only newer versions; rerunning it without schema changes is a no-op.
 
 `receipts` retains the source provider/file identity, original file name, store,
@@ -170,5 +172,5 @@ tracking, or reconciliation in this slice. Divergence is an accepted migration
 tradeoff; source file IDs in logs identify failed database writes for later review.
 
 Database configuration and initial connectivity are required at server startup.
-Migrations are an explicit setup/deployment step, not run during requests or
-server startup. Apply them before starting a new server version.
+The systemd unit applies migrations before launching the server. Direct launches
+with `start` or `dev` require the separate migration command first.

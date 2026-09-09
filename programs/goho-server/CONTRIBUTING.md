@@ -114,8 +114,10 @@ pnpm --filter @goho/goho-server db:migrate
 `infra:up` starts Postgres and creates the database on its first startup.
 `db:migrate` connects to that database and creates or updates its tables. These
 are separate commands. Neither `start` nor `dev` runs migrations automatically.
-For deployment, run `db:migrate` against the target database before starting the
-new server version; CI does not migrate deployment databases.
+The [systemd unit](../../infra/systemd/goho-server/README.md) runs `db:migrate`
+automatically before launching the server on each start or restart. For other
+deployments, run it explicitly before starting the new server version. CI does
+not migrate deployment databases.
 
 ### How the runner works
 
