@@ -7,7 +7,7 @@ export default defineConfig({
     base,
     effect({
       packageName: "goho",
-      runtimeEntryPoints: ["src/main.ts"],
+      runtimeEntryPoints: ["src/main.ts", "src/database/migrate.ts"],
     }),
   ],
 });

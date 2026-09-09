@@ -10,11 +10,14 @@
     "start": "node --env-file-if-exists=.env src/main.ts",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run --project unit",
+    "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
+    "test:integration": "vitest run --project integration"
   },
   "dependencies": {
     "@effect/ai-openai": "catalog:",
     "@effect/platform-node": "catalog:",
+    "@effect/sql-pg": "catalog:",
     "@goho/core": "workspace:*",
     "@goho/goho-server-client": "workspace:*",
     "effect": "catalog:"

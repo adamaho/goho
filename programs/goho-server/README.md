@@ -3,25 +3,9 @@
 Runs receipt processing behind one synchronous HTTP endpoint. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
-## Setup
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for Google and OpenAI credentials.
-From the repository root after the [development setup](../../CONTRIBUTING.md#development-setup):
-
-```bash
-cp programs/goho-server/.env.example programs/goho-server/.env
-pnpm --filter @goho/goho-server start
-```
-
-Configure the environment file before starting:
-
-- `GOHO_SERVER_PORT`: defaults to `3000`.
-- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
-- `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
-- `OPENAI_API_KEY`: OpenAI secret.
-- `OPENAI_MODEL`: extraction model.
-
 The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
+
+For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## API
 
