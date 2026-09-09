@@ -49,6 +49,16 @@ it is ever exposed.
 3. Store the key only in `programs/goho-server/.env` as `OPENAI_API_KEY`. The local
    environment file is ignored by Git.
 
+## Runtime configuration
+
+Configure the environment file before starting:
+
+- `GOHO_SERVER_PORT`: defaults to `3000`.
+- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
+- `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
+- `OPENAI_API_KEY`: OpenAI secret.
+- `OPENAI_MODEL`: extraction model.
+
 ## Local Setup
 
 Copy the environment template:
@@ -98,6 +108,22 @@ Complete this manual validation checklist after changes to receipt processing:
 
 Use the shared Postgres layer from `@goho/core`. Keep receipt tables, migrations,
 and repository behavior in this server.
+
+### Receipt schema
+
+`receipts` retains the source provider/file identity, original file name, store,
+receipt date, category, subtotal, tax, total, nullable currency, extraction
+version, validated extraction JSON, and creation time. `receipt_items` stores
+ordered item names and amounts, linked to a receipt. Dates use `date`, creation
+times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
+Currency remains unknown with the current extraction contract. Decimal strings
+preserve the finite numeric values supplied by the parser; they cannot recover
+precision already lost upstream.
+
+The repository inserts a receipt and all its items in one transaction. The
+first successful save for a source provider/file ID wins; subsequent saves
+return the existing receipt ID without replacing data or duplicating items.
+Repeated item names are allowed because identity uses position within a receipt.
 
 ### Running migrations locally
 
