@@ -27,7 +27,4 @@ runs:
       shell: bash
       env:
         NODE_AUTH_TOKEN: ${{ github.token }}
-      run: |
-        pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts
-        node -e "console.log('LOCKFILE_BASE64=' + require('node:fs').readFileSync('pnpm-lock.yaml').toString('base64'))"
-        pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
