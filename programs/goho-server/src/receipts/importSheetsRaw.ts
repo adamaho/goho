@@ -3,7 +3,7 @@ import type {
   ImportSheetsRawRequest,
   ImportSheetsRawResult,
 } from "@goho/goho-server-client/receipts";
-import { Effect } from "effect";
+import { Array, Effect } from "effect";
 
 import { DecimalString, type ImportedSheetsPayload, type ReceiptToSave } from "./model.ts";
 import * as ReceiptRepository from "./repository.ts";
@@ -319,13 +319,13 @@ const groupKey = (row: ValidRawRow, spreadsheetId: string): string => {
 };
 
 const toReceipt = (group: ReceiptGroup): ReceiptToSave => {
-  const totals = importTaxTotals(group.items.map((item) => item.price));
+  const totals = importTaxTotals(Array.map(group.items, (item) => item.price));
   const extractedPayload = {
     importedFrom: "google_sheets_raw",
     store: { name: group.storeName },
     date: group.receiptDate,
     transaction: {
-      items: group.items.map((item) => ({ name: item.name, price: item.price })),
+      items: Array.map(group.items, (item) => ({ name: item.name, price: item.price })),
       category: group.category,
       subtotal: totals.subtotalNumber,
       tax: totals.taxNumber,
@@ -343,18 +343,11 @@ const toReceipt = (group: ReceiptGroup): ReceiptToSave => {
     currency: null,
     extractionVersion: 1,
     extractedPayload,
-    items: [
-      {
-        position: 0,
-        name: group.items[0].name,
-        amount: DecimalString.make(String(group.items[0].price)),
-      },
-      ...group.items.slice(1).map((item, index) => ({
-        position: index + 1,
-        name: item.name,
-        amount: DecimalString.make(String(item.price)),
-      })),
-    ],
+    items: Array.map(group.items, (item, position) => ({
+      position,
+      name: item.name,
+      amount: DecimalString.make(String(item.price)),
+    })),
   };
 };
 

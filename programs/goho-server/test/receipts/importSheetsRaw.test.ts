@@ -4,7 +4,8 @@ import { Effect, Layer, Schema } from "effect";
 import { expect } from "vitest";
 
 import { importTaxTotals, mapRawRows, run } from "../../src/receipts/importSheetsRaw.ts";
-import { ParsedReceipt } from "../../src/receipts/model.ts";
+import { ParsedReceipt, ReceiptId } from "../../src/receipts/model.ts";
+import * as Repository from "../../src/receipts/repository.ts";
 import { parsedReceipt } from "./fixtures.ts";
 
 const header = ["store", "date", "category", "item", "price", "source_file_id"] as const;
@@ -130,7 +131,7 @@ it("rejects empty or invalid store, date, category, item, and price without inve
 
 it.effect("keeps the live ParsedReceipt date rule at 2025 or later", () =>
   Effect.gen(function* () {
-    const decoded = yield* Schema.decodeUnknownEffect(ParsedReceipt)({
+    const decoded = yield* Schema.decodeEffect(ParsedReceipt)({
       ...parsedReceipt,
       date: "2024-12-31",
     }).pipe(Effect.result);
@@ -152,16 +153,27 @@ it.effect("dry-run maps receipt counts and sample ids without writing", () =>
     });
   }).pipe(
     Effect.provide(
-      Layer.succeed(GoogleSheets.Service, {
-        readRows: () =>
-          Effect.succeed([
-            header,
-            ["Costco", "2026-01-02", "Groceries", "Milk", 3, "drive-file-1"],
-            ["", "2026-01-02", "Groceries", "Milk", 3, ""],
-          ]),
-        appendRows: () =>
-          Effect.fail(new GoogleSheets.SheetsError({ operation: "appendRows", message: "unused" })),
-      }),
+      Layer.mergeAll(
+        Layer.succeed(GoogleSheets.Service, {
+          readRows: () =>
+            Effect.succeed([
+              header,
+              ["Costco", "2026-01-02", "Groceries", "Milk", 3, "drive-file-1"],
+              ["", "2026-01-02", "Groceries", "Milk", 3, ""],
+            ]),
+          appendRows: () =>
+            Effect.fail(
+              new GoogleSheets.SheetsError({ operation: "appendRows", message: "unused" }),
+            ),
+        }),
+        Layer.succeed(Repository.Service, {
+          save: () =>
+            Effect.succeed({
+              _tag: "AlreadyExists",
+              receiptId: ReceiptId.make("00000000-0000-4000-8000-000000000001"),
+            }),
+        }),
+      ),
     ),
   ),
 );

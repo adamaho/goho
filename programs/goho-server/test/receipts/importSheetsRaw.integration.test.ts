@@ -76,14 +76,16 @@ it.effect("applies a blank-F merge once and skips the same source on re-run", ()
       },
     ]);
   }).pipe(
-    Effect.provide(DatabaseLive),
     Effect.provide(
-      sheetsLayer([
-        header,
-        ["Costco", "2024-06-01", "Groceries", "Milk", 3, ""],
-        [],
-        ["Costco", "2024-06-01", "Pharmacy", "Eggs", 4, ""],
-      ]),
+      Layer.merge(
+        DatabaseLive,
+        sheetsLayer([
+          header,
+          ["Costco", "2024-06-01", "Groceries", "Milk", 3, ""],
+          [],
+          ["Costco", "2024-06-01", "Pharmacy", "Eggs", 4, ""],
+        ]),
+      ),
     ),
   ),
 );
@@ -99,13 +101,15 @@ it.effect("persists a real-F group so later live source ids would already exist"
     `,
     ).toEqual([{ source_provider: "google_drive", source_file_id: "drive-file-1" }]);
   }).pipe(
-    Effect.provide(DatabaseLive),
     Effect.provide(
-      sheetsLayer([
-        header,
-        ["Costco", "2026-01-02", "Groceries", "Milk", 3.5, "drive-file-1"],
-        ["Costco", "2026-01-02", "Groceries", "Eggs", 4, "drive-file-1"],
-      ]),
+      Layer.merge(
+        DatabaseLive,
+        sheetsLayer([
+          header,
+          ["Costco", "2026-01-02", "Groceries", "Milk", 3.5, "drive-file-1"],
+          ["Costco", "2026-01-02", "Groceries", "Eggs", 4, "drive-file-1"],
+        ]),
+      ),
     ),
   ),
 );
