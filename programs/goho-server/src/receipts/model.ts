@@ -1,8 +1,6 @@
 import { DecimalString } from "@goho/goho-server-client/receipts";
 import { Array, Schema } from "effect";
 
-export { DecimalString, ReceiptId } from "@goho/goho-server-client/receipts";
-
 const Name = Schema.Trim.check(Schema.isNonEmpty());
 
 const ReceiptDate = Schema.String.check(

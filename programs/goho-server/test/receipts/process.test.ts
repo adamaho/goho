@@ -1,10 +1,11 @@
 import { it } from "@effect/vitest";
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
+import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Deferred, Effect, Fiber, Layer, Ref, Schema, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
-import { ReceiptId, type ReceiptToSave } from "../../src/receipts/model.ts";
+import type { ReceiptToSave } from "../../src/receipts/model.ts";
 import * as Workflow from "../../src/receipts/process.ts";
 import * as Repository from "../../src/receipts/repository.ts";
 import * as Receipts from "../../src/receipts/service.ts";

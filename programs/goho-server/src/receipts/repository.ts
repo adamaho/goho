@@ -1,16 +1,14 @@
 import { createHash } from "node:crypto";
 
-import type {
-  CreateReceiptRequest,
-  IdempotencyKey,
-  Receipt,
-} from "@goho/goho-server-client/receipts";
 import {
   CalendarDate,
   CreateReceiptRequest as CreateReceiptRequestSchema,
   DecimalString,
   IdempotencyKey as IdempotencyKeySchema,
   ReceiptId,
+  type CreateReceiptRequest,
+  type IdempotencyKey,
+  type Receipt,
 } from "@goho/goho-server-client/receipts";
 import { Array, BigDecimal, Context, Effect, Layer, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
