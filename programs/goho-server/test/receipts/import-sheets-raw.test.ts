@@ -3,7 +3,7 @@ import { GoogleSheets } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
 import { expect } from "vitest";
 
-import { importTaxTotals, mapRawRows, run } from "../../src/receipts/import-sheets-raw.ts";
+import { mapRawRows, run } from "../../src/receipts/import-sheets-raw.ts";
 import { ParsedReceipt, ReceiptId } from "../../src/receipts/model.ts";
 import * as Repository from "../../src/receipts/repository.ts";
 import { parsedReceipt } from "./fixtures.ts";
@@ -73,39 +73,32 @@ it("keeps mixed real-F and blank-F rows with the same store and date as separate
 });
 
 it("rounds import-only totals as subtotal × 1.13 half-up to 2 decimals", () => {
-  expect(importTaxTotals([10])).toMatchObject({
-    subtotal: "10",
-    total: "11.30",
-    tax: "1.30",
-  });
-  expect(importTaxTotals([1.15])).toMatchObject({
-    subtotal: "1.15",
-    total: "1.30",
-    tax: "0.15",
-  });
-  expect(importTaxTotals([2.22])).toMatchObject({
-    subtotal: "2.22",
-    total: "2.51",
-    tax: "0.29",
-  });
   const mapped = mapRawRows("sheet-1", [
     header,
     ["Costco", "2026-01-02", "Groceries", "Milk", 10, ""],
+    ["Costco", "2026-01-03", "Groceries", "Milk", 1.15, ""],
+    ["Costco", "2026-01-04", "Groceries", "Milk", 2.22, ""],
   ]);
-  expect(mapped.receipts[0]).toMatchObject({
-    subtotal: "10",
-    total: "11.30",
-    tax: "1.30",
-  });
+  expect(
+    mapped.receipts.map(({ subtotal, tax, total }) => ({ subtotal, tax, total })),
+  ).toEqual([
+    { subtotal: "10", tax: "1.3", total: "11.3" },
+    { subtotal: "1.15", tax: "0.15", total: "1.3" },
+    { subtotal: "2.22", tax: "0.29", total: "2.51" },
+  ]);
 });
 
-it("imports calendar dates before 2025 on the mapper path only", () => {
+it("imports ISO and numeric Sheets calendar dates before 2025 on the mapper path only", () => {
   const mapped = mapRawRows("sheet-1", [
     header,
     ["Costco", "2024-12-31", "Groceries", "Milk", 3, ""],
+    ["Walmart", 45_657, "Groceries", "Eggs", 4, ""],
   ]);
   expect(mapped.rejects).toEqual([]);
-  expect(mapped.receipts[0]?.receiptDate).toBe("2024-12-31");
+  expect(mapped.receipts.map((receipt) => receipt.receiptDate)).toEqual([
+    "2024-12-31",
+    "2024-12-31",
+  ]);
 });
 
 it("rejects empty or invalid store, date, category, item, and price without inventing values", () => {
@@ -117,6 +110,8 @@ it("rejects empty or invalid store, date, category, item, and price without inve
     ["Costco", "2026-01-02", "Groceries", "", 3, ""],
     ["Costco", "2026-01-02", "Groceries", "Milk", "N/A", ""],
     ["Costco", "2026-13-40", "Groceries", "Milk", 3, ""],
+    ["Costco", "2026-01-02", "Groceries", "Milk", "", "drive-file-1"],
+    ["Costco", "2026-01-02", "Groceries", "Milk", "   ", "drive-file-2"],
   ]);
   expect(mapped.receipts).toEqual([]);
   expect(mapped.rejects).toEqual([
@@ -126,6 +121,8 @@ it("rejects empty or invalid store, date, category, item, and price without inve
     { row: 5, reason: "invalid item" },
     { row: 6, reason: "invalid price" },
     { row: 7, reason: "invalid date" },
+    { row: 8, reason: "invalid price" },
+    { row: 9, reason: "invalid price" },
   ]);
 });
 

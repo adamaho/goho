@@ -3,7 +3,7 @@ import type {
   ImportSheetsRawRequest,
   ImportSheetsRawResult,
 } from "@goho/goho-server-client/receipts";
-import { Array, Effect, Option, Schema } from "effect";
+import { Array, BigDecimal, Effect, Option, Schema } from "effect";
 
 import {
   CalendarDate,
@@ -38,12 +38,6 @@ export interface MappedImport {
   readonly rejects: ReadonlyArray<RejectedRow>;
 }
 
-interface Decimal {
-  readonly negative: boolean;
-  readonly coefficient: bigint;
-  readonly scale: number;
-}
-
 interface ValidRawRow {
   readonly row: number;
   readonly store: string;
@@ -52,21 +46,6 @@ interface ValidRawRow {
   readonly item: string;
   readonly price: number;
   readonly sourceFileId: string | undefined;
-}
-
-/**
- * Import-only tax, subtotal, and total produced from item prices.
- *
- * @category models
- * @since 0.1.0
- */
-export interface ImportTaxTotals {
-  readonly subtotal: DecimalString;
-  readonly tax: DecimalString;
-  readonly total: DecimalString;
-  readonly subtotalNumber: number;
-  readonly taxNumber: number;
-  readonly totalNumber: number;
 }
 
 interface ReceiptItem {
@@ -82,10 +61,9 @@ interface ReceiptGroup {
   readonly items: [ReceiptItem, ...Array<ReceiptItem>];
 }
 
-const zero: Decimal = { negative: false, coefficient: 0n, scale: 0 };
-const TAX_RATE: Decimal = { negative: false, coefficient: 113n, scale: 2 };
+const TAX_RATE = BigDecimal.make(113n, 2);
 
-const NameText = Schema.Trim.check(Schema.isNonEmpty());
+const NonEmptyText = Schema.Trim.check(Schema.isNonEmpty());
 const BlankText = Schema.String.check(
   Schema.makeFilter((value) => value.trim() === "", {
     expected: "a blank cell",
@@ -93,11 +71,11 @@ const BlankText = Schema.String.check(
 );
 const PriceFromCell = Schema.Union([
   Schema.Finite,
-  Schema.Trim.pipe(Schema.decodeTo(Schema.FiniteFromString)),
+  NonEmptyText.pipe(Schema.decodeTo(Schema.FiniteFromString)),
 ]);
 const NonNegativeFinite = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
 
-const decodeName = Schema.decodeUnknownOption(NameText);
+const decodeName = Schema.decodeUnknownOption(NonEmptyText);
 const decodeBlankText = Schema.decodeUnknownOption(BlankText);
 const decodePrice = Schema.decodeUnknownOption(PriceFromCell);
 const decodeCalendarDate = Schema.decodeUnknownOption(CalendarDate);
@@ -160,107 +138,17 @@ const parseSourceFileId = (
 
 const normalizeStore = (store: string): string => store.trim().replace(/\s+/g, " ");
 
-const parseDecimal = (value: string): Decimal => {
-  const match = /^(-)?(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i.exec(value);
-  if (match === null) {
-    return zero;
-  }
-  const fraction = match[3] ?? "";
-  let scale = fraction.length;
-  let coefficient = BigInt(`${match[2]}${fraction}`);
-  if (match[4] !== undefined) {
-    const exponent = Number(match[4]);
-    if (exponent >= 0) {
-      coefficient *= 10n ** BigInt(exponent);
-    } else {
-      scale += -exponent;
-    }
-  }
-  return {
-    negative: match[1] === "-" && coefficient !== 0n,
-    coefficient,
-    scale,
-  };
-};
-
-const addDecimal = (left: Decimal, right: Decimal): Decimal => {
-  const scale = Math.max(left.scale, right.scale);
-  const leftCoeff = left.coefficient * 10n ** BigInt(scale - left.scale);
-  const rightCoeff = right.coefficient * 10n ** BigInt(scale - right.scale);
-  const leftSigned = left.negative ? -leftCoeff : leftCoeff;
-  const rightSigned = right.negative ? -rightCoeff : rightCoeff;
-  const sum = leftSigned + rightSigned;
-  return {
-    negative: sum < 0n,
-    coefficient: sum < 0n ? -sum : sum,
-    scale,
-  };
-};
-
-const subtractDecimal = (left: Decimal, right: Decimal): Decimal =>
-  addDecimal(left, {
-    negative: right.coefficient === 0n ? false : !right.negative,
-    coefficient: right.coefficient,
-    scale: right.scale,
+const importTaxTotals = (prices: ReadonlyArray<number>) => {
+  const subtotal = BigDecimal.sumAll(Array.map(prices, BigDecimal.fromNumberUnsafe));
+  const total = BigDecimal.round(BigDecimal.multiply(subtotal, TAX_RATE), {
+    mode: "half-from-zero",
+    scale: 2,
   });
-
-const multiplyDecimal = (left: Decimal, right: Decimal): Decimal => ({
-  negative: left.negative !== right.negative && left.coefficient !== 0n && right.coefficient !== 0n,
-  coefficient: left.coefficient * right.coefficient,
-  scale: left.scale + right.scale,
-});
-
-const roundHalfUp = (value: Decimal, places: number): Decimal => {
-  if (value.scale <= places) {
-    return {
-      negative: value.negative,
-      coefficient: value.coefficient * 10n ** BigInt(places - value.scale),
-      scale: places,
-    };
-  }
-  const divisor = 10n ** BigInt(value.scale - places);
-  const quotient = value.coefficient / divisor;
-  const remainder = value.coefficient % divisor;
-  const increment = remainder * 2n >= divisor ? 1n : 0n;
-  const coefficient = quotient + increment;
+  const tax = BigDecimal.subtract(total, subtotal);
   return {
-    negative: coefficient === 0n ? false : value.negative,
-    coefficient,
-    scale: places,
-  };
-};
-
-const formatDecimal = (value: Decimal): string => {
-  const digits = value.coefficient.toString().padStart(value.scale + 1, "0");
-  const whole = value.scale === 0 ? digits : digits.slice(0, -value.scale);
-  const fraction = value.scale === 0 ? "" : digits.slice(-value.scale);
-  const sign = value.negative && value.coefficient !== 0n ? "-" : "";
-  return fraction === "" ? `${sign}${whole}` : `${sign}${whole}.${fraction}`;
-};
-
-const numberToDecimal = (value: number): Decimal => parseDecimal(String(value));
-
-/**
- * Import-only tax mapping: subtotal is the item sum, total is that sum times
- * 1.13 rounded half-up to 2 decimals, and tax is total minus subtotal.
- *
- * @category models
- * @since 0.1.0
- */
-export const importTaxTotals = (prices: ReadonlyArray<number>): ImportTaxTotals => {
-  const subtotal = prices.reduce((sum, price) => addDecimal(sum, numberToDecimal(price)), zero);
-  const total = roundHalfUp(multiplyDecimal(subtotal, TAX_RATE), 2);
-  const tax = subtractDecimal(total, subtotal);
-  const subtotalText = formatDecimal(subtotal);
-  const taxText = formatDecimal(tax);
-  const totalText = formatDecimal(total);
-  return {
-    subtotal: DecimalString.make(subtotalText),
-    tax: DecimalString.make(taxText),
-    total: DecimalString.make(totalText),
-    subtotalNumber: Number(subtotalText),
-    taxNumber: Number(taxText),
-    totalNumber: Number(totalText),
+    subtotal: DecimalString.make(BigDecimal.format(subtotal)),
+    tax: DecimalString.make(BigDecimal.format(tax)),
+    total: DecimalString.make(BigDecimal.format(total)),
   };
 };
 
@@ -320,9 +208,9 @@ const toReceipt = (group: ReceiptGroup): ReceiptToSave => {
     transaction: {
       items: Array.map(group.items, (item) => ({ name: item.name, price: item.price })),
       category: group.category,
-      subtotal: totals.subtotalNumber,
-      tax: totals.taxNumber,
-      total: totals.totalNumber,
+      subtotal: Number(totals.subtotal),
+      tax: Number(totals.tax),
+      total: Number(totals.total),
     },
   } satisfies ImportedSheetsPayload;
   return {
@@ -356,7 +244,6 @@ export const mapRawRows = (
 ): MappedImport => {
   const rejects: Array<RejectedRow> = [];
   const groups = new Map<string, ReceiptGroup>();
-  const order: Array<string> = [];
   const startIndex = rows[0] !== undefined && isHeaderRow(rows[0]) ? 1 : 0;
 
   for (const [offset, row] of rows.slice(startIndex).entries()) {
@@ -394,14 +281,10 @@ export const mapRawRows = (
       category: parsed.category,
       items: [{ name: parsed.item, price: parsed.price }],
     });
-    order.push(key);
   }
 
   return {
-    receipts: order.flatMap((key) => {
-      const group = groups.get(key);
-      return group === undefined ? [] : [toReceipt(group)];
-    }),
+    receipts: [...groups.values()].map(toReceipt),
     rejects,
   };
 };

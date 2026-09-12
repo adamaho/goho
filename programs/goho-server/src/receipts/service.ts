@@ -85,10 +85,7 @@ export const make = Effect.fn("@goho/ReceiptService.make")(function* (
     );
   }, Effect.uninterruptible);
   // Finish an accepted batch before releasing its lock, even if its HTTP client disconnects.
-  return Service.of({
-    process,
-    importSheetsRaw: () => Effect.fail(new HttpApiError.InternalServerError()),
-  });
+  return { process } as const;
 });
 
 /**

@@ -61,10 +61,10 @@ it.effect("applies a blank-F merge once and skips the same source on re-run", ()
       skippedInvalid: 0,
     });
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
     expect(
       yield* sql`
-      SELECT source_provider, source_file_id, store_name, receipt_date::text
+      SELECT source_provider, source_file_id, store_name, receipt_date::text,
+        category, subtotal, tax, total, extracted_payload
       FROM receipts
     `,
     ).toEqual([
@@ -73,7 +73,32 @@ it.effect("applies a blank-F merge once and skips the same source on re-run", ()
         source_file_id: "sheet:sheet-1:Costco:2024-06-01",
         store_name: "Costco",
         receipt_date: "2024-06-01",
+        category: "Groceries",
+        subtotal: "7",
+        tax: "0.91",
+        total: "7.91",
+        extracted_payload: {
+          importedFrom: "google_sheets_raw",
+          store: { name: "Costco" },
+          date: "2024-06-01",
+          transaction: {
+            items: [
+              { name: "Milk", price: 3 },
+              { name: "Eggs", price: 4 },
+            ],
+            category: "Groceries",
+            subtotal: 7,
+            tax: 0.91,
+            total: 7.91,
+          },
+        },
       },
+    ]);
+    expect(
+      yield* sql`SELECT position, name, amount FROM receipt_items ORDER BY position`,
+    ).toEqual([
+      { position: 0, name: "Milk", amount: "3" },
+      { position: 1, name: "Eggs", amount: "4" },
     ]);
   }).pipe(
     Effect.provide(
