@@ -94,9 +94,7 @@ it.effect("applies a blank-F merge once and skips the same source on re-run", ()
         },
       },
     ]);
-    expect(
-      yield* sql`SELECT position, name, amount FROM receipt_items ORDER BY position`,
-    ).toEqual([
+    expect(yield* sql`SELECT position, name, amount FROM receipt_items ORDER BY position`).toEqual([
       { position: 0, name: "Milk", amount: "3" },
       { position: 1, name: "Eggs", amount: "4" },
     ]);

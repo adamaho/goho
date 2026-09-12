@@ -79,9 +79,7 @@ it("rounds import-only totals as subtotal × 1.13 half-up to 2 decimals", () => 
     ["Costco", "2026-01-03", "Groceries", "Milk", 1.15, ""],
     ["Costco", "2026-01-04", "Groceries", "Milk", 2.22, ""],
   ]);
-  expect(
-    mapped.receipts.map(({ subtotal, tax, total }) => ({ subtotal, tax, total })),
-  ).toEqual([
+  expect(mapped.receipts.map(({ subtotal, tax, total }) => ({ subtotal, tax, total }))).toEqual([
     { subtotal: "10", tax: "1.3", total: "11.3" },
     { subtotal: "1.15", tax: "0.15", total: "1.3" },
     { subtotal: "2.22", tax: "0.29", total: "2.51" },
