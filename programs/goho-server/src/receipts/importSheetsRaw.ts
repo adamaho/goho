@@ -9,7 +9,6 @@ import { DecimalString, type ImportedSheetsPayload, type ReceiptToSave } from ".
 import * as ReceiptRepository from "./repository.ts";
 
 const SAMPLE_SOURCE_IDS = 10;
-const TAX_RATE = { coefficient: 113n, scale: 2 };
 const HEADER_CELLS = ["store", "date", "category", "item", "price", "source_file_id"] as const;
 
 /**
@@ -64,6 +63,7 @@ interface ReceiptGroup {
 }
 
 const zero: Decimal = { negative: false, coefficient: 0n, scale: 0 };
+const TAX_RATE: Decimal = { negative: false, coefficient: 113n, scale: 2 };
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
