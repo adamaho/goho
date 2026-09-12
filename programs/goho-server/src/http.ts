@@ -7,7 +7,9 @@ import * as Receipts from "./receipts/service.ts";
 const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
     const receipts = yield* Receipts.Service;
-    return handlers.handle("process", ({ payload }) => receipts.process(payload));
+    return handlers
+      .handle("process", ({ payload }) => receipts.process(payload))
+      .handle("importSheetsRaw", ({ payload }) => receipts.importSheetsRaw(payload));
   }),
 );
 

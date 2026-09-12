@@ -62,3 +62,58 @@ export const ReceiptProcessingResult = Schema.Union([
  * @since 0.1.0
  */
 export type ReceiptProcessingResult = Schema.Schema.Type<typeof ReceiptProcessingResult>;
+
+/**
+ * Inputs for a one-shot Sheets RAW import into Postgres.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ImportSheetsRawRequest = Schema.Struct({
+  spreadsheetId: Schema.Trim.check(Schema.isNonEmpty()),
+  worksheet: Schema.Trim.check(Schema.isNonEmpty()),
+  apply: Schema.Boolean,
+});
+
+/**
+ * Decoded Sheets RAW import inputs.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ImportSheetsRawRequest extends Schema.Schema.Type<typeof ImportSheetsRawRequest> {}
+
+/**
+ * One RAW row rejected because a required field was empty or invalid.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ImportSheetsRawReject = Schema.Struct({
+  row: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+  reason: Schema.String,
+});
+
+/**
+ * Dry-run or apply summary for a Sheets RAW import.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ImportSheetsRawResult = Schema.Struct({
+  apply: Schema.Boolean,
+  receiptCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  sampleSourceIds: Schema.Array(Schema.String),
+  imported: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  skippedAlreadyPresent: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  skippedInvalid: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  rejects: Schema.Array(ImportSheetsRawReject),
+});
+
+/**
+ * Decoded Sheets RAW import summary.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ImportSheetsRawResult extends Schema.Schema.Type<typeof ImportSheetsRawResult> {}

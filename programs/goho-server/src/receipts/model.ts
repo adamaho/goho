@@ -2,33 +2,64 @@ import { Array, Schema } from "effect";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty());
 
-const ReceiptDate = Schema.String.check(
-  Schema.makeFilter(
-    (value) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return false;
-      }
+const isCalendarDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
 
-      const year = Number(value.slice(0, 4));
-      const month = Number(value.slice(5, 7));
-      const day = Number(value.slice(8, 10));
-      const date = new Date(Date.UTC(year, month - 1, day));
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const date = new Date(Date.UTC(year, month - 1, day));
 
-      return (
-        year >= 2025 &&
-        date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
-        date.getUTCDate() === day
-      );
-    },
-    {
-      expected: "a real calendar date in YYYY-MM-DD format with a year of 2025 or later",
-      toJsonSchema: () => ({
-        pattern: "^(?:202[5-9]|20[3-9][0-9]|2[1-9][0-9]{2}|[3-9][0-9]{3})-\\d{2}-\\d{2}$",
-      }),
-    },
-  ),
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+};
+
+/**
+ * Real calendar day used at the persistence boundary. The live extraction
+ * contract still requires 2025+ via {@link ReceiptDate}.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const CalendarDate = Schema.String.check(
+  Schema.makeFilter(isCalendarDate, {
+    expected: "a real calendar date in YYYY-MM-DD format",
+    toJsonSchema: () => ({
+      pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+    }),
+  }),
 );
+
+/**
+ * Live extraction date: a real calendar day in 2025 or later.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptDate = Schema.String.check(
+  Schema.makeFilter((value) => isCalendarDate(value) && Number(value.slice(0, 4)) >= 2025, {
+    expected: "a real calendar date in YYYY-MM-DD format with a year of 2025 or later",
+    toJsonSchema: () => ({
+      pattern: "^(?:202[5-9]|20[3-9][0-9]|2[1-9][0-9]{2}|[3-9][0-9]{3})-\\d{2}-\\d{2}$",
+    }),
+  }),
+);
+
+const Transaction = Schema.Struct({
+  items: Schema.NonEmptyArray(
+    Schema.Struct({
+      name: Name,
+      price: Schema.Finite,
+    }),
+  ),
+  category: Name,
+  subtotal: Schema.Finite,
+  tax: Schema.Finite,
+  total: Schema.Finite,
+});
 
 /**
  * Schema of the validated AI extraction.
@@ -41,18 +72,7 @@ export const ParsedReceipt = Schema.Struct({
     name: Name,
   }),
   date: ReceiptDate,
-  transaction: Schema.Struct({
-    items: Schema.NonEmptyArray(
-      Schema.Struct({
-        name: Name,
-        price: Schema.Finite,
-      }),
-    ),
-    category: Name,
-    subtotal: Schema.Finite,
-    tax: Schema.Finite,
-    total: Schema.Finite,
-  }),
+  transaction: Transaction,
 });
 
 /**
@@ -102,7 +122,7 @@ export type DecimalString = typeof DecimalString.Type;
  * @since 0.1.0
  */
 export const ReceiptSource = Schema.Struct({
-  provider: Schema.Literal("google_drive"),
+  provider: Schema.Literals(["google_drive", "google_sheets"]),
   fileId: Name,
   fileName: Name,
 });
@@ -115,6 +135,29 @@ export const ReceiptSource = Schema.Struct({
 export interface ReceiptSource extends Schema.Schema.Type<typeof ReceiptSource> {}
 
 /**
+ * Marker stored on one-shot Sheets RAW imports so they stay distinguishable
+ * from live AI extractions.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ImportedSheetsPayload = Schema.Struct({
+  importedFrom: Schema.Literal("google_sheets_raw"),
+  store: Schema.Struct({
+    name: Name,
+  }),
+  date: CalendarDate,
+  transaction: Transaction,
+});
+/**
+ * Validated Sheets RAW import payload.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ImportedSheetsPayload extends Schema.Schema.Type<typeof ImportedSheetsPayload> {}
+
+/**
  * Receipt and ordered items accepted by the repository.
  *
  * @category models
@@ -123,14 +166,14 @@ export interface ReceiptSource extends Schema.Schema.Type<typeof ReceiptSource> 
 export const ReceiptToSave = Schema.Struct({
   source: ReceiptSource,
   storeName: Name,
-  receiptDate: ReceiptDate,
+  receiptDate: CalendarDate,
   category: Name,
   subtotal: DecimalString,
   tax: DecimalString,
   total: DecimalString,
   currency: Schema.NullOr(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))),
   extractionVersion: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
-  extractedPayload: ParsedReceipt,
+  extractedPayload: Schema.Union([ImportedSheetsPayload, ParsedReceipt]),
   items: Schema.NonEmptyArray(
     Schema.Struct({
       position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),

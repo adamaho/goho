@@ -22,6 +22,17 @@ running, and 500 means the batch could not complete. Individual failed receipts
 remain successful HTTP responses with `Failed` or `Stranded` outcomes.
 Provider causes are logged on the server and omitted from API responses.
 
+`POST /receipts/import-sheets-raw` accepts JSON:
+
+```json
+{ "spreadsheetId": "sheet-id", "worksheet": "RAW", "apply": false }
+```
+
+This is the one-shot historical RAW import. It reads columns A-F, maps item
+rows into the existing `receipts` and `receipt_items` tables, and never appends
+to Sheets. `apply: false` is a dry-run. HTTP 400 means invalid input and 500
+means the import could not complete.
+
 An accepted batch continues when its client disconnects. The lock is local to this
 server process and is released when processing finishes. Restarting or killing the
 server can leave files in `processing`; there is no durable job or automatic recovery.

@@ -1,5 +1,9 @@
 import * as GohoServer from "@goho/goho-server-client/client";
-import { Concurrency, type ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
+import {
+  Concurrency,
+  type ImportSheetsRawResult,
+  type ReceiptProcessingResult,
+} from "@goho/goho-server-client/receipts";
 import { Config, Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
@@ -97,6 +101,74 @@ const processCommand = Command.make("process", {
   ),
 );
 
+const reportImportResults = Effect.fn("@goho/Receipts.reportImportResults")(function* (
+  result: ImportSheetsRawResult,
+) {
+  const rejectLines = result.rejects.map((reject) => `  row ${reject.row}: ${reject.reason}`);
+  if (result.apply) {
+    yield* Console.log(
+      [
+        `Imported: ${result.imported}`,
+        `Skipped already present: ${result.skippedAlreadyPresent}`,
+        `Skipped invalid: ${result.skippedInvalid}`,
+        ...(rejectLines.length > 0 ? ["Rejects:", ...rejectLines] : []),
+      ].join("\n"),
+    );
+    return;
+  }
+
+  yield* Console.log(
+    [
+      `Dry-run receipts: ${result.receiptCount}`,
+      `Sample source ids: ${result.sampleSourceIds.join(", ") || "(none)"}`,
+      `Skipped invalid: ${result.skippedInvalid}`,
+      ...(rejectLines.length > 0 ? ["Rejects:", ...rejectLines] : []),
+    ].join("\n"),
+  );
+});
+
+const importSheetsRawCommand = Command.make("import-sheets-raw", {
+  spreadsheetId: Argument.string("spreadsheet-id").pipe(
+    Argument.withDescription("Google Sheets spreadsheet that contains the RAW worksheet."),
+  ),
+  worksheet: Flag.string("worksheet").pipe(
+    Flag.withDefault("RAW"),
+    Flag.withDescription("Worksheet name containing columns A-F (default: RAW)."),
+  ),
+  apply: Flag.boolean("apply").pipe(
+    Flag.withDefault(false),
+    Flag.withDescription("Write mapped receipts to Postgres. Default is a dry-run."),
+  ),
+}).pipe(
+  Command.withDescription(
+    "Import historical RAW sheet rows into Postgres without changing Sheets.",
+  ),
+  Command.withHandler(({ apply, spreadsheetId, worksheet }) =>
+    Effect.gen(function* () {
+      const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
+        Config.withDefault("http://127.0.0.1:3000"),
+      );
+      const client = yield* GohoServer.make(baseUrl);
+      return yield* client.receipts.importSheetsRaw({
+        payload: { spreadsheetId, worksheet, apply },
+      });
+    }).pipe(
+      Effect.provide(FetchHttpClient.layer),
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "ConfigError"
+                ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
+                : "Sheets RAW import could not be confirmed. Check server logs before running again.",
+            cause,
+          }),
+      ),
+      Effect.andThen(reportImportResults),
+    ),
+  ),
+);
+
 /**
  * Command group for receipt-processing operations.
  *
@@ -105,5 +177,5 @@ const processCommand = Command.make("process", {
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([processCommand]),
+  Command.withSubcommands([processCommand, importSheetsRawCommand]),
 );

@@ -1,8 +1,14 @@
 import type { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import type { ProcessRequest, ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
+import type {
+  ImportSheetsRawRequest,
+  ImportSheetsRawResult,
+  ProcessRequest,
+  ReceiptProcessingResult,
+} from "@goho/goho-server-client/receipts";
 import { Context, Effect, Layer, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
+import * as ImportSheetsRaw from "./importSheetsRaw.ts";
 import * as Workflow from "./process.ts";
 import type * as ReceiptRepository from "./repository.ts";
 
@@ -21,6 +27,9 @@ export class Service extends Context.Service<
       ReadonlyArray<ReceiptProcessingResult>,
       HttpApiError.Conflict | HttpApiError.InternalServerError
     >;
+    readonly importSheetsRaw: (
+      request: ImportSheetsRawRequest,
+    ) => Effect.Effect<ImportSheetsRawResult, HttpApiError.InternalServerError>;
   }
 >()("@goho/goho-server/Receipts") {}
 
@@ -76,7 +85,10 @@ export const make = Effect.fn("@goho/ReceiptService.make")(function* (
     );
   }, Effect.uninterruptible);
   // Finish an accepted batch before releasing its lock, even if its HTTP client disconnects.
-  return Service.of({ process });
+  return Service.of({
+    process,
+    importSheetsRaw: () => Effect.fail(new HttpApiError.InternalServerError()),
+  });
 });
 
 /**
@@ -95,10 +107,23 @@ export const layer: Layer.Layer<
     const services = yield* Effect.context<
       Ai.Service | GoogleDrive.Service | GoogleSheets.Service | ReceiptRepository.Service
     >();
-    return yield* make((request) =>
+    const locked = yield* make((request) =>
       Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
         Effect.provide(services),
       ),
     );
+    const importSheetsRaw = Effect.fn("@goho/ReceiptService.importSheetsRaw")(function* (
+      request: ImportSheetsRawRequest,
+    ) {
+      return yield* ImportSheetsRaw.run(request).pipe(
+        Effect.provide(services),
+        Effect.catchCause((cause) =>
+          Effect.logError("Sheets RAW import failed", cause).pipe(
+            Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+          ),
+        ),
+      );
+    });
+    return Service.of({ process: locked.process, importSheetsRaw });
   }),
 );

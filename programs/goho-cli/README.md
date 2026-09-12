@@ -37,4 +37,19 @@ already completed; inspect server logs and follow the
 [recovery procedure](../goho-server/README.md#failure-outcomes-and-recovery).
 Detailed provider errors are available only in server logs.
 
+## Import historical RAW rows
+
+One-shot import of existing `RAW` item rows into Postgres. This does not append
+to Sheets or run live receipt processing.
+
+```bash
+pnpm --filter @goho/goho-cli start receipts import-sheets-raw <spreadsheet-id>
+pnpm --filter @goho/goho-cli start receipts import-sheets-raw <spreadsheet-id> --apply
+```
+
+The worksheet defaults to `RAW`. Dry-run prints receipt counts, sample source
+IDs, and a reject list. `--apply` writes new receipts and prints imported /
+skipped-already-present / skipped-invalid summaries. Re-runs skip source IDs
+already stored in Postgres.
+
 Run `pnpm --filter @goho/goho-cli start --help` for command help.

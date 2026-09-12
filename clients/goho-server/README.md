@@ -20,6 +20,8 @@ const processReceipts = Effect.gen(function* () {
 }).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
+The client also exposes `receipts.importSheetsRaw` for the one-shot RAW import.
+
 Call this effect from the consuming program's runtime. No generated files or
 separate code-generation command are needed. Requests are not automatically retried.
 

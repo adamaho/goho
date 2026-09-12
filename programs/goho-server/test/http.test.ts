@@ -14,6 +14,16 @@ const TestLive = HttpRouter.serve(
       Layer.succeed(Receipts.Service, {
         process: () =>
           Effect.succeed([{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }]),
+        importSheetsRaw: () =>
+          Effect.succeed({
+            apply: false,
+            receiptCount: 1,
+            sampleSourceIds: ["receipt-1"],
+            imported: 0,
+            skippedAlreadyPresent: 0,
+            skippedInvalid: 0,
+            rejects: [],
+          }),
       }),
     ]),
   ),
@@ -42,5 +52,31 @@ it.effect("rejects invalid request inputs at the HTTP boundary", () =>
       });
       expect(response.status).toBe(400);
     }
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("round-trips a Sheets RAW dry-run through the generated client", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const result = yield* client.receipts.importSheetsRaw({
+      payload: { spreadsheetId: "sheet", worksheet: "RAW", apply: false },
+    });
+    expect(result).toEqual({
+      apply: false,
+      receiptCount: 1,
+      sampleSourceIds: ["receipt-1"],
+      imported: 0,
+      skippedAlreadyPresent: 0,
+      skippedInvalid: 0,
+      rejects: [],
+    });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("rejects invalid Sheets RAW import inputs at the HTTP boundary", () =>
+  Effect.gen(function* () {
+    const body = yield* HttpBody.json({ spreadsheetId: "", worksheet: "RAW", apply: false });
+    const response = yield* HttpClient.post("/receipts/import-sheets-raw", { body });
+    expect(response.status).toBe(400);
   }).pipe(Effect.provide(TestLive)),
 );
