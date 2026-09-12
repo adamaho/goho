@@ -1,10 +1,48 @@
 import { it } from "@effect/vitest";
+import { CreateReceiptRequest, IdempotencyKey } from "@goho/goho-server-client/receipts";
 import { Deferred, Effect, Fiber, Ref, Result } from "effect";
 import { expect } from "vitest";
 
-import { make } from "../../src/receipts/service.ts";
+import * as Repository from "../../src/receipts/repository.ts";
+import { make, makeCreate } from "../../src/receipts/service.ts";
 
 const request = { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 };
+const idempotencyKey = IdempotencyKey.make("manual-entry-1");
+const receipt = CreateReceiptRequest.make({
+  storeName: "Example Store",
+  receiptDate: "2024-09-01",
+  category: "Groceries",
+  subtotal: "10.25",
+  tax: "0.75",
+  total: "11",
+  currency: null,
+  items: [{ name: "Apples", amount: "11" }],
+});
+
+it.effect("maps idempotency conflicts onto the public conflict error", () =>
+  Effect.gen(function* () {
+    const create = makeCreate({
+      create: () => new Repository.IdempotencyConflict({ idempotencyKey }),
+    });
+    const result = yield* create(idempotencyKey, receipt).pipe(Effect.result);
+    expect(Result.isFailure(result) && result.failure._tag).toBe("Conflict");
+  }),
+);
+
+it.effect("redacts receipt persistence failures", () =>
+  Effect.gen(function* () {
+    const create = makeCreate({
+      create: () =>
+        new Repository.PersistenceError({
+          operation: "create",
+          cause: "private database details",
+        }),
+    });
+    const result = yield* create(idempotencyKey, receipt).pipe(Effect.result);
+    expect(Result.isFailure(result) && result.failure._tag).toBe("InternalServerError");
+    expect(JSON.stringify(result)).not.toContain("private database details");
+  }),
+);
 
 it.effect("rejects overlap and releases the lock after a successful batch", () =>
   Effect.gen(function* () {

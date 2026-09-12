@@ -1,4 +1,7 @@
+import { DecimalString } from "@goho/goho-server-client/receipts";
 import { Array, Schema } from "effect";
+
+export { DecimalString, ReceiptId } from "@goho/goho-server-client/receipts";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty());
 
@@ -62,38 +65,6 @@ export const ParsedReceipt = Schema.Struct({
  * @since 0.1.0
  */
 export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> {}
-
-/**
- * Database receipt identity.
- *
- * @category models
- * @since 0.1.0
- */
-export const ReceiptId = Schema.String.check(Schema.isUUID()).pipe(Schema.brand("ReceiptId"));
-/**
- * Validated database receipt identity.
- *
- * @category models
- * @since 0.1.0
- */
-export type ReceiptId = typeof ReceiptId.Type;
-
-/**
- * Decimal text, including exponent notation emitted by finite JavaScript numbers.
- *
- * @category models
- * @since 0.1.0
- */
-export const DecimalString = Schema.String.check(
-  Schema.isPattern(/^-?\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i),
-).pipe(Schema.brand("DecimalString"));
-/**
- * Decimal text accepted by the persistence boundary.
- *
- * @category models
- * @since 0.1.0
- */
-export type DecimalString = typeof DecimalString.Type;
 
 /**
  * Identity of the original receipt file.

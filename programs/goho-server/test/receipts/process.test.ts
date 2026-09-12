@@ -71,6 +71,7 @@ const setup = (
           ),
       }),
       Layer.succeed(Repository.Service, {
+        create: () => Effect.die("unexpected create"),
         save: (input) =>
           record("save").pipe(
             Effect.andThen(Ref.update(saves, (all) => [...all, input])),

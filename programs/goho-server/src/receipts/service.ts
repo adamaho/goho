@@ -1,10 +1,16 @@
 import type { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import type { ProcessRequest, ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
+import type {
+  CreateReceiptRequest,
+  IdempotencyKey,
+  ProcessRequest,
+  Receipt,
+  ReceiptProcessingResult,
+} from "@goho/goho-server-client/receipts";
 import { Context, Effect, Layer, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
 import * as Workflow from "./process.ts";
-import type * as ReceiptRepository from "./repository.ts";
+import * as ReceiptRepository from "./repository.ts";
 
 /**
  * Runs one receipt batch at a time.
@@ -15,6 +21,10 @@ import type * as ReceiptRepository from "./repository.ts";
 export class Service extends Context.Service<
   Service,
   {
+    readonly create: (
+      idempotencyKey: IdempotencyKey,
+      receipt: CreateReceiptRequest,
+    ) => Effect.Effect<Receipt, HttpApiError.Conflict | HttpApiError.InternalServerError>;
     readonly process: (
       request: ProcessRequest,
     ) => Effect.Effect<
@@ -76,8 +86,30 @@ export const make = Effect.fn("@goho/ReceiptService.make")(function* (
     );
   }, Effect.uninterruptible);
   // Finish an accepted batch before releasing its lock, even if its HTTP client disconnects.
-  return Service.of({ process });
+  return { process } as const;
 });
+
+/**
+ * Maps receipt persistence outcomes onto the public HTTP error contract.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const makeCreate = (repository: Pick<ReceiptRepository.Interface, "create">) =>
+  Effect.fn("@goho/ReceiptService.create")(
+    (idempotencyKey: IdempotencyKey, receipt: CreateReceiptRequest) =>
+      repository.create(idempotencyKey, receipt).pipe(
+        Effect.catchTag(
+          "GohoServer.ReceiptRepository.IdempotencyConflict",
+          () => new HttpApiError.Conflict(),
+        ),
+        Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
+          Effect.logError("Receipt creation failed", error).pipe(
+            Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+          ),
+        ),
+      ),
+  );
 
 /**
  * Provides Google-backed receipt processing.
@@ -92,13 +124,16 @@ export const layer: Layer.Layer<
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const repository = yield* ReceiptRepository.Service;
     const services = yield* Effect.context<
       Ai.Service | GoogleDrive.Service | GoogleSheets.Service | ReceiptRepository.Service
     >();
-    return yield* make((request) =>
+    const batch = yield* make((request) =>
       Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
         Effect.provide(services),
       ),
     );
+    const create = makeCreate(repository);
+    return Service.of({ ...batch, create });
   }),
 );

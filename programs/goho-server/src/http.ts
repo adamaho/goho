@@ -7,7 +7,11 @@ import * as Receipts from "./receipts/service.ts";
 const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
     const receipts = yield* Receipts.Service;
-    return handlers.handle("process", ({ payload }) => receipts.process(payload));
+    return handlers
+      .handle("create", ({ headers, payload }) =>
+        receipts.create(headers["idempotency-key"], payload),
+      )
+      .handle("process", ({ payload }) => receipts.process(payload));
   }),
 );
 
