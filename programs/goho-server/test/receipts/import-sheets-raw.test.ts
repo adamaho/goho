@@ -3,7 +3,7 @@ import { GoogleSheets } from "@goho/core";
 import { Effect, Layer, Schema } from "effect";
 import { expect } from "vitest";
 
-import { importTaxTotals, mapRawRows, run } from "../../src/receipts/importSheetsRaw.ts";
+import { importTaxTotals, mapRawRows, run } from "../../src/receipts/import-sheets-raw.ts";
 import { ParsedReceipt, ReceiptId } from "../../src/receipts/model.ts";
 import * as Repository from "../../src/receipts/repository.ts";
 import { parsedReceipt } from "./fixtures.ts";

@@ -3,9 +3,14 @@ import type {
   ImportSheetsRawRequest,
   ImportSheetsRawResult,
 } from "@goho/goho-server-client/receipts";
-import { Array, Effect } from "effect";
+import { Array, Effect, Option, Schema } from "effect";
 
-import { DecimalString, type ImportedSheetsPayload, type ReceiptToSave } from "./model.ts";
+import {
+  CalendarDate,
+  DecimalString,
+  type ImportedSheetsPayload,
+  type ReceiptToSave,
+} from "./model.ts";
 import * as ReceiptRepository from "./repository.ts";
 
 const SAMPLE_SOURCE_IDS = 10;
@@ -49,6 +54,21 @@ interface ValidRawRow {
   readonly sourceFileId: string | undefined;
 }
 
+/**
+ * Import-only tax, subtotal, and total produced from item prices.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ImportTaxTotals {
+  readonly subtotal: DecimalString;
+  readonly tax: DecimalString;
+  readonly total: DecimalString;
+  readonly subtotalNumber: number;
+  readonly taxNumber: number;
+  readonly totalNumber: number;
+}
+
 interface ReceiptItem {
   readonly name: string;
   readonly price: number;
@@ -65,55 +85,41 @@ interface ReceiptGroup {
 const zero: Decimal = { negative: false, coefficient: 0n, scale: 0 };
 const TAX_RATE: Decimal = { negative: false, coefficient: 113n, scale: 2 };
 
-const isString = (value: unknown): value is string => typeof value === "string";
+const NameText = Schema.Trim.check(Schema.isNonEmpty());
+const BlankText = Schema.String.check(
+  Schema.makeFilter((value) => value.trim() === "", {
+    expected: "a blank cell",
+  }),
+);
+const PriceFromCell = Schema.Union([
+  Schema.Finite,
+  Schema.Trim.pipe(Schema.decodeTo(Schema.FiniteFromString)),
+]);
+const NonNegativeFinite = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
+
+const decodeName = Schema.decodeUnknownOption(NameText);
+const decodeBlankText = Schema.decodeUnknownOption(BlankText);
+const decodePrice = Schema.decodeUnknownOption(PriceFromCell);
+const decodeCalendarDate = Schema.decodeUnknownOption(CalendarDate);
+const decodeNonNegativeFinite = Schema.decodeUnknownOption(NonNegativeFinite);
 
 const isBlankCell = (value: GoogleSheets.CellValue | undefined): boolean =>
-  value === undefined || (isString(value) && value.trim() === "");
+  value === undefined || Option.isSome(decodeBlankText(value));
 
 const isEmptyRow = (row: GoogleSheets.Row): boolean =>
   [0, 1, 2, 3, 4, 5].every((index) => isBlankCell(row.at(index)));
 
 const isHeaderRow = (row: GoogleSheets.Row): boolean =>
   HEADER_CELLS.every((header, index) => {
-    const value = row.at(index);
-    return isString(value) && value.trim().toLowerCase() === header;
+    const text = decodeName(row.at(index));
+    return Option.isSome(text) && text.value.toLowerCase() === header;
   });
 
-const parseName = (value: GoogleSheets.CellValue | undefined): string | undefined => {
-  if (!isString(value)) {
-    return undefined;
-  }
-  const name = value.trim();
-  return name.length > 0 ? name : undefined;
-};
+const parseName = (value: GoogleSheets.CellValue | undefined): string | undefined =>
+  Option.getOrUndefined(decodeName(value));
 
-const parsePrice = (value: GoogleSheets.CellValue | undefined): number | undefined => {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : undefined;
-  }
-  if (!isString(value)) {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (trimmed === "" || !/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed)) {
-    return undefined;
-  }
-  const price = Number(trimmed);
-  return Number.isFinite(price) ? price : undefined;
-};
-
-const isCalendarDate = (value: string): boolean => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-  const year = Number(value.slice(0, 4));
-  const month = Number(value.slice(5, 7));
-  const day = Number(value.slice(8, 10));
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return (
-    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  );
-};
+const parsePrice = (value: GoogleSheets.CellValue | undefined): number | undefined =>
+  Option.getOrUndefined(decodePrice(value));
 
 const formatIsoDate = (date: Date): string => {
   const year = String(date.getUTCFullYear()).padStart(4, "0");
@@ -123,37 +129,33 @@ const formatIsoDate = (date: Date): string => {
 };
 
 const parseSheetsSerialDate = (serial: number): string | undefined => {
-  if (!Number.isFinite(serial) || serial < 0) {
-    return undefined;
-  }
-  const whole = Math.trunc(serial);
-  const date = new Date(Date.UTC(1899, 11, 30) + whole * 86_400_000);
-  const iso = formatIsoDate(date);
-  return isCalendarDate(iso) ? iso : undefined;
+  const date = new Date(Date.UTC(1899, 11, 30) + Math.trunc(serial) * 86_400_000);
+  return Option.getOrUndefined(decodeCalendarDate(formatIsoDate(date)));
 };
 
 const parseDate = (value: GoogleSheets.CellValue | undefined): string | undefined => {
-  if (typeof value === "number") {
-    return parseSheetsSerialDate(value);
+  const iso = decodeCalendarDate(value);
+  if (Option.isSome(iso)) {
+    return iso.value;
   }
-  if (!isString(value)) {
-    return undefined;
+  const serial = decodeNonNegativeFinite(value);
+  if (Option.isSome(serial)) {
+    return parseSheetsSerialDate(serial.value);
   }
-  const date = value.trim();
-  return isCalendarDate(date) ? date : undefined;
+  return undefined;
 };
 
 const parseSourceFileId = (
   value: GoogleSheets.CellValue | undefined,
 ): { readonly ok: true; readonly id: string | undefined } | { readonly ok: false } => {
+  const id = decodeName(value);
+  if (Option.isSome(id)) {
+    return { ok: true, id: id.value };
+  }
   if (isBlankCell(value)) {
     return { ok: true, id: undefined };
   }
-  if (!isString(value)) {
-    return { ok: false };
-  }
-  const id = value.trim();
-  return id.length > 0 ? { ok: true, id } : { ok: true, id: undefined };
+  return { ok: false };
 };
 
 const normalizeStore = (store: string): string => store.trim().replace(/\s+/g, " ");
@@ -245,16 +247,7 @@ const numberToDecimal = (value: number): Decimal => parseDecimal(String(value));
  * @category models
  * @since 0.1.0
  */
-export const importTaxTotals = (
-  prices: ReadonlyArray<number>,
-): {
-  readonly subtotal: DecimalString;
-  readonly tax: DecimalString;
-  readonly total: DecimalString;
-  readonly subtotalNumber: number;
-  readonly taxNumber: number;
-  readonly totalNumber: number;
-} => {
+export const importTaxTotals = (prices: ReadonlyArray<number>): ImportTaxTotals => {
   const subtotal = prices.reduce((sum, price) => addDecimal(sum, numberToDecimal(price)), zero);
   const total = roundHalfUp(multiplyDecimal(subtotal, TAX_RATE), 2);
   const tax = subtractDecimal(total, subtotal);

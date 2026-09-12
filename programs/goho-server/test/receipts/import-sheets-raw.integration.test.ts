@@ -8,7 +8,7 @@ import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "../../src/database/migrations.ts";
-import { run } from "../../src/receipts/importSheetsRaw.ts";
+import { run } from "../../src/receipts/import-sheets-raw.ts";
 import * as Repository from "../../src/receipts/repository.ts";
 
 const header = ["store", "date", "category", "item", "price", "source_file_id"] as const;
