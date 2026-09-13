@@ -20,7 +20,26 @@ const processReceipts = Effect.gen(function* () {
 }).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
+The folder and spreadsheet IDs above are illustrative placeholders. Replace them
+with real IDs. All three HTTP payload fields are required; the CLI’s concurrency
+default does not apply to HTTP requests.
+
 Call this effect from the consuming program's runtime. No generated files or
 separate code-generation command are needed. Requests are not automatically retried.
 
 `make` delegates directly to Effect's `HttpApiClient.make` with the Goho contract.
+
+See the [server API reference](../../programs/goho-server/README.md#api) for
+receipt creation, idempotency, public errors, and batch recovery. The running
+server exposes the generated contract at `/openapi.json` and Swagger UI at `/docs`.
+
+To inspect OpenAPI without starting the server or calling providers, run from
+this package directory after installing workspace dependencies:
+
+```bash
+node --input-type=module -e 'import { api } from "./src/api.ts"; import { OpenApi } from "effect/unstable/httpapi"; console.log(JSON.stringify(OpenApi.fromApi(api), null, 2));'
+```
+
+Edit `src/api.ts` and `src/receipts.ts`; the OpenAPI document is generated from
+those annotations and schemas. Schema validation also includes runtime checks
+that the generated JSON Schema does not fully express, such as real calendar dates.

@@ -26,17 +26,21 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Local API for creating receipts and processing Google Drive receipt batches. No authentication is required.",
+    "Creates receipts in PostgreSQL and processes Google Drive receipt images into Google Sheets. The server listens on loopback without authentication.",
   )
   .add(
     HttpApiGroup.make("health")
       .annotate(OpenApi.Description, "Server liveness.")
       .add(
         HttpApiEndpoint.get("check", "/health", {
-          success: Schema.Struct({ status: Schema.Literal("ok") }).annotate({
+          success: Schema.Struct({
+            status: Schema.Literal("ok").annotate({
+              description: "Liveness status returned when the HTTP handler responds.",
+            }),
+          }).annotate({
             identifier: "HealthResponse",
             description:
-              "The HTTP server is running. This does not check database or provider readiness.",
+              "Liveness response from the HTTP server. Database and provider readiness are not checked.",
             examples: [{ status: "ok" }],
           }),
         })
@@ -54,31 +58,64 @@ export const api = HttpApi.make("goho-server")
           payload: CreateReceiptRequest,
           success: Receipt,
           error: [
-            HttpApiError.BadRequestNoContent,
-            HttpApiError.Conflict,
-            HttpApiError.InternalServerError,
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The required `idempotency-key` header or JSON payload is invalid. The response body is empty.",
+            }),
+            HttpApiError.Conflict.annotate({
+              description:
+                "The idempotency key already identifies different normalized receipt data. Returns JSON with only `_tag: Conflict`.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description:
+                "Repository validation or persistence failed. Returns JSON with only `_tag: InternalServerError`; diagnostic causes stay in server logs.",
+            }),
           ],
         })
           .annotate(OpenApi.Summary, "Create a receipt")
+          // Swagger displays parameter descriptions separately from referenced schema metadata.
+          .annotate(OpenApi.Transform, (operation) => ({
+            ...operation,
+            parameters: operation.parameters.map((parameter: OpenApi.OpenAPISpecParameter) =>
+              parameter.in === "header" && parameter.name === "idempotency-key"
+                ? {
+                    ...parameter,
+                    description: Schema.resolveAnnotations(IdempotencyKey)?.description,
+                  }
+                : parameter,
+            ),
+          }))
           .annotate(
             OpenApi.Description,
-            "Creates a receipt and its ordered items atomically. Repeating the same idempotency key and normalized payload returns the existing receipt. Returns 400 for invalid input, 409 for a key reused with different data, or 500 when persistence fails.",
+            "Creates a receipt and its ordered items in one database transaction and returns HTTP 200. Trims store, category, and item names and normalizes decimal strings before storage and idempotency comparison. Reusing the same key and normalized data returns the stored receipt; changing data or item order returns HTTP 409. The operation does not call Google Drive, Google Sheets, or OpenAI.",
           ),
       )
       .add(
         HttpApiEndpoint.post("process", "/receipts/process", {
           payload: ProcessRequest,
-          success: Schema.Array(ReceiptProcessingResult),
+          success: Schema.Array(ReceiptProcessingResult).annotate({
+            description:
+              "One outcome per file in the batch’s Drive listing order, returned after the batch finishes. An empty todo folder returns an empty array. Individual `Failed` and `Stranded` outcomes still return HTTP 200.",
+          }),
           error: [
-            HttpApiError.BadRequestNoContent,
-            HttpApiError.Conflict,
-            HttpApiError.InternalServerError,
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The JSON payload is invalid. All three fields are required. The response body is empty.",
+            }),
+            HttpApiError.Conflict.annotate({
+              description:
+                "Another batch is running in this server process, even for a different root or spreadsheet. Returns JSON with only `_tag: Conflict`.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description:
+                "Batch setup or execution failed. Some files or rows can already have changed. Returns JSON with only `_tag: InternalServerError`; inspect server logs and workflow state before retrying.",
+            }),
           ],
         })
           .annotate(OpenApi.Summary, "Process a receipt batch")
           .annotate(
             OpenApi.Description,
-            "Processes the workflow root's todo files and returns one outcome per file when the batch finishes. An empty batch returns an empty array. Individual Failed or Stranded outcomes still return HTTP 200. Returns 400 for invalid input, 409 while another batch is running, or 500 if the batch cannot complete. Accepted work continues if the client disconnects.",
+            "Processes the files listed in the workflow root’s `todo` folder and waits for their outcomes. Claims files into `processing`, extracts JPEG, PNG, or WebP images, attempts database persistence, appends item rows to `RAW`, and moves completed files to `processed`. A file ID already present in the spreadsheet snapshot skips extraction, database persistence, and appending. Expected database save failures are logged and do not prevent Sheets processing. Drive moves, Sheets appends, and database writes do not share a transaction. Accepted work continues after client disconnect. The batch lock is local to this server process; run only one server against a workflow. Inspect Drive, Sheets, and logs before retrying after a lost response or failure.",
           ),
       ),
   );

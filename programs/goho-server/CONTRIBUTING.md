@@ -119,13 +119,18 @@ receipt date, category, subtotal, tax, total, nullable currency, extraction
 version, validated extraction JSON, and creation time. `receipt_items` stores
 ordered item names and amounts, linked to a receipt. Dates use `date`, creation
 times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
-Currency remains unknown with the current extraction contract. Decimal strings
-preserve the finite numeric values supplied by the parser; they cannot recover
-precision already lost upstream.
+Currency remains unknown with the current extraction contract. API-created
+receipts instead accept an explicit currency or null and have no source or
+extraction metadata. They retain an idempotency key and normalized-data fingerprint;
+see [receipt creation](./README.md#create-a-receipt) for the HTTP contract.
 
-The repository inserts a receipt and all its items in one transaction. The
-first successful save for a source provider/file ID wins; subsequent saves
-return the existing receipt ID without replacing data or duplicating items.
+Decimal strings preserve the finite numeric values supplied by the parser; they
+cannot recover precision already lost upstream.
+
+The repository inserts a receipt and all its items in one transaction. For
+Google Drive receipts, the first successful save for a source provider/file ID
+wins; subsequent saves return the existing receipt ID without replacing data or
+duplicating items.
 Repeated item names are allowed because identity uses position within a receipt.
 
 ### Running migrations locally
