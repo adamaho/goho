@@ -4,6 +4,10 @@
   "private": true,
   "description": "Shared core logic for Goho programs.",
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
+  },
   "exports": {
     ".": "./src/index.ts"
   },

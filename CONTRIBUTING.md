@@ -70,6 +70,26 @@ must match its `package.json` name after removing the npm scope. For example,
 `@goho/billing` belongs in `packages/billing`, while `@goho/core` belongs in
 `packages/core`.
 
+## Package Imports
+
+Define package-local aliases in `package.json` using Node's `imports` field:
+
+```json
+"imports": {
+  "#src/*": "./src/*",
+  "#test/*": "./test/*"
+}
+```
+
+Include each alias when its directory exists, including in tooling packages.
+Use these aliases for imports that would otherwise traverse parent directories,
+such as `#src/receipts/repository.ts`. Keep explicit file extensions; imports
+within the same directory can use `./`. Import other workspace packages through
+their public package names and exports.
+
+Node, TypeScript's NodeNext resolution, and the test runner use the package
+mapping directly; do not add TypeScript-only `paths` aliases.
+
 ## Documentation Comments
 
 Use JSDoc where it helps a consumer understand an exported API, or where code

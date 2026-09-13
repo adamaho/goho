@@ -4,7 +4,7 @@ import { Config, Effect, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
-import * as Postgres from "../src/database/postgres.ts";
+import * as Postgres from "#src/database/postgres.ts";
 
 const DatabaseLive = Postgres.layerConfig({
   url: Config.redacted("TEST_DATABASE_URL"),

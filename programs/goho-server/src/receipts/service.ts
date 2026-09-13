@@ -13,7 +13,7 @@ import * as Workflow from "./process.ts";
 import * as ReceiptRepository from "./repository.ts";
 
 /**
- * Runs one receipt batch at a time.
+ * Creates receipts and runs one receipt processing batch at a time.
  *
  * @category models
  * @since 0.1.0
@@ -35,7 +35,7 @@ export class Service extends Context.Service<
 >()("@goho/goho-server/Receipts") {}
 
 /**
- * Provides the existing workflow with an in-process batch lock.
+ * Maps receipt failures to public errors and guards processing with a batch lock.
  *
  * @category models
  * @since 0.1.0
@@ -44,7 +44,21 @@ export const make = Effect.fn("@goho/ReceiptService.make")(function* (
   run: (
     request: ProcessRequest,
   ) => Effect.Effect<ReadonlyArray<Workflow.ReceiptProcessingResult>, unknown>,
+  repository: Pick<ReceiptRepository.Interface, "create">,
 ) {
+  const create = Effect.fn("@goho/ReceiptService.create")(
+    (idempotencyKey: IdempotencyKey, receipt: CreateReceiptRequest) =>
+      repository.create(idempotencyKey, receipt).pipe(
+        Effect.catchTags({
+          "GohoServer.ReceiptRepository.IdempotencyConflict": () =>
+            Effect.fail(new HttpApiError.Conflict()),
+          "GohoServer.ReceiptRepository.PersistenceError": (error) =>
+            Effect.logError("Receipt creation failed", error).pipe(
+              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+            ),
+        }),
+      ),
+  );
   const busy = yield* Ref.make(false);
   const process = Effect.fn("@goho/ReceiptService.process")(function* (request: ProcessRequest) {
     const acquired = yield* Ref.modify(busy, (current) => [!current, true]);
@@ -86,33 +100,11 @@ export const make = Effect.fn("@goho/ReceiptService.make")(function* (
     );
   }, Effect.uninterruptible);
   // Finish an accepted batch before releasing its lock, even if its HTTP client disconnects.
-  return { process } as const;
+  return Service.of({ create, process });
 });
 
 /**
- * Maps receipt persistence outcomes onto the public HTTP error contract.
- *
- * @category models
- * @since 0.1.0
- */
-export const makeCreate = (repository: Pick<ReceiptRepository.Interface, "create">) =>
-  Effect.fn("@goho/ReceiptService.create")(
-    (idempotencyKey: IdempotencyKey, receipt: CreateReceiptRequest) =>
-      repository.create(idempotencyKey, receipt).pipe(
-        Effect.catchTag(
-          "GohoServer.ReceiptRepository.IdempotencyConflict",
-          () => new HttpApiError.Conflict(),
-        ),
-        Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
-          Effect.logError("Receipt creation failed", error).pipe(
-            Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
-          ),
-        ),
-      ),
-  );
-
-/**
- * Provides Google-backed receipt processing.
+ * Provides receipt creation and Google-backed processing.
  *
  * @category layers
  * @since 0.1.0
@@ -128,12 +120,12 @@ export const layer: Layer.Layer<
     const services = yield* Effect.context<
       Ai.Service | GoogleDrive.Service | GoogleSheets.Service | ReceiptRepository.Service
     >();
-    const batch = yield* make((request) =>
-      Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
-        Effect.provide(services),
-      ),
+    return yield* make(
+      (request) =>
+        Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
+          Effect.provide(services),
+        ),
+      repository,
     );
-    const create = makeCreate(repository);
-    return Service.of({ ...batch, create });
   }),
 );

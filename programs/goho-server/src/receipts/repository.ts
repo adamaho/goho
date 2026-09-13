@@ -92,20 +92,20 @@ const ItemRow = Schema.Struct({
 const decodeReceiptRow = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ReceiptRow));
 const decodeItemRows = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ItemRow));
 
-const canonicalDecimal = (value: typeof DecimalString.Type): typeof DecimalString.Type =>
+const normalizeDecimal = (value: DecimalString): DecimalString =>
   DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
 
-const canonicalize = (receipt: CreateReceiptRequest): CreateReceiptRequest => ({
+const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest => ({
   storeName: receipt.storeName,
   receiptDate: receipt.receiptDate,
   category: receipt.category,
-  subtotal: canonicalDecimal(receipt.subtotal),
-  tax: canonicalDecimal(receipt.tax),
-  total: canonicalDecimal(receipt.total),
+  subtotal: normalizeDecimal(receipt.subtotal),
+  tax: normalizeDecimal(receipt.tax),
+  total: normalizeDecimal(receipt.total),
   currency: receipt.currency,
   items: Array.map(receipt.items, (item) => ({
     name: item.name,
-    amount: canonicalDecimal(item.amount),
+    amount: normalizeDecimal(item.amount),
   })),
 });
 
@@ -153,16 +153,18 @@ export const layer = Layer.effect(
     ) {
       const outcome = yield* Effect.gen(function* () {
         const key = yield* Schema.decodeEffect(IdempotencyKeySchema)(idempotencyKey);
-        const receipt = canonicalize(yield* Schema.decodeEffect(CreateReceiptRequestSchema)(input));
-        const requestFingerprint = fingerprint(receipt);
+        const receipt = normalizeReceipt(
+          yield* Schema.decodeEffect(CreateReceiptRequestSchema)(input),
+        );
+        const receiptFingerprint = fingerprint(receipt);
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const inserted = yield* sql`
               INSERT INTO receipts (
-                idempotency_key, request_fingerprint, store_name, receipt_date,
+                idempotency_key, fingerprint, store_name, receipt_date,
                 category, subtotal, tax, total, currency
               ) VALUES (
-                ${key}, ${requestFingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
+                ${key}, ${receiptFingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
                 ${receipt.category}, ${receipt.subtotal}, ${receipt.tax}, ${receipt.total},
                 ${receipt.currency}
               ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
@@ -171,7 +173,7 @@ export const layer = Layer.effect(
             if (row === undefined) {
               const existing = yield* sql`
                 SELECT id FROM receipts
-                WHERE idempotency_key = ${key} AND request_fingerprint = ${requestFingerprint}
+                WHERE idempotency_key = ${key} AND fingerprint = ${receiptFingerprint}
               `.pipe(Effect.flatMap(decodeInserted));
               const existingRow = existing.at(0);
               if (existingRow === undefined) return { _tag: "Conflict" } as const;

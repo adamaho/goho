@@ -17,7 +17,7 @@ export default Effect.gen(function* () {
       ALTER COLUMN extraction_version DROP NOT NULL,
       ALTER COLUMN extracted_payload DROP NOT NULL,
       ADD COLUMN idempotency_key text,
-      ADD COLUMN request_fingerprint bytea,
+      ADD COLUMN fingerprint bytea,
       ADD CONSTRAINT receipts_source_complete CHECK (
         (
           source_provider IS NULL AND
@@ -34,13 +34,7 @@ export default Effect.gen(function* () {
         )
       ),
       ADD CONSTRAINT receipts_idempotency_complete CHECK (
-        (idempotency_key IS NULL) = (request_fingerprint IS NULL)
-      ),
-      ADD CONSTRAINT receipts_idempotency_key_nonempty CHECK (
-        idempotency_key IS NULL OR length(btrim(idempotency_key)) > 0
-      ),
-      ADD CONSTRAINT receipts_request_fingerprint_sha256 CHECK (
-        request_fingerprint IS NULL OR octet_length(request_fingerprint) = 32
+        (idempotency_key IS NULL) = (fingerprint IS NULL)
       ),
       ADD CONSTRAINT receipts_idempotency_key_unique UNIQUE (idempotency_key)
   `;

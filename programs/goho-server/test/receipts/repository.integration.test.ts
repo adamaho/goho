@@ -8,8 +8,9 @@ import { Config, Context, Effect, Layer, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
-import * as Migrations from "../../src/database/migrations.ts";
-import * as Repository from "../../src/receipts/repository.ts";
+import * as Migrations from "#src/database/migrations.ts";
+import * as Repository from "#src/receipts/repository.ts";
+
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
 const idempotencyKey = IdempotencyKey.make("manual-entry-1");

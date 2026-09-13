@@ -4,6 +4,10 @@
   "private": true,
   "description": "Receipt processing HTTP server for Goho.",
   "type": "module",
+  "imports": {
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
+  },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
     "dev": "node --env-file-if-exists=.env --watch src/main.ts",
