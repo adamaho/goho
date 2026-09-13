@@ -1,7 +1,19 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { createHash } from "node:crypto";
+
+import {
+  CalendarDate,
+  CreateReceiptRequest as CreateReceiptRequestSchema,
+  DecimalString,
+  IdempotencyKey as IdempotencyKeySchema,
+  ReceiptId,
+  type CreateReceiptRequest,
+  type IdempotencyKey,
+  type Receipt,
+} from "@goho/goho-server-client/receipts";
+import { Array, BigDecimal, Context, Effect, Layer, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
-import { ReceiptId, ReceiptToSave } from "./model.ts";
+import { ReceiptToSave } from "./model.ts";
 
 /**
  * Expected failure while validating or saving a receipt.
@@ -12,6 +24,17 @@ import { ReceiptId, ReceiptToSave } from "./model.ts";
 export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
   "GohoServer.ReceiptRepository.PersistenceError",
   { operation: Schema.String, cause: Schema.Defect() },
+) {}
+
+/**
+ * The same idempotency key was previously used for different receipt data.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>()(
+  "GohoServer.ReceiptRepository.IdempotencyConflict",
+  { idempotencyKey: IdempotencyKeySchema },
 ) {}
 
 /**
@@ -31,6 +54,10 @@ export type SaveResult =
  * @since 0.1.0
  */
 export interface Interface {
+  readonly create: (
+    idempotencyKey: IdempotencyKey,
+    receipt: CreateReceiptRequest,
+  ) => Effect.Effect<Receipt, PersistenceError | IdempotencyConflict>;
   readonly save: (receipt: ReceiptToSave) => Effect.Effect<SaveResult, PersistenceError>;
 }
 
@@ -47,9 +74,46 @@ export class Service extends Context.Service<Service, Interface>()(
 const IdRow = Schema.Struct({ id: ReceiptId });
 const decodeInserted = Schema.decodeUnknownEffect(Schema.Array(IdRow));
 const decodeExisting = Schema.decodeUnknownEffect(Schema.NonEmptyArray(IdRow));
+const ReceiptRow = Schema.Struct({
+  id: ReceiptId,
+  store_name: Schema.String,
+  receipt_date: CalendarDate,
+  category: Schema.String,
+  subtotal: DecimalString,
+  tax: DecimalString,
+  total: DecimalString,
+  currency: Schema.NullOr(Schema.String),
+});
+const ItemRow = Schema.Struct({
+  position: Schema.Int,
+  name: Schema.String,
+  amount: DecimalString,
+});
+const decodeReceiptRow = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ReceiptRow));
+const decodeItemRows = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ItemRow));
+
+const normalizeDecimal = (value: DecimalString): DecimalString =>
+  DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
+
+const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest => ({
+  storeName: receipt.storeName,
+  receiptDate: receipt.receiptDate,
+  category: receipt.category,
+  subtotal: normalizeDecimal(receipt.subtotal),
+  tax: normalizeDecimal(receipt.tax),
+  total: normalizeDecimal(receipt.total),
+  currency: receipt.currency,
+  items: Array.map(receipt.items, (item) => ({
+    name: item.name,
+    amount: normalizeDecimal(item.amount),
+  })),
+});
+
+const fingerprint = (receipt: CreateReceiptRequest): Uint8Array =>
+  createHash("sha256").update(JSON.stringify(receipt)).digest();
 
 /**
- * Saves each receipt and all its items atomically. The first successful save wins.
+ * Creates or saves each receipt and all its items atomically.
  *
  * @category models
  * @since 0.1.0
@@ -58,6 +122,83 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+    const readReceipt = Effect.fn("@goho/ReceiptRepository.readReceipt")(function* (
+      receiptId: typeof ReceiptId.Type,
+    ) {
+      const receipts = yield* sql`
+        SELECT id, store_name, receipt_date::text, category,
+          subtotal::text, tax::text, total::text, currency
+        FROM receipts WHERE id = ${receiptId}
+      `.pipe(Effect.flatMap(decodeReceiptRow));
+      const items = yield* sql`
+        SELECT position, name, amount::text
+        FROM receipt_items WHERE receipt_id = ${receiptId} ORDER BY position
+      `.pipe(Effect.flatMap(decodeItemRows));
+      const receipt = receipts[0];
+      return {
+        id: receipt.id,
+        storeName: receipt.store_name,
+        receiptDate: receipt.receipt_date,
+        category: receipt.category,
+        subtotal: receipt.subtotal,
+        tax: receipt.tax,
+        total: receipt.total,
+        currency: receipt.currency,
+        items,
+      } satisfies Receipt;
+    });
+    const create = Effect.fn("@goho/ReceiptRepository.create")(function* (
+      idempotencyKey: IdempotencyKey,
+      input: CreateReceiptRequest,
+    ) {
+      const outcome = yield* Effect.gen(function* () {
+        const key = yield* Schema.decodeEffect(IdempotencyKeySchema)(idempotencyKey);
+        const receipt = normalizeReceipt(
+          yield* Schema.decodeEffect(CreateReceiptRequestSchema)(input),
+        );
+        const receiptFingerprint = fingerprint(receipt);
+        return yield* sql.withTransaction(
+          Effect.gen(function* () {
+            const inserted = yield* sql`
+              INSERT INTO receipts (
+                idempotency_key, fingerprint, store_name, receipt_date,
+                category, subtotal, tax, total, currency
+              ) VALUES (
+                ${key}, ${receiptFingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
+                ${receipt.category}, ${receipt.subtotal}, ${receipt.tax}, ${receipt.total},
+                ${receipt.currency}
+              ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
+            `.pipe(Effect.flatMap(decodeInserted));
+            const row = inserted.at(0);
+            if (row === undefined) {
+              const existing = yield* sql`
+                SELECT id FROM receipts
+                WHERE idempotency_key = ${key} AND fingerprint = ${receiptFingerprint}
+              `.pipe(Effect.flatMap(decodeInserted));
+              const existingRow = existing.at(0);
+              if (existingRow === undefined) return { _tag: "Conflict" } as const;
+              return {
+                _tag: "Receipt",
+                receipt: yield* readReceipt(existingRow.id),
+              } as const;
+            }
+            yield* sql`INSERT INTO receipt_items ${sql.insert(
+              Array.map(receipt.items, (item, position) => ({
+                receipt_id: row.id,
+                position,
+                name: item.name,
+                amount: item.amount,
+              })),
+            )}`;
+            return { _tag: "Receipt", receipt: yield* readReceipt(row.id) } as const;
+          }),
+        );
+      }).pipe(Effect.mapError((cause) => new PersistenceError({ operation: "create", cause })));
+      if (outcome._tag === "Conflict") {
+        return yield* new IdempotencyConflict({ idempotencyKey });
+      }
+      return outcome.receipt;
+    });
     const save = Effect.fn("@goho/ReceiptRepository.save")(
       function* (input: ReceiptToSave): Effect.fn.Return<SaveResult, unknown> {
         const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
@@ -96,6 +237,6 @@ export const layer = Layer.effect(
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "save", cause })),
     );
-    return Service.of({ save });
+    return Service.of({ create, save });
   }),
 );

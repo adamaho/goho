@@ -3,13 +3,30 @@ import { randomUUID } from "node:crypto";
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
+import { CreateReceiptRequest, IdempotencyKey } from "@goho/goho-server-client/receipts";
 import { Config, Context, Effect, Layer, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
-import * as Migrations from "../../src/database/migrations.ts";
-import * as Repository from "../../src/receipts/repository.ts";
+import * as Migrations from "#src/database/migrations.ts";
+import * as Repository from "#src/receipts/repository.ts";
+
 import { parsedReceipt, receipt } from "./fixtures.ts";
+
+const idempotencyKey = IdempotencyKey.make("manual-entry-1");
+const receiptInput = CreateReceiptRequest.make({
+  storeName: "Example Store",
+  receiptDate: "2024-09-01",
+  category: "Groceries",
+  subtotal: "10.250",
+  tax: "7.5e-1",
+  total: "11.00",
+  currency: null,
+  items: [
+    { name: "Apples", amount: "12.00" },
+    { name: "Adjustment", amount: "-1.0" },
+  ],
+});
 
 // Each test owns a schema and pool. Cleanup cannot touch development tables or
 // other test runs, and concurrent saves use actual separate pool connections.
@@ -40,7 +57,94 @@ it.effect("applies migrations from empty and does not reapply completed migratio
     const applied = yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
     expect(applied).toEqual([]);
     const sql = yield* SqlClient.SqlClient;
-    expect(yield* sql`SELECT name FROM goho_migrations`).toEqual([{ name: "receipts" }]);
+    expect(yield* sql`SELECT name FROM goho_migrations`).toEqual([
+      { name: "receipts" },
+      { name: "create_receipt" },
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("creates a complete receipt and replays an equivalent normalized request", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const created = yield* repo.create(idempotencyKey, receiptInput);
+    expect(created).toEqual({
+      id: created.id,
+      storeName: "Example Store",
+      receiptDate: "2024-09-01",
+      category: "Groceries",
+      subtotal: "10.25",
+      tax: "0.75",
+      total: "11",
+      currency: null,
+      items: [
+        { position: 0, name: "Apples", amount: "12" },
+        { position: 1, name: "Adjustment", amount: "-1" },
+      ],
+    });
+    const replayed = yield* repo.create(
+      idempotencyKey,
+      CreateReceiptRequest.make({
+        ...receiptInput,
+        subtotal: "1.025e1",
+        tax: "0.7500",
+        total: "11.0",
+        items: [
+          { name: "Apples", amount: "12.0" },
+          { name: "Adjustment", amount: "-1.00" },
+        ],
+      }),
+    );
+    expect(replayed).toEqual(created);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("rejects reuse of an idempotency key for different normalized data", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const created = yield* repo.create(idempotencyKey, receiptInput);
+    const result = yield* repo
+      .create(idempotencyKey, CreateReceiptRequest.make({ ...receiptInput, total: "12" }))
+      .pipe(Effect.result);
+    expect(Result.isFailure(result) && result.failure._tag).toBe(
+      "GohoServer.ReceiptRepository.IdempotencyConflict",
+    );
+    expect(yield* sql`SELECT total::text FROM receipts WHERE id = ${created.id}`).toEqual([
+      { total: "11" },
+    ]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("concurrent equivalent creates return one receipt and item set", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const results = yield* Effect.all(
+      [repo.create(idempotencyKey, receiptInput), repo.create(idempotencyKey, receiptInput)],
+      { concurrency: 2 },
+    );
+    expect(results[0]).toEqual(results[1]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("rolls back an API-created receipt when an item insert fails", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
+    const result = yield* repo.create(idempotencyKey, receiptInput).pipe(Effect.result);
+    expect(Result.isFailure(result) && result.failure._tag).toBe(
+      "GohoServer.ReceiptRepository.PersistenceError",
+    );
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

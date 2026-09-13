@@ -4,7 +4,7 @@ import { Config, Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 import { FetchHttpClient } from "effect/unstable/http";
 
-import { CommandError } from "../errors.ts";
+import { CommandError } from "#src/errors.ts";
 const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {

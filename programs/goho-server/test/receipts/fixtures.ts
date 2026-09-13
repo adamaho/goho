@@ -1,4 +1,4 @@
-import { ParsedReceipt, prepareReceipt } from "../../src/receipts/model.ts";
+import { ParsedReceipt, prepareReceipt } from "#src/receipts/model.ts";
 
 /**
  * Receipt fixture with repeated items and fractional amounts.

@@ -1,13 +1,15 @@
 import { it } from "@effect/vitest";
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
+import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Deferred, Effect, Fiber, Layer, Ref, Schema, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
-import { ReceiptId, type ReceiptToSave } from "../../src/receipts/model.ts";
-import * as Workflow from "../../src/receipts/process.ts";
-import * as Repository from "../../src/receipts/repository.ts";
-import * as Receipts from "../../src/receipts/service.ts";
+import type { ReceiptToSave } from "#src/receipts/model.ts";
+import * as Workflow from "#src/receipts/process.ts";
+import * as Repository from "#src/receipts/repository.ts";
+import * as Receipts from "#src/receipts/service.ts";
+
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
 const savedId = ReceiptId.make("00000000-0000-4000-8000-000000000001");
@@ -71,6 +73,7 @@ const setup = (
           ),
       }),
       Layer.succeed(Repository.Service, {
+        create: () => Effect.die("unexpected create"),
         save: (input) =>
           record("save").pipe(
             Effect.andThen(Ref.update(saves, (all) => [...all, input])),
@@ -85,10 +88,8 @@ const setup = (
           ),
       }),
     );
-    const service = yield* Receipts.make(() =>
-      Workflow.process(request.rootFolderId, request.spreadsheetId, request.concurrency).pipe(
-        Effect.provide(layer),
-      ),
+    const service = yield* Receipts.Service.pipe(
+      Effect.provide(Receipts.layer.pipe(Layer.provide(layer))),
     );
     return { service, events, saves, appends };
   });
