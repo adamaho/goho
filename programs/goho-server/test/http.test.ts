@@ -34,7 +34,7 @@ const testLayer = (create: ReceiptRepository.Interface["create"] = () => Effect.
       Layer.provide(
         Receipts.layer.pipe(
           Layer.provide(
-            ReceiptDependencies.make({
+            ReceiptDependencies.layer({
               repository: { create },
               googleDrive: {
                 listFiles: () =>

@@ -6,14 +6,13 @@ import * as Repository from "#src/receipts/repository.ts";
 
 import { parsedReceipt } from "./fixtures.ts";
 
-/* eslint-disable nopeus/require-service-constructor-names -- Test dependency factory intentionally exposes make. */
 /**
  * Provides controlled receipt dependencies shared by HTTP and service tests.
  *
  * @category layers
  * @since 0.1.0
  */
-export const make = (
+export const layer = (
   overrides: {
     readonly googleDrive?: Partial<GoogleDrive.Interface>;
     readonly googleSheets?: Partial<GoogleSheets.Interface>;
@@ -55,4 +54,3 @@ export const make = (
       ...overrides.repository,
     }),
   );
-/* eslint-enable nopeus/require-service-constructor-names */

@@ -9,7 +9,7 @@ import * as ReceiptDependencies from "./dependencies.ts";
 
 const request = { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 };
 const receiptLayer = (googleDrive: Partial<GoogleDrive.Interface>) =>
-  Receipts.layer.pipe(Layer.provide(ReceiptDependencies.make({ googleDrive })));
+  Receipts.layer.pipe(Layer.provide(ReceiptDependencies.layer({ googleDrive })));
 
 it.effect("rejects overlap and releases the lock after a successful batch", () =>
   Effect.gen(function* () {
