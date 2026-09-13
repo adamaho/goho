@@ -9,6 +9,7 @@ import { expect } from "vitest";
 import * as Http from "#src/http.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as Services from "#test/receipts/services.ts";
 
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",
@@ -31,12 +32,15 @@ const testLayer = (create: ReceiptRepository.Interface["create"] = () => Effect.
   HttpRouter.serve(
     Http.layer.pipe(
       Layer.provide(
-        Layer.effect(
-          Receipts.Service,
-          Receipts.make(
-            () =>
-              Effect.succeed([{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }]),
-            { create },
+        Receipts.layer.pipe(
+          Layer.provide(
+            Services.layer({
+              repository: { create },
+              googleDrive: {
+                listFiles: () =>
+                  Effect.succeed([{ id: "receipt-1", name: "receipt.png", mimeType: "image/png" }]),
+              },
+            }),
           ),
         ),
       ),
