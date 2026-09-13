@@ -167,3 +167,28 @@ it.effect("rejects invalid request inputs at the HTTP boundary", () =>
     }
   }).pipe(Effect.provide(TestLive)),
 );
+
+it.effect(
+  "returns liveness through HTTP and the generated client without receipt dependencies",
+  () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get("/health");
+      expect(response.status).toBe(200);
+      expect(yield* response.json).toEqual({ status: "ok" });
+      const client = yield* Client.make("");
+      expect(yield* client.health.check()).toEqual({ status: "ok" });
+    }).pipe(
+      Effect.provide(
+        HttpRouter.serve(
+          Http.layer.pipe(
+            Layer.provide(
+              Layer.succeed(Receipts.Service, {
+                create: () => Effect.die("Health must not create receipts"),
+                process: () => Effect.die("Health must not process receipts"),
+              }),
+            ),
+          ),
+        ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
+      ),
+    ),
+);

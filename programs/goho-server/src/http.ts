@@ -1,6 +1,6 @@
 import { api } from "@goho/goho-server-client/api";
 import { Effect, Layer } from "effect";
-import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { HttpApiBuilder, HttpApiSwagger } from "effect/unstable/httpapi";
 
 import * as Receipts from "./receipts/service.ts";
 
@@ -15,10 +15,17 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   }),
 );
 
+const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
+  handlers.handle("check", () => Effect.succeed({ status: "ok" as const })),
+);
+
 /**
- * Provides the receipt HTTP routes.
+ * Provides the API routes, generated OpenAPI document, and Swagger UI.
  *
  * @category models
  * @since 0.1.0
  */
-export const layer = HttpApiBuilder.layer(api).pipe(Layer.provide(ReceiptsLive));
+export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
+  Layer.provide([ReceiptsLive, HealthLive]),
+  Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
+);

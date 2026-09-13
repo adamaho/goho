@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Runs receipt processing behind one synchronous HTTP endpoint. The CLI connects through
+Exposes receipt creation, synchronous batch processing, health checks, and API documentation. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
 The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
@@ -8,6 +8,22 @@ The server binds to `127.0.0.1` and requires no authentication. It is intended f
 For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## API
+
+- `GET /health` returns HTTP 200 with `{"status":"ok"}` when the HTTP server is running.
+  This is a liveness check; it does not query PostgreSQL, Google, or OpenAI.
+- `GET /openapi.json` serves the OpenAPI contract generated from Effect schemas.
+- `GET /docs` renders interactive Swagger UI, with bundled assets and the same
+  generated contract. Models include descriptions and examples. Try it out sends
+  real requests to this server.
+
+Open [Swagger docs](http://127.0.0.1:3000/docs) after starting the server with the
+default port. The health and documentation routes require no authentication.
+
+`POST /receipts` creates a receipt and its ordered items atomically. Supply an
+`idempotency-key` header and the JSON body shown in Swagger. Monetary values are
+strings to preserve decimal precision. Repeating the key with the same normalized
+payload returns the existing receipt; reusing it with different data returns 409.
+Invalid input returns 400 and persistence failures return 500.
 
 `POST /receipts/process` accepts JSON:
 
