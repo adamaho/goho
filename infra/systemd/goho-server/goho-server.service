@@ -9,7 +9,7 @@ User=adam
 Group=adam
 WorkingDirectory=/home/adam/github.com/adamaho/goho
 Environment=HOME=/home/adam
-Environment="PATH=/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=/home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/etc/goho/server.env
 ExecStartPre=/usr/bin/env pnpm --filter @goho/goho-server db:migrate
 ExecStart=/usr/bin/env pnpm --filter @goho/goho-server start
