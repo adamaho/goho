@@ -5,11 +5,11 @@ import { expect } from "vitest";
 
 import * as Receipts from "#src/receipts/service.ts";
 
-import * as Services from "./services.ts";
+import * as ReceiptDependencies from "./dependencies.ts";
 
 const request = { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 };
 const receiptLayer = (googleDrive: Partial<GoogleDrive.Interface>) =>
-  Receipts.layer.pipe(Layer.provide(Services.layer({ googleDrive })));
+  Receipts.layer.pipe(Layer.provide(ReceiptDependencies.make({ googleDrive })));
 
 it.effect("rejects overlap and releases the lock after a successful batch", () =>
   Effect.gen(function* () {

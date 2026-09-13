@@ -9,7 +9,7 @@ import { expect } from "vitest";
 import * as Http from "#src/http.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
-import * as Services from "#test/receipts/services.ts";
+import * as ReceiptDependencies from "#test/receipts/dependencies.ts";
 
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",
@@ -34,7 +34,7 @@ const testLayer = (create: ReceiptRepository.Interface["create"] = () => Effect.
       Layer.provide(
         Receipts.layer.pipe(
           Layer.provide(
-            Services.layer({
+            ReceiptDependencies.make({
               repository: { create },
               googleDrive: {
                 listFiles: () =>
