@@ -120,9 +120,8 @@ version, validated extraction JSON, and creation time. `receipt_items` stores
 ordered item names and amounts, linked to a receipt. Dates use `date`, creation
 times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
 Currency remains unknown with the current extraction contract. API-created
-receipts instead accept an explicit currency or null and have no source or
-extraction metadata. They retain an idempotency key and normalized-data fingerprint;
-see [receipt creation](./README.md#create-a-receipt) for the HTTP contract.
+receipts accept a currency or null and use an idempotency key instead of source
+metadata. See [receipt creation](./README.md#create-a-receipt).
 
 Decimal strings preserve the finite numeric values supplied by the parser; they
 cannot recover precision already lost upstream.

@@ -18,7 +18,7 @@ export const IdempotencyKey = Schema.String.check(
 ).annotate({
   identifier: "IdempotencyKey",
   description:
-    "Opaque token containing at least one non-whitespace character. Required in the `idempotency-key` header. Goho preserves the received value, including case and whitespace. Keys are unique across receipts in the database and have no implemented expiry. Reuse the key with the same normalized receipt data to retrieve the stored receipt; different normalized data returns HTTP 409.",
+    "Receipt creation token, unique across receipts with no expiry. Case and received whitespace are significant.",
   examples: ["manual-entry-1"],
 });
 
@@ -57,8 +57,7 @@ export const CalendarDate = Schema.String.check(
   ),
 ).annotate({
   identifier: "CalendarDate",
-  description:
-    "A real calendar date in YYYY-MM-DD format, without a time or timezone. The runtime accepts years 0100 through 9999.",
+  description: "Real calendar date in YYYY-MM-DD format, years 0100–9999.",
   examples: ["2026-09-13"],
 });
 
@@ -75,8 +74,7 @@ export const DecimalString = Schema.String.check(
   }),
 ).annotate({
   identifier: "DecimalString",
-  description:
-    "An exact decimal encoded as a JSON string to preserve precision. Negative values and exponent notation are accepted.",
+  description: "Exact decimal encoded as a string to preserve precision.",
   examples: ["10.25", "-1.50", "1e2", "1E2"],
 });
 
@@ -92,16 +90,14 @@ export type DecimalString = typeof DecimalString.Type;
 const ReceiptFields = {
   storeName: Name.pipe(
     Schema.annotateEncoded({
-      description:
-        "Store or merchant name. Surrounding whitespace is removed; the result must be nonempty.",
+      description: "Store or merchant name.",
       examples: ["Example Store"],
     }),
   ),
   receiptDate: CalendarDate.annotateKey({ description: "Date of the purchase." }),
   category: Name.pipe(
     Schema.annotateEncoded({
-      description:
-        "Receipt category. Surrounding whitespace is removed; the result must be nonempty.",
+      description: "Receipt category.",
       examples: ["Groceries"],
     }),
   ),
@@ -110,7 +106,7 @@ const ReceiptFields = {
   total: DecimalString.annotateKey({ description: "Total receipt amount.", examples: ["11"] }),
   currency: Schema.NullOr(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))).annotate({
     description:
-      "Currency expressed as three uppercase ASCII letters, or null when unknown. The field is required. The letters are not checked against a currency registry.",
+      "Currency code, or null when unknown. Codes are not checked against a currency registry.",
     examples: ["USD", null],
   }),
 };
@@ -118,7 +114,7 @@ const ReceiptFields = {
 const ReceiptItemInput = Schema.Struct({
   name: Name.pipe(
     Schema.annotateEncoded({
-      description: "Item name. Surrounding whitespace is removed; the result must be nonempty.",
+      description: "Item name.",
       examples: ["Apples"],
     }),
   ),
@@ -128,8 +124,7 @@ const ReceiptItemInput = Schema.Struct({
   }),
 }).annotate({
   identifier: "ReceiptItemInput",
-  description:
-    "One line item supplied for receipt creation. Repeated names and negative amounts are allowed.",
+  description: "Receipt line item; repeated names are allowed.",
   examples: [{ name: "Apples", amount: "10.25" }],
 });
 
@@ -142,13 +137,12 @@ const ReceiptItemInput = Schema.Struct({
 export const CreateReceiptRequest = Schema.Struct({
   ...ReceiptFields,
   items: Schema.NonEmptyArray(ReceiptItemInput).annotate({
-    description:
-      "At least one item. Array order defines zero-based persisted positions and participates in idempotency comparison.",
+    description: "Line items in receipt order. Order affects idempotency comparison.",
   }),
 }).annotate({
   identifier: "CreateReceiptRequest",
   description:
-    "Receipt and ordered line items to persist in one transaction. All fields are required, including nullable `currency`. Amounts use decimal strings without currency symbols. No currency conversion, two-decimal rounding, or validation of relationships between item amounts, subtotal, tax, and total is performed.",
+    "Receipt and ordered items. Names are trimmed and must remain nonempty. Amounts are not rounded, converted, or checked for arithmetic consistency.",
   examples: [
     {
       storeName: "Example Store",
@@ -199,7 +193,7 @@ export type ReceiptId = typeof ReceiptId.Type;
  */
 export const Receipt = Schema.Struct({
   id: ReceiptId.annotateKey({
-    description: "Identity assigned on creation and retained on replay.",
+    description: "Receipt identity, retained on replay.",
   }),
   ...ReceiptFields,
   items: Schema.NonEmptyArray(
@@ -215,13 +209,12 @@ export const Receipt = Schema.Struct({
       examples: [{ position: 0, name: "Apples", amount: "10.25" }],
     }),
   ).annotate({
-    description:
-      "Receipt items in ascending position order, starting at zero. Contains at least one item.",
+    description: "Items in ascending position order.",
   }),
 }).annotate({
   identifier: "Receipt",
   description:
-    "Complete persisted receipt returned with HTTP 200 on creation or replay. Names have surrounding whitespace removed. Decimal strings are normalized before storage, so their spelling can differ from the request.",
+    "Stored receipt with trimmed names and normalized decimal strings; for example, `11.00` becomes `11`.",
   examples: [
     {
       id: "5bb54486-9d88-4df7-89d1-1f2c3b2de21c",
@@ -253,7 +246,7 @@ export interface Receipt extends Schema.Schema.Type<typeof Receipt> {}
  */
 export const Concurrency = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 5 })).annotate({
   identifier: "Concurrency",
-  description: "Maximum files processed concurrently in one batch, from 1 through 5 inclusive.",
+  description: "Maximum files processed concurrently.",
   examples: [5],
 });
 
@@ -267,25 +260,24 @@ export const ProcessRequest = Schema.Struct({
   rootFolderId: Schema.Trim.check(Schema.isNonEmpty()).pipe(
     Schema.annotateEncoded({
       description:
-        "Google Drive folder ID. The root must contain exactly one immediate child folder named `todo`, `processing`, `processed`, and `failed`. Surrounding whitespace is removed; the result must be nonempty.",
+        "Google Drive root with exactly one immediate child folder for each of `todo`, `processing`, `processed`, and `failed`.",
       examples: ["drive-root"],
     }),
   ),
   spreadsheetId: Schema.Trim.check(Schema.isNonEmpty()).pipe(
     Schema.annotateEncoded({
       description:
-        "Destination Google spreadsheet ID. Requires an existing `RAW` worksheet with item columns A–E and source file IDs in F. Surrounding whitespace is removed; the result must be nonempty.",
+        "Destination spreadsheet with a `RAW` worksheet: store, date, category, item, price, and source file ID in columns A–F.",
       examples: ["sheet-id"],
     }),
   ),
   concurrency: Concurrency.annotateKey({
-    description:
-      "Maximum files processed concurrently in this batch. Required; no HTTP default is supplied.",
+    description: "Maximum files processed concurrently; no HTTP default.",
   }),
 }).annotate({
   identifier: "ProcessRequest",
   description:
-    "Required inputs for one synchronous Google Drive receipt batch. Grant the service account access to download and move workflow files and update the spreadsheet. Example folder and spreadsheet IDs are illustrative placeholders; replace them with real IDs.",
+    "Batch inputs. IDs are trimmed and must remain nonempty. The service account needs access to download and move files and update the spreadsheet.",
   examples: [{ rootFolderId: "drive-root", spreadsheetId: "sheet-id", concurrency: 5 }],
 });
 
@@ -299,8 +291,7 @@ export interface ProcessRequest extends Schema.Schema.Type<typeof ProcessRequest
 
 const File = {
   fileId: Schema.String.annotate({
-    description:
-      "Original Google Drive file ID used to locate the file and match source IDs in `RAW!F:F`. Example IDs are illustrative placeholders.",
+    description: "Original Google Drive file ID.",
     examples: ["receipt-1"],
   }),
   fileName: Schema.String.annotate({
@@ -317,8 +308,7 @@ const Stage = Schema.Literals([
   "Complete",
 ]).annotate({
   identifier: "ProcessingStage",
-  description:
-    "Stage where the original operation failed: `Claim` moves from `todo` to `processing`; `ValidateFile` checks the MIME type; `DownloadFile` retrieves the image; `ParseReceipt` extracts receipt data; `AppendRows` writes item rows to Sheets; `Complete` moves to `processed`. Database save failures are logged separately and have no stage outcome.",
+  description: "Stage where processing failed.",
   examples: ["ParseReceipt"],
 });
 
@@ -332,19 +322,19 @@ export const ReceiptProcessingResult = Schema.Union([
   Schema.TaggedStruct("Processed", File).annotate({
     identifier: "Processed",
     description:
-      "Receipt item rows were appended to Sheets and the file moved to `processed`. Database persistence is best effort, so this outcome does not confirm a database record.",
+      "Rows appended to Sheets and file moved to `processed`; database persistence is not guaranteed.",
   }),
   Schema.TaggedStruct("AlreadyProcessed", File).annotate({
     identifier: "AlreadyProcessed",
     description:
-      "The file ID was present in the initial `RAW!F:F` snapshot. Image validation, download, parsing, database persistence, and appending were skipped, and the file moved to `processed`.",
+      "File already recorded in Sheets and moved to `processed`, without new rows or a database write.",
   }),
   Schema.TaggedStruct("Failed", {
     ...File,
     stage: Stage,
     disposition: Schema.Literals(["MovedToFailed", "ClaimNotConfirmed"]).annotate({
       description:
-        "`MovedToFailed` confirms a successful claim followed by a successful compensating move to `failed`. `ClaimNotConfirmed` means the initial claim failed at stage `Claim`; the file location is unconfirmed and no compensating move was attempted.",
+        "`MovedToFailed`: file moved to `failed`. `ClaimNotConfirmed`: initial move failed; file location is unknown.",
       examples: ["MovedToFailed"],
     }),
   }).annotate({
@@ -354,12 +344,11 @@ export const ReceiptProcessingResult = Schema.Union([
   Schema.TaggedStruct("Stranded", { ...File, stage: Stage }).annotate({
     identifier: "Stranded",
     description:
-      "Processing failed after a successful claim, and the compensating move to `failed` also failed. The final file location is unconfirmed. Locate the file by ID before retrying.",
+      "Processing and the move to `failed` both failed. Locate the file by ID before retrying.",
   }),
 ]).annotate({
   identifier: "ReceiptProcessingResult",
-  description:
-    "Outcome for one file. Provider diagnostics are omitted; failure outcomes remain HTTP 200 batch results.",
+  description: "Outcome for one file; provider diagnostics are omitted.",
   examples: [
     { _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" },
     { _tag: "AlreadyProcessed", fileId: "receipt-2", fileName: "receipt.png" },
