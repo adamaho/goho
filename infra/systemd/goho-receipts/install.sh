@@ -8,7 +8,7 @@ readonly CONFIG_DIR="/etc/goho"
 readonly SYSTEMD_DIR="/etc/systemd/system"
 readonly SERVICE_UNIT="goho-receipts.service"
 readonly TIMER_UNIT="goho-receipts.timer"
-readonly TOOLCHAIN_PATH="/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
+readonly TOOLCHAIN_PATH="/home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
 if [[ $EUID -ne 0 ]]; then
   printf 'Run this installer with sudo.\n' >&2
@@ -45,7 +45,7 @@ install -d -o root -g adam -m 0750 "$CONFIG_DIR"
 
 if [[ ! -e "$CONFIG_DIR/receipts.env" ]]; then
   install -o root -g adam -m 0640 \
-    "$SOURCE_DIR/.env.example" \
+    "$REPOSITORY_DIR/infra/deployment/goho-receipts/.env.example" \
     "$CONFIG_DIR/receipts.env"
   printf 'Created %s from the tracked example.\n' "$CONFIG_DIR/receipts.env"
 else

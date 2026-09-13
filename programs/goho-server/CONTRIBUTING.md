@@ -222,6 +222,9 @@ with `start` or `dev` require the separate migration command first.
 
 ## Systemd service
 
+For this machine's Docker Compose deployment and automated installation, see
+[local machine deployment](../../infra/deployment/README.md).
+
 Run the installation commands below from the repository root.
 
 This unit targets the existing `adam` user and checkout at
@@ -234,7 +237,7 @@ then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
 Both service units use this explicit `PATH`:
 
 ```text
-/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
+/home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
 Ensure both executables are available to `adam` on that path. The services do
@@ -246,7 +249,7 @@ service. Check the versions with that same path before starting the services.
 
 ```bash
 sudo install -d -o root -g adam -m 0750 /etc/goho
-sudo install -o root -g adam -m 0640 infra/systemd/goho-server/.env.example /etc/goho/server.env
+sudo install -o root -g adam -m 0640 infra/deployment/goho-server/.env.example /etc/goho/server.env
 sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.service /etc/systemd/system/goho-server.service
 ```
 
