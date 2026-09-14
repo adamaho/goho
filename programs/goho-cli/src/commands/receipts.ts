@@ -1,10 +1,10 @@
-import * as GohoServer from "@goho/goho-server-client/client";
 import { Concurrency, type ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
-import { Config, Console, Effect } from "effect";
+import { Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
-import { FetchHttpClient } from "effect/unstable/http";
 
 import { CommandError } from "#src/errors.ts";
+import * as GohoServer from "#src/goho-server.ts";
+
 const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
@@ -55,14 +55,11 @@ const listCommand = Command.make("list").pipe(
   Command.withDescription("List all persisted receipts."),
   Command.withHandler(() =>
     Effect.gen(function* () {
-      const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
-        Config.withDefault("http://127.0.0.1:3000"),
-      );
-      const client = yield* GohoServer.make(baseUrl);
+      const client = yield* GohoServer.Service;
       const response = yield* client.receipts.list();
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }).pipe(
-      Effect.provide(FetchHttpClient.layer),
+      Effect.provide(GohoServer.layer),
       Effect.mapError(
         (cause) =>
           new CommandError({
@@ -97,15 +94,12 @@ const processCommand = Command.make("process", {
   Command.withDescription("Process all receipts in the 'todo' google drive folder."),
   Command.withHandler(({ concurrency, rootFolderId, spreadsheetId }) =>
     Effect.gen(function* () {
-      const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
-        Config.withDefault("http://127.0.0.1:3000"),
-      );
-      const client = yield* GohoServer.make(baseUrl);
+      const client = yield* GohoServer.Service;
       return yield* client.receipts.process({
         payload: { rootFolderId, spreadsheetId, concurrency },
       });
     }).pipe(
-      Effect.provide(FetchHttpClient.layer),
+      Effect.provide(GohoServer.layer),
       Effect.map((response) => response.data),
       Effect.mapError(
         (cause) =>
