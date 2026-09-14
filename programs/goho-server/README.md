@@ -11,19 +11,27 @@ For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 - `GET /health` returns HTTP 200 with `{"status":"ok"}` when the HTTP server is running.
   This is a liveness check; it does not query PostgreSQL, Google, or OpenAI.
-- `GET /openapi.json` serves the OpenAPI contract generated from Effect schemas.
-- `GET /docs` renders interactive Swagger UI, with bundled assets and the same
-  generated contract. Models include descriptions and examples. Try it out sends
-  real requests to this server.
+- `GET /openapi.json` serves the OpenAPI contract.
+- `GET /docs` serves Swagger UI. Try it out sends real requests to this server.
 
 Open [Swagger docs](http://127.0.0.1:3000/docs) after starting the server with the
-default port. The health and documentation routes require no authentication.
+default port.
+
+### Create a receipt
 
 `POST /receipts` creates a receipt and its ordered items atomically. Supply an
-`idempotency-key` header and the JSON body shown in Swagger. Monetary values are
-strings to preserve decimal precision. Repeating the key with the same normalized
-payload returns the existing receipt; reusing it with different data returns 409.
-Invalid input returns 400 and persistence failures return 500.
+`idempotency-key` header and the JSON body shown in Swagger.
+
+Names are trimmed and decimal strings normalized (`11.00` becomes `11`). Reuse
+the same key and normalized data to retrieve the stored receipt with HTTP 200.
+Changed data or item order returns HTTP 409. After a lost response, retry with
+the same key and data.
+
+Invalid headers or payloads return HTTP 400 with an empty body. Conflicts return
+`{"_tag":"Conflict"}`; validation or persistence failures return HTTP 500 with
+`{"_tag":"InternalServerError"}`.
+
+### Process a receipt batch
 
 `POST /receipts/process` accepts JSON:
 
@@ -31,18 +39,17 @@ Invalid input returns 400 and persistence failures return 500.
 { "rootFolderId": "drive-root", "spreadsheetId": "sheet-id", "concurrency": 5 }
 ```
 
-IDs must be nonempty and concurrency must be an integer from 1 through 5.
-The response is an array of receipt outcomes after the batch finishes.
-HTTP 400 means invalid input, 409 means another batch is
-running, and 500 means the batch could not complete. Individual failed receipts
-remain successful HTTP responses with `Failed` or `Stranded` outcomes.
-Provider causes are logged on the server and omitted from API responses.
+Replace the example IDs with real IDs. All fields are required; concurrency has
+no HTTP default. See Swagger for field constraints.
 
-An accepted batch continues when its client disconnects. The lock is local to this
-server process and is released when processing finishes. Restarting or killing the
-server can leave files in `processing`; there is no durable job or automatic recovery.
-A lost response does not mean no work happened. Inspect the folders, Sheets, and
-server logs before retrying. HTTP clients or proxies may time out during a long batch.
+The response contains one outcome per file in Drive listing order after completion,
+or an empty array when no files are found. `Failed` and `Stranded` outcomes still
+return HTTP 200. Invalid input returns HTTP 400 with an empty body; an overlapping
+batch on this server returns HTTP 409 with `{"_tag":"Conflict"}`. Batch failure
+returns HTTP 500 with `{"_tag":"InternalServerError"}` and may leave partial changes.
+
+Accepted work continues after client disconnect. After a lost response or server
+restart, inspect Drive, Sheets, and server logs before retrying; recovery is manual.
 
 ## Receipt workflow
 
@@ -81,10 +88,8 @@ Cell F1 must contain `source_file_id`. Hide column F manually after setup; the
 server does not change worksheet formatting. Every item row created from a receipt
 contains the same real Drive file ID in column F.
 
-Before parsing, the server reads `RAW!F:F` once and uses the IDs as an
-idempotency snapshot. A claimed file whose ID is already present skips image
-validation, download, OpenAI parsing, and spreadsheet appending, then moves to
-`processed`.
+Files whose IDs already appear below the `RAW!F:F` header at batch start move to
+`processed` without new rows or a database write.
 
 Leave historical F cells blank unless the corresponding real Drive file ID is
 known. Values such as `Legacy` or generated placeholders do not provide retry
@@ -94,8 +99,11 @@ the server.
 
 ### Completion
 
-The server returns public receipt outcomes. The [CLI](../goho-cli/README.md)
-prints the four counts and sets its exit status. An empty batch returns an empty array.
+`Processed` confirms appended Sheets rows and a move to `processed`; database
+persistence is not guaranteed. `AlreadyProcessed` confirms an existing source
+file ID in Sheets and a move to `processed`. Batches are not atomic.
+
+The [CLI](../goho-cli/README.md) prints outcome counts and sets its exit status.
 
 ### Failure outcomes and recovery
 
@@ -121,6 +129,6 @@ while files may be in `processing`:
    must also be returned to `todo` manually.
 5. Run one processing command for the root and verify its final summary.
 
-Retrying is safe when spreadsheet rows may already have been appended: the
-real Drive ID in column F causes the retry to skip another append and finish by
-moving the file to `processed`.
+Keep real source file IDs in the same spreadsheet to prevent duplicate appends.
+Inspect rows after an uncertain append before returning a file to `todo`.
+Retries do not restore missing database records.

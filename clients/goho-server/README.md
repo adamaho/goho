@@ -20,7 +20,16 @@ const processReceipts = Effect.gen(function* () {
 }).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
-Call this effect from the consuming program's runtime. No generated files or
-separate code-generation command are needed. Requests are not automatically retried.
+Replace the example folder and spreadsheet IDs with real IDs. Call the effect
+from the consuming program's runtime. Requests are not automatically retried.
 
-`make` delegates directly to Effect's `HttpApiClient.make` with the Goho contract.
+See the [server API reference](../../programs/goho-server/README.md#api) for
+receipt creation and batch recovery. The server exposes OpenAPI at `/openapi.json`
+and Swagger UI at `/docs`.
+
+The contract is defined in `src/api.ts` and `src/receipts.ts`. To inspect the
+generated OpenAPI document, run from this package directory:
+
+```bash
+node --input-type=module -e 'import { api } from "./src/api.ts"; import { OpenApi } from "effect/unstable/httpapi"; console.log(JSON.stringify(OpenApi.fromApi(api), null, 2));'
+```

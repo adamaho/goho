@@ -69,7 +69,7 @@ export interface Processed extends Schema.Schema.Type<typeof Processed> {}
  */
 export interface AlreadyProcessed extends Schema.Schema.Type<typeof AlreadyProcessed> {}
 /**
- * Receipt whose failure was moved into the failed workflow folder.
+ * Receipt that failed with either a confirmed move to failed or an unconfirmed claim.
  *
  * @category models
  * @since 0.1.0
