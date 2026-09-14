@@ -1,4 +1,5 @@
 import { api } from "@goho/goho-server-client/api";
+import { withData } from "@goho/goho-server-client/response";
 import { Effect, Layer } from "effect";
 import { HttpApiBuilder, HttpApiSwagger } from "effect/unstable/httpapi";
 
@@ -8,15 +9,17 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
     const receipts = yield* Receipts.Service;
     return handlers
+      .handle("list", () => receipts.list().pipe(Effect.map(withData)))
       .handle("create", ({ headers, payload }) =>
-        receipts.create(headers["idempotency-key"], payload),
+        receipts.create(headers["idempotency-key"], payload).pipe(Effect.map(withData)),
       )
-      .handle("process", ({ payload }) => receipts.process(payload));
+      .handle("process", ({ payload }) => receipts.process(payload).pipe(Effect.map(withData)));
   }),
 );
 
+
 const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
-  handlers.handle("check", () => Effect.succeed({ status: "ok" as const })),
+  handlers.handle("check", () => Effect.succeed(withData({ status: "ok" as const }))),
 );
 
 /**

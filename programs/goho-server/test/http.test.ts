@@ -28,14 +28,18 @@ const receipt = Receipt.make({
   items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
 });
 
-const testLayer = (create: ReceiptRepository.Interface["create"] = () => Effect.succeed(receipt)) =>
+const testLayer = (repository: Partial<ReceiptRepository.Interface> = {}) =>
   HttpRouter.serve(
     Http.layer.pipe(
       Layer.provide(
         Receipts.layer.pipe(
           Layer.provide(
             ReceiptDependencies.layer({
-              repository: { create },
+              repository: {
+                create: () => Effect.succeed(receipt),
+                list: () => Effect.succeed([receipt]),
+                ...repository,
+              },
               googleDrive: {
                 listFiles: () =>
                   Effect.succeed([{ id: "receipt-1", name: "receipt.png", mimeType: "image/png" }]),
@@ -56,8 +60,36 @@ it.effect("creates a receipt through the generated client and returns the comple
       headers: { "idempotency-key": "manual-entry-1" },
       payload: createPayload,
     });
-    expect(result).toEqual(receipt);
+    expect(result).toEqual({ data: receipt });
   }).pipe(Effect.provide(TestLive)),
+);
+
+
+it.effect("lists complete receipts through the generated client", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    expect(yield* client.receipts.list()).toEqual({ data: [receipt] });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns HTTP 500 without exposing receipt listing failure details", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get("/receipts");
+    expect(response.status).toBe(500);
+    expect(yield* response.text).not.toContain("private database details");
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        list: () =>
+          Effect.fail(
+            new ReceiptRepository.PersistenceError({
+              operation: "list",
+              cause: "private database details",
+            }),
+          ),
+      }),
+    ),
+  ),
 );
 
 it.effect("requires an idempotency key before dispatching receipt creation", () =>
@@ -78,9 +110,10 @@ it.effect("returns HTTP 409 when the repository reports an idempotency conflict"
     expect(response.status).toBe(409);
   }).pipe(
     Effect.provide(
-      testLayer((idempotencyKey) =>
-        Effect.fail(new ReceiptRepository.IdempotencyConflict({ idempotencyKey })),
-      ),
+      testLayer({
+        create: (idempotencyKey) =>
+          Effect.fail(new ReceiptRepository.IdempotencyConflict({ idempotencyKey })),
+      }),
     ),
   ),
 );
@@ -96,14 +129,15 @@ it.effect("returns HTTP 500 without exposing private repository failure details"
     expect(yield* response.text).not.toContain("private database details");
   }).pipe(
     Effect.provide(
-      testLayer(() =>
-        Effect.fail(
-          new ReceiptRepository.PersistenceError({
-            operation: "create",
-            cause: "private database details",
-          }),
-        ),
-      ),
+      testLayer({
+        create: () =>
+          Effect.fail(
+            new ReceiptRepository.PersistenceError({
+              operation: "create",
+              cause: "private database details",
+            }),
+          ),
+      }),
     ),
   ),
 );
@@ -148,7 +182,9 @@ it.effect("round-trips receipt results through the generated client without auth
     const result = yield* client.receipts.process({
       payload: { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 5 },
     });
-    expect(result).toEqual([{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }]);
+    expect(result).toEqual({
+      data: [{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }],
+    });
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -174,9 +210,9 @@ it.effect(
     Effect.gen(function* () {
       const response = yield* HttpClient.get("/health");
       expect(response.status).toBe(200);
-      expect(yield* response.json).toEqual({ status: "ok" });
+      expect(yield* response.json).toEqual({ data: { status: "ok" } });
       const client = yield* Client.make("");
-      expect(yield* client.health.check()).toEqual({ status: "ok" });
+      expect(yield* client.health.check()).toEqual({ data: { status: "ok" } });
     }).pipe(
       Effect.provide(
         HttpRouter.serve(
@@ -184,6 +220,7 @@ it.effect(
             Layer.provide(
               Layer.succeed(Receipts.Service, {
                 create: () => Effect.die("Health must not create receipts"),
+                list: () => Effect.die("Health must not list receipts"),
                 process: () => Effect.die("Health must not process receipts"),
               }),
             ),

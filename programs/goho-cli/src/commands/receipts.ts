@@ -51,6 +51,33 @@ const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(fu
   }
 });
 
+const listCommand = Command.make("list").pipe(
+  Command.withDescription("List all persisted receipts."),
+  Command.withHandler(() =>
+    Effect.gen(function* () {
+      const baseUrl = yield* Config.string("GOHO_SERVER_URL").pipe(
+        Config.withDefault("http://127.0.0.1:3000"),
+      );
+      const client = yield* GohoServer.make(baseUrl);
+      const response = yield* client.receipts.list();
+      yield* Console.log(JSON.stringify(response.data, null, 2));
+    }).pipe(
+      Effect.provide(FetchHttpClient.layer),
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "ConfigError"
+                ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
+                : "Receipts could not be listed. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
+
+
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
     Argument.withDescription(
@@ -80,6 +107,7 @@ const processCommand = Command.make("process", {
       });
     }).pipe(
       Effect.provide(FetchHttpClient.layer),
+      Effect.map((response) => response.data),
       Effect.mapError(
         (cause) =>
           new CommandError({
@@ -105,5 +133,5 @@ const processCommand = Command.make("process", {
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([processCommand]),
+  Command.withSubcommands([listCommand, processCommand]),
 );

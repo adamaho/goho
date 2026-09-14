@@ -52,6 +52,7 @@ const DatabaseLive = Layer.effectContext(
   }),
 );
 
+
 it.effect("applies migrations from empty and does not reapply completed migrations", () =>
   Effect.gen(function* () {
     const applied = yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
@@ -60,6 +61,35 @@ it.effect("applies migrations from empty and does not reapply completed migratio
     expect(yield* sql`SELECT name FROM goho_migrations`).toEqual([
       { name: "receipts" },
       { name: "create_receipt" },
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("returns an empty receipt list", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    expect(yield* repo.list()).toEqual([]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("lists complete receipts newest first with ordered items", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const created = yield* repo.create(idempotencyKey, receiptInput);
+    const saved = yield* repo.save(receipt);
+    expect(yield* repo.list()).toEqual([
+      {
+        id: saved.receiptId,
+        storeName: receipt.storeName,
+        receiptDate: receipt.receiptDate,
+        category: receipt.category,
+        subtotal: receipt.subtotal,
+        tax: receipt.tax,
+        total: receipt.total,
+        currency: receipt.currency,
+        items: receipt.items,
+      },
+      created,
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
