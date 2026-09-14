@@ -64,6 +64,35 @@ it.effect("applies migrations from empty and does not reapply completed migratio
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+it.effect("returns an empty receipt list", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    expect(yield* repo.list()).toEqual([]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("lists complete receipts newest first with ordered items", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const created = yield* repo.create(idempotencyKey, receiptInput);
+    const saved = yield* repo.save(receipt);
+    expect(yield* repo.list()).toEqual([
+      {
+        id: saved.receiptId,
+        storeName: receipt.storeName,
+        receiptDate: receipt.receiptDate,
+        category: receipt.category,
+        subtotal: receipt.subtotal,
+        tax: receipt.tax,
+        total: receipt.total,
+        currency: receipt.currency,
+        items: receipt.items,
+      },
+      created,
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
 it.effect("creates a complete receipt and replays an equivalent normalized request", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;

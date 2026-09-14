@@ -1,6 +1,7 @@
 # @goho/goho-server
 
-Exposes receipt creation, synchronous batch processing, health checks, and API documentation. The CLI connects through
+Exposes receipt listing, creation, synchronous batch processing, health checks,
+and API documentation. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
 The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
@@ -9,13 +10,22 @@ For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## API
 
-- `GET /health` returns HTTP 200 with `{"status":"ok"}` when the HTTP server is running.
+Every successful endpoint returns its payload under a top-level `data` field.
+
+- `GET /health` returns HTTP 200 with `{"data":{"status":"ok"}}` when the HTTP server is running.
   This is a liveness check; it does not query PostgreSQL, Google, or OpenAI.
 - `GET /openapi.json` serves the OpenAPI contract.
 - `GET /docs` serves Swagger UI. Try it out sends real requests to this server.
 
 Open [Swagger docs](http://127.0.0.1:3000/docs) after starting the server with the
 default port.
+
+### List receipts
+
+`GET /receipts` returns every persisted receipt and its ordered items under
+`data`. Receipts are ordered by receipt date and creation time, newest first.
+An empty database returns `{"data":[]}`. A retrieval failure returns HTTP 500
+with `{"_tag":"InternalServerError"}`.
 
 ### Create a receipt
 
@@ -25,7 +35,7 @@ default port.
 Names are trimmed and decimal strings normalized (`11.00` becomes `11`). Reuse
 the same key and normalized data to retrieve the stored receipt with HTTP 200.
 Changed data or item order returns HTTP 409. After a lost response, retry with
-the same key and data.
+the same key and data. The complete receipt is returned under `data`.
 
 Invalid headers or payloads return HTTP 400 with an empty body. Conflicts return
 `{"_tag":"Conflict"}`; validation or persistence failures return HTTP 500 with
@@ -42,8 +52,8 @@ Invalid headers or payloads return HTTP 400 with an empty body. Conflicts return
 Replace the example IDs with real IDs. All fields are required; concurrency has
 no HTTP default. See Swagger for field constraints.
 
-The response contains one outcome per file in Drive listing order after completion,
-or an empty array when no files are found. `Failed` and `Stranded` outcomes still
+The response `data` contains one outcome per file in Drive listing order after
+completion, or an empty array when no files are found. `Failed` and `Stranded` outcomes still
 return HTTP 200. Invalid input returns HTTP 400 with an empty body; an overlapping
 batch on this server returns HTTP 409 with `{"_tag":"Conflict"}`. Batch failure
 returns HTTP 500 with `{"_tag":"InternalServerError"}` and may leave partial changes.

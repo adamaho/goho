@@ -1,6 +1,6 @@
 # @goho/goho-cli
 
-Calls the Goho server and prints receipt-processing results. Google and OpenAI
+Calls the Goho server to list receipts and print receipt-processing results. Google and OpenAI
 credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
@@ -13,6 +13,15 @@ cp programs/goho-cli/.env.example programs/goho-cli/.env
 
 `GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`.
 Start the server before invoking the CLI.
+
+## List receipts
+
+```bash
+pnpm --filter @goho/goho-cli start receipts list
+```
+
+The command prints a JSON array containing every persisted receipt and its
+ordered items, newest first. An empty database prints `[]`.
 
 ## Process receipts
 

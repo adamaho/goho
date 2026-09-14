@@ -5,6 +5,7 @@ Google and OpenAI integrations stay in the server.
 
 - `/api`: HTTP endpoint contract.
 - `/receipts`: request validation and public result schemas.
+- `/response`: shared successful response envelope schema, type, and constructor.
 - `/client`: `make(baseUrl)`, deriving the client from the contract.
 
 ```ts
@@ -14,9 +15,10 @@ import { FetchHttpClient } from "effect/unstable/http";
 
 const processReceipts = Effect.gen(function* () {
   const client = yield* make("http://127.0.0.1:3000");
-  return yield* client.receipts.process({
+  const response = yield* client.receipts.process({
     payload: { rootFolderId: "drive-root", spreadsheetId: "sheet-id", concurrency: 5 },
   });
+  return response.data;
 }).pipe(Effect.provide(FetchHttpClient.layer));
 ```
 
@@ -27,7 +29,8 @@ See the [server API reference](../../programs/goho-server/README.md#api) for
 receipt creation and batch recovery. The server exposes OpenAPI at `/openapi.json`
 and Swagger UI at `/docs`.
 
-The contract is defined in `src/api.ts` and `src/receipts.ts`. To inspect the
+Successful responses use the shared `{ data: ... }` envelope. The contract is
+defined in `src/api.ts`, `src/receipts.ts`, and `src/response.ts`. To inspect the
 generated OpenAPI document, run from this package directory:
 
 ```bash
