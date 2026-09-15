@@ -5,6 +5,7 @@ import {
   CreateReceiptRequest as CreateReceiptRequestSchema,
   DecimalString,
   IdempotencyKey as IdempotencyKeySchema,
+  Receipt as ReceiptSchema,
   ReceiptId,
   type CreateReceiptRequest,
   type IdempotencyKey,
@@ -54,6 +55,7 @@ export type SaveResult =
  * @since 0.1.0
  */
 export interface Interface {
+  readonly list: () => Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
   readonly create: (
     idempotencyKey: IdempotencyKey,
     receipt: CreateReceiptRequest,
@@ -91,6 +93,18 @@ const ItemRow = Schema.Struct({
 });
 const decodeReceiptRow = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ReceiptRow));
 const decodeItemRows = Schema.decodeUnknownEffect(Schema.NonEmptyArray(ItemRow));
+const ReceiptListRow = Schema.Struct({
+  ...ReceiptRow.fields,
+  item_position: Schema.NullOr(Schema.Int),
+  item_name: Schema.NullOr(Schema.String),
+  item_amount: Schema.NullOr(DecimalString),
+});
+const decodeReceiptListRows = Schema.decodeUnknownEffect(Schema.Array(ReceiptListRow));
+const decodeReceiptList = Schema.decodeUnknownEffect(Schema.Array(ReceiptSchema));
+
+type ReceiptCandidate = Omit<Receipt, "items"> & {
+  readonly items: Array<Receipt["items"][number]>;
+};
 
 const normalizeDecimal = (value: DecimalString): DecimalString =>
   DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
@@ -113,7 +127,7 @@ const fingerprint = (receipt: CreateReceiptRequest): Uint8Array =>
   createHash("sha256").update(JSON.stringify(receipt)).digest();
 
 /**
- * Creates or saves each receipt and all its items atomically.
+ * Lists receipts and creates or saves each receipt with all its items.
  *
  * @category models
  * @since 0.1.0
@@ -147,6 +161,49 @@ export const layer = Layer.effect(
         items,
       } satisfies Receipt;
     });
+    const list = Effect.fn("@goho/ReceiptRepository.list")(
+      function* () {
+        const rows = yield* sql`
+          SELECT r.id, r.store_name, r.receipt_date::text, r.category,
+            r.subtotal::text, r.tax::text, r.total::text, r.currency,
+            i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
+          FROM receipts r
+          LEFT JOIN receipt_items i ON i.receipt_id = r.id
+          ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
+        `.pipe(Effect.flatMap(decodeReceiptListRows));
+        const receipts = new Map<typeof ReceiptId.Type, ReceiptCandidate>();
+        for (const row of rows) {
+          let receipt = receipts.get(row.id);
+          if (receipt === undefined) {
+            receipt = {
+              id: row.id,
+              storeName: row.store_name,
+              receiptDate: row.receipt_date,
+              category: row.category,
+              subtotal: row.subtotal,
+              tax: row.tax,
+              total: row.total,
+              currency: row.currency,
+              items: [],
+            };
+            receipts.set(row.id, receipt);
+          }
+          if (
+            row.item_position !== null &&
+            row.item_name !== null &&
+            row.item_amount !== null
+          ) {
+            receipt.items.push({
+              position: row.item_position,
+              name: row.item_name,
+              amount: row.item_amount,
+            });
+          }
+        }
+        return yield* decodeReceiptList([...receipts.values()]);
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
+    );
     const create = Effect.fn("@goho/ReceiptRepository.create")(function* (
       idempotencyKey: IdempotencyKey,
       input: CreateReceiptRequest,
@@ -237,6 +294,6 @@ export const layer = Layer.effect(
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "save", cause })),
     );
-    return Service.of({ create, save });
+    return Service.of({ create, list, save });
   }),
 );

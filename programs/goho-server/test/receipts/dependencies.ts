@@ -46,6 +46,7 @@ export const layer = (
     }),
     Layer.succeed(Repository.Service, {
       create: () => Effect.die("Unexpected repository.create call in processing test"),
+      list: () => Effect.die("Unexpected repository.list call in processing test"),
       save: () =>
         Effect.succeed({
           _tag: "Inserted",

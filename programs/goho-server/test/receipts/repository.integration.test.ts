@@ -64,6 +64,66 @@ it.effect("applies migrations from empty and does not reapply completed migratio
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+it.effect("returns an empty receipt list", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    expect(yield* repo.list()).toEqual([]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("lists complete receipts newest first with ordered items", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const earlierCreated = {
+      ...receipt,
+      source: { ...receipt.source, fileId: "same-date-first", fileName: "first.png" },
+      storeName: "First same-date receipt",
+    };
+    const laterCreated = {
+      ...receipt,
+      source: { ...receipt.source, fileId: "same-date-second", fileName: "second.png" },
+      storeName: "Second same-date receipt",
+    };
+    const earlierCreatedSaved = yield* repo.save(earlierCreated);
+    const laterCreatedSaved = yield* repo.save(laterCreated);
+    const olderInsertedLast = yield* repo.create(idempotencyKey, receiptInput);
+    yield* sql`
+      UPDATE receipts SET created_at = CASE id
+        WHEN ${earlierCreatedSaved.receiptId} THEN '2026-09-01T00:00:00Z'::timestamptz
+        WHEN ${laterCreatedSaved.receiptId} THEN '2026-09-02T00:00:00Z'::timestamptz
+        WHEN ${olderInsertedLast.id} THEN '2026-09-03T00:00:00Z'::timestamptz
+        ELSE created_at
+      END
+    `;
+    expect(yield* repo.list()).toEqual([
+      {
+        id: laterCreatedSaved.receiptId,
+        storeName: laterCreated.storeName,
+        receiptDate: laterCreated.receiptDate,
+        category: laterCreated.category,
+        subtotal: laterCreated.subtotal,
+        tax: laterCreated.tax,
+        total: laterCreated.total,
+        currency: laterCreated.currency,
+        items: laterCreated.items,
+      },
+      {
+        id: earlierCreatedSaved.receiptId,
+        storeName: earlierCreated.storeName,
+        receiptDate: earlierCreated.receiptDate,
+        category: earlierCreated.category,
+        subtotal: earlierCreated.subtotal,
+        tax: earlierCreated.tax,
+        total: earlierCreated.total,
+        currency: earlierCreated.currency,
+        items: earlierCreated.items,
+      },
+      olderInsertedLast,
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
 it.effect("creates a complete receipt and replays an equivalent normalized request", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;

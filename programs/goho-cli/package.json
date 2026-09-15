@@ -8,14 +8,16 @@
   },
   "type": "module",
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
     "dev": "node --env-file-if-exists=.env --watch src/main.ts",
     "start": "node --env-file-if-exists=.env src/main.ts",
     "lint": "oxlint .",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
@@ -31,6 +33,7 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
