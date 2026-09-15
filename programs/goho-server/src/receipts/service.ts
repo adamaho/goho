@@ -4,16 +4,17 @@ import type {
   IdempotencyKey,
   ProcessRequest,
   Receipt,
+  ReceiptId,
   ReceiptProcessingResult,
 } from "@goho/goho-server-client/receipts";
-import { Context, Effect, Layer, Ref } from "effect";
+import { Context, Effect, Layer, Option, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
 import * as Workflow from "./process.ts";
 import * as ReceiptRepository from "./repository.ts";
 
 /**
- * Lists and creates receipts and runs one receipt processing batch at a time.
+ * Retrieves and creates receipts and runs one receipt processing batch at a time.
  *
  * @category models
  * @since 0.1.0
@@ -21,6 +22,9 @@ import * as ReceiptRepository from "./repository.ts";
 export class Service extends Context.Service<
   Service,
   {
+    readonly get: (
+      receiptId: ReceiptId,
+    ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
     readonly list: () => Effect.Effect<
       ReadonlyArray<Receipt>,
       HttpApiError.InternalServerError
@@ -39,7 +43,7 @@ export class Service extends Context.Service<
 >()("@goho/goho-server/Receipts") {}
 
 /**
- * Provides receipt listing, creation, and Google-backed processing with an in-process batch lock.
+ * Provides receipt retrieval, creation, and Google-backed processing with an in-process batch lock.
  *
  * @category layers
  * @since 0.1.0
@@ -68,6 +72,21 @@ export const layer = Layer.effect(
               ),
           }),
         ),
+    );
+    const get = Effect.fn("@goho/ReceiptService.get")((receiptId: ReceiptId) =>
+      repository.findById(receiptId).pipe(
+        Effect.flatMap(
+          Option.match({
+            onNone: () => Effect.fail(new HttpApiError.NotFound()),
+            onSome: Effect.succeed,
+          }),
+        ),
+        Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
+          Effect.logError("Receipt retrieval failed", error).pipe(
+            Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+          ),
+        ),
+      ),
     );
     const list = Effect.fn("@goho/ReceiptService.list")(() =>
       repository.list().pipe(
@@ -124,6 +143,6 @@ export const layer = Layer.effect(
       );
     }, Effect.uninterruptible);
     // Finish an accepted batch before releasing its lock, even if its HTTP client disconnects.
-    return Service.of({ create, list, process });
+    return Service.of({ create, get, list, process });
   }),
 );

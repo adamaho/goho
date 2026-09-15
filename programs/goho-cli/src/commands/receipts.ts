@@ -1,4 +1,8 @@
-import { Concurrency, type ReceiptProcessingResult } from "@goho/goho-server-client/receipts";
+import {
+  Concurrency,
+  ReceiptId,
+  type ReceiptProcessingResult,
+} from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
@@ -70,6 +74,33 @@ const listCommand = Command.make("list").pipe(
   ),
 );
 
+const showCommand = Command.make("show", {
+  receiptId: Argument.string("receipt-id").pipe(
+    Argument.withSchema(ReceiptId),
+    Argument.withDescription("ID of the persisted receipt to show."),
+  ),
+}).pipe(
+  Command.withDescription("Show one persisted receipt."),
+  Command.withHandler(({ receiptId }) =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      const response = yield* client.receipts.get({ params: { receiptId } });
+      yield* Console.log(JSON.stringify(response.data, null, 2));
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "NotFound"
+                ? `Receipt ${receiptId} was not found.`
+                : "Receipt could not be retrieved. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
+
 const processCommand = Command.make("process", {
   rootFolderId: Argument.string("root-folder-id").pipe(
     Argument.withDescription(
@@ -119,5 +150,5 @@ const processCommand = Command.make("process", {
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([listCommand, processCommand]),
+  Command.withSubcommands([listCommand, showCommand, processCommand]),
 );

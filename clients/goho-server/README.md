@@ -26,7 +26,7 @@ Replace the example folder and spreadsheet IDs with real IDs. Call the effect
 from the consuming program's runtime. Requests are not automatically retried.
 
 See the [server API reference](../../programs/goho-server/README.md#api) for
-receipt creation and batch recovery. The server exposes OpenAPI at `/openapi.json`
+receipt retrieval, creation, and batch recovery. The server exposes OpenAPI at `/openapi.json`
 and Swagger UI at `/docs`.
 
 Successful responses use the shared `{ data: ... }` envelope. The contract is
