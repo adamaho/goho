@@ -59,14 +59,10 @@ const listCommand = Command.make("list").pipe(
       const response = yield* client.receipts.list();
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }).pipe(
-      Effect.provide(GohoServer.layer),
       Effect.mapError(
         (cause) =>
           new CommandError({
-            message:
-              cause._tag === "ConfigError"
-                ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
-                : "Receipts could not be listed. Check the server logs and try again.",
+            message: "Receipts could not be listed. Check the server logs and try again.",
             cause,
           }),
       ),
@@ -99,7 +95,6 @@ const processCommand = Command.make("process", {
         payload: { rootFolderId, spreadsheetId, concurrency },
       });
     }).pipe(
-      Effect.provide(GohoServer.layer),
       Effect.map((response) => response.data),
       Effect.mapError(
         (cause) =>
@@ -107,9 +102,7 @@ const processCommand = Command.make("process", {
             message:
               cause._tag === "Conflict"
                 ? "Another receipt batch is running. Wait for it to finish."
-                : cause._tag === "ConfigError"
-                  ? "Invalid CLI configuration. Check GOHO_SERVER_URL."
-                  : "Receipt processing could not be confirmed. Work may have completed. Check server logs and Drive folders before running again.",
+                : "Receipt processing could not be confirmed. Work may have completed. Check server logs and Drive folders before running again.",
             cause,
           }),
       ),

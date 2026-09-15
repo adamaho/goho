@@ -2,6 +2,8 @@ import * as Client from "@goho/goho-server-client/client";
 import { Config, Context, Effect, Layer } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 
+import { CommandError } from "#src/errors.ts";
+
 type ClientShape = Effect.Success<ReturnType<typeof Client.make>>;
 
 /**
@@ -25,5 +27,12 @@ export const layer = Layer.effect(
   Config.string("GOHO_SERVER_URL").pipe(
     Config.withDefault("http://127.0.0.1:3000"),
     Effect.flatMap(Client.make),
+    Effect.mapError(
+      (cause) =>
+        new CommandError({
+          message: "Invalid CLI configuration. Check GOHO_SERVER_URL.",
+          cause,
+        }),
+    ),
   ),
 ).pipe(Layer.provide(FetchHttpClient.layer));
