@@ -100,7 +100,6 @@ describe("receipts list", () => {
   });
 });
 
-
 describe("receipts show", () => {
   it("prints one unwrapped receipt", async () => {
     const result = await withJsonResponse(200, { data: receipt }, (baseUrl) =>
