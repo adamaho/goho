@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { NodeServices } from "@effect/platform-node";
+import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-server-client/receipts";
@@ -9,6 +10,8 @@ import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
+import receiptsMigration from "#src/database/migrations/0001-receipts.ts";
+import createReceiptMigration from "#src/database/migrations/0002-create-receipt.ts";
 import * as Repository from "#src/receipts/repository.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
@@ -52,6 +55,30 @@ const DatabaseLive = Layer.effectContext(
   }),
 );
 
+const LegacyDatabaseLive = Layer.effectContext(
+  Effect.gen(function* () {
+    const url = yield* Config.redacted("TEST_DATABASE_URL");
+    const adminContext = yield* Layer.build(Postgres.layer({ url }));
+    const admin = Context.get(adminContext, SqlClient.SqlClient);
+    const schema = `test_${randomUUID().replaceAll("-", "")}`;
+    yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
+      admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
+    );
+    const testUrl = new URL(Redacted.value(url));
+    const options = testUrl.searchParams.get("options") ?? "";
+    testUrl.searchParams.set("options", `${options} -c search_path=${schema}`.trim());
+    const services = yield* Layer.build(Postgres.layer({ url: Redacted.make(testUrl.toString()) }));
+    yield* PgMigrator.run({
+      loader: PgMigrator.fromRecord({
+        "0001_receipts": receiptsMigration,
+        "0002_create_receipt": createReceiptMigration,
+      }),
+      table: "goho_migrations",
+    }).pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
+    return services;
+  }),
+);
+
 it.effect("applies migrations from empty and does not reapply completed migrations", () =>
   Effect.gen(function* () {
     const applied = yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
@@ -60,8 +87,67 @@ it.effect("applies migrations from empty and does not reapply completed migratio
     expect(yield* sql`SELECT name FROM goho_migrations`).toEqual([
       { name: "receipts" },
       { name: "create_receipt" },
+      { name: "bigint_receipt_ids" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("migrates populated UUID receipts to BIGINT identities without losing items", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO receipts (
+        id, store_name, receipt_date, category, subtotal, tax, total, currency
+      ) VALUES (
+        '00000000-0000-4000-8000-000000000001', 'Legacy Store', '2026-09-01',
+        'Groceries', 10, 1, 11, 'CAD'
+      )
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (id, receipt_id, position, name, amount)
+      VALUES (
+        '00000000-0000-4000-8000-000000000002',
+        '00000000-0000-4000-8000-000000000001', 0, 'Apples', 11
+      )
+    `;
+
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
+
+    expect(yield* sql`SELECT id::text AS id, store_name FROM receipts`).toEqual([
+      { id: "1", store_name: "Legacy Store" },
+    ]);
+    expect(
+      yield* sql`
+        SELECT receipt_id::text AS receipt_id, position, name
+        FROM receipt_items
+      `,
+    ).toEqual([{ receipt_id: "1", position: 0, name: "Apples" }]);
+    expect(
+      yield* sql`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name IN ('receipts', 'receipt_items')
+          AND data_type = 'uuid'
+      `,
+    ).toEqual([]);
+    expect(
+      yield* sql`
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'receipts'
+          AND column_name = 'id'
+      `,
+    ).toEqual([{ data_type: "bigint" }]);
+    expect(
+      yield* sql`
+        INSERT INTO receipts (store_name, receipt_date, category, subtotal, tax, total, currency)
+        VALUES ('New Store', '2026-09-02', 'Groceries', 20, 2, 22, 'CAD')
+        RETURNING id::text AS id
+      `,
+    ).toEqual([{ id: "2" }]);
+  }).pipe(Effect.provide(LegacyDatabaseLive)),
 );
 
 it.effect("returns an empty receipt list", () =>
@@ -76,9 +162,7 @@ it.effect("finds one receipt and returns none for a missing ID", () =>
     const repo = yield* Repository.Service;
     const created = yield* repo.create(idempotencyKey, receiptInput);
     expect(yield* repo.findById(created.id)).toEqual(Option.some(created));
-    expect(yield* repo.findById(ReceiptId.make("00000000-0000-4000-8000-000000000002"))).toEqual(
-      Option.none(),
-    );
+    expect(yield* repo.findById(ReceiptId.make("999"))).toEqual(Option.none());
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

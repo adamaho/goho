@@ -51,7 +51,7 @@ export const layer = (
       save: () =>
         Effect.succeed({
           _tag: "Inserted",
-          receiptId: "00000000-0000-4000-8000-000000000001",
+          receiptId: "1",
         } satisfies Repository.SaveResult),
       ...overrides.repository,
     }),

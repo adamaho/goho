@@ -30,7 +30,7 @@ with `{"_tag":"InternalServerError"}`.
 ### Get a receipt
 
 `GET /receipts/:receiptId` returns one complete receipt under `data`. A valid
-UUID with no matching receipt returns HTTP 404 with `{"_tag":"NotFound"}`.
+positive integer ID with no matching receipt returns HTTP 404 with `{"_tag":"NotFound"}`.
 A malformed ID returns HTTP 400. Retrieval failures return
 HTTP 500 with `{"_tag":"InternalServerError"}`.
 
