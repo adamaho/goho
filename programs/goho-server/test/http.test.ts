@@ -2,7 +2,7 @@ import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import * as Client from "@goho/goho-server-client/client";
 import { CreateReceiptRequest, Receipt } from "@goho/goho-server-client/receipts";
-import { Array, Effect, Layer } from "effect";
+import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { expect } from "vitest";
 
@@ -37,6 +37,7 @@ const testLayer = (repository: Partial<ReceiptRepository.Interface> = {}) =>
             ReceiptDependencies.layer({
               repository: {
                 create: () => Effect.succeed(receipt),
+                findById: () => Effect.succeed(Option.some(receipt)),
                 list: () => Effect.succeed([receipt]),
                 ...repository,
               },
@@ -68,6 +69,29 @@ it.effect("lists complete receipts through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
     expect(yield* client.receipts.list()).toEqual({ data: [receipt] });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("gets one complete receipt through the generated client", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    expect(yield* client.receipts.get({ params: { receiptId: receipt.id } })).toEqual({
+      data: receipt,
+    });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns HTTP 404 when a receipt does not exist", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(404);
+  }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeed(Option.none()) }))),
+);
+
+it.effect("rejects a malformed receipt ID at the HTTP boundary", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get("/receipts/not-a-uuid");
+    expect(response.status).toBe(400);
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -219,6 +243,7 @@ it.effect(
             Layer.provide(
               Layer.succeed(Receipts.Service, {
                 create: () => Effect.die("Health must not create receipts"),
+                get: () => Effect.die("Health must not get receipts"),
                 list: () => Effect.die("Health must not list receipts"),
                 process: () => Effect.die("Health must not process receipts"),
               }),

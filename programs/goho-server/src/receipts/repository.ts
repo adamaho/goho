@@ -11,7 +11,7 @@ import {
   type IdempotencyKey,
   type Receipt,
 } from "@goho/goho-server-client/receipts";
-import { Array, BigDecimal, Context, Effect, Layer, Schema } from "effect";
+import { Array, BigDecimal, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import { ReceiptToSave } from "./model.ts";
@@ -55,6 +55,9 @@ export type SaveResult =
  * @since 0.1.0
  */
 export interface Interface {
+  readonly findById: (
+    receiptId: ReceiptId,
+  ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
   readonly list: () => Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
   readonly create: (
     idempotencyKey: IdempotencyKey,
@@ -127,7 +130,7 @@ const fingerprint = (receipt: CreateReceiptRequest): Uint8Array =>
   createHash("sha256").update(JSON.stringify(receipt)).digest();
 
 /**
- * Lists receipts and creates or saves each receipt with all its items.
+ * Retrieves receipts and creates or saves each receipt with all its items.
  *
  * @category models
  * @since 0.1.0
@@ -161,6 +164,16 @@ export const layer = Layer.effect(
         items,
       } satisfies Receipt;
     });
+    const findById = Effect.fn("@goho/ReceiptRepository.findById")(
+      function* (receiptId: ReceiptId) {
+        const rows = yield* sql`SELECT id FROM receipts WHERE id = ${receiptId}`.pipe(
+          Effect.flatMap(decodeInserted),
+        );
+        const row = rows.at(0);
+        return row === undefined ? Option.none() : Option.some(yield* readReceipt(row.id));
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
+    );
     const list = Effect.fn("@goho/ReceiptRepository.list")(
       function* () {
         const rows = yield* sql`
@@ -188,11 +201,7 @@ export const layer = Layer.effect(
             };
             receipts.set(row.id, receipt);
           }
-          if (
-            row.item_position !== null &&
-            row.item_name !== null &&
-            row.item_amount !== null
-          ) {
+          if (row.item_position !== null && row.item_name !== null && row.item_amount !== null) {
             receipt.items.push({
               position: row.item_position,
               name: row.item_name,
@@ -294,6 +303,6 @@ export const layer = Layer.effect(
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "save", cause })),
     );
-    return Service.of({ create, list, save });
+    return Service.of({ create, findById, list, save });
   }),
 );

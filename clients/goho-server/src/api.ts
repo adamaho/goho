@@ -12,6 +12,7 @@ import {
   IdempotencyKey,
   ProcessRequest,
   Receipt,
+  ReceiptId,
   ReceiptProcessingResult,
 } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
@@ -50,7 +51,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Description, "Does not check database or provider readiness."),
       ),
     HttpApiGroup.make("receipts")
-      .annotate(OpenApi.Description, "Receipt listing, creation, and batch processing.")
+      .annotate(OpenApi.Description, "Receipt retrieval, creation, and batch processing.")
       .add(
         HttpApiEndpoint.get("list", "/receipts", {
           success: DataResponse(
@@ -68,6 +69,25 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Returns all persisted receipts with their items in ascending position order.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/receipts/:receiptId", {
+          params: { receiptId: ReceiptId },
+          success: DataResponse(Receipt),
+          error: [
+            HttpApiError.NotFound.annotate({
+              description: "No receipt exists with this ID.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "Receipt retrieval failed.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a receipt")
+          .annotate(
+            OpenApi.Description,
+            "Returns one persisted receipt with its items in ascending position order.",
           ),
       )
       .add(

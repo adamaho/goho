@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Exposes receipt listing, creation, synchronous batch processing, health checks,
+Exposes receipt retrieval, creation, synchronous batch processing, health checks,
 and API documentation. The CLI connects through
 [@goho/goho-server-client](../../clients/goho-server/README.md).
 
@@ -26,6 +26,13 @@ default port.
 `data`. Receipts are ordered by receipt date and creation time, newest first.
 An empty database returns `{"data":[]}`. A retrieval failure returns HTTP 500
 with `{"_tag":"InternalServerError"}`.
+
+### Get a receipt
+
+`GET /receipts/:receiptId` returns one complete receipt under `data`. A valid
+UUID with no matching receipt returns HTTP 404 with `{"_tag":"NotFound"}`.
+A malformed ID returns HTTP 400. Retrieval failures return
+HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 ### Create a receipt
 
