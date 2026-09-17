@@ -75,9 +75,9 @@ it.effect("lists complete receipts through the generated client", () =>
 it.effect("gets one complete receipt through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
-    expect(
-      yield* client.receipts.get({ params: { receiptId: receipt.id } }),
-    ).toEqual({ data: receipt });
+    expect(yield* client.receipts.get({ params: { receiptId: receipt.id } })).toEqual({
+      data: receipt,
+    });
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -85,11 +85,7 @@ it.effect("returns HTTP 404 when a receipt does not exist", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(`/receipts/${receipt.id}`);
     expect(response.status).toBe(404);
-  }).pipe(
-    Effect.provide(
-      testLayer({ findById: () => Effect.succeed(Option.none()) }),
-    ),
-  ),
+  }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeed(Option.none()) }))),
 );
 
 it.effect("rejects a malformed receipt ID at the HTTP boundary", () =>

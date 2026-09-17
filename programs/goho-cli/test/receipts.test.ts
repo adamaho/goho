@@ -1,8 +1,9 @@
-import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
 
+import { NodeServices } from "@effect/platform-node";
+import { Effect, Schema, Stream } from "effect";
+import { ChildProcess } from "effect/unstable/process";
 import { describe, expect, it } from "vitest";
 
 const mainPath = fileURLToPath(new URL("../src/main.ts", import.meta.url));
@@ -14,27 +15,25 @@ interface CliResult {
 }
 
 const runCommand = (baseUrl: string, args: ReadonlyArray<string>): Promise<CliResult> =>
-  new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [mainPath, ...args], {
-      env: { ...process.env, GOHO_SERVER_URL: baseUrl },
-      stdio: ["ignore", "pipe", "pipe"],
+  Effect.gen(function* () {
+    const child = yield* ChildProcess.make(process.execPath, [mainPath, ...args], {
+      env: { GOHO_SERVER_URL: baseUrl },
+      extendEnv: true,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
     });
-    let stderr = "";
-    let stdout = "";
-    child.stderr.setEncoding("utf8");
-    child.stdout.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
-    });
-    child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
-    });
-    child.once("error", reject);
-    child.once("close", (code) => resolve({ code, stderr, stdout }));
-  });
+    return yield* Effect.all(
+      {
+        code: child.exitCode,
+        stderr: child.stderr.pipe(Stream.decodeText(), Stream.mkString),
+        stdout: child.stdout.pipe(Stream.decodeText(), Stream.mkString),
+      },
+      { concurrency: "unbounded" },
+    );
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer), Effect.runPromise);
 
-const runList = (baseUrl: string): Promise<CliResult> =>
-  runCommand(baseUrl, ["receipts", "list"]);
+const runList = (baseUrl: string): Promise<CliResult> => runCommand(baseUrl, ["receipts", "list"]);
 
 const runShow = (receiptId: string, baseUrl: string): Promise<CliResult> =>
   runCommand(baseUrl, ["receipts", "show", receiptId]);
@@ -53,7 +52,7 @@ const withJsonResponse = async <A>(
     server.listen(0, "127.0.0.1", resolve);
   });
   try {
-    const address = server.address() as AddressInfo;
+    const address = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Int }))(server.address());
     return await run(`http://127.0.0.1:${address.port}`);
   } finally {
     await new Promise<void>((resolve, reject) =>

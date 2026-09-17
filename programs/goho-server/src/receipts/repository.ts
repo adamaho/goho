@@ -201,11 +201,7 @@ export const layer = Layer.effect(
             };
             receipts.set(row.id, receipt);
           }
-          if (
-            row.item_position !== null &&
-            row.item_name !== null &&
-            row.item_amount !== null
-          ) {
+          if (row.item_position !== null && row.item_name !== null && row.item_amount !== null) {
             receipt.items.push({
               position: row.item_position,
               name: row.item_name,

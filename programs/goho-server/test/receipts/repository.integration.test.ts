@@ -3,11 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import {
-  CreateReceiptRequest,
-  IdempotencyKey,
-  ReceiptId,
-} from "@goho/goho-server-client/receipts";
+import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
@@ -80,9 +76,9 @@ it.effect("finds one receipt and returns none for a missing ID", () =>
     const repo = yield* Repository.Service;
     const created = yield* repo.create(idempotencyKey, receiptInput);
     expect(yield* repo.findById(created.id)).toEqual(Option.some(created));
-    expect(
-      yield* repo.findById(ReceiptId.make("00000000-0000-4000-8000-000000000002")),
-    ).toEqual(Option.none());
+    expect(yield* repo.findById(ReceiptId.make("00000000-0000-4000-8000-000000000002"))).toEqual(
+      Option.none(),
+    );
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
