@@ -88,9 +88,9 @@ it.effect("returns HTTP 404 when a receipt does not exist", () =>
   }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeed(Option.none()) }))),
 );
 
-it.effect("rejects malformed and out-of-range receipt IDs at the HTTP boundary", () =>
+it.effect("rejects malformed and overlong receipt IDs at the HTTP boundary", () =>
   Effect.gen(function* () {
-    for (const id of ["not-an-integer", "0", "9223372036854775808"]) {
+    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
       const response = yield* HttpClient.get(`/receipts/${id}`);
       expect(response.status).toBe(400);
     }

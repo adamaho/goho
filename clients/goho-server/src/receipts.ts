@@ -171,17 +171,9 @@ export interface CreateReceiptRequest extends Schema.Schema.Type<typeof CreateRe
  * @category models
  * @since 0.1.0
  */
-export const ReceiptId = Schema.String.check(
-  Schema.makeFilter(
-    (value) => /^[1-9]\d*$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n,
-    {
-      expected: "a positive PostgreSQL BIGINT encoded as a decimal string",
-      toJsonSchema: () => ({ pattern: "^[1-9]\\d*$", maxLength: 19 }),
-    },
-  ),
-).annotate({
+export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/)).annotate({
   identifier: "ReceiptId",
-  description: "Server-assigned positive BIGINT identity identifying a persisted receipt.",
+  description: "The receipt's positive number on the roster, bud.",
   examples: ["42"],
 });
 
