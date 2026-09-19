@@ -28,47 +28,50 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Lists and creates receipts and processes Google Drive images into Google Sheets. No authentication is required.",
+    "Runs the receipt playbook: list and create receipts, then skate Google Drive images into Google Sheets rows. No authentication required, bud.",
   )
   .add(
     HttpApiGroup.make("health")
-      .annotate(OpenApi.Description, "Server liveness.")
+      .annotate(OpenApi.Description, "A quick bench check for server liveness.")
       .add(
         HttpApiEndpoint.get("check", "/health", {
           success: DataResponse(
             Schema.Struct({
               status: Schema.Literal("ok").annotate({
-                description: "Server status.",
+                description: "The server's bench status.",
               }),
             }).annotate({
               identifier: "HealthData",
-              description: "Server liveness.",
+              description: "Whether the server is awake for the shift.",
               examples: [{ status: "ok" }],
             }),
           ),
         })
           .annotate(OpenApi.Summary, "Check server liveness")
-          .annotate(OpenApi.Description, "Does not check database or provider readiness."),
+          .annotate(
+            OpenApi.Description,
+            "Confirms the server is awake; it does not skate over to the database or providers.",
+          ),
       ),
     HttpApiGroup.make("receipts")
-      .annotate(OpenApi.Description, "Receipt retrieval, creation, and batch processing.")
+      .annotate(OpenApi.Description, "Receipt retrieval, creation, and batch-processing plays.")
       .add(
         HttpApiEndpoint.get("list", "/receipts", {
           success: DataResponse(
             Schema.Array(Receipt).annotate({
-              description: "Complete receipts in newest-first order; empty when none exist.",
+              description: "Complete receipts, newest off the bench first; empty when none exist.",
             }),
           ),
           error: [
             HttpApiError.InternalServerError.annotate({
-              description: "Receipt retrieval failed.",
+              description: "The server could not pull the receipts off the bench.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "List receipts")
           .annotate(
             OpenApi.Description,
-            "Returns all persisted receipts with their items in ascending position order.",
+            "Pulls every saved receipt off the bench, newest first, with its items in position order.",
           ),
       )
       .add(
@@ -77,17 +80,17 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(Receipt),
           error: [
             HttpApiError.NotFound.annotate({
-              description: "No receipt exists with this ID.",
+              description: "No receipt is wearing that number, bud.",
             }),
             HttpApiError.InternalServerError.annotate({
-              description: "Receipt retrieval failed.",
+              description: "The server could not retrieve this receipt.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "Get a receipt")
           .annotate(
             OpenApi.Description,
-            "Returns one persisted receipt with its items in ascending position order.",
+            "Brings back one saved receipt with its items lined up by position.",
           ),
       )
       .add(
@@ -98,14 +101,14 @@ export const api = HttpApi.make("goho-server")
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
-                "The `idempotency-key` header or payload is invalid; the response body is empty.",
+                "The `idempotency-key` header or payload is a bad pass; the response body stays empty.",
             }),
             HttpApiError.Conflict.annotate({
               description:
-                "The idempotency key identifies different normalized receipt data or item order.",
+                "That idempotency key is already skating with different normalized receipt data or item order.",
             }),
             HttpApiError.InternalServerError.annotate({
-              description: "Receipt validation or persistence failed.",
+              description: "Receipt validation or persistence missed the net.",
             }),
           ],
         })
@@ -124,7 +127,7 @@ export const api = HttpApi.make("goho-server")
           }))
           .annotate(
             OpenApi.Description,
-            "Creates the receipt and items atomically. Reusing the key with the same normalized data returns the stored receipt.",
+            "Creates the receipt and items in one clean play. Reuse the key with the same normalized data and the saved receipt comes back.",
           ),
       )
       .add(
@@ -133,27 +136,27 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(
             Schema.Array(ReceiptProcessingResult).annotate({
               description:
-                "One outcome per file in Drive listing order; empty when no files are found. `Failed` and `Stranded` outcomes still return HTTP 200.",
+                "One final whistle per file in Drive listing order; empty when no files are found. `Failed` and `Stranded` still return HTTP 200.",
             }),
           ),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
-              description: "The payload is invalid; the response body is empty.",
+              description: "The payload is a bad pass; the response body stays empty.",
             }),
             HttpApiError.Conflict.annotate({
               description:
-                "Another batch is running on this server, regardless of root or spreadsheet.",
+                "Another batch is already on the ice for this server, no matter the root or spreadsheet.",
             }),
             HttpApiError.InternalServerError.annotate({
               description:
-                "The batch failed; partial changes may remain. Inspect Drive, Sheets, and server logs before retrying.",
+                "The batch went sideways and may have left partial changes. Check Drive, Sheets, and server logs before taking another shot.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "Process a receipt batch")
           .annotate(
             OpenApi.Description,
-            "Processes `todo` images into `RAW` rows and waits for completion. Accepted work continues after client disconnect. Run only one server per workflow; inspect partial results before retrying a lost response.",
+            "Skates `todo` images into `RAW` rows and waits for the final whistle. Accepted work keeps moving after a client disconnect. Run one server per workflow and check partial results before replaying a lost response.",
           ),
       ),
   );

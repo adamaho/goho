@@ -12,7 +12,7 @@ import * as Receipts from "#src/receipts/service.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
-const savedId = ReceiptId.make("00000000-0000-4000-8000-000000000001");
+const savedId = ReceiptId.make("1");
 const request = { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 };
 
 const setup = (

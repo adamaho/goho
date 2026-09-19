@@ -62,7 +62,7 @@ const withJsonResponse = async <A>(
 };
 
 const receipt = {
-  id: "01994ac0-dc00-7d9d-8d70-a50dfdad9c11",
+  id: "42",
   storeName: "Example Store",
   receiptDate: "2026-09-01",
   category: "Groceries",

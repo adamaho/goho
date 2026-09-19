@@ -26,7 +26,7 @@ ordered items, newest first. An empty database prints `[]`.
 ## Show a receipt
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts show <receipt-id>
+pnpm --filter @goho/goho-cli start receipts show <positive-integer-receipt-id>
 ```
 
 The command prints the complete receipt as JSON. A malformed ID or a valid ID

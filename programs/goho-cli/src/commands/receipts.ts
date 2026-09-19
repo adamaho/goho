@@ -77,7 +77,7 @@ const listCommand = Command.make("list").pipe(
 const showCommand = Command.make("show", {
   receiptId: Argument.string("receipt-id").pipe(
     Argument.withSchema(ReceiptId),
-    Argument.withDescription("ID of the persisted receipt to show."),
+    Argument.withDescription("Positive integer ID of the persisted receipt to show."),
   ),
 }).pipe(
   Command.withDescription("Show one persisted receipt."),

@@ -24,7 +24,7 @@ const createPayload = CreateReceiptRequest.make({
 
 const receipt = Receipt.make({
   ...createPayload,
-  id: "5bb54486-9d88-4df7-89d1-1f2c3b2de21c",
+  id: "42",
   items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
 });
 
@@ -88,10 +88,12 @@ it.effect("returns HTTP 404 when a receipt does not exist", () =>
   }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeed(Option.none()) }))),
 );
 
-it.effect("rejects a malformed receipt ID at the HTTP boundary", () =>
+it.effect("rejects malformed and overlong receipt IDs at the HTTP boundary", () =>
   Effect.gen(function* () {
-    const response = yield* HttpClient.get("/receipts/not-a-uuid");
-    expect(response.status).toBe(400);
+    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
+      const response = yield* HttpClient.get(`/receipts/${id}`);
+      expect(response.status).toBe(400);
+    }
   }).pipe(Effect.provide(TestLive)),
 );
 
