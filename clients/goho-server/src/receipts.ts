@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
-  description: "Nonempty text with surrounding whitespace removed.",
+  description: "Nonempty text with the extra whitespace scraped off the boards.",
 });
 
 /**
@@ -18,7 +18,7 @@ export const IdempotencyKey = Schema.String.check(
 ).annotate({
   identifier: "IdempotencyKey",
   description:
-    "Receipt creation token, unique across receipts with no expiry. Case and received whitespace are significant.",
+    "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs.",
   examples: ["manual-entry-1"],
 });
 
@@ -57,7 +57,7 @@ export const CalendarDate = Schema.String.check(
   ),
 ).annotate({
   identifier: "CalendarDate",
-  description: "Real calendar date in YYYY-MM-DD format, years 0100–9999.",
+  description: "A real calendar date in YYYY-MM-DD format, from year 0100 through 9999.",
   examples: ["2026-09-13"],
 });
 
@@ -74,7 +74,7 @@ export const DecimalString = Schema.String.check(
   }),
 ).annotate({
   identifier: "DecimalString",
-  description: "Exact decimal encoded as a string to preserve precision.",
+  description: "An exact decimal kept as text so no precision gets lost in the shuffle.",
   examples: ["10.25", "-1.50", "1e2", "1E2"],
 });
 
@@ -90,23 +90,23 @@ export type DecimalString = typeof DecimalString.Type;
 const ReceiptFields = {
   storeName: Name.pipe(
     Schema.annotateEncoded({
-      description: "Store or merchant name.",
+      description: "Store or merchant named on the receipt.",
       examples: ["Example Store"],
     }),
   ),
-  receiptDate: CalendarDate.annotateKey({ description: "Date of the purchase." }),
+  receiptDate: CalendarDate.annotateKey({ description: "Date the purchase hit the ice." }),
   category: Name.pipe(
     Schema.annotateEncoded({
-      description: "Receipt category.",
+      description: "Receipt category in the lineup.",
       examples: ["Groceries"],
     }),
   ),
   subtotal: DecimalString.annotateKey({ description: "Amount before tax.", examples: ["10.25"] }),
   tax: DecimalString.annotateKey({ description: "Tax amount.", examples: ["0.75"] }),
-  total: DecimalString.annotateKey({ description: "Total receipt amount.", examples: ["11"] }),
+  total: DecimalString.annotateKey({ description: "Final receipt total.", examples: ["11"] }),
   currency: Schema.NullOr(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))).annotate({
     description:
-      "Currency code, or null when unknown. Codes are not checked against a currency registry.",
+      "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
     examples: ["USD", null],
   }),
 };
@@ -114,17 +114,17 @@ const ReceiptFields = {
 const ReceiptItemInput = Schema.Struct({
   name: Name.pipe(
     Schema.annotateEncoded({
-      description: "Item name.",
+      description: "Item name on the receipt.",
       examples: ["Apples"],
     }),
   ),
   amount: DecimalString.annotateKey({
-    description: "Item amount, including negative adjustments.",
+    description: "Item amount; negative adjustments can suit up too.",
     examples: ["10.25"],
   }),
 }).annotate({
   identifier: "ReceiptItemInput",
-  description: "Receipt line item; repeated names are allowed.",
+  description: "One receipt line item; repeat names are fair game.",
   examples: [{ name: "Apples", amount: "10.25" }],
 });
 
@@ -137,12 +137,13 @@ const ReceiptItemInput = Schema.Struct({
 export const CreateReceiptRequest = Schema.Struct({
   ...ReceiptFields,
   items: Schema.NonEmptyArray(ReceiptItemInput).annotate({
-    description: "Line items in receipt order. Order affects idempotency comparison.",
+    description:
+      "Line items in receipt order. Shuffle the lineup and the idempotency check changes.",
   }),
 }).annotate({
   identifier: "CreateReceiptRequest",
   description:
-    "Receipt and ordered items. Names are trimmed and must remain nonempty. Amounts are not rounded, converted, or checked for arithmetic consistency.",
+    "The full receipt lineup, bud. Names are trimmed and stay nonempty; amounts are not rounded, converted, or checked against the totals.",
   examples: [
     {
       storeName: "Example Store",
@@ -193,28 +194,28 @@ export type ReceiptId = typeof ReceiptId.Type;
  */
 export const Receipt = Schema.Struct({
   id: ReceiptId.annotateKey({
-    description: "Receipt identity, retained on replay.",
+    description: "The receipt's roster number, kept the same on a replay.",
   }),
   ...ReceiptFields,
   items: Schema.NonEmptyArray(
     Schema.Struct({
       position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
-        description: "Zero-based item position within the receipt.",
+        description: "Zero-based spot in the receipt lineup.",
         examples: [0],
       }),
       ...ReceiptItemInput.fields,
     }).annotate({
       identifier: "ReceiptItem",
-      description: "A persisted receipt line item with its original position.",
+      description: "A saved receipt line item in its original slot.",
       examples: [{ position: 0, name: "Apples", amount: "10.25" }],
     }),
   ).annotate({
-    description: "Items in ascending position order.",
+    description: "Items lined up by ascending position.",
   }),
 }).annotate({
   identifier: "Receipt",
   description:
-    "Stored receipt with trimmed names and normalized decimal strings; for example, `11.00` becomes `11`.",
+    "A saved receipt with trimmed names and normalized decimals; `11.00` comes back as `11`, beauty.",
   examples: [
     {
       id: "42",
@@ -246,7 +247,7 @@ export interface Receipt extends Schema.Schema.Type<typeof Receipt> {}
  */
 export const Concurrency = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 5 })).annotate({
   identifier: "Concurrency",
-  description: "Maximum files processed concurrently.",
+  description: "Most files allowed on the ice at once.",
   examples: [5],
 });
 
@@ -260,24 +261,24 @@ export const ProcessRequest = Schema.Struct({
   rootFolderId: Schema.Trim.check(Schema.isNonEmpty()).pipe(
     Schema.annotateEncoded({
       description:
-        "Google Drive root with exactly one immediate child folder for each of `todo`, `processing`, `processed`, and `failed`.",
+        "Google Drive root with exactly one immediate folder each for `todo`, `processing`, `processed`, and `failed`. Keep all four in the lineup, bud.",
       examples: ["drive-root"],
     }),
   ),
   spreadsheetId: Schema.Trim.check(Schema.isNonEmpty()).pipe(
     Schema.annotateEncoded({
       description:
-        "Destination spreadsheet with a `RAW` worksheet: store, date, category, item, price, and source file ID in columns A–F.",
+        "Destination spreadsheet with a `RAW` sheet carrying store, date, category, item, price, and source file ID in columns A–F.",
       examples: ["sheet-id"],
     }),
   ),
   concurrency: Concurrency.annotateKey({
-    description: "Maximum files processed concurrently; no HTTP default.",
+    description: "Most files processed at once; the HTTP route picks no default for you.",
   }),
 }).annotate({
   identifier: "ProcessRequest",
   description:
-    "Batch inputs. IDs are trimmed and must remain nonempty. The service account needs access to download and move files and update the spreadsheet.",
+    "The batch game plan. IDs are trimmed and stay nonempty; the service account needs access to download and move files and update the sheet.",
   examples: [{ rootFolderId: "drive-root", spreadsheetId: "sheet-id", concurrency: 5 }],
 });
 
@@ -308,7 +309,7 @@ const Stage = Schema.Literals([
   "Complete",
 ]).annotate({
   identifier: "ProcessingStage",
-  description: "Stage where processing failed.",
+  description: "The shift where processing went sideways.",
   examples: ["ParseReceipt"],
 });
 
@@ -322,33 +323,33 @@ export const ReceiptProcessingResult = Schema.Union([
   Schema.TaggedStruct("Processed", File).annotate({
     identifier: "Processed",
     description:
-      "Rows appended to Sheets and file moved to `processed`; database persistence is not guaranteed.",
+      "Rows made the sheet and the file reached `processed`; database persistence is not a sure thing.",
   }),
   Schema.TaggedStruct("AlreadyProcessed", File).annotate({
     identifier: "AlreadyProcessed",
     description:
-      "File already recorded in Sheets and moved to `processed`, without new rows or a database write.",
+      "The file was already on the scoresheet and moved to `processed`, with no new rows or database write.",
   }),
   Schema.TaggedStruct("Failed", {
     ...File,
     stage: Stage,
     disposition: Schema.Literals(["MovedToFailed", "ClaimNotConfirmed"]).annotate({
       description:
-        "`MovedToFailed`: file moved to `failed`. `ClaimNotConfirmed`: initial move failed; file location is unknown.",
+        "`MovedToFailed` puts the file in `failed`. `ClaimNotConfirmed` means the opening move failed and the file location is unknown.",
       examples: ["MovedToFailed"],
     }),
   }).annotate({
     identifier: "Failed",
-    description: "Processing failed; disposition describes the file recovery state.",
+    description: "Processing missed the net; disposition tells you where the file ended up.",
   }),
   Schema.TaggedStruct("Stranded", { ...File, stage: Stage }).annotate({
     identifier: "Stranded",
     description:
-      "Processing and the move to `failed` both failed. Locate the file by ID before retrying.",
+      "Processing and the move to `failed` both missed. Find the file by ID before taking another shot.",
   }),
 ]).annotate({
   identifier: "ReceiptProcessingResult",
-  description: "Outcome for one file; provider diagnostics are omitted.",
+  description: "The final whistle for one file; provider diagnostics stay in the room.",
   examples: [
     { _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" },
     { _tag: "AlreadyProcessed", fileId: "receipt-2", fileName: "receipt.png" },
