@@ -1,6 +1,7 @@
 import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Schema } from "effect";
 
+import { FileId } from "#src/file-storage.ts";
 import { NonEmptyText } from "#src/schema.ts";
 
 /**
@@ -83,7 +84,7 @@ export type ReceiptUploadFailureCode = typeof ReceiptUploadFailureCode.Type;
  */
 export const QueuedReceiptUpload = Schema.Struct({
   id: ReceiptUploadId,
-  storageKey: NonEmptyText,
+  fileId: FileId,
   fileName: NonEmptyText,
   contentType: ReceiptUploadContentType,
 });

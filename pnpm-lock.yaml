@@ -239,6 +239,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.116(effect@4.0.0-rc.116)(redis@6.2.1)
       '@effect/sql-pg':
         specifier: 'catalog:'
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)

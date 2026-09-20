@@ -1,3 +1,4 @@
+import { NodeStream } from "@effect/platform-node";
 import { drive, type drive_v3 } from "@googleapis/drive";
 import { Context, Effect, Layer, Schema, Stream } from "effect";
 
@@ -62,6 +63,19 @@ export interface DownloadFileOptions {
 }
 
 /**
+ * Options for uploading a file to a Drive folder.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface UploadFileOptions {
+  readonly folderId: string;
+  readonly name: string;
+  readonly mimeType: string;
+  readonly bytes: Uint8Array;
+}
+
+/**
  * Options for moving a file between Drive folders.
  *
  * @category models
@@ -84,11 +98,17 @@ export interface MoveFileOptions {
  * @since 0.1.0
  */
 export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.DriveError", {
-  operation: Schema.Literals(["listFolders", "listFiles", "downloadFile", "moveFile"]),
+  operation: Schema.Literals([
+    "listFolders",
+    "listFiles",
+    "uploadFile",
+    "downloadFile",
+    "moveFile",
+  ]),
   message: Schema.String,
 }) {}
 
-type Operation = "listFolders" | "listFiles" | "downloadFile" | "moveFile";
+type Operation = "listFolders" | "listFiles" | "uploadFile" | "downloadFile" | "moveFile";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -186,6 +206,7 @@ export interface Interface {
   readonly listFiles: (
     options: ListFilesOptions,
   ) => Effect.Effect<ReadonlyArray<FileMetadata>, DriveError>;
+  readonly uploadFile: (options: UploadFileOptions) => Effect.Effect<FileMetadata, DriveError>;
   readonly downloadFile: (options: DownloadFileOptions) => Stream.Stream<Uint8Array, DriveError>;
   readonly moveFile: (options: MoveFileOptions) => Effect.Effect<FileMetadata, DriveError>;
 }
@@ -294,6 +315,42 @@ export const make = Effect.gen(function* () {
     return files;
   });
 
+  const uploadFile = Effect.fn("@goho/GoogleDrive.uploadFile")(function* (
+    options: UploadFileOptions,
+  ) {
+    const headers = yield* auth
+      .getRequestHeaders()
+      .pipe(Effect.mapError((error) => clientError("uploadFile", error)));
+
+    const response = yield* Effect.tryPromise({
+      try: (signal) =>
+        client.files.create(
+          {
+            requestBody: {
+              name: options.name,
+              mimeType: options.mimeType,
+              parents: [options.folderId],
+            },
+            media: {
+              mimeType: options.mimeType,
+              body: NodeStream.toReadableNever(Stream.make(options.bytes)),
+            },
+            supportsAllDrives: true,
+            fields: "id,name,mimeType",
+          },
+          { headers, signal },
+        ),
+      catch: (error) => clientError("uploadFile", error),
+    });
+    const metadata = fileMetadata("uploadFile", response.data);
+
+    if (metadata instanceof DriveError) {
+      return yield* metadata;
+    }
+
+    return metadata;
+  });
+
   /**
    * Opens a file download as an Effect stream.
    *
@@ -367,7 +424,7 @@ export const make = Effect.gen(function* () {
     return metadata;
   });
 
-  return Service.of({ listFolders, listFiles, downloadFile, moveFile });
+  return Service.of({ listFolders, listFiles, uploadFile, downloadFile, moveFile });
 });
 
 /**

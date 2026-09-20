@@ -44,6 +44,7 @@ const setup = (
             })),
           ),
         listFiles: () => Effect.succeed([file]),
+        uploadFile: ({ name, mimeType }) => Effect.succeed({ id: "uploaded", name, mimeType }),
         downloadFile: () => Stream.make(new Uint8Array([1])),
         moveFile: (move) => record(`move:${move.destinationFolderId}`).pipe(Effect.as(file)),
       }),

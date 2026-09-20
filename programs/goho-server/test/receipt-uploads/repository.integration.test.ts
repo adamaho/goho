@@ -9,6 +9,7 @@ import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
+import { FileId } from "#src/file-storage.ts";
 import { ReceiptUploadId } from "#src/receipt-uploads/model.ts";
 import * as Repository from "#src/receipt-uploads/repository.ts";
 
@@ -36,7 +37,7 @@ const DatabaseLive = Layer.effectContext(
 
 const makeUpload = () => ({
   id: ReceiptUploadId.make(randomUUID()),
-  storageKey: "receipts/2026/example.png",
+  fileId: FileId.make("drive-file-id"),
   fileName: "example.png",
   contentType: "image/png" as const,
 });

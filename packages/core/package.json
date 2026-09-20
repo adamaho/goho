@@ -18,6 +18,7 @@
     "test:integration": "vitest run test/*.integration.test.ts"
   },
   "dependencies": {
+    "@effect/platform-node": "catalog:",
     "@effect/sql-pg": "catalog:",
     "@googleapis/drive": "catalog:",
     "@googleapis/sheets": "catalog:",
