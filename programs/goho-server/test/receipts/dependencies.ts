@@ -1,5 +1,5 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Effect, Layer, Schema, Stream } from "effect";
 
 import * as Workflow from "#src/receipts/process.ts";

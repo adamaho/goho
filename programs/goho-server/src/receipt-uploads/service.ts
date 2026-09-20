@@ -4,7 +4,7 @@ import {
   type ReceiptUpload as PublicReceiptUpload,
   ReceiptUploadContentType,
   ReceiptUploadId,
-} from "@goho/goho-server-client/receipt-uploads";
+} from "@goho/goho-api/receipt-uploads";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { SqlClient } from "effect/unstable/sql";

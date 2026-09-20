@@ -1,8 +1,4 @@
-import {
-  Concurrency,
-  ReceiptId,
-  type ReceiptProcessingResult,
-} from "@goho/goho-server-client/receipts";
+import { Concurrency, ReceiptId, type ReceiptProcessingResult } from "@goho/goho-api/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 

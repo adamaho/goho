@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@goho/goho-api": "workspace:*",
     "@goho/goho-server-client": "workspace:*",
     "effect": "catalog:"
   },

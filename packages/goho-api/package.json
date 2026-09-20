@@ -1,14 +1,17 @@
 {
-  "name": "@goho/goho-server-client",
+  "name": "@goho/goho-api",
   "version": "0.0.0",
   "private": true,
-  "description": "Typed Effect client for the Goho server API.",
+  "description": "Shared Goho HTTP API contract and public schemas.",
   "type": "module",
   "imports": {
     "#src/*": "./src/*"
   },
   "exports": {
-    "./client": "./src/client.ts"
+    "./api": "./src/api.ts",
+    "./receipt-uploads": "./src/receipt-uploads.ts",
+    "./receipts": "./src/receipts.ts",
+    "./response": "./src/response.ts"
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
@@ -16,7 +19,6 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@goho/goho-api": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

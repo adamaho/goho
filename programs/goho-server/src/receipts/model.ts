@@ -1,4 +1,4 @@
-import { DecimalString } from "@goho/goho-server-client/receipts";
+import { DecimalString } from "@goho/goho-api/receipts";
 import { Array, Schema } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";

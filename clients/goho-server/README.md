@@ -1,12 +1,7 @@
 # @goho/goho-server-client
 
-The Goho server API contract and typed Effect client. Depends on Effect;
-Google and OpenAI integrations stay in the server.
-
-- `/api`: HTTP endpoint contract.
-- `/receipts`: request validation and public result schemas.
-- `/response`: shared successful response envelope schema, type, and constructor.
-- `/client`: `make(baseUrl)`, deriving the client from the contract.
+The typed Effect client for the Goho server. The complete client is derived
+from the shared `@goho/goho-api` contract by calling `make(baseUrl)`.
 
 ```ts
 import { make } from "@goho/goho-server-client/client";
@@ -29,10 +24,5 @@ See the [server API reference](../../programs/goho-server/README.md#api) for
 receipt retrieval, creation, and batch recovery. The server exposes OpenAPI at `/openapi.json`
 and Swagger UI at `/docs`.
 
-Successful responses use the shared `{ data: ... }` envelope. The contract is
-defined in `src/api.ts`, `src/receipts.ts`, and `src/response.ts`. To inspect the
-generated OpenAPI document, run from this package directory:
-
-```bash
-node --input-type=module -e 'import { api } from "./src/api.ts"; import { OpenApi } from "effect/unstable/httpapi"; console.log(JSON.stringify(OpenApi.fromApi(api), null, 2));'
-```
+Successful responses use the shared `{ data: ... }` envelope defined by
+`@goho/goho-api`.

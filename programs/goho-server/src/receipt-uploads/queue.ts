@@ -1,4 +1,4 @@
-import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
+import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { Context, Effect, Layer, Schedule, Schema } from "effect";
 import { PersistedQueue } from "effect/unstable/persistence";
 

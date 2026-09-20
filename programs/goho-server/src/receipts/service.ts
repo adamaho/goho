@@ -6,7 +6,7 @@ import type {
   Receipt,
   ReceiptId,
   ReceiptProcessingResult,
-} from "@goho/goho-server-client/receipts";
+} from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Ref } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 

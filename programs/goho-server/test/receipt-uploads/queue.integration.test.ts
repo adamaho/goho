@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
+import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";

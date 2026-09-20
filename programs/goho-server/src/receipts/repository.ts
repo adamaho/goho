@@ -10,7 +10,7 @@ import {
   type CreateReceiptRequest,
   type IdempotencyKey,
   type Receipt,
-} from "@goho/goho-server-client/receipts";
+} from "@goho/goho-api/receipts";
 import { Array, BigDecimal, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 

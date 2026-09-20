@@ -2,8 +2,8 @@ import {
   ReceiptUploadFailureCode,
   ReceiptUploadId,
   ReceiptUploadStatus,
-} from "@goho/goho-server-client/receipt-uploads";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+} from "@goho/goho-api/receipt-uploads";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 

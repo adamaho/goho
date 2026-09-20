@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Deferred, Effect, Fiber, Layer, Ref, Schema, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";

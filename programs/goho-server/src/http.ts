@@ -1,5 +1,5 @@
-import { api } from "@goho/goho-server-client/api";
-import { withData } from "@goho/goho-server-client/response";
+import { api } from "@goho/goho-api/api";
+import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { HttpApiBuilder, HttpApiError, HttpApiSwagger } from "effect/unstable/httpapi";
 

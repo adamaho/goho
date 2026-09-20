@@ -39,5 +39,6 @@ Coding agents use these same commands with Node.js and pnpm on `PATH`.
 ## Receipt processing
 
 Start the [Goho server](programs/goho-server/README.md), then use the
-[CLI](programs/goho-cli/README.md) to process a batch. The shared contract and client
-live in [clients/goho-server](clients/goho-server/README.md).
+[CLI](programs/goho-cli/README.md) to process a batch. The shared API contract lives in
+[packages/goho-api](packages/goho-api/README.md), and the derived typed client lives in
+[clients/goho-server](clients/goho-server/README.md).

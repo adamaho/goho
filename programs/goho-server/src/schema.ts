@@ -1,4 +1,4 @@
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Schema, SchemaGetter } from "effect";
 
 /**

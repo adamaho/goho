@@ -3,8 +3,8 @@ import {
   ReceiptUploadFailureCode,
   ReceiptUploadId,
   ReceiptUploadStatus,
-} from "@goho/goho-server-client/receipt-uploads";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+} from "@goho/goho-api/receipt-uploads";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Schema } from "effect";
 
 import { FileId } from "#src/file-storage.ts";

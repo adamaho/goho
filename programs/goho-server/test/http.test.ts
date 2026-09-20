@@ -1,8 +1,8 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
+import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
-import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";

@@ -4,7 +4,7 @@ import { NodeServices } from "@effect/platform-node";
 import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-server-client/receipts";
+import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-api/receipts";
 import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";

@@ -1,4 +1,4 @@
-import { ReceiptUploadFailureCode } from "@goho/goho-server-client/receipt-uploads";
+import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
 import { Effect, Layer, Schema } from "effect";
 
 import * as FileStorage from "#src/file-storage.ts";

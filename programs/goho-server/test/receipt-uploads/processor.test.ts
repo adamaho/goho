@@ -1,7 +1,7 @@
 import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
-import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Effect, Layer, Option, Ref, Schema } from "effect";
 import { expect } from "vitest";
 
