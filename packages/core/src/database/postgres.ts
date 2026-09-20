@@ -2,6 +2,10 @@ import { PgClient, PgTypes } from "@effect/sql-pg";
 import { Config, Effect, Layer, Result, type Redacted } from "effect";
 
 const regclassOid = 2205;
+
+// PgMigrator probes for its table with a `regclass` result. sql-pg rc.116 does
+// not include that PostgreSQL type in its binary codec registry, so its four
+// binary OID bytes otherwise fall through to UTF-8 decoding and fail.
 const regclassCodec: PgTypes.Codec<number> = {
   decode: (bytes) =>
     bytes.length === 4

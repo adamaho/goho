@@ -14,6 +14,8 @@ import {
 import { Array, BigDecimal, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { ReceiptIdFromDatabase } from "#src/schema.ts";
+
 import { ReceiptToSave } from "./model.ts";
 
 /**
@@ -76,11 +78,11 @@ export class Service extends Context.Service<Service, Interface>()(
   "@goho/goho-server/ReceiptRepository",
 ) {}
 
-const IdRow = Schema.Struct({ id: ReceiptId });
+const IdRow = Schema.Struct({ id: ReceiptIdFromDatabase });
 const decodeInserted = Schema.decodeUnknownEffect(Schema.Array(IdRow));
 const decodeExisting = Schema.decodeUnknownEffect(Schema.NonEmptyArray(IdRow));
 const ReceiptRow = Schema.Struct({
-  id: ReceiptId,
+  id: ReceiptIdFromDatabase,
   store_name: Schema.String,
   receipt_date: CalendarDate,
   category: Schema.String,
@@ -143,7 +145,7 @@ export const layer = Layer.effect(
       receiptId: typeof ReceiptId.Type,
     ) {
       const receipts = yield* sql`
-        SELECT id::text AS id, store_name, receipt_date::text, category,
+        SELECT id, store_name, receipt_date::text, category,
           subtotal::text, tax::text, total::text, currency
         FROM receipts WHERE id = ${receiptId}
       `.pipe(Effect.flatMap(decodeReceiptRow));
@@ -166,7 +168,7 @@ export const layer = Layer.effect(
     });
     const findById = Effect.fn("@goho/ReceiptRepository.findById")(
       function* (receiptId: ReceiptId) {
-        const rows = yield* sql`SELECT id::text AS id FROM receipts WHERE id = ${receiptId}`.pipe(
+        const rows = yield* sql`SELECT id FROM receipts WHERE id = ${receiptId}`.pipe(
           Effect.flatMap(decodeInserted),
         );
         const row = rows.at(0);
@@ -177,7 +179,7 @@ export const layer = Layer.effect(
     const list = Effect.fn("@goho/ReceiptRepository.list")(
       function* () {
         const rows = yield* sql`
-          SELECT r.id::text AS id, r.store_name, r.receipt_date::text, r.category,
+          SELECT r.id, r.store_name, r.receipt_date::text, r.category,
             r.subtotal::text, r.tax::text, r.total::text, r.currency,
             i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
           FROM receipts r
@@ -233,12 +235,12 @@ export const layer = Layer.effect(
                 ${key}, ${receiptFingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
                 ${receipt.category}, ${receipt.subtotal}, ${receipt.tax}, ${receipt.total},
                 ${receipt.currency}
-              ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id::text AS id
+              ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
             `.pipe(Effect.flatMap(decodeInserted));
             const row = inserted.at(0);
             if (row === undefined) {
               const existing = yield* sql`
-                SELECT id::text AS id FROM receipts
+                SELECT id FROM receipts
                 WHERE idempotency_key = ${key} AND fingerprint = ${receiptFingerprint}
               `.pipe(Effect.flatMap(decodeInserted));
               const existingRow = existing.at(0);
@@ -279,12 +281,12 @@ export const layer = Layer.effect(
             ${receipt.storeName}, ${receipt.receiptDate}, ${receipt.category},
             ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency},
             ${receipt.extractionVersion}, ${JSON.stringify(receipt.extractedPayload)}::jsonb
-          ) ON CONFLICT (source_provider, source_file_id) DO NOTHING RETURNING id::text AS id
+          ) ON CONFLICT (source_provider, source_file_id) DO NOTHING RETURNING id
         `.pipe(Effect.flatMap(decodeInserted));
             const row = inserted.at(0);
             if (row === undefined) {
               const existing = yield* sql`
-            SELECT id::text AS id FROM receipts
+            SELECT id FROM receipts
             WHERE source_provider = ${receipt.source.provider} AND source_file_id = ${receipt.source.fileId}
           `.pipe(Effect.flatMap(decodeExisting));
               return { _tag: "AlreadyExists", receiptId: existing[0].id } satisfies SaveResult;

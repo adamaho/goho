@@ -1,7 +1,7 @@
 import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Schema } from "effect";
 
-const NonEmptyText = Schema.Trim.check(Schema.isNonEmpty());
+import { NonEmptyText } from "#src/schema.ts";
 
 /**
  * Identity shared by an upload and its future persisted queue job.
@@ -9,9 +9,7 @@ const NonEmptyText = Schema.Trim.check(Schema.isNonEmpty());
  * @category models
  * @since 0.1.0
  */
-export const ReceiptUploadId = Schema.String.check(
-  Schema.isPattern(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
-);
+export const ReceiptUploadId = Schema.String.check(Schema.isUUID(4));
 
 /**
  * Persisted receipt upload identity.

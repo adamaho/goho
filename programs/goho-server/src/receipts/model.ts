@@ -1,7 +1,7 @@
 import { DecimalString } from "@goho/goho-server-client/receipts";
 import { Array, Schema } from "effect";
 
-const Name = Schema.Trim.check(Schema.isNonEmpty());
+import { NonEmptyText } from "#src/schema.ts";
 
 const ReceiptDate = Schema.String.check(
   Schema.makeFilter(
@@ -39,17 +39,17 @@ const ReceiptDate = Schema.String.check(
  */
 export const ParsedReceipt = Schema.Struct({
   store: Schema.Struct({
-    name: Name,
+    name: NonEmptyText,
   }),
   date: ReceiptDate,
   transaction: Schema.Struct({
     items: Schema.NonEmptyArray(
       Schema.Struct({
-        name: Name,
+        name: NonEmptyText,
         price: Schema.Finite,
       }),
     ),
-    category: Name,
+    category: NonEmptyText,
     subtotal: Schema.Finite,
     tax: Schema.Finite,
     total: Schema.Finite,
@@ -72,8 +72,8 @@ export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> 
  */
 export const ReceiptSource = Schema.Struct({
   provider: Schema.Literal("google_drive"),
-  fileId: Name,
-  fileName: Name,
+  fileId: NonEmptyText,
+  fileName: NonEmptyText,
 });
 /**
  * Source file metadata for persistence.
@@ -91,9 +91,9 @@ export interface ReceiptSource extends Schema.Schema.Type<typeof ReceiptSource> 
  */
 export const ReceiptToSave = Schema.Struct({
   source: ReceiptSource,
-  storeName: Name,
+  storeName: NonEmptyText,
   receiptDate: ReceiptDate,
-  category: Name,
+  category: NonEmptyText,
   subtotal: DecimalString,
   tax: DecimalString,
   total: DecimalString,
@@ -103,7 +103,7 @@ export const ReceiptToSave = Schema.Struct({
   items: Schema.NonEmptyArray(
     Schema.Struct({
       position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
-      name: Name,
+      name: NonEmptyText,
       amount: DecimalString,
     }),
   ),

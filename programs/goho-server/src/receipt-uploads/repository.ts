@@ -2,6 +2,8 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { ReceiptIdFromDatabase } from "#src/schema.ts";
+
 import {
   QueuedReceiptUpload,
   ReceiptUpload,
@@ -90,7 +92,7 @@ const ReceiptUploadRow = Schema.Struct({
   file_name: Schema.String,
   content_type: ReceiptUpload.fields.contentType,
   status: ReceiptUploadStatus,
-  receipt_id: Schema.NullOr(ReceiptId),
+  receipt_id: Schema.NullOr(ReceiptIdFromDatabase),
   error: Schema.NullOr(Schema.String),
   created_at: Schema.String,
   updated_at: Schema.String,
@@ -123,7 +125,7 @@ export const layer = Layer.effect(
     const findById = Effect.fn("@goho/ReceiptUploadRepository.findById")(
       function* (uploadId: ReceiptUploadId) {
         const rows = yield* sql`
-          SELECT id, storage_key, file_name, content_type, status, receipt_id::text,
+          SELECT id, storage_key, file_name, content_type, status, receipt_id,
             error, created_at::text, updated_at::text
           FROM receipt_uploads WHERE id = ${uploadId}
         `.pipe(Effect.flatMap(decodeRows));
@@ -150,7 +152,7 @@ export const layer = Layer.effect(
         const rows = yield* sql`
           INSERT INTO receipt_uploads (id, storage_key, file_name, content_type, status)
           VALUES (${upload.id}, ${upload.storageKey}, ${upload.fileName}, ${upload.contentType}, 'queued')
-          RETURNING id, storage_key, file_name, content_type, status, receipt_id::text,
+          RETURNING id, storage_key, file_name, content_type, status, receipt_id,
             error, created_at::text, updated_at::text
         `.pipe(Effect.flatMap(decodeRows));
         return fromRow(rows[0]!);
@@ -163,7 +165,7 @@ export const layer = Layer.effect(
       const rows = yield* sql`
         UPDATE receipt_uploads SET status = 'processing', updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id::text,
+        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
           error, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
@@ -180,7 +182,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads
         SET status = 'succeeded', receipt_id = ${receiptId}, updated_at = now()
         WHERE id = ${uploadId} AND status = 'processing'
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id::text,
+        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
           error, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
@@ -200,7 +202,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads
         SET status = 'failed', error = ${failure}, updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id::text,
+        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
           error, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
