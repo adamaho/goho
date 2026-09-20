@@ -32,10 +32,15 @@ Consumers depend only on `FileStorage.Service`. The application composition root
 and then provides the resulting `FileStorage.Service` to the upload workflow. Another adapter
 can replace it by constructing a layer for the same service tag, leaving consumers unchanged.
 
-The processing queue is durable and SQL-backed. One worker claims an upload, marks it
-`processing`, extracts and saves a receipt with the existing receipt service, then marks the
-upload `succeeded` with its receipt ID. Exhausted work is marked `failed` with a stable
-failure code; provider and diagnostic details remain in logs.
+The processing queue is durable and SQL-backed. The `receipt-uploads` queue carries only a
+typed upload ID and uses that same UUID as its de-duplication key. Effect manages the shared
+`effect_queue` table and its migrations, so the application database role needs permission to
+create tables and indexes. Completed queue records are retained for 30 days before cleanup;
+the durable upload status remains in `receipt_uploads`.
+
+One worker claims an upload, marks it `processing`, extracts and saves a receipt with the
+existing receipt service, then marks the upload `succeeded` with its receipt ID. Exhausted work
+is marked `failed` with a stable failure code; provider and diagnostic details remain in logs.
 Retries may re-enter `processing`, so processing and receipt creation must be idempotent.
 
 ## HTTP resources
@@ -51,9 +56,10 @@ Each pull request starts from the updated `dev` branch and is merged before the 
 1. Add the upload model, database migration, repository, and integration tests. Refresh
    Effect and its sibling packages to the latest release candidate.
 2. Add the `FileStorage` service, Google Drive layer, and tests.
-3. Add the persisted queue, worker, upload and status endpoints, and runtime wiring. Read
+3. Add the typed, SQL-backed persisted queue, retry policy, cleanup, and integration tests.
+4. Add the worker, upload and status endpoints, and runtime wiring. Read
    `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` at the composition root and provide the Google Drive-backed
    `FileStorage` layer. Test the immediate response, state transitions, retries, and failure
    path.
-4. Add `receipts upload` and `receipts status`; rename `receipts show` to `receipts view`
+5. Add `receipts upload` and `receipts status`; rename `receipts show` to `receipts view`
    without a compatibility alias. Update CLI documentation and tests.
