@@ -86,6 +86,7 @@ const run = Effect.gen(function* () {
 
 /**
  * Runs the receipt upload consumer for the lifetime of the application scope.
+ * Forking lets layer acquisition finish; closing the scope interrupts the worker.
  *
  * @category layers
  * @since 0.1.0
