@@ -24,6 +24,15 @@ which provider backs it. The first production layer stores files in Google Drive
 layer supports tests, and future S3 or R2 layers can replace Drive without changing the upload
 workflow.
 
+Production uploads go into a dedicated Google Drive folder named `uploads`. Its ID is supplied
+through `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`; the service account must have Editor access to that
+folder. Goho uses the ID directly instead of finding or creating a folder by name.
+
+Consumers depend only on `FileStorage.Service`. The application composition root constructs
+`FileStorage.layerGoogleDrive({ folderId })`, provides its `GoogleDrive.Service` dependency,
+and then provides the resulting `FileStorage.Service` to the upload workflow. Another adapter
+can replace it by constructing a layer for the same service tag, leaving consumers unchanged.
+
 The processing queue is durable and SQL-backed. One worker claims an upload, marks it
 `processing`, extracts and saves a receipt with the existing receipt service, then marks the
 upload `succeeded` with its receipt ID. Exhausted work is marked `failed` with a stable
@@ -43,7 +52,9 @@ Each pull request starts from the updated `dev` branch and is merged before the 
 1. Add the upload model, database migration, repository, and integration tests. Refresh
    Effect and its sibling packages to the latest release candidate.
 2. Add the `FileStorage` service, Google Drive layer, in-memory test layer, and tests.
-3. Add the persisted queue, worker, upload and status endpoints, and runtime wiring. Test the
-   immediate response, state transitions, retries, and failure path.
+3. Add the persisted queue, worker, upload and status endpoints, and runtime wiring. Read
+   `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` at the composition root and provide the Google Drive-backed
+   `FileStorage` layer. Test the immediate response, state transitions, retries, and failure
+   path.
 4. Add `receipts upload` and `receipts status`; rename `receipts show` to `receipts view`
    without a compatibility alias. Update CLI documentation and tests.
