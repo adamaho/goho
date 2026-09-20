@@ -6,7 +6,7 @@ import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
-import * as QueuePersistence from "#src/queue-persistence.ts";
+import * as QueueConstants from "#src/queues/constants.ts";
 import { ReceiptUploadId } from "#src/receipt-uploads/model.ts";
 import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 
@@ -58,7 +58,7 @@ it.effect("deduplicates jobs by upload ID", () =>
 
     const rows = yield* sql`
       SELECT count(*)::int AS count
-      FROM ${sql(QueuePersistence.tableName)}
+      FROM ${sql(QueueConstants.tableName)}
       WHERE queue_name = 'receipt-uploads' AND id = ${job.uploadId}
     `.pipe(
       Effect.flatMap(

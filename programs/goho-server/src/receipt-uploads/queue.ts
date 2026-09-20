@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Schedule, Schema } from "effect";
 import { PersistedQueue } from "effect/unstable/persistence";
 
-import * as QueuePersistence from "#src/queue-persistence.ts";
+import * as QueueConstants from "#src/queues/constants.ts";
 
 import { ReceiptUploadId } from "./model.ts";
 
@@ -43,7 +43,7 @@ export class Service extends Context.Service<Service>()("@goho/goho-server/Recei
   }),
 }) {}
 
-const StoreLive = PersistedQueue.layerStoreSql({ tableName: QueuePersistence.tableName });
+const StoreLive = PersistedQueue.layerStoreSql({ tableName: QueueConstants.tableName });
 const QueueLive = Layer.effect(Service, Service.make).pipe(
   Layer.provide(PersistedQueue.layer),
   Layer.provide(StoreLive),
