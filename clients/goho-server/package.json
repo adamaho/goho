@@ -8,7 +8,10 @@
     "#src/*": "./src/*"
   },
   "exports": {
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./receipt-uploads": "./src/receipt-uploads.ts",
+    "./receipts": "./src/receipts.ts",
+    "./response": "./src/response.ts"
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",

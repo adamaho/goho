@@ -1,7 +1,8 @@
 # @goho/goho-server-client
 
 The typed Effect client for the Goho server. The complete client is derived
-from the shared `@goho/goho-api` contract by calling `make(baseUrl)`.
+from the shared `@goho/goho-api` contract by calling `make(baseUrl)`. Public
+receipt schemas and types are re-exported so consumers only need this package.
 
 ```ts
 import { make } from "@goho/goho-server-client/client";
@@ -25,4 +26,4 @@ receipt retrieval, creation, and batch recovery. The server exposes OpenAPI at `
 and Swagger UI at `/docs`.
 
 Successful responses use the shared `{ data: ... }` envelope defined by
-`@goho/goho-api`.
+`@goho/goho-api` and re-exported from this package.
