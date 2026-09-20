@@ -9,7 +9,9 @@ import { NonEmptyText } from "#src/schema.ts";
  * @category models
  * @since 0.1.0
  */
-export const ReceiptUploadId = Schema.String.check(Schema.isUUID(4));
+export const ReceiptUploadId = Schema.String.check(Schema.isUUID(4)).pipe(
+  Schema.brand("ReceiptUploadId"),
+);
 
 /**
  * Persisted receipt upload identity.

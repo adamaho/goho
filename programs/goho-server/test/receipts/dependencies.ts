@@ -1,4 +1,5 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
+import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Effect, Layer, Schema, Stream } from "effect";
 
 import * as Workflow from "#src/receipts/process.ts";
@@ -51,7 +52,7 @@ export const layer = (
       save: () =>
         Effect.succeed({
           _tag: "Inserted",
-          receiptId: "1",
+          receiptId: ReceiptId.make("1"),
         } satisfies Repository.SaveResult),
       ...overrides.repository,
     }),

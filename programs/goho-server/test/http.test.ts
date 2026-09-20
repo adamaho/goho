@@ -1,7 +1,7 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import * as Client from "@goho/goho-server-client/client";
-import { CreateReceiptRequest, Receipt } from "@goho/goho-server-client/receipts";
+import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { expect } from "vitest";
@@ -24,7 +24,7 @@ const createPayload = CreateReceiptRequest.make({
 
 const receipt = Receipt.make({
   ...createPayload,
-  id: "42",
+  id: ReceiptId.make("42"),
   items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
 });
 
