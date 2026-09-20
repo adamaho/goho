@@ -34,9 +34,9 @@ can replace it by constructing a layer for the same service tag, leaving consume
 
 The processing queue is durable and SQL-backed. The `receipt-uploads` queue carries only a
 typed upload ID and uses that same UUID as its de-duplication key. Effect manages the shared
-`effect_queue` table and its migrations, so the application database role needs permission to
-create tables and indexes. Completed queue records are retained for 30 days before cleanup;
-the durable upload status remains in `receipt_uploads`.
+`goho_queues` table and its `goho_queues_migrations` metadata, so the application database role
+needs permission to create tables and indexes. Completed queue records are retained for 30 days
+before cleanup; the durable upload status remains in `receipt_uploads`.
 
 One worker claims an upload, marks it `processing`, extracts and saves a receipt with the
 existing receipt service, then marks the upload `succeeded` with its receipt ID. Exhausted work
