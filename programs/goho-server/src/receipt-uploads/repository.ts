@@ -2,6 +2,7 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
 import {
@@ -89,7 +90,7 @@ export class Service extends Context.Service<Service, Interface>()(
 
 const ReceiptUploadRow = Schema.Struct({
   id: ReceiptUploadId,
-  storage_key: Schema.String,
+  file_id: FileId,
   file_name: Schema.String,
   content_type: ReceiptUpload.fields.contentType,
   status: ReceiptUploadStatus,
@@ -103,7 +104,7 @@ const decodeRows = Schema.decodeUnknownEffect(Schema.Array(ReceiptUploadRow));
 
 const fromRow = (row: ReceiptUploadRow): ReceiptUpload => ({
   id: row.id,
-  storageKey: row.storage_key,
+  fileId: row.file_id,
   fileName: row.file_name,
   contentType: row.content_type,
   status: row.status,
@@ -126,7 +127,7 @@ export const layer = Layer.effect(
     const findById = Effect.fn("@goho/ReceiptUploadRepository.findById")(
       function* (uploadId: ReceiptUploadId) {
         const rows = yield* sql`
-          SELECT id, storage_key, file_name, content_type, status, receipt_id,
+          SELECT id, file_id, file_name, content_type, status, receipt_id,
             failure_code, created_at::text, updated_at::text
           FROM receipt_uploads WHERE id = ${uploadId}
         `.pipe(Effect.flatMap(decodeRows));
@@ -151,9 +152,9 @@ export const layer = Layer.effect(
       function* (input: QueuedReceiptUpload) {
         const upload = yield* Schema.decodeEffect(QueuedReceiptUpload)(input);
         const rows = yield* sql`
-          INSERT INTO receipt_uploads (id, storage_key, file_name, content_type, status)
-          VALUES (${upload.id}, ${upload.storageKey}, ${upload.fileName}, ${upload.contentType}, 'queued')
-          RETURNING id, storage_key, file_name, content_type, status, receipt_id,
+          INSERT INTO receipt_uploads (id, file_id, file_name, content_type, status)
+          VALUES (${upload.id}, ${upload.fileId}, ${upload.fileName}, ${upload.contentType}, 'queued')
+          RETURNING id, file_id, file_name, content_type, status, receipt_id,
             failure_code, created_at::text, updated_at::text
         `.pipe(Effect.flatMap(decodeRows));
         return fromRow(rows[0]!);
@@ -166,7 +167,7 @@ export const layer = Layer.effect(
       const rows = yield* sql`
         UPDATE receipt_uploads SET status = 'processing', updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
+        RETURNING id, file_id, file_name, content_type, status, receipt_id,
           failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
@@ -183,7 +184,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads
         SET status = 'succeeded', receipt_id = ${receiptId}, updated_at = now()
         WHERE id = ${uploadId} AND status = 'processing'
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
+        RETURNING id, file_id, file_name, content_type, status, receipt_id,
           failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
@@ -203,7 +204,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads
         SET status = 'failed', failure_code = ${failure}, updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, storage_key, file_name, content_type, status, receipt_id,
+        RETURNING id, file_id, file_name, content_type, status, receipt_id,
           failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),

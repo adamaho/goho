@@ -31,6 +31,7 @@ export const layer = (
           })),
         ),
       listFiles: () => Effect.succeed([]),
+      uploadFile: ({ name, mimeType }) => Effect.succeed({ id: "uploaded", name, mimeType }),
       downloadFile: () => Stream.make(new Uint8Array([1])),
       moveFile: ({ fileId }) =>
         Effect.succeed({ id: fileId, name: "receipt.png", mimeType: "image/png" }),

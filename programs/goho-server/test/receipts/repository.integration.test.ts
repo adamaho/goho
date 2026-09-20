@@ -89,6 +89,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "create_receipt" },
       { name: "bigint_receipt_ids" },
       { name: "receipt_uploads" },
+      { name: "receipt_upload_file_id" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );

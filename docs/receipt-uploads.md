@@ -19,9 +19,10 @@ become receipts.
 
 ## Storage and processing
 
-`FileStorage` owns `put` and `get`; callers do not know which provider backs it. The first
-production layer stores files in Google Drive. A fake layer supports tests, and future S3 or
-R2 layers can replace Drive without changing the upload workflow.
+`FileStorage` owns `put` and `get`; callers only retain its branded file ID and do not know
+which provider backs it. The first production layer stores files in Google Drive. An in-memory
+layer supports tests, and future S3 or R2 layers can replace Drive without changing the upload
+workflow.
 
 The processing queue is durable and SQL-backed. One worker claims an upload, marks it
 `processing`, extracts and saves a receipt with the existing receipt service, then marks the
