@@ -9,7 +9,7 @@ import { ReceiptUploadId } from "./model.ts";
  * @category models
  * @since 0.1.0
  */
-export const Job = Schema.Struct({ uploadId: ReceiptUploadId });
+export const ReceiptUploadJob = Schema.Struct({ uploadId: ReceiptUploadId });
 
 /**
  * Work required to process one stored receipt upload.
@@ -17,7 +17,7 @@ export const Job = Schema.Struct({ uploadId: ReceiptUploadId });
  * @category models
  * @since 0.1.0
  */
-export interface Job extends Schema.Schema.Type<typeof Job> {}
+export interface ReceiptUploadJob extends Schema.Schema.Type<typeof ReceiptUploadJob> {}
 
 /**
  * Durable queue of receipt uploads waiting to be processed.
@@ -29,11 +29,11 @@ export class Service extends Context.Service<Service>()("@goho/goho-server/Recei
   make: Effect.gen(function* () {
     const queue = yield* PersistedQueue.make({
       name: "receipt-uploads",
-      schema: Job,
+      schema: ReceiptUploadJob,
       maxAttempts: 3,
       retrySchedule: Schedule.exponential("1 second"),
     });
-    const offer = Effect.fn("@goho/ReceiptUploadQueue.offer")(function* (job: Job) {
+    const offer = Effect.fn("@goho/ReceiptUploadQueue.offer")(function* (job: ReceiptUploadJob) {
       yield* queue.offer(job, { id: job.uploadId });
       return job.uploadId;
     });
