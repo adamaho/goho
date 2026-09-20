@@ -1,5 +1,25 @@
-import { PgClient } from "@effect/sql-pg";
-import { Config, Effect, Layer, type Redacted } from "effect";
+import { PgClient, PgTypes } from "@effect/sql-pg";
+import { Config, Effect, Layer, Result, type Redacted } from "effect";
+
+const regclassOid = 2205;
+
+// PgMigrator probes for its table with a `regclass` result. sql-pg rc.116 does
+// not include that PostgreSQL type in its binary codec registry, so its four
+// binary OID bytes otherwise fall through to UTF-8 decoding and fail.
+const regclassCodec: PgTypes.Codec<number> = {
+  decode: (bytes) =>
+    bytes.length === 4
+      ? Result.succeed(new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0))
+      : Result.fail(new PgTypes.CodecError({ message: "Expected four bytes for regclass" })),
+  encode: (value) => {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, value);
+    return Result.succeed(bytes);
+  },
+};
+
+const defaultTypes = PgTypes.makeRegistry();
+defaultTypes.register(regclassOid, regclassCodec);
 
 /**
  * Connection settings supplied by the owning program, with shared pool defaults.
@@ -21,6 +41,7 @@ export interface Options extends PgClient.PgPoolConfig {
 export const layer = (options: Options) =>
   PgClient.layer({
     ...options,
+    types: options.types ?? defaultTypes,
     applicationName: options.applicationName ?? "goho",
     maxConnections: options.maxConnections ?? 5,
     connectTimeout: options.connectTimeout ?? "5 seconds",
@@ -37,7 +58,7 @@ export const layer = (options: Options) =>
  * import { Config } from "effect";
  *
  * const DatabaseLive = Postgres.layerConfig({
- *   url: Config.redacted("DATABASE_URL"),
+ *   url: Config.Redacted("DATABASE_URL"),
  *   applicationName: Config.succeed("goho-server"),
  * });
  * ```

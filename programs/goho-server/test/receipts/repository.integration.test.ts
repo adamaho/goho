@@ -35,7 +35,7 @@ const receiptInput = CreateReceiptRequest.make({
 // other test runs, and concurrent saves use actual separate pool connections.
 const DatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
-    const url = yield* Config.redacted("TEST_DATABASE_URL");
+    const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
     const schema = `test_${randomUUID().replaceAll("-", "")}`;
@@ -57,7 +57,7 @@ const DatabaseLive = Layer.effectContext(
 
 const LegacyDatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
-    const url = yield* Config.redacted("TEST_DATABASE_URL");
+    const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
     const schema = `test_${randomUUID().replaceAll("-", "")}`;
@@ -88,6 +88,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "receipts" },
       { name: "create_receipt" },
       { name: "bigint_receipt_ids" },
+      { name: "receipt_uploads" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );

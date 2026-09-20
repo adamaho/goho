@@ -75,7 +75,7 @@ const listCommand = Command.make("list").pipe(
 );
 
 const showCommand = Command.make("show", {
-  receiptId: Argument.string("receipt-id").pipe(
+  receiptId: Argument.String("receipt-id").pipe(
     Argument.withSchema(ReceiptId),
     Argument.withDescription("Positive integer ID of the persisted receipt to show."),
   ),
@@ -102,15 +102,15 @@ const showCommand = Command.make("show", {
 );
 
 const processCommand = Command.make("process", {
-  rootFolderId: Argument.string("root-folder-id").pipe(
+  rootFolderId: Argument.String("root-folder-id").pipe(
     Argument.withDescription(
       `Google Drive folder containing the receipt workflow folders. This folder must contain todo, processing, processed, failed.`,
     ),
   ),
-  spreadsheetId: Argument.string("spreadsheet-id").pipe(
+  spreadsheetId: Argument.String("spreadsheet-id").pipe(
     Argument.withDescription("Google Sheets spreadsheet that contains the RAW worksheet."),
   ),
-  concurrency: Flag.integer("concurrency").pipe(
+  concurrency: Flag.Int("concurrency").pipe(
     Flag.withSchema(Concurrency),
     Flag.withDefault(5),
     Flag.withDescription(

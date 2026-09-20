@@ -172,11 +172,13 @@ export interface CreateReceiptRequest extends Schema.Schema.Type<typeof CreateRe
  * @category models
  * @since 0.1.0
  */
-export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/)).annotate({
-  identifier: "ReceiptId",
-  description: "The receipt's positive number on the roster, bud.",
-  examples: ["42"],
-});
+export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/))
+  .annotate({
+    identifier: "ReceiptId",
+    description: "The receipt's positive number on the roster, bud.",
+    examples: ["42"],
+  })
+  .pipe(Schema.brand("ReceiptId"));
 
 /**
  * Decoded persisted receipt identity.
@@ -218,7 +220,7 @@ export const Receipt = Schema.Struct({
     "A saved receipt with trimmed names and normalized decimals; `11.00` comes back as `11`, beauty.",
   examples: [
     {
-      id: "42",
+      id: ReceiptId.make("42"),
       storeName: "Example Store",
       receiptDate: "2026-09-13",
       category: "Groceries",

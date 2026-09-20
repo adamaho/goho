@@ -14,6 +14,8 @@ import {
 import { Array, BigDecimal, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { ReceiptIdFromDatabase } from "#src/schema.ts";
+
 import { ReceiptToSave } from "./model.ts";
 
 /**
@@ -76,11 +78,11 @@ export class Service extends Context.Service<Service, Interface>()(
   "@goho/goho-server/ReceiptRepository",
 ) {}
 
-const IdRow = Schema.Struct({ id: ReceiptId });
+const IdRow = Schema.Struct({ id: ReceiptIdFromDatabase });
 const decodeInserted = Schema.decodeUnknownEffect(Schema.Array(IdRow));
 const decodeExisting = Schema.decodeUnknownEffect(Schema.NonEmptyArray(IdRow));
 const ReceiptRow = Schema.Struct({
-  id: ReceiptId,
+  id: ReceiptIdFromDatabase,
   store_name: Schema.String,
   receipt_date: CalendarDate,
   category: Schema.String,

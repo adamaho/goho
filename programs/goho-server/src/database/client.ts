@@ -8,6 +8,6 @@ import { Config } from "effect";
  * @since 0.1.0
  */
 export const layer = Postgres.layerConfig({
-  url: Config.redacted("DATABASE_URL"),
+  url: Config.Redacted("DATABASE_URL"),
   applicationName: Config.succeed("goho-server"),
 });
