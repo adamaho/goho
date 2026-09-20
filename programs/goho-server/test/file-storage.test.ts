@@ -15,38 +15,6 @@ const driveLayer = (overrides: Partial<GoogleDrive.Interface>) =>
     ...overrides,
   });
 
-it.effect("round trips isolated JPEG, PNG, and WebP bytes in memory", () =>
-  Effect.gen(function* () {
-    const storage = yield* FileStorage.Service;
-    const files = [
-      { name: "receipt.jpg", contentType: "image/jpeg", bytes: new Uint8Array([1, 2]) },
-      { name: "receipt.png", contentType: "image/png", bytes: new Uint8Array([3, 4]) },
-      { name: "receipt.webp", contentType: "image/webp", bytes: new Uint8Array([5, 6]) },
-    ];
-
-    for (const file of files) {
-      const expected = new Uint8Array(file.bytes);
-      const fileId = yield* storage.put(file);
-      file.bytes.fill(0);
-      const firstRead = yield* storage.get(fileId);
-      expect(firstRead).toEqual(expected);
-      firstRead.fill(0);
-      expect(yield* storage.get(fileId)).toEqual(expected);
-    }
-  }).pipe(Effect.provide(FileStorage.layerMemory)),
-);
-
-it.effect("returns a typed error for an unknown in-memory file", () =>
-  Effect.gen(function* () {
-    const storage = yield* FileStorage.Service;
-    const result = yield* storage.get(FileStorage.FileId.make("missing")).pipe(Effect.result);
-    expect(Result.isFailure(result) && result.failure).toMatchObject({
-      _tag: "GohoServer.FileStorage.StorageError",
-      operation: "get",
-    });
-  }).pipe(Effect.provide(FileStorage.layerMemory)),
-);
-
 it.effect("adapts Google Drive upload and download operations", () =>
   Effect.gen(function* () {
     const uploads = yield* Ref.make<ReadonlyArray<GoogleDrive.UploadFileOptions>>([]);

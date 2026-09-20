@@ -1,7 +1,5 @@
-import { randomUUID } from "node:crypto";
-
 import { GoogleDrive } from "@goho/core";
-import { Context, Effect, Layer, Ref, Schema, Stream } from "effect";
+import { Context, Effect, Layer, Schema, Stream } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";
 
@@ -79,25 +77,13 @@ export class Service extends Context.Service<Service, Interface>()(
 const storageError = (operation: StorageError["operation"]) =>
   Effect.mapError((cause: unknown) => new StorageError({ operation, cause }));
 
-const concatBytes = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
-  const bytes = new Uint8Array(chunks.reduce((length, chunk) => length + chunk.length, 0));
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return bytes;
-};
-
 /**
  * Stores files in one Google Drive folder.
  *
  * @category layers
  * @since 0.1.0
  */
-export const layerGoogleDrive = (options: {
-  readonly folderId: string;
-}): Layer.Layer<Service, never, GoogleDrive.Service> =>
+export const layerGoogleDrive = (options: { readonly folderId: string }) =>
   Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -115,47 +101,9 @@ export const layerGoogleDrive = (options: {
       }, storageError("put"));
 
       const get = Effect.fn("@goho/FileStorage.GoogleDrive.get")(function* (fileId: FileId) {
-        const chunks = yield* drive.downloadFile({ fileId }).pipe(Stream.runCollect);
-        return concatBytes(chunks);
+        return yield* drive.downloadFile({ fileId }).pipe(Stream.mkUint8Array);
       }, storageError("get"));
 
       return Service.of({ put, get });
     }),
   );
-
-/**
- * Stores isolated copies of files in memory for tests and local consumers.
- *
- * @category layers
- * @since 0.1.0
- */
-export const layerMemory: Layer.Layer<Service> = Layer.effect(
-  Service,
-  Effect.gen(function* () {
-    const files = yield* Ref.make<ReadonlyMap<FileId, Uint8Array>>(new Map());
-
-    const put = Effect.fn("@goho/FileStorage.Memory.put")(function* (file: FileToStore) {
-      const input = yield* Schema.decodeEffect(FileToStore)(file);
-      const fileId = FileId.make(randomUUID());
-      yield* Ref.update(files, (current) => {
-        const next = new Map(current);
-        next.set(fileId, new Uint8Array(input.bytes));
-        return next;
-      });
-      return fileId;
-    }, storageError("put"));
-
-    const get = Effect.fn("@goho/FileStorage.Memory.get")(function* (fileId: FileId) {
-      const bytes = (yield* Ref.get(files)).get(fileId);
-      if (bytes === undefined) {
-        return yield* new StorageError({
-          operation: "get",
-          cause: new globalThis.Error("File not found"),
-        });
-      }
-      return new Uint8Array(bytes);
-    });
-
-    return Service.of({ put, get });
-  }),
-);

@@ -1,5 +1,4 @@
-import { Readable } from "node:stream";
-
+import { NodeStream } from "@effect/platform-node";
 import { drive, type drive_v3 } from "@googleapis/drive";
 import { Context, Effect, Layer, Schema, Stream } from "effect";
 
@@ -334,7 +333,7 @@ export const make = Effect.gen(function* () {
             },
             media: {
               mimeType: options.mimeType,
-              body: Readable.from([options.bytes]),
+              body: NodeStream.toReadableNever(Stream.make(options.bytes)),
             },
             supportsAllDrives: true,
             fields: "id,name,mimeType",

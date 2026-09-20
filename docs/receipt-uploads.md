@@ -20,9 +20,8 @@ become receipts.
 ## Storage and processing
 
 `FileStorage` owns `put` and `get`; callers only retain its branded file ID and do not know
-which provider backs it. The first production layer stores files in Google Drive. An in-memory
-layer supports tests, and future S3 or R2 layers can replace Drive without changing the upload
-workflow.
+which provider backs it. The first production layer stores files in Google Drive. Future S3 or
+R2 layers can replace Drive without changing the upload workflow.
 
 Production uploads go into a dedicated Google Drive folder named `uploads`. Its ID is supplied
 through `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`; the service account must have Editor access to that
@@ -51,7 +50,7 @@ Each pull request starts from the updated `dev` branch and is merged before the 
 
 1. Add the upload model, database migration, repository, and integration tests. Refresh
    Effect and its sibling packages to the latest release candidate.
-2. Add the `FileStorage` service, Google Drive layer, in-memory test layer, and tests.
+2. Add the `FileStorage` service, Google Drive layer, and tests.
 3. Add the persisted queue, worker, upload and status endpoints, and runtime wiring. Read
    `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` at the composition root and provide the Google Drive-backed
    `FileStorage` layer. Test the immediate response, state transitions, retries, and failure
