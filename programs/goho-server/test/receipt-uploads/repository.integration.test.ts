@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
+import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
 import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
@@ -10,7 +11,6 @@ import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
 import { FileId } from "#src/file-storage.ts";
-import { ReceiptUploadId } from "#src/receipt-uploads/model.ts";
 import * as Repository from "#src/receipt-uploads/repository.ts";
 
 const DatabaseLive = Layer.effectContext(

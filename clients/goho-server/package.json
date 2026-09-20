@@ -10,6 +10,7 @@
   "exports": {
     "./api": "./src/api.ts",
     "./client": "./src/client.ts",
+    "./receipt-uploads": "./src/receipt-uploads.ts",
     "./receipts": "./src/receipts.ts",
     "./response": "./src/response.ts"
   },

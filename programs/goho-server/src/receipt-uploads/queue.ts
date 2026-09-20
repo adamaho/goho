@@ -1,9 +1,8 @@
+import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
 import { Context, Effect, Layer, Schedule, Schema } from "effect";
 import { PersistedQueue } from "effect/unstable/persistence";
 
 import * as QueueConstants from "#src/queues/constants.ts";
-
-import { ReceiptUploadId } from "./model.ts";
 
 /**
  * Work required to process one stored receipt upload.
@@ -22,6 +21,14 @@ export const ReceiptUploadJob = Schema.Struct({ uploadId: ReceiptUploadId });
 export interface ReceiptUploadJob extends Schema.Schema.Type<typeof ReceiptUploadJob> {}
 
 /**
+ * Number of processing attempts before an upload reaches a terminal failure.
+ *
+ * @category constants
+ * @since 0.1.0
+ */
+export const maxAttempts = 3;
+
+/**
  * Durable queue of receipt uploads waiting to be processed.
  *
  * @category services
@@ -32,7 +39,7 @@ export class Service extends Context.Service<Service>()("@goho/goho-server/Recei
     const queue = yield* PersistedQueue.make({
       name: "receipt-uploads",
       schema: ReceiptUploadJob,
-      maxAttempts: 3,
+      maxAttempts,
       retrySchedule: Schedule.exponential("1 second"),
     });
     const offer = Effect.fn("@goho/ReceiptUploadQueue.offer")(function* (job: ReceiptUploadJob) {

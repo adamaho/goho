@@ -57,6 +57,7 @@ Configure the environment file before starting:
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
 - `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
+- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`: required ID of the Drive folder used for receipt uploads.
 - `OPENAI_API_KEY`: OpenAI secret.
 - `OPENAI_MODEL`: extraction model.
 

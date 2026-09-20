@@ -1,6 +1,7 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
 import { Effect, Result, Schema, Stream } from "effect";
 
+import * as ReceiptExtraction from "./extraction.ts";
 import * as ReceiptModel from "./model.ts";
 import * as ReceiptRepository from "./repository.ts";
 
@@ -108,19 +109,6 @@ const supportedImageMimeTypes: ReadonlySet<string> = new Set([
   "image/png",
   "image/webp",
 ]);
-
-const receiptSystemPrompt = `Extract the receipt into the required structured receipt object.
-- Expand recognizable abbreviations in store names and item names.
-- Expand purchases with a quantity greater than one into one item entry per unit.
-- Exclude purchased quantities such as (2) from each expanded item name.
-- Associate item-specific sale, discount, coupon, and TPD/<item number> adjustment lines with the referenced item and subtract the adjustment from that item's price.
-- Do not return sale, discount, coupon, or adjustment lines as separate item entries. Ignore them when they cannot be associated with a specific item.
-- Apply item-specific adjustments before expanding quantities. When a quantity line shows a combined price, divide the adjusted total evenly across the expanded item entries so their prices sum to the adjusted line total.
-- Infer one transaction category from the purchased items.
-- Format the receipt date as YYYY-MM-DD.
-- Return all prices, subtotal, tax, and total as numeric values without currency symbols.
-- Preserve monetary values exactly as displayed on the receipt; do not convert currencies.
-- Ignore payment methods, loyalty identifiers, and unrelated barcodes unless they are needed to identify the store or receipt date.`;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Errors
@@ -269,41 +257,17 @@ const parseReceipt = Effect.fn("@goho/Receipts.parseReceipt")(function* (
     Effect.mapError((cause) => new ReceiptProcessingError({ stage: "DownloadFile", cause })),
   );
 
-  const ai = yield* Ai.Service;
-
   yield* Effect.logDebug("Parsing receipt image", {
     fileId: file.id,
     fileName: file.name,
     byteLength: imageBytes.byteLength,
   });
 
-  return yield* ai
-    .generateObject({
-      objectName: "receipt",
-      schema: ReceiptModel.ParsedReceipt,
-      prompt: [
-        {
-          role: "system",
-          content: receiptSystemPrompt,
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "Extract the structured receipt data from this image.",
-            },
-            {
-              type: "file",
-              mediaType: file.mimeType,
-              fileName: file.name,
-              data: imageBytes,
-            },
-          ],
-        },
-      ],
-    })
-    .pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
+  return yield* ReceiptExtraction.extract({
+    bytes: imageBytes,
+    fileName: file.name,
+    contentType: file.mimeType,
+  }).pipe(Effect.mapError((cause) => new ReceiptProcessingError({ stage: "ParseReceipt", cause })));
 });
 
 const appendReceiptRows = Effect.fn("@goho/Receipts.appendReceiptRows")(function* (

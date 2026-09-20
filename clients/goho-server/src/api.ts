@@ -1,12 +1,15 @@
 import { Schema } from "effect";
+import { Multipart } from "effect/unstable/http";
 import {
   HttpApi,
   HttpApiEndpoint,
   HttpApiError,
   HttpApiGroup,
+  HttpApiSchema,
   OpenApi,
 } from "effect/unstable/httpapi";
 
+import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
   IdempotencyKey,
@@ -16,6 +19,14 @@ import {
   ReceiptProcessingResult,
 } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
+
+const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
+  HttpApiSchema.asMultipart({
+    maxParts: 1,
+    maxFileSize: "20 megabytes",
+    maxTotalSize: "21 megabytes",
+  }),
+);
 
 /**
  * Goho server HTTP contract.
@@ -28,7 +39,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: list and create receipts, then skate Google Drive images into Google Sheets rows. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, manage finished receipts, and skate legacy Drive batches into Sheets. No authentication required, bud.",
   )
   .add(
     HttpApiGroup.make("health")
@@ -51,6 +62,46 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Confirms the server is awake; it does not skate over to the database or providers.",
+          ),
+      ),
+    HttpApiGroup.make("receiptUploads")
+      .annotate(OpenApi.Description, "Single-file receipt uploads and their processing status.")
+      .add(
+        HttpApiEndpoint.post("create", "/receipt-uploads", {
+          payload: ReceiptUploadPayload,
+          success: DataResponse(ReceiptUpload).pipe(HttpApiSchema.status(202)),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload is missing a supported receipt image.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not store or queue the receipt image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Upload a receipt image")
+          .annotate(
+            OpenApi.Description,
+            "Stores one receipt image and returns its queued status before processing starts.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/receipt-uploads/:uploadId", {
+          params: { uploadId: ReceiptUploadId },
+          success: DataResponse(ReceiptUpload),
+          error: [
+            HttpApiError.NotFound.annotate({
+              description: "No receipt upload is wearing that number, bud.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not retrieve this receipt upload.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get receipt upload status")
+          .annotate(
+            OpenApi.Description,
+            "Returns the latest queue or processing status and the receipt ID after a clean finish.",
           ),
       ),
     HttpApiGroup.make("receipts")
