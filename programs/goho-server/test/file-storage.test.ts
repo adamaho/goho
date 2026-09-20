@@ -11,6 +11,7 @@ const driveLayer = (overrides: Partial<GoogleDrive.Interface>) =>
     listFiles: () => Effect.die("Unexpected listFiles call"),
     uploadFile: () => Effect.die("Unexpected uploadFile call"),
     downloadFile: () => Stream.die("Unexpected downloadFile call"),
+    deleteFile: () => Effect.die("Unexpected deleteFile call"),
     moveFile: () => Effect.die("Unexpected moveFile call"),
     ...overrides,
   });
@@ -19,6 +20,7 @@ it.effect("adapts Google Drive upload and download operations", () =>
   Effect.gen(function* () {
     const uploads = yield* Ref.make<ReadonlyArray<GoogleDrive.UploadFileOptions>>([]);
     const downloads = yield* Ref.make<ReadonlyArray<string>>([]);
+    const deletions = yield* Ref.make<ReadonlyArray<string>>([]);
     const googleDrive = driveLayer({
       uploadFile: (options) =>
         Ref.update(uploads, (all) => [...all, options]).pipe(
@@ -28,6 +30,7 @@ it.effect("adapts Google Drive upload and download operations", () =>
         Stream.fromEffect(Ref.update(downloads, (all) => [...all, fileId])).pipe(
           Stream.flatMap(() => Stream.make(new Uint8Array([1, 2]), new Uint8Array([3, 4]))),
         ),
+      deleteFile: ({ fileId }) => Ref.update(deletions, (all) => [...all, fileId]),
     });
     const storage = yield* FileStorage.Service.pipe(
       Effect.provide(
@@ -55,6 +58,8 @@ it.effect("adapts Google Drive upload and download operations", () =>
     ]);
     expect(yield* storage.get(fileId)).toEqual(new Uint8Array([1, 2, 3, 4]));
     expect(yield* Ref.get(downloads)).toEqual(["drive-file"]);
+    yield* storage.delete(fileId);
+    expect(yield* Ref.get(deletions)).toEqual(["drive-file"]);
   }),
 );
 

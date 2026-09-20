@@ -38,6 +38,7 @@ const RepositoryLive = ReceiptUploadRepository.layer.pipe(Layer.provide(Database
 const StorageLive = Layer.succeed(FileStorage.Service, {
   put: () => Effect.succeed(FileId.make("drive-file")),
   get: () => Effect.succeed(new Uint8Array([1])),
+  delete: () => Effect.void,
 });
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([DatabaseLive, QueueLive, RepositoryLive, StorageLive]),
@@ -113,6 +114,39 @@ it.effect("creates the upload row and queue job in one workflow", () =>
     );
     expect(rows).toEqual([{ state: "pending", id: created.id }]);
   }).pipe(Effect.provide([ReceiptUploadsLive, DatabaseLive])),
+);
+
+it.effect("deletes the stored file when the database handoff fails", () =>
+  Effect.gen(function* () {
+    const deleted = yield* Ref.make<ReadonlyArray<FileStorage.FileId>>([]);
+    const storage = Layer.succeed(FileStorage.Service, {
+      put: () => Effect.succeed(FileStorage.FileId.make("orphaned-drive-file")),
+      get: () => Effect.die("Unexpected storage.get call"),
+      delete: (fileId) => Ref.update(deleted, (fileIds) => [...fileIds, fileId]),
+    });
+    const unavailableQueue = Layer.succeed(ReceiptUploadQueue.Service, {
+      offer: () => Effect.die("queue unavailable"),
+      take: () => Effect.die("Unexpected queue.take call"),
+    });
+    const uploads = yield* ReceiptUploads.Service.pipe(
+      Effect.provide(
+        ReceiptUploads.layer.pipe(
+          Layer.provide([DatabaseLive, RepositoryLive, storage, unavailableQueue]),
+        ),
+      ),
+    );
+
+    const result = yield* uploads
+      .create({
+        name: "receipt.png",
+        contentType: "image/png",
+        bytes: new Uint8Array([1, 2, 3]),
+      })
+      .pipe(Effect.result);
+
+    expect(result._tag).toBe("Failure");
+    expect(yield* Ref.get(deleted)).toEqual(["orphaned-drive-file"]);
+  }).pipe(Effect.provide(DatabaseLive)),
 );
 
 it.effect("keeps pending work across queue layer restarts", () =>

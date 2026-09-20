@@ -91,18 +91,32 @@ export const layer = Layer.effect(
         const uploadId = ReceiptUploadId.make(randomUUID());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
-        const upload = yield* sql.withTransaction(
-          Effect.gen(function* () {
-            const created = yield* repository.createQueued({
-              id: uploadId,
-              fileId,
-              fileName: file.name,
-              contentType: file.contentType,
-            });
-            yield* queue.offer({ uploadId });
-            return created;
-          }),
-        );
+        const upload = yield* sql
+          .withTransaction(
+            Effect.gen(function* () {
+              const created = yield* repository.createQueued({
+                id: uploadId,
+                fileId,
+                fileName: file.name,
+                contentType: file.contentType,
+              });
+              yield* queue.offer({ uploadId });
+              return created;
+            }),
+          )
+          .pipe(
+            Effect.catchCause((cause) =>
+              storage.delete(fileId).pipe(
+                Effect.catchCause((cleanupCause) =>
+                  Effect.logError(
+                    "Orphaned receipt upload file could not be deleted",
+                    cleanupCause,
+                  ).pipe(Effect.annotateLogs({ fileId })),
+                ),
+                Effect.andThen(Effect.failCause(cause)),
+              ),
+            ),
+          );
         return toPublic(upload);
       },
       Effect.catchCause((cause) =>

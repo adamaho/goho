@@ -1,5 +1,5 @@
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
-import { Effect, Layer, Schema } from "effect";
+import { Effect, Layer, Schedule, Schema } from "effect";
 
 import * as FileStorage from "#src/file-storage.ts";
 import * as ReceiptExtraction from "#src/receipts/extraction.ts";
@@ -64,6 +64,7 @@ export const process = Effect.fn("@goho/ReceiptUploads.process")(function* (
         if (metadata.attempts >= maxAttempts) {
           yield* ReceiptUploadRepository.Service.pipe(
             Effect.flatMap((uploads) => uploads.markFailed(job.uploadId, error.failureCode)),
+            Effect.retry(Schedule.spaced("1 second").pipe(Schedule.upTo({ times: 2 }))),
             Effect.catchCause((cause) =>
               Effect.logError("Receipt upload terminal failure could not be recorded", cause),
             ),
@@ -80,7 +81,9 @@ const run = Effect.gen(function* () {
   const queue = yield* ReceiptUploadQueue;
   yield* queue.take(process);
 }).pipe(
-  Effect.catch((error) => Effect.logError("Receipt upload worker attempt failed", error)),
+  Effect.catch((error) =>
+    Effect.logError("Receipt upload worker attempt failed", error).pipe(Effect.delay("1 second")),
+  ),
   Effect.forever,
 );
 

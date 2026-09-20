@@ -2,7 +2,8 @@ import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
-import { Effect, Layer, Option, Ref, Schema } from "effect";
+import { Effect, Fiber, Layer, Option, Ref, Schema } from "effect";
+import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
 import * as FileStorage from "#src/file-storage.ts";
@@ -34,6 +35,7 @@ const dependencies = (options: {
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
       get: options.storageGet ?? (() => Effect.succeed(new Uint8Array([1, 2, 3]))),
+      delete: () => Effect.die("Unexpected storage.delete call"),
     }),
     Layer.succeed(Ai.Service, {
       generateObject: ({ schema }) =>
@@ -98,5 +100,37 @@ it.effect("records a stable failure code only after the final attempt", () =>
       Effect.result,
     );
     expect(yield* Ref.get(failures)).toEqual(["storage_failed"]);
+  }),
+);
+
+it.effect("retries the terminal status write before giving up", () =>
+  Effect.gen(function* () {
+    const attempts = yield* Ref.make(0);
+    const layer = dependencies({
+      storageGet: () =>
+        Effect.fail(new FileStorage.StorageError({ operation: "get", cause: "provider details" })),
+      markFailed: (_, failureCode) =>
+        Ref.updateAndGet(attempts, (attempt) => attempt + 1).pipe(
+          Effect.flatMap((attempt) =>
+            attempt < 3
+              ? Effect.fail(
+                  new ReceiptUploadRepository.PersistenceError({
+                    operation: "markFailed",
+                    cause: "database unavailable",
+                  }),
+                )
+              : Effect.succeed({ ...upload, status: "failed", failureCode }),
+          ),
+        ),
+    });
+
+    const fiber = yield* Processor.process(
+      { uploadId: upload.id },
+      { id: upload.id, attempts: 3 },
+    ).pipe(Effect.provide(layer), Effect.result, Effect.forkChild);
+    yield* TestClock.adjust("2 seconds");
+    yield* Fiber.join(fiber);
+
+    expect(yield* Ref.get(attempts)).toBe(3);
   }),
 );
