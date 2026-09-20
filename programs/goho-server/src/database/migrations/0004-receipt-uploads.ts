@@ -17,13 +17,19 @@ export default Effect.gen(function* () {
       content_type text NOT NULL CHECK (content_type IN ('image/jpeg', 'image/png', 'image/webp')),
       status text NOT NULL CHECK (status IN ('queued', 'processing', 'succeeded', 'failed')),
       receipt_id bigint UNIQUE REFERENCES receipts(id),
-      error text,
+      failure_code text CHECK (failure_code IN (
+        'unsupported_file_type',
+        'storage_failed',
+        'processing_failed',
+        'receipt_creation_failed',
+        'internal_error'
+      )),
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now(),
       CONSTRAINT receipt_uploads_outcome_matches_status CHECK (
-        (status IN ('queued', 'processing') AND receipt_id IS NULL AND error IS NULL) OR
-        (status = 'succeeded' AND receipt_id IS NOT NULL AND error IS NULL) OR
-        (status = 'failed' AND receipt_id IS NULL AND length(btrim(error)) > 0)
+        (status IN ('queued', 'processing') AND receipt_id IS NULL AND failure_code IS NULL) OR
+        (status = 'succeeded' AND receipt_id IS NOT NULL AND failure_code IS NULL) OR
+        (status = 'failed' AND receipt_id IS NULL AND failure_code IS NOT NULL)
       )
     )
   `;

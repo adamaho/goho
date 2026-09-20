@@ -61,7 +61,7 @@ it.effect("creates a queued upload and finds it by ID", () =>
       ...input,
       status: "queued",
       receiptId: null,
-      error: null,
+      failureCode: null,
     });
     expect(yield* repo.findById(input.id)).toEqual(Option.some(created));
     expect(yield* repo.findById(ReceiptUploadId.make(randomUUID()))).toEqual(Option.none());
@@ -81,7 +81,7 @@ it.effect("moves a queued upload through processing to its receipt", () =>
       id: input.id,
       status: "succeeded",
       receiptId,
-      error: null,
+      failureCode: null,
     });
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -95,15 +95,15 @@ it.effect("records a safe failure from queued or processing", () =>
     yield* repo.createQueued(processing);
     yield* repo.markProcessing(processing.id);
 
-    expect(yield* repo.markFailed(queued.id, "Could not read the image")).toMatchObject({
+    expect(yield* repo.markFailed(queued.id, "processing_failed")).toMatchObject({
       status: "failed",
       receiptId: null,
-      error: "Could not read the image",
+      failureCode: "processing_failed",
     });
-    expect(yield* repo.markFailed(processing.id, "Extraction failed")).toMatchObject({
+    expect(yield* repo.markFailed(processing.id, "receipt_creation_failed")).toMatchObject({
       status: "failed",
       receiptId: null,
-      error: "Extraction failed",
+      failureCode: "receipt_creation_failed",
     });
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -119,7 +119,7 @@ it.effect("rejects missing uploads and invalid terminal transitions", () =>
 
     const input = makeUpload();
     yield* repo.createQueued(input);
-    yield* repo.markFailed(input.id, "No receipt found");
+    yield* repo.markFailed(input.id, "processing_failed");
     const invalid = yield* repo.markProcessing(input.id).pipe(Effect.result);
     expect(Result.isFailure(invalid) && invalid.failure).toMatchObject({
       _tag: "GohoServer.ReceiptUploadRepository.InvalidTransition",

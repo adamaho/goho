@@ -7,6 +7,7 @@ import { ReceiptIdFromDatabase } from "#src/schema.ts";
 import {
   QueuedReceiptUpload,
   ReceiptUpload,
+  ReceiptUploadFailureCode,
   ReceiptUploadId,
   ReceiptUploadStatus,
 } from "./model.ts";
@@ -72,7 +73,7 @@ export interface Interface {
   ) => Effect.Effect<ReceiptUpload, TransitionError>;
   readonly markFailed: (
     uploadId: ReceiptUploadId,
-    error: string,
+    failureCode: ReceiptUploadFailureCode,
   ) => Effect.Effect<ReceiptUpload, TransitionError>;
 }
 
@@ -93,7 +94,7 @@ const ReceiptUploadRow = Schema.Struct({
   content_type: ReceiptUpload.fields.contentType,
   status: ReceiptUploadStatus,
   receipt_id: Schema.NullOr(ReceiptIdFromDatabase),
-  error: Schema.NullOr(Schema.String),
+  failure_code: Schema.NullOr(ReceiptUploadFailureCode),
   created_at: Schema.String,
   updated_at: Schema.String,
 });
@@ -107,7 +108,7 @@ const fromRow = (row: ReceiptUploadRow): ReceiptUpload => ({
   contentType: row.content_type,
   status: row.status,
   receiptId: row.receipt_id,
-  error: row.error,
+  failureCode: row.failure_code,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -126,7 +127,7 @@ export const layer = Layer.effect(
       function* (uploadId: ReceiptUploadId) {
         const rows = yield* sql`
           SELECT id, storage_key, file_name, content_type, status, receipt_id,
-            error, created_at::text, updated_at::text
+            failure_code, created_at::text, updated_at::text
           FROM receipt_uploads WHERE id = ${uploadId}
         `.pipe(Effect.flatMap(decodeRows));
         const row = rows.at(0);
@@ -153,7 +154,7 @@ export const layer = Layer.effect(
           INSERT INTO receipt_uploads (id, storage_key, file_name, content_type, status)
           VALUES (${upload.id}, ${upload.storageKey}, ${upload.fileName}, ${upload.contentType}, 'queued')
           RETURNING id, storage_key, file_name, content_type, status, receipt_id,
-            error, created_at::text, updated_at::text
+            failure_code, created_at::text, updated_at::text
         `.pipe(Effect.flatMap(decodeRows));
         return fromRow(rows[0]!);
       },
@@ -166,7 +167,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads SET status = 'processing', updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
         RETURNING id, storage_key, file_name, content_type, status, receipt_id,
-          error, created_at::text, updated_at::text
+          failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
         Effect.mapError((cause) => new PersistenceError({ operation: "markProcessing", cause })),
@@ -183,7 +184,7 @@ export const layer = Layer.effect(
         SET status = 'succeeded', receipt_id = ${receiptId}, updated_at = now()
         WHERE id = ${uploadId} AND status = 'processing'
         RETURNING id, storage_key, file_name, content_type, status, receipt_id,
-          error, created_at::text, updated_at::text
+          failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
         Effect.mapError((cause) => new PersistenceError({ operation: "markSucceeded", cause })),
@@ -193,17 +194,17 @@ export const layer = Layer.effect(
     });
     const markFailed = Effect.fn("@goho/ReceiptUploadRepository.markFailed")(function* (
       uploadId: ReceiptUploadId,
-      error: string,
+      failureCode: ReceiptUploadFailureCode,
     ) {
-      const failure = yield* Schema.decodeEffect(NonEmptyFailure)(error).pipe(
+      const failure = yield* Schema.decodeEffect(ReceiptUploadFailureCode)(failureCode).pipe(
         Effect.mapError((cause) => new PersistenceError({ operation: "markFailed", cause })),
       );
       const rows = yield* sql`
         UPDATE receipt_uploads
-        SET status = 'failed', error = ${failure}, updated_at = now()
+        SET status = 'failed', failure_code = ${failure}, updated_at = now()
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
         RETURNING id, storage_key, file_name, content_type, status, receipt_id,
-          error, created_at::text, updated_at::text
+          failure_code, created_at::text, updated_at::text
       `.pipe(
         Effect.flatMap(decodeRows),
         Effect.mapError((cause) => new PersistenceError({ operation: "markFailed", cause })),
@@ -213,8 +214,4 @@ export const layer = Layer.effect(
     });
     return Service.of({ createQueued, findById, markProcessing, markSucceeded, markFailed });
   }),
-);
-
-const NonEmptyFailure = Schema.String.check(
-  Schema.makeFilter((value) => value.trim().length > 0, { expected: "a non-whitespace failure" }),
 );

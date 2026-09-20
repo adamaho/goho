@@ -54,6 +54,28 @@ export const ReceiptUploadStatus = Schema.Literals(["queued", "processing", "suc
 export type ReceiptUploadStatus = typeof ReceiptUploadStatus.Type;
 
 /**
+ * Stable reason a receipt upload could not be completed.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptUploadFailureCode = Schema.Literals([
+  "unsupported_file_type",
+  "storage_failed",
+  "processing_failed",
+  "receipt_creation_failed",
+  "internal_error",
+]);
+
+/**
+ * Stable reason a receipt upload could not be completed.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export type ReceiptUploadFailureCode = typeof ReceiptUploadFailureCode.Type;
+
+/**
  * Metadata required to create a queued upload after its file has been stored.
  *
  * @category models
@@ -84,7 +106,7 @@ export const ReceiptUpload = Schema.Struct({
   ...QueuedReceiptUpload.fields,
   status: ReceiptUploadStatus,
   receiptId: Schema.NullOr(ReceiptId),
-  error: Schema.NullOr(Schema.String),
+  failureCode: Schema.NullOr(ReceiptUploadFailureCode),
   createdAt: Schema.String,
   updatedAt: Schema.String,
 });

@@ -25,7 +25,8 @@ R2 layers can replace Drive without changing the upload workflow.
 
 The processing queue is durable and SQL-backed. One worker claims an upload, marks it
 `processing`, extracts and saves a receipt with the existing receipt service, then marks the
-upload `succeeded` with its receipt ID. Exhausted work is marked `failed` with a safe error.
+upload `succeeded` with its receipt ID. Exhausted work is marked `failed` with a stable
+failure code; provider and diagnostic details remain in logs.
 Retries may re-enter `processing`, so processing and receipt creation must be idempotent.
 
 ## HTTP resources
