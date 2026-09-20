@@ -7,7 +7,7 @@ import { expect } from "vitest";
 import * as Postgres from "#src/database/postgres.ts";
 
 const DatabaseLive = Postgres.layerConfig({
-  url: Config.redacted("TEST_DATABASE_URL"),
+  url: Config.Redacted("TEST_DATABASE_URL"),
   maxConnections: Config.succeed(1),
 });
 

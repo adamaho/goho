@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import receipts from "./migrations/0001-receipts.ts";
 import createReceipt from "./migrations/0002-create-receipt.ts";
 import bigintReceiptIds from "./migrations/0003-bigint-receipt-ids.ts";
+import receiptUploads from "./migrations/0004-receipt-uploads.ts";
 
 /**
  * Explicit migration registry, shared by the migration command and tests.
@@ -17,6 +18,7 @@ export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
       "0001_receipts": receipts,
       "0002_create_receipt": createReceipt,
       "0003_bigint_receipt_ids": bigintReceiptIds,
+      "0004_receipt_uploads": receiptUploads,
     }),
     table: "goho_migrations",
   });

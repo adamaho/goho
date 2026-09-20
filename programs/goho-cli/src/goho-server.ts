@@ -24,7 +24,7 @@ export class Service extends Context.Service<Service, ClientShape>()(
  */
 export const layer = Layer.effect(
   Service,
-  Config.string("GOHO_SERVER_URL").pipe(
+  Config.String("GOHO_SERVER_URL").pipe(
     Config.withDefault("http://127.0.0.1:3000"),
     Effect.flatMap(Client.make),
     Effect.mapError(

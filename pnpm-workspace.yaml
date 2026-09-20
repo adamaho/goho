@@ -11,19 +11,19 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
-  "@effect/sql-pg": 4.0.0-rc.112
-  "@effect/vitest": 4.0.0-rc.112
-  vitest: 4.1.11
+  "@effect/sql-pg": 4.0.0-rc.116
+  "@effect/vitest": 4.0.0-rc.116
+  vitest: 5.0.1
   "@adamaho/nopeus-oxlint-config": 0.4.0
   "@adamaho/nopeus-oxlint-plugin": 0.6.0
   "@adamaho/nopeus-tsconfig": 0.2.0
-  "@effect/ai-openai": 4.0.0-rc.112
-  "@effect/platform-node": 4.0.0-rc.112
+  "@effect/ai-openai": 4.0.0-rc.116
+  "@effect/platform-node": 4.0.0-rc.116
   "@effect/tsgo": 0.41.0
   "@googleapis/drive": 22.0.0
   "@googleapis/sheets": 14.0.0
   "@types/node": 24.13.3
-  effect: 4.0.0-rc.112
+  effect: 4.0.0-rc.116
   google-auth-library: 11.0.2
   oxfmt: 0.66.0
   oxlint: 1.81.0
