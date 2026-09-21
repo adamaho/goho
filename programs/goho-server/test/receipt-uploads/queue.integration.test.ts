@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
@@ -41,7 +41,7 @@ const StorageLive = Layer.succeed(FileStorage.Service, {
   delete: () => Effect.void,
 });
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
-  Layer.provide([DatabaseLive, QueueLive, RepositoryLive, StorageLive]),
+  Layer.provide([DatabaseLive, NodeCrypto.layer, QueueLive, RepositoryLive, StorageLive]),
 );
 
 const makeJob = () => ({ uploadId: ReceiptUploadId.make(randomUUID()) });
@@ -131,7 +131,13 @@ it.effect("deletes the stored file when the database handoff fails", () =>
     const uploads = yield* ReceiptUploads.Service.pipe(
       Effect.provide(
         ReceiptUploads.layer.pipe(
-          Layer.provide([DatabaseLive, RepositoryLive, storage, unavailableQueue]),
+          Layer.provide([
+            DatabaseLive,
+            NodeCrypto.layer,
+            RepositoryLive,
+            storage,
+            unavailableQueue,
+          ]),
         ),
       ),
     );

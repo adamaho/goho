@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
+import { NodeCrypto, NodeHttpServer, NodeRuntime } from "@effect/platform-node";
 import { GoogleDrive, GoogleSheets } from "@goho/core";
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";
@@ -35,6 +35,7 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     Database.layer,
     FileStorageLive,
+    NodeCrypto.layer,
     ReceiptUploadQueueLive,
     ReceiptUploadRepositoryLive,
   ]),

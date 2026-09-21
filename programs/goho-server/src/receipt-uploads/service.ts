@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
-
 import {
   type ReceiptUpload as PublicReceiptUpload,
   ReceiptUploadContentType,
   ReceiptUploadId,
 } from "@goho/goho-api/receipt-uploads";
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Context, Crypto, Effect, Layer, Option, Schema } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { SqlClient } from "effect/unstable/sql";
 
@@ -85,10 +83,11 @@ export const layer = Layer.effect(
     const repository = yield* ReceiptUploadRepository.Service;
     const queue = yield* ReceiptUploadQueue.Service;
     const sql = yield* SqlClient.SqlClient;
+    const crypto = yield* Crypto.Crypto;
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
       function* (input: UploadInput) {
-        const uploadId = ReceiptUploadId.make(randomUUID());
+        const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4);
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
         const upload = yield* sql
