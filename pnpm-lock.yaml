@@ -130,8 +130,8 @@ catalogs:
       specifier: 0.4.0
       version: 0.4.0
     '@adamaho/nopeus-oxlint-plugin':
-      specifier: 0.6.0
-      version: 0.6.0
+      specifier: 0.7.0
+      version: 0.7.0
     '@adamaho/nopeus-tsconfig':
       specifier: 0.2.0
       version: 0.2.0
@@ -215,7 +215,7 @@ importers:
         version: 0.4.0(oxlint@1.81.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.81.0)
+        version: 0.7.0(oxlint@1.81.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -266,7 +266,7 @@ importers:
         version: 0.4.0(oxlint@1.81.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.81.0)
+        version: 0.7.0(oxlint@1.81.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)(vitest@5.0.1(@types/node@24.13.3)(vite@8.2.2(@types/node@24.13.3)))
@@ -306,7 +306,7 @@ importers:
         version: 0.4.0(oxlint@1.81.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.81.0)
+        version: 0.7.0(oxlint@1.81.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -346,7 +346,7 @@ importers:
         version: 0.4.0(oxlint@1.81.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.81.0)
+        version: 0.7.0(oxlint@1.81.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -398,7 +398,7 @@ importers:
         version: 0.4.0(oxlint@1.81.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.81.0)
+        version: 0.7.0(oxlint@1.81.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0-rc.116(effect@4.0.0-rc.116)(vitest@5.0.1(@types/node@24.13.3)(vite@8.2.2(@types/node@24.13.3)))
@@ -459,8 +459,8 @@ packages:
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-oxlint-plugin@0.6.0':
-    resolution: {integrity: sha512-LsHX3wi0ZHDDQuwk70vfMTkZsw54aa0LmSga47VYlXHpH8Px4S6fSolF8epJaW9g0C23GiMivPVNS+PIYHBZmg==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-oxlint-plugin/0.6.0/c5f06a3088e4eee8479faf42adaa1aa349e6ab91}
+  '@adamaho/nopeus-oxlint-plugin@0.7.0':
+    resolution: {integrity: sha512-lReYEQOC7NDaSgdeF6aBeKql+DbGlt1yRUAaIWoQK2N5QdDS9dv32yvAjhFKDMFe1OskyZ+WPKU/Po7wg4uFKA==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-oxlint-plugin/0.7.0/8514dcf2e73ba1a2cac747fc835a7bd90450a08e}
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
@@ -1929,7 +1929,7 @@ snapshots:
     dependencies:
       oxlint: 1.81.0
 
-  '@adamaho/nopeus-oxlint-plugin@0.6.0(oxlint@1.81.0)':
+  '@adamaho/nopeus-oxlint-plugin@0.7.0(oxlint@1.81.0)':
     dependencies:
       '@oxlint/plugins': 1.81.0
       oxc-resolver: 11.24.2
