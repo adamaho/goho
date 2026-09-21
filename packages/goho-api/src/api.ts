@@ -20,9 +20,7 @@ import {
 } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
 
-// ---------------------------------------------------------------------------------------------------------------------
 // Payload schemas
-// ---------------------------------------------------------------------------------------------------------------------
 
 const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
   HttpApiSchema.asMultipart({
@@ -32,9 +30,7 @@ const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema })
   }),
 );
 
-// ---------------------------------------------------------------------------------------------------------------------
 // API groups
-// ---------------------------------------------------------------------------------------------------------------------
 
 /**
  * Goho server HTTP contract.
@@ -50,9 +46,7 @@ export const api = HttpApi.make("goho-server")
     "Runs the receipt playbook: upload and track images, manage finished receipts, and skate legacy Drive batches into Sheets. No authentication required, bud.",
   )
   .add(
-    // -----------------------------------------------------------------------------------------------------------------
     // Health
-    // -----------------------------------------------------------------------------------------------------------------
     HttpApiGroup.make("health")
       .annotate(OpenApi.Description, "A quick bench check for server liveness.")
       .add(
@@ -75,9 +69,7 @@ export const api = HttpApi.make("goho-server")
             "Confirms the server is awake; it does not skate over to the database or providers.",
           ),
       ),
-    // -----------------------------------------------------------------------------------------------------------------
     // Receipt uploads
-    // -----------------------------------------------------------------------------------------------------------------
     HttpApiGroup.make("receiptUploads")
       .annotate(OpenApi.Description, "Single-file receipt uploads and their processing status.")
       .add(
@@ -118,9 +110,7 @@ export const api = HttpApi.make("goho-server")
             "Returns the latest queue or processing status and the receipt ID after a clean finish.",
           ),
       ),
-    // -----------------------------------------------------------------------------------------------------------------
     // Receipts
-    // -----------------------------------------------------------------------------------------------------------------
     HttpApiGroup.make("receipts")
       .annotate(OpenApi.Description, "Receipt retrieval, creation, and batch-processing plays.")
       .add(
