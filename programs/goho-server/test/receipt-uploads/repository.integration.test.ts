@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
-
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
-import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
+import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
@@ -18,7 +16,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const schema = `test_${randomUUID().replaceAll("-", "")}`;
+    const crypto = yield* Crypto.Crypto;
+    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -33,14 +32,22 @@ const DatabaseLive = Layer.effectContext(
     yield* Migrations.run().pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
     return services;
   }),
-);
+).pipe(Layer.provide(NodeCrypto.layer));
 
-const makeUpload = () => ({
-  id: ReceiptUploadId.make(randomUUID()),
-  fileId: FileId.make("drive-file-id"),
-  fileName: "example.png",
-  contentType: "image/png" as const,
-});
+const makeUpload = Effect.gen(function* () {
+  const crypto = yield* Crypto.Crypto;
+  return {
+    id: ReceiptUploadId.make(yield* crypto.randomUUIDv4),
+    fileId: FileId.make("drive-file-id"),
+    fileName: "example.png",
+    contentType: "image/png" as const,
+  };
+}).pipe(Effect.provide(NodeCrypto.layer));
+
+const makeUploadId = Crypto.Crypto.use((crypto) => crypto.randomUUIDv4).pipe(
+  Effect.map(ReceiptUploadId.make),
+  Effect.provide(NodeCrypto.layer),
+);
 
 const createReceipt = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -55,7 +62,7 @@ const createReceipt = Effect.gen(function* () {
 it.effect("creates a queued upload and finds it by ID", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    const input = makeUpload();
+    const input = yield* makeUpload;
     const created = yield* repo.createQueued(input);
 
     expect(created).toMatchObject({
@@ -65,14 +72,14 @@ it.effect("creates a queued upload and finds it by ID", () =>
       failureCode: null,
     });
     expect(yield* repo.findById(input.id)).toEqual(Option.some(created));
-    expect(yield* repo.findById(ReceiptUploadId.make(randomUUID()))).toEqual(Option.none());
+    expect(yield* repo.findById(yield* makeUploadId)).toEqual(Option.none());
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
 it.effect("moves a queued upload through processing to its receipt", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    const input = makeUpload();
+    const input = yield* makeUpload;
     yield* repo.createQueued(input);
     expect((yield* repo.markProcessing(input.id)).status).toBe("processing");
     expect((yield* repo.markProcessing(input.id)).status).toBe("processing");
@@ -90,8 +97,8 @@ it.effect("moves a queued upload through processing to its receipt", () =>
 it.effect("records a safe failure from queued or processing", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    const queued = makeUpload();
-    const processing = makeUpload();
+    const queued = yield* makeUpload;
+    const processing = yield* makeUpload;
     yield* repo.createQueued(queued);
     yield* repo.createQueued(processing);
     yield* repo.markProcessing(processing.id);
@@ -112,13 +119,13 @@ it.effect("records a safe failure from queued or processing", () =>
 it.effect("rejects missing uploads and invalid terminal transitions", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    const missingId = ReceiptUploadId.make(randomUUID());
+    const missingId = yield* makeUploadId;
     const missing = yield* repo.markProcessing(missingId).pipe(Effect.result);
     expect(Result.isFailure(missing) && missing.failure._tag).toBe(
       "GohoServer.ReceiptUploadRepository.UploadNotFound",
     );
 
-    const input = makeUpload();
+    const input = yield* makeUpload;
     yield* repo.createQueued(input);
     yield* repo.markFailed(input.id, "processing_failed");
     const invalid = yield* repo.markProcessing(input.id).pipe(Effect.result);

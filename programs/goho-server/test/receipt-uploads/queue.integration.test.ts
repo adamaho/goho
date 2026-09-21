@@ -1,10 +1,8 @@
-import { randomUUID } from "node:crypto";
-
 import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
-import { Config, Context, Effect, Layer, Redacted, Ref, Schema } from "effect";
+import { Config, Context, Crypto, Effect, Layer, Redacted, Ref, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
@@ -21,7 +19,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const schema = `test_${randomUUID().replaceAll("-", "")}`;
+    const crypto = yield* Crypto.Crypto;
+    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -32,7 +31,7 @@ const DatabaseLive = Layer.effectContext(
     yield* Migrations.run().pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
     return services;
   }),
-);
+).pipe(Layer.provide(NodeCrypto.layer));
 const QueueLive = ReceiptUploadQueue.layer.pipe(Layer.provideMerge(DatabaseLive));
 const RepositoryLive = ReceiptUploadRepository.layer.pipe(Layer.provide(DatabaseLive));
 const StorageLive = Layer.succeed(FileStorage.Service, {
@@ -44,7 +43,10 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([DatabaseLive, NodeCrypto.layer, QueueLive, RepositoryLive, StorageLive]),
 );
 
-const makeJob = () => ({ uploadId: ReceiptUploadId.make(randomUUID()) });
+const makeJob = Effect.gen(function* () {
+  const crypto = yield* Crypto.Crypto;
+  return { uploadId: ReceiptUploadId.make(yield* crypto.randomUUIDv4) };
+}).pipe(Effect.provide(NodeCrypto.layer));
 
 class RetryableProcessingError extends Schema.TaggedError<RetryableProcessingError>()(
   "GohoServer.Test.RetryableProcessingError",
@@ -54,7 +56,7 @@ class RetryableProcessingError extends Schema.TaggedError<RetryableProcessingErr
 it.effect("offers and consumes a typed receipt upload job", () =>
   Effect.gen(function* () {
     const queue = yield* ReceiptUploadQueue.Service;
-    const job = makeJob();
+    const job = yield* makeJob;
 
     expect(yield* queue.offer(job)).toBe(job.uploadId);
     expect(yield* queue.take((taken, metadata) => Effect.succeed({ taken, metadata }))).toEqual({
@@ -68,7 +70,7 @@ it.effect("deduplicates jobs by upload ID", () =>
   Effect.gen(function* () {
     const queue = yield* ReceiptUploadQueue.Service;
     const sql = yield* SqlClient.SqlClient;
-    const job = makeJob();
+    const job = yield* makeJob;
 
     yield* queue.offer(job);
     yield* queue.offer(job);
@@ -157,7 +159,7 @@ it.effect("deletes the stored file when the database handoff fails", () =>
 
 it.effect("keeps pending work across queue layer restarts", () =>
   Effect.gen(function* () {
-    const job = makeJob();
+    const job = yield* makeJob;
 
     yield* Effect.gen(function* () {
       const queue = yield* ReceiptUploadQueue.Service;
@@ -179,7 +181,7 @@ it.live(
     Effect.gen(function* () {
       const queue = yield* ReceiptUploadQueue.Service;
       const attempts = yield* Ref.make<ReadonlyArray<number>>([]);
-      const job = makeJob();
+      const job = yield* makeJob;
       yield* queue.offer(job);
 
       const process = queue.take((taken, metadata) =>

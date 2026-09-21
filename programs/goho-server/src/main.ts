@@ -20,7 +20,9 @@ import * as GoogleAuth from "./services/auth.ts";
 const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
   Layer.provide(GoogleAuth.layer),
 );
-const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(Database.layer));
+const RepositoryLive = ReceiptRepository.layer.pipe(
+  Layer.provide([Database.layer, NodeCrypto.layer]),
+);
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
   Layer.provide(Database.layer),
 );
