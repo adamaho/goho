@@ -39,9 +39,11 @@ needs permission to create tables and indexes. Completed queue records are retai
 before cleanup; the durable upload status remains in `receipt_uploads`.
 
 One worker claims an upload, marks it `processing`, extracts and saves a receipt with the
-existing receipt service, then marks the upload `succeeded` with its receipt ID. Exhausted work
-is marked `failed` with a stable failure code; provider and diagnostic details remain in logs.
-Retries may re-enter `processing`, so processing and receipt creation must be idempotent.
+existing extraction and repository services, then marks the upload `succeeded` with its receipt
+ID. Uploaded receipts use the provider-neutral `file_storage` source; the legacy batch keeps its
+`google_drive` source. Exhausted work is marked `failed` with a stable failure code; provider and
+diagnostic details remain in logs. Retries may re-enter `processing`, so processing and receipt
+creation must be idempotent.
 
 ## HTTP resources
 

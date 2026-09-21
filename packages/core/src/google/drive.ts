@@ -63,6 +63,16 @@ export interface DownloadFileOptions {
 }
 
 /**
+ * Options for deleting a Drive file.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface DeleteFileOptions {
+  readonly fileId: string;
+}
+
+/**
  * Options for uploading a file to a Drive folder.
  *
  * @category models
@@ -103,12 +113,19 @@ export class DriveError extends Schema.TaggedError<DriveError>()("GoogleDrive.Dr
     "listFiles",
     "uploadFile",
     "downloadFile",
+    "deleteFile",
     "moveFile",
   ]),
   message: Schema.String,
 }) {}
 
-type Operation = "listFolders" | "listFiles" | "uploadFile" | "downloadFile" | "moveFile";
+type Operation =
+  | "listFolders"
+  | "listFiles"
+  | "uploadFile"
+  | "downloadFile"
+  | "deleteFile"
+  | "moveFile";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Helpers
@@ -208,6 +225,7 @@ export interface Interface {
   ) => Effect.Effect<ReadonlyArray<FileMetadata>, DriveError>;
   readonly uploadFile: (options: UploadFileOptions) => Effect.Effect<FileMetadata, DriveError>;
   readonly downloadFile: (options: DownloadFileOptions) => Stream.Stream<Uint8Array, DriveError>;
+  readonly deleteFile: (options: DeleteFileOptions) => Effect.Effect<void, DriveError>;
   readonly moveFile: (options: MoveFileOptions) => Effect.Effect<FileMetadata, DriveError>;
 }
 
@@ -396,6 +414,23 @@ export const make = Effect.gen(function* () {
     );
   }
 
+  const deleteFile = Effect.fn("@goho/GoogleDrive.deleteFile")(function* (
+    options: DeleteFileOptions,
+  ) {
+    const headers = yield* auth
+      .getRequestHeaders()
+      .pipe(Effect.mapError((error) => clientError("deleteFile", error)));
+
+    yield* Effect.tryPromise({
+      try: (signal) =>
+        client.files.delete(
+          { fileId: options.fileId, supportsAllDrives: true },
+          { headers, signal },
+        ),
+      catch: (error) => clientError("deleteFile", error),
+    });
+  });
+
   const moveFile = Effect.fn("@goho/GoogleDrive.moveFile")(function* (options: MoveFileOptions) {
     const headers = yield* auth
       .getRequestHeaders()
@@ -424,7 +459,7 @@ export const make = Effect.gen(function* () {
     return metadata;
   });
 
-  return Service.of({ listFolders, listFiles, uploadFile, downloadFile, moveFile });
+  return Service.of({ listFolders, listFiles, uploadFile, downloadFile, deleteFile, moveFile });
 });
 
 /**

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import {
   CalendarDate,
   CreateReceiptRequest as CreateReceiptRequestSchema,
@@ -10,8 +8,8 @@ import {
   type CreateReceiptRequest,
   type IdempotencyKey,
   type Receipt,
-} from "@goho/goho-server-client/receipts";
-import { Array, BigDecimal, Context, Effect, Layer, Option, Schema } from "effect";
+} from "@goho/goho-api/receipts";
+import { Array, BigDecimal, Context, Crypto, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
@@ -128,9 +126,6 @@ const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest =
   })),
 });
 
-const fingerprint = (receipt: CreateReceiptRequest): Uint8Array =>
-  createHash("sha256").update(JSON.stringify(receipt)).digest();
-
 /**
  * Retrieves receipts and creates or saves each receipt with all its items.
  *
@@ -140,6 +135,7 @@ const fingerprint = (receipt: CreateReceiptRequest): Uint8Array =>
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
     const sql = yield* SqlClient.SqlClient;
     const readReceipt = Effect.fn("@goho/ReceiptRepository.readReceipt")(function* (
       receiptId: typeof ReceiptId.Type,
@@ -224,7 +220,10 @@ export const layer = Layer.effect(
         const receipt = normalizeReceipt(
           yield* Schema.decodeEffect(CreateReceiptRequestSchema)(input),
         );
-        const receiptFingerprint = fingerprint(receipt);
+        const receiptFingerprint = yield* crypto.digest(
+          "SHA-256",
+          new TextEncoder().encode(JSON.stringify(receipt)),
+        );
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const inserted = yield* sql`

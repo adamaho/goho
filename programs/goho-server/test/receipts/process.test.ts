@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Deferred, Effect, Fiber, Layer, Ref, Schema, Stream } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
@@ -46,6 +46,7 @@ const setup = (
         listFiles: () => Effect.succeed([file]),
         uploadFile: ({ name, mimeType }) => Effect.succeed({ id: "uploaded", name, mimeType }),
         downloadFile: () => Stream.make(new Uint8Array([1])),
+        deleteFile: () => Effect.void,
         moveFile: (move) => record(`move:${move.destinationFolderId}`).pipe(Effect.as(file)),
       }),
       Layer.succeed(GoogleSheets.Service, {

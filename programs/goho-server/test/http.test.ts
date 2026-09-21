@@ -1,12 +1,15 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
+import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
+import { HttpApiError } from "effect/unstable/httpapi";
 import { expect } from "vitest";
 
 import * as Http from "#src/http.ts";
+import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
 import * as ReceiptDependencies from "#test/receipts/dependencies.ts";
@@ -28,10 +31,34 @@ const receipt = Receipt.make({
   items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
 });
 
-const testLayer = (repository: Partial<ReceiptRepository.Interface> = {}) =>
+const receiptUpload = ReceiptUpload.make({
+  id: ReceiptUploadId.make("7d89d8f7-6f0c-4df2-a2a9-94771638ac99"),
+  fileName: "receipt.png",
+  contentType: "image/png",
+  status: "queued",
+  receiptId: null,
+  failureCode: null,
+  createdAt: "2026-09-20T00:00:00.000Z",
+  updatedAt: "2026-09-20T00:00:00.000Z",
+});
+
+const receiptUploadsTest = (overrides: Partial<ReceiptUploads.Interface> = {}) =>
+  Layer.succeed(
+    ReceiptUploads.Service,
+    ReceiptUploads.Service.of({
+      create: () => Effect.succeed(receiptUpload),
+      get: () => Effect.succeed(receiptUpload),
+      ...overrides,
+    }),
+  );
+
+const testLayer = (
+  repository: Partial<ReceiptRepository.Interface> = {},
+  receiptUploads: Partial<ReceiptUploads.Interface> = {},
+) =>
   HttpRouter.serve(
     Http.layer.pipe(
-      Layer.provide(
+      Layer.provide([
         Receipts.layer.pipe(
           Layer.provide(
             ReceiptDependencies.layer({
@@ -48,7 +75,8 @@ const testLayer = (repository: Partial<ReceiptRepository.Interface> = {}) =>
             }),
           ),
         ),
-      ),
+        receiptUploadsTest(receiptUploads),
+      ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
 
@@ -78,6 +106,40 @@ it.effect("gets one complete receipt through the generated client", () =>
     expect(yield* client.receipts.get({ params: { receiptId: receipt.id } })).toEqual({
       data: receipt,
     });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("uploads one receipt image and retrieves its status through the generated client", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const form = new FormData();
+    form.append(
+      "file",
+      new File([new Uint8Array([1, 2, 3])], "receipt.png", { type: "image/png" }),
+    );
+
+    expect(yield* client.receiptUploads.create({ payload: form })).toEqual({
+      data: receiptUpload,
+    });
+    expect(yield* client.receiptUploads.get({ params: { uploadId: receiptUpload.id } })).toEqual({
+      data: receiptUpload,
+    });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns HTTP 404 when a receipt upload does not exist", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/receipt-uploads/${receiptUpload.id}`);
+    expect(response.status).toBe(404);
+  }).pipe(Effect.provide(testLayer({}, { get: () => Effect.fail(new HttpApiError.NotFound()) }))),
+);
+
+it.effect("rejects unsupported receipt upload content types", () =>
+  Effect.gen(function* () {
+    const form = new FormData();
+    form.append("file", new File(["not an image"], "receipt.txt", { type: "text/plain" }));
+    const response = yield* HttpClient.post("/receipt-uploads", { body: HttpBody.formData(form) });
+    expect(response.status).toBe(400);
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -242,14 +304,15 @@ it.effect(
       Effect.provide(
         HttpRouter.serve(
           Http.layer.pipe(
-            Layer.provide(
+            Layer.provide([
               Layer.succeed(Receipts.Service, {
                 create: () => Effect.die("Health must not create receipts"),
                 get: () => Effect.die("Health must not get receipts"),
                 list: () => Effect.die("Health must not list receipts"),
                 process: () => Effect.die("Health must not process receipts"),
               }),
-            ),
+              receiptUploadsTest(),
+            ]),
           ),
         ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
       ),

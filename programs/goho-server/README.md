@@ -1,8 +1,9 @@
 # @goho/goho-server
 
 Exposes receipt retrieval, creation, synchronous batch processing, health checks,
-and API documentation. The CLI connects through
-[@goho/goho-server-client](../../clients/goho-server/README.md).
+and API documentation. The server implements the shared
+[@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
+through the derived [typed client](../../clients/goho-server/README.md).
 
 The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
 

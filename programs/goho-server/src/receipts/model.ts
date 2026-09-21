@@ -1,4 +1,4 @@
-import { DecimalString } from "@goho/goho-server-client/receipts";
+import { DecimalString } from "@goho/goho-api/receipts";
 import { Array, Schema } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";
@@ -71,7 +71,7 @@ export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> 
  * @since 0.1.0
  */
 export const ReceiptSource = Schema.Struct({
-  provider: Schema.Literal("google_drive"),
+  provider: Schema.Literals(["google_drive", "file_storage"]),
   fileId: NonEmptyText,
   fileName: NonEmptyText,
 });

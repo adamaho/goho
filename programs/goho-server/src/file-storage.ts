@@ -48,7 +48,7 @@ export interface FileToStore extends Schema.Schema.Type<typeof FileToStore> {}
 export class StorageError extends Schema.TaggedError<StorageError>()(
   "GohoServer.FileStorage.StorageError",
   {
-    operation: Schema.Literals(["put", "get"]),
+    operation: Schema.Literals(["put", "get", "delete"]),
     cause: Schema.Defect(),
   },
 ) {}
@@ -62,6 +62,7 @@ export class StorageError extends Schema.TaggedError<StorageError>()(
 export interface Interface {
   readonly put: (file: FileToStore) => Effect.Effect<FileId, StorageError>;
   readonly get: (fileId: FileId) => Effect.Effect<Uint8Array, StorageError>;
+  readonly delete: (fileId: FileId) => Effect.Effect<void, StorageError>;
 }
 
 /**
@@ -104,6 +105,12 @@ export const layerGoogleDrive = (options: { readonly folderId: string }) =>
         return yield* drive.downloadFile({ fileId }).pipe(Stream.mkUint8Array);
       }, storageError("get"));
 
-      return Service.of({ put, get });
+      const deleteFile = Effect.fn("@goho/FileStorage.GoogleDrive.deleteFile")(function* (
+        fileId: FileId,
+      ) {
+        yield* drive.deleteFile({ fileId });
+      }, storageError("delete"));
+
+      return Service.of({ put, get, delete: deleteFile });
     }),
   );

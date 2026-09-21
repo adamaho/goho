@@ -1,9 +1,38 @@
-import { api } from "@goho/goho-server-client/api";
-import { withData } from "@goho/goho-server-client/response";
-import { Effect, Layer } from "effect";
-import { HttpApiBuilder, HttpApiSwagger } from "effect/unstable/httpapi";
+import { api } from "@goho/goho-api/api";
+import { withData } from "@goho/goho-api/response";
+import { Effect, FileSystem, Layer, Schema } from "effect";
+import { HttpApiBuilder, HttpApiError, HttpApiSwagger } from "effect/unstable/httpapi";
 
+import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
+
+const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers) =>
+  Effect.gen(function* () {
+    const uploads = yield* ReceiptUploads.Service;
+    const fileSystem = yield* FileSystem.FileSystem;
+    return handlers
+      .handle("create", ({ payload }) =>
+        Effect.gen(function* () {
+          const bytes = yield* fileSystem
+            .readFile(payload.file.path)
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.logError("Temporary receipt upload could not be read", cause).pipe(
+                  Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+                ),
+              ),
+            );
+          const input = yield* Schema.decodeUnknownEffect(ReceiptUploads.UploadInput)({
+            name: payload.file.name,
+            contentType: payload.file.contentType,
+            bytes,
+          }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
+          return yield* uploads.create(input).pipe(Effect.map(withData));
+        }),
+      )
+      .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)));
+  }),
+);
 
 const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
@@ -29,6 +58,6 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([ReceiptsLive, HealthLive]),
+  Layer.provide([ReceiptUploadsLive, ReceiptsLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
 );

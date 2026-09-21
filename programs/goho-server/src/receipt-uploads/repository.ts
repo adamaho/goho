@@ -1,17 +1,16 @@
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import {
+  ReceiptUploadFailureCode,
+  ReceiptUploadId,
+  ReceiptUploadStatus,
+} from "@goho/goho-api/receipt-uploads";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
-import {
-  QueuedReceiptUpload,
-  ReceiptUpload,
-  ReceiptUploadFailureCode,
-  ReceiptUploadId,
-  ReceiptUploadStatus,
-} from "./model.ts";
+import { QueuedReceiptUpload, ReceiptUpload } from "./model.ts";
 
 /**
  * Unexpected failure while validating or persisting an upload.

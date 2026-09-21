@@ -1,5 +1,5 @@
 import { Ai, GoogleDrive, GoogleSheets } from "@goho/core";
-import { ReceiptId } from "@goho/goho-server-client/receipts";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import { Effect, Layer, Schema, Stream } from "effect";
 
 import * as Workflow from "#src/receipts/process.ts";
@@ -33,6 +33,7 @@ export const layer = (
       listFiles: () => Effect.succeed([]),
       uploadFile: ({ name, mimeType }) => Effect.succeed({ id: "uploaded", name, mimeType }),
       downloadFile: () => Stream.make(new Uint8Array([1])),
+      deleteFile: () => Effect.void,
       moveFile: ({ fileId }) =>
         Effect.succeed({ id: fileId, name: "receipt.png", mimeType: "image/png" }),
       ...overrides.googleDrive,

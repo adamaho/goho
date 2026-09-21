@@ -1,11 +1,9 @@
-import { randomUUID } from "node:crypto";
-
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-server-client/receipts";
-import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
+import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-api/receipts";
+import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
@@ -38,7 +36,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const schema = `test_${randomUUID().replaceAll("-", "")}`;
+    const crypto = yield* Crypto.Crypto;
+    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -53,14 +52,15 @@ const DatabaseLive = Layer.effectContext(
     yield* Migrations.run().pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
     return services;
   }),
-);
+).pipe(Layer.provide(NodeCrypto.layer));
 
 const LegacyDatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const schema = `test_${randomUUID().replaceAll("-", "")}`;
+    const crypto = yield* Crypto.Crypto;
+    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -77,7 +77,7 @@ const LegacyDatabaseLive = Layer.effectContext(
     }).pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
     return services;
   }),
-);
+).pipe(Layer.provide(NodeCrypto.layer));
 
 it.effect("applies migrations from empty and does not reapply completed migrations", () =>
   Effect.gen(function* () {

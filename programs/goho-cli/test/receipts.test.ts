@@ -1,12 +1,8 @@
-import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-
-import { NodeServices } from "@effect/platform-node";
-import { Effect, Schema, Stream } from "effect";
+import { NodeHttpServer, NodeServices } from "@effect/platform-node";
+import { Effect, Layer, Path, Stream } from "effect";
+import { HttpServer, HttpServerResponse } from "effect/unstable/http";
 import { ChildProcess } from "effect/unstable/process";
 import { describe, expect, it } from "vitest";
-
-const mainPath = fileURLToPath(new URL("../src/main.ts", import.meta.url));
 
 interface CliResult {
   readonly code: number | null;
@@ -16,6 +12,8 @@ interface CliResult {
 
 const runCommand = (baseUrl: string, args: ReadonlyArray<string>): Promise<CliResult> =>
   Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const mainPath = yield* path.fromFileUrl(new URL("../src/main.ts", import.meta.url));
     const child = yield* ChildProcess.make(process.execPath, [mainPath, ...args], {
       env: { GOHO_SERVER_URL: baseUrl },
       extendEnv: true,
@@ -43,22 +41,15 @@ const withJsonResponse = async <A>(
   body: unknown,
   run: (baseUrl: string) => Promise<A>,
 ): Promise<A> => {
-  const server = createServer((_request, response) => {
-    response.writeHead(status, { "content-type": "application/json" });
-    response.end(JSON.stringify(body));
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  try {
-    const address = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Int }))(server.address());
-    return await run(`http://127.0.0.1:${address.port}`);
-  } finally {
-    await new Promise<void>((resolve, reject) =>
-      server.close((error) => (error === undefined ? resolve() : reject(error))),
+  const ServerLive = HttpServer.serve(
+    Effect.succeed(HttpServerResponse.jsonUnsafe(body, { status })),
+  ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
+  return Effect.gen(function* () {
+    const server = yield* HttpServer.HttpServer;
+    return yield* Effect.tryPromise(() => run(HttpServer.formatAddress(server.address))).pipe(
+      Effect.orDie,
     );
-  }
+  }).pipe(Effect.provide(ServerLive), Effect.scoped, Effect.runPromise);
 };
 
 const receipt = {

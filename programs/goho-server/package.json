@@ -23,13 +23,14 @@
     "@effect/platform-node": "catalog:",
     "@effect/sql-pg": "catalog:",
     "@goho/core": "workspace:*",
-    "@goho/goho-server-client": "workspace:*",
+    "@goho/goho-api": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@adamaho/nopeus-oxlint-config": "catalog:",
     "@adamaho/nopeus-oxlint-plugin": "catalog:",
     "@effect/vitest": "catalog:",
+    "@goho/goho-server-client": "workspace:*",
     "@goho/tool-oxfmt-config": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
     "@types/node": "catalog:",
