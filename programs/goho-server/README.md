@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Exposes receipt retrieval, creation, synchronous batch processing, health checks,
+Exposes receipt uploads, retrieval, creation, synchronous batch processing, health checks,
 and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
@@ -27,6 +27,26 @@ default port.
 `data`. Receipts are ordered by receipt date and creation time, newest first.
 An empty database returns `{"data":[]}`. A retrieval failure returns HTTP 500
 with `{"_tag":"InternalServerError"}`.
+
+### Upload a receipt
+
+`POST /receipt-uploads` accepts one multipart `file` containing a JPEG, PNG, or
+WebP image no larger than 20 MB. It stores the original, creates a durable upload
+record, queues processing, and immediately returns HTTP 202 with the upload
+resource under `data`.
+
+Set `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` to the ID of a dedicated Drive folder and
+give the service account Editor access. The server uses that folder directly;
+it does not find or create one by name.
+
+### Get receipt upload status
+
+`GET /receipt-uploads/:uploadId` returns `queued`, `processing`, `succeeded`, or
+`failed`. A successful upload includes its generated receipt ID. A failed upload
+includes a stable failure code; diagnostic details remain in server logs.
+
+A valid UUID with no matching upload returns HTTP 404. Malformed IDs return HTTP
+400, and retrieval failures return HTTP 500.
 
 ### Get a receipt
 

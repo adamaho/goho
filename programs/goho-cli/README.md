@@ -1,7 +1,7 @@
 # @goho/goho-cli
 
-Calls the Goho server to list or show receipts and print receipt-processing results. Google and OpenAI
-credentials belong only to the [server](../goho-server/README.md).
+Calls the Goho server to upload, inspect, list, and process receipts. Google and OpenAI credentials
+belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -23,10 +23,29 @@ pnpm --filter @goho/goho-cli start receipts list
 The command prints a JSON array containing every persisted receipt and its
 ordered items, newest first. An empty database prints `[]`.
 
-## Show a receipt
+## Upload a receipt
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts show <positive-integer-receipt-id>
+pnpm --filter @goho/goho-cli start receipts upload <path>
+```
+
+The command accepts one JPEG, PNG, or WebP image and immediately prints the
+queued upload resource as JSON. Keep its UUID to check processing status.
+
+## Check upload status
+
+```bash
+pnpm --filter @goho/goho-cli start receipts status <upload-id>
+```
+
+The command prints `queued`, `processing`, `succeeded`, or `failed`. A successful
+upload includes the resulting receipt ID; a failed upload includes a stable
+failure code.
+
+## View a receipt
+
+```bash
+pnpm --filter @goho/goho-cli start receipts view <positive-integer-receipt-id>
 ```
 
 The command prints the complete receipt as JSON. A malformed ID or a valid ID

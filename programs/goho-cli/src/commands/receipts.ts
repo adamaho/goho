@@ -9,6 +9,8 @@ import { Argument, Command, Flag } from "effect/unstable/cli";
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
+import { statusCommand, uploadCommand } from "./receipt-uploads.ts";
+
 const reportProcessResults = Effect.fn("@goho/Receipts.reportProcessResults")(function* (
   results: ReadonlyArray<ReceiptProcessingResult>,
 ) {
@@ -74,13 +76,13 @@ const listCommand = Command.make("list").pipe(
   ),
 );
 
-const showCommand = Command.make("show", {
+const viewCommand = Command.make("view", {
   receiptId: Argument.String("receipt-id").pipe(
     Argument.withSchema(ReceiptId),
-    Argument.withDescription("Positive integer ID of the persisted receipt to show."),
+    Argument.withDescription("Positive integer ID of the persisted receipt to view."),
   ),
 }).pipe(
-  Command.withDescription("Show one persisted receipt."),
+  Command.withDescription("View one persisted receipt."),
   Command.withHandler(({ receiptId }) =>
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
@@ -150,5 +152,5 @@ const processCommand = Command.make("process", {
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([listCommand, showCommand, processCommand]),
+  Command.withSubcommands([listCommand, viewCommand, uploadCommand, statusCommand, processCommand]),
 );
