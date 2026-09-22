@@ -26,5 +26,6 @@ dist-ssr/
 __unconfig*
 
 .secrets
+.data/
 
 programs/goho-cli/tickets/

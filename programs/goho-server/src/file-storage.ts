@@ -1,5 +1,4 @@
-import { GoogleDrive } from "@goho/core";
-import { Context, Effect, Layer, Schema, Stream } from "effect";
+import { Context, Crypto, Effect, FileSystem, Layer, Path, Schema } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";
 
@@ -79,36 +78,41 @@ const storageError = (operation: StorageError["operation"]) =>
   Effect.mapError((cause: unknown) => new StorageError({ operation, cause }));
 
 /**
- * Stores files in one Google Drive folder.
+ * Stores files in one local filesystem directory.
  *
  * @category layers
  * @since 0.1.0
  */
-export const layerGoogleDrive = (options: { readonly folderId: string }) =>
+export const layerFileSystem = (options: { readonly directory: string }) =>
   Layer.effect(
     Service,
     Effect.gen(function* () {
-      const drive = yield* GoogleDrive.Service;
+      const crypto = yield* Crypto.Crypto;
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
 
-      const put = Effect.fn("@goho/FileStorage.GoogleDrive.put")(function* (file: FileToStore) {
+      yield* fileSystem.makeDirectory(options.directory, { recursive: true, mode: 0o700 });
+
+      const storedPath = (fileId: FileId) => path.join(options.directory, fileId);
+
+      const put = Effect.fn("@goho/FileStorage.FileSystem.put")(function* (file: FileToStore) {
         const input = yield* Schema.decodeEffect(FileToStore)(file);
-        const stored = yield* drive.uploadFile({
-          folderId: options.folderId,
-          name: input.name,
-          mimeType: input.contentType,
-          bytes: input.bytes,
+        const fileId = yield* Schema.decodeEffect(FileId)(yield* crypto.randomUUIDv4);
+        yield* fileSystem.writeFile(storedPath(fileId), input.bytes, {
+          flag: "wx",
+          mode: 0o600,
         });
-        return yield* Schema.decodeEffect(FileId)(stored.id);
+        return fileId;
       }, storageError("put"));
 
-      const get = Effect.fn("@goho/FileStorage.GoogleDrive.get")(function* (fileId: FileId) {
-        return yield* drive.downloadFile({ fileId }).pipe(Stream.mkUint8Array);
+      const get = Effect.fn("@goho/FileStorage.FileSystem.get")(function* (fileId: FileId) {
+        return yield* fileSystem.readFile(storedPath(fileId));
       }, storageError("get"));
 
-      const deleteFile = Effect.fn("@goho/FileStorage.GoogleDrive.deleteFile")(function* (
+      const deleteFile = Effect.fn("@goho/FileStorage.FileSystem.deleteFile")(function* (
         fileId: FileId,
       ) {
-        yield* drive.deleteFile({ fileId });
+        yield* fileSystem.remove(storedPath(fileId));
       }, storageError("delete"));
 
       return Service.of({ put, get, delete: deleteFile });

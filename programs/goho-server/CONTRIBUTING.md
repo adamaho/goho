@@ -55,9 +55,9 @@ Configure the environment file before starting:
 
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
+- `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
 - `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
 - `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
-- `GOOGLE_DRIVE_UPLOAD_FOLDER_ID`: required ID of the Drive folder used for receipt uploads.
 - `OPENAI_API_KEY`: OpenAI secret.
 - `OPENAI_MODEL`: extraction model.
 
