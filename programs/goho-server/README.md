@@ -35,9 +35,9 @@ WebP image no larger than 20 MB. It stores the original, creates a durable uploa
 record, queues processing, and immediately returns HTTP 202 with the upload
 resource under `data`.
 
-Set `GOOGLE_DRIVE_UPLOAD_FOLDER_ID` to the ID of a dedicated Drive folder and
-give the service account Editor access. The server uses that folder directly;
-it does not find or create one by name.
+Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
+be retained. File names are opaque IDs; original names and MIME types are stored
+with the upload record in PostgreSQL.
 
 ### Get receipt upload status
 

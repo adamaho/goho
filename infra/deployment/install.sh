@@ -66,13 +66,30 @@ os.chmod(postgres, 0o600)
 server = Path('/etc/goho/server.env')
 lines = [
     line for line in server.read_text().splitlines()
-    if not line.strip().startswith('DATABASE_URL=')
+    if not line.strip().startswith(('DATABASE_URL=', 'GOOGLE_DRIVE_UPLOAD_FOLDER_ID='))
 ]
 lines.append(f'DATABASE_URL=postgresql://goho:{quote(password, safe="")}@127.0.0.1:5434/goho')
+if not any(line.strip().startswith('GOHO_UPLOADS_DIRECTORY=') for line in lines):
+    lines.append('GOHO_UPLOADS_DIRECTORY=/var/lib/goho/receipt-uploads')
 server.write_text('\n'.join(lines) + '\n')
 PY
 chown root:adam /etc/goho/server.env
 chmod 0640 /etc/goho/server.env
+uploads_directory="$(python3 - <<'PY'
+from pathlib import Path
+
+settings = dict(
+    line.split('=', 1)
+    for line in Path('/etc/goho/server.env').read_text().splitlines()
+    if '=' in line and not line.lstrip().startswith('#')
+)
+directory = Path(settings.get('GOHO_UPLOADS_DIRECTORY', '').strip())
+if not directory.is_absolute() or directory == Path('/'):
+    raise SystemExit('GOHO_UPLOADS_DIRECTORY in /etc/goho/server.env must be an absolute non-root path')
+print(directory)
+PY
+)"
+install -d -o adam -g adam -m 0700 "$uploads_directory"
 server_port="$(python3 - <<'PY'
 from pathlib import Path
 settings = dict(

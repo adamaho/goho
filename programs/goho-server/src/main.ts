@@ -1,6 +1,12 @@
 import { createServer } from "node:http";
 
-import { NodeCrypto, NodeHttpServer, NodeRuntime } from "@effect/platform-node";
+import {
+  NodeCrypto,
+  NodeFileSystem,
+  NodeHttpServer,
+  NodePath,
+  NodeRuntime,
+} from "@effect/platform-node";
 import { GoogleDrive, GoogleSheets } from "@goho/core";
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";
@@ -28,10 +34,10 @@ const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
 );
 const ReceiptUploadQueueLive = ReceiptUploadQueue.layer.pipe(Layer.provide(Database.layer));
 const FileStorageLive = Layer.unwrap(
-  Config.String("GOOGLE_DRIVE_UPLOAD_FOLDER_ID").pipe(
-    Config.map((folderId) => FileStorage.layerGoogleDrive({ folderId })),
+  Config.String("GOHO_UPLOADS_DIRECTORY").pipe(
+    Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
-).pipe(Layer.provide(GoogleLive));
+).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
 const ReceiptsLive = Receipts.layer.pipe(Layer.provide([GoogleLive, Ai.layer, RepositoryLive]));
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
