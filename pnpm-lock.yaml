@@ -133,8 +133,8 @@ catalogs:
       specifier: 0.7.0
       version: 0.7.0
     '@adamaho/nopeus-tsconfig':
-      specifier: 0.2.0
-      version: 0.2.0
+      specifier: 0.3.0
+      version: 0.3.0
     '@effect/ai-openai':
       specifier: 4.0.0-rc.116
       version: 4.0.0-rc.116
@@ -440,7 +440,7 @@ importers:
     devDependencies:
       '@adamaho/nopeus-tsconfig':
         specifier: 'catalog:'
-        version: 0.2.0
+        version: 0.3.0
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.41.0
@@ -465,8 +465,8 @@ packages:
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-tsconfig@0.2.0':
-    resolution: {integrity: sha512-HGLN8GcVBguKogCrXIYft3DEDjWEJ4U3kmFKDziv/Hzd05220dtK7msNwibw2XznhzzwKd4dBX0lZB76LcenJA==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-tsconfig/0.2.0/21ef79da8bbbec584116aee49f64c2fcac097a0c}
+  '@adamaho/nopeus-tsconfig@0.3.0':
+    resolution: {integrity: sha512-px1p/psbUvnjV0cw+QImHW7OcmCtPlS/th6BSpUelpnF+p5nhPBOI6nUMKj6De6u++9d6yowEME0+bkK01fX7g==, tarball: https://npm.pkg.github.com/download/@adamaho/nopeus-tsconfig/0.3.0/c760bafd86223574f4384e128449402f3f2ef863}
 
   '@effect/ai-openai@4.0.0-rc.116':
     resolution: {integrity: sha512-+fquqrde4qq28isIR2TCmCTaU0aKHr7hoSjVyzgWfe4rXiBfbaL39ZI2vm06ijXnPQaUcbD6Amm2vo1Vs50Njg==}
@@ -1935,7 +1935,7 @@ snapshots:
       oxc-resolver: 11.24.2
       oxlint: 1.81.0
 
-  '@adamaho/nopeus-tsconfig@0.2.0': {}
+  '@adamaho/nopeus-tsconfig@0.3.0': {}
 
   '@effect/ai-openai@4.0.0-rc.116(effect@4.0.0-rc.116)':
     dependencies:

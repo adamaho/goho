@@ -16,7 +16,7 @@ catalog:
   vitest: 5.0.1
   "@adamaho/nopeus-oxlint-config": 0.4.0
   "@adamaho/nopeus-oxlint-plugin": 0.7.0
-  "@adamaho/nopeus-tsconfig": 0.2.0
+  "@adamaho/nopeus-tsconfig": 0.3.0
   "@effect/ai-openai": 4.0.0-rc.116
   "@effect/platform-node": 4.0.0-rc.116
   "@effect/tsgo": 0.41.0
