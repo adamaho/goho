@@ -109,10 +109,10 @@ type ReceiptCandidate = Omit<Receipt, "items"> & {
   readonly items: Array<Receipt["items"][number]>;
 };
 
-const normalizeDecimal = (value: DecimalString): DecimalString =>
+const normalizeDecimal = (value: DecimalString) =>
   DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
 
-const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest => ({
+const normalizeReceipt = (receipt: CreateReceiptRequest) => ({
   storeName: receipt.storeName,
   receiptDate: receipt.receiptDate,
   category: receipt.category,
@@ -267,7 +267,7 @@ export const layer = Layer.effect(
       return outcome.receipt;
     });
     const save = Effect.fn("@goho/ReceiptRepository.save")(
-      function* (input: ReceiptToSave): Effect.fn.Return<SaveResult, unknown> {
+      function* (input: ReceiptToSave) {
         const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
         return yield* sql.withTransaction(
           Effect.gen(function* () {

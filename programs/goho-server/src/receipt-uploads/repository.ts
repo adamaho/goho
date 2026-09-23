@@ -101,7 +101,7 @@ const ReceiptUploadRow = Schema.Struct({
 type ReceiptUploadRow = typeof ReceiptUploadRow.Type;
 const decodeRows = Schema.decodeUnknownEffect(Schema.Array(ReceiptUploadRow));
 
-const fromRow = (row: ReceiptUploadRow): ReceiptUpload => ({
+const fromRow = (row: ReceiptUploadRow) => ({
   id: row.id,
   fileId: row.file_id,
   fileName: row.file_name,
