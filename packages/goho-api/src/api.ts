@@ -10,14 +10,7 @@ import {
 } from "effect/unstable/httpapi";
 
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
-import {
-  CreateReceiptRequest,
-  IdempotencyKey,
-  ProcessRequest,
-  Receipt,
-  ReceiptId,
-  ReceiptProcessingResult,
-} from "./receipts.ts";
+import { CreateReceiptRequest, IdempotencyKey, Receipt, ReceiptId } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
 
 // Payload schemas
@@ -43,7 +36,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, manage finished receipts, and skate legacy Drive batches into Sheets. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts. No authentication required, bud.",
   )
   .add(
     // Health
@@ -112,7 +105,7 @@ export const api = HttpApi.make("goho-server")
       ),
     // Receipts
     HttpApiGroup.make("receipts")
-      .annotate(OpenApi.Description, "Receipt retrieval, creation, and batch-processing plays.")
+      .annotate(OpenApi.Description, "Receipt retrieval and creation plays.")
       .add(
         HttpApiEndpoint.get("list", "/receipts", {
           success: DataResponse(
@@ -186,35 +179,6 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Creates the receipt and items in one clean play. Reuse the key with the same normalized data and the saved receipt comes back.",
-          ),
-      )
-      .add(
-        HttpApiEndpoint.post("process", "/receipts/process", {
-          payload: ProcessRequest,
-          success: DataResponse(
-            Schema.Array(ReceiptProcessingResult).annotate({
-              description:
-                "One final whistle per file in Drive listing order; empty when no files are found. `Failed` and `Stranded` still return HTTP 200.",
-            }),
-          ),
-          error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The payload is a bad pass; the response body stays empty.",
-            }),
-            HttpApiError.Conflict.annotate({
-              description:
-                "Another batch is already on the ice for this server, no matter the root or spreadsheet.",
-            }),
-            HttpApiError.InternalServerError.annotate({
-              description:
-                "The batch went sideways and may have left partial changes. Check Drive, Sheets, and server logs before taking another shot.",
-            }),
-          ],
-        })
-          .annotate(OpenApi.Summary, "Process a receipt batch")
-          .annotate(
-            OpenApi.Description,
-            "Skates `todo` images into `RAW` rows and waits for the final whistle. Accepted work keeps moving after a client disconnect. Run one server per workflow and check partial results before replaying a lost response.",
           ),
       ),
   );

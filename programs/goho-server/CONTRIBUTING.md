@@ -11,35 +11,6 @@ setup.
 Follow the root [development setup](../../CONTRIBUTING.md#development-setup)
 to install Node.js, pnpm, and workspace dependencies before running server commands.
 
-### Google service account
-
-1. Create or select a project in the
-   [Google Cloud console](https://console.cloud.google.com/).
-2. Enable the
-   [Google Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com)
-   and
-   [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com)
-   for that project.
-3. Create a service account from the
-   [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
-   page.
-4. Open the service account, select **Keys**, choose **Add key**, then create a
-   new JSON key. See Google's
-   [service-account key documentation](https://cloud.google.com/iam/docs/keys-create-delete#creating)
-   for the complete procedure.
-5. Place the downloaded key at
-   `programs/goho-server/.secrets/google-service-account.json`. The `.secrets`
-   directory is ignored by Git and must not be committed.
-6. Share the Google Drive root folder used for receipt processing with the
-   `client_email` address from the JSON key and grant it **Editor** access.
-   Limit the service account's access by sharing only the workflow root rather
-   than broader Drive resources.
-7. Share the destination spreadsheet with the same `client_email` address and
-   grant it **Editor** access.
-
-Service-account keys are long-lived credentials. Revoke and replace the key if
-it is ever exposed.
-
 ### OpenAI API key
 
 1. Create an API key from the
@@ -56,8 +27,6 @@ Configure the environment file before starting:
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
-- `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE`: service-account JSON key path, relative to this package when using the example.
-- `GOOGLE_AUTH_SCOPES`: comma-separated Drive and Sheets OAuth scopes.
 - `OPENAI_API_KEY`: OpenAI secret.
 - `OPENAI_MODEL`: extraction model.
 
@@ -69,8 +38,7 @@ Copy the environment template:
 cp programs/goho-server/.env.example programs/goho-server/.env
 ```
 
-The example already points `GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE` at the
-package-local JSON key. Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
+Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
 
 Start the database, apply migrations, and start the server:
 
@@ -81,7 +49,7 @@ pnpm --filter @goho/goho-server start
 ```
 
 In a second terminal, configure and run the [CLI](../goho-cli/README.md).
-Use `pnpm --filter @goho/goho-server dev` for watch mode; avoid restarting during a real batch.
+Use `pnpm --filter @goho/goho-server dev` for watch mode.
 
 ## Verification
 
@@ -90,23 +58,6 @@ Run the repository checks before submitting changes:
 ```bash
 pnpm check
 ```
-
-Follow the authoritative
-[failure outcomes and recovery procedure](./README.md#failure-outcomes-and-recovery)
-when a validation run fails or is interrupted. In particular, locate uncertain
-files by Drive ID and inspect their current parent before moving them.
-
-Complete this manual validation checklist after changes to receipt processing:
-
-- [ ] Process one supported receipt successfully and confirm its item rows,
-      source file ID, move to `processed`, zero failure counts, and status `0`.
-- [ ] Process one unsupported MIME type and confirm its move to `failed`, safe
-      `MovedToFailed` diagnostic, nonzero failed count, and status `1`.
-- [ ] Run with missing or invalid required configuration and confirm a safe
-      startup message and status `1` without provider details or a stack trace.
-- [ ] Return a file whose real Drive ID already exists in `RAW!F:F` to `todo`,
-      then confirm no rows are appended, the file moves to `processed`, and the
-      `Already processed` count increases.
 
 ## Database changes
 
@@ -128,9 +79,9 @@ Decimal strings preserve the finite numeric values supplied by the parser; they
 cannot recover precision already lost upstream.
 
 The repository inserts a receipt and all its items in one transaction. For
-Google Drive receipts, the first successful save for a source provider/file ID
-wins; subsequent saves return the existing receipt ID without replacing data or
-duplicating items.
+receipts with source provider/file metadata, the first successful save for that
+identity wins; subsequent saves return the existing receipt ID without replacing
+data or duplicating items.
 Repeated item names are allowed because identity uses position within a receipt.
 
 ### Running migrations locally
@@ -200,27 +151,6 @@ and run `pnpm --filter @goho/goho-server test:integration`. Each repository test
 creates a temporary schema, applies the real migration registry, and drops the
 schema afterward. No Google or OpenAI credentials are required.
 
-After a receipt-processing change, also verify that a new receipt has one
-`receipts` row and the expected ordered `receipt_items` rows. The automated
-workflow tests cover database failure/timeout without live Google or AI calls.
-
-### Database writes during processing
-
-After parsing a new receipt, the server prepares one normalized representation,
-attempts to save the receipt and all its items, then appends the corresponding
-Sheets rows. Database saves have a five-second attempt timeout; cancellation and
-transaction cleanup finish before proceeding. Expected write failures/timeouts
-are logged with the source file ID and error type, and Sheets processing continues.
-Database failures do not add a new public API outcome. `Processed` confirms the
-existing Sheets/Drive workflow, not database persistence.
-
-A database duplicate does not suppress a Sheets append. A Sheets failure after
-successful persistence leaves that database record in place. A receipt already
-present in Sheets keeps the existing skip behavior, including skipping the
-database write. There is no historical backfill, automatic retry, export-status
-tracking, or reconciliation in this slice. Divergence is an accepted migration
-tradeoff; source file IDs in logs identify failed database writes for later review.
-
 Database configuration and initial connectivity are required at server startup.
 The systemd unit applies migrations before launching the server. Direct launches
 with `start` or `dev` require the separate migration command first.
@@ -239,16 +169,16 @@ This unit targets the existing `adam` user and checkout at
 
 Install Node.js and pnpm at the versions required by the root `package.json`,
 then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
-Both service units use this explicit `PATH`:
+The service unit uses this explicit `PATH`:
 
 ```text
 /home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
-Ensure both executables are available to `adam` on that path. The services do
+Ensure both executables are available to `adam` on that path. The service does
 not load interactive shell profiles. If your tools live elsewhere, set
 `Environment="PATH=..."` with the complete path in a systemd override for each
-service. Check the versions with that same path before starting the services.
+service. Check the versions with that same path before starting it.
 
 ### Install the service
 
@@ -259,9 +189,7 @@ sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.servi
 ```
 
 The environment install command is for first setup; preserve an existing file.
-Configure `/etc/goho/server.env` and install the Google JSON key at
-`/etc/goho/google-service-account.json`, owned by `root:adam` with mode `0640`.
-Configure `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
+Configure `/etc/goho/server.env` and `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
 The database must be running when the service starts. `ExecStartPre` runs
 `db:migrate` as `adam`, using the same working directory, PATH, and environment
 file as the server. Each start or restart applies pending migrations before
@@ -283,7 +211,6 @@ command above and run `sudo systemctl daemon-reload`, then restart the service
 after draining active work. Updating the checkout alone does not update the
 installed unit.
 
-Stop the receipt timer and wait for the active batch to finish before restarting
-or upgrading the server. Forced shutdown can leave files in `processing`;
-follow the [recovery procedure](./README.md#failure-outcomes-and-recovery).
-Provider failure causes appear in the server journal; review before sharing.
+The deployment installer retires any installed legacy receipt timer after the
+replacement server passes its health check. Provider failure causes appear in the
+server journal; review before sharing.

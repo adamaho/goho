@@ -71,7 +71,17 @@ describe("receipts view", () => {
       runCommand(baseUrl, ["receipts", "show", receipt.id]),
     );
     expect(result.code).toBe(1);
-    expect(result.stdout).toContain("view       View one persisted receipt.");
-    expect(result.stdout).not.toContain("show       ");
+    expect(result.stdout).toMatch(/view\s+View one persisted receipt\./);
+    expect(result.stdout).not.toMatch(/show\s+/);
+  });
+});
+
+describe("receipts process", () => {
+  it("does not retain the legacy process command", async () => {
+    const result = await withJsonResponse(200, { data: [] }, (baseUrl) =>
+      runCommand(baseUrl, ["receipts", "process", "root", "sheet"]),
+    );
+    expect(result.code).toBe(1);
+    expect(result.stdout).not.toMatch(/^  process\s/m);
   });
 });

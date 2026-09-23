@@ -7,7 +7,6 @@ import {
   NodePath,
   NodeRuntime,
 } from "@effect/platform-node";
-import { GoogleDrive, GoogleSheets } from "@goho/core";
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
@@ -21,11 +20,7 @@ import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
-import * as GoogleAuth from "./services/auth.ts";
 
-const GoogleLive = Layer.merge(GoogleDrive.layer, GoogleSheets.layer).pipe(
-  Layer.provide(GoogleAuth.layer),
-);
 const RepositoryLive = ReceiptRepository.layer.pipe(
   Layer.provide([Database.layer, NodeCrypto.layer]),
 );
@@ -38,7 +33,7 @@ const FileStorageLive = Layer.unwrap(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
-const ReceiptsLive = Receipts.layer.pipe(Layer.provide([GoogleLive, Ai.layer, RepositoryLive]));
+const ReceiptsLive = Receipts.layer.pipe(Layer.provide(RepositoryLive));
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     Database.layer,

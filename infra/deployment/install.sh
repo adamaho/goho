@@ -15,12 +15,10 @@ if [[ "$REPOSITORY_DIR" != /home/adam/github.com/adamaho/goho ]]; then
   exit 1
 fi
 
-for configuration in server.env receipts.env; do
-  if [[ ! -f "/etc/goho/$configuration" ]]; then
-    printf 'Missing existing configuration: /etc/goho/%s\n' "$configuration" >&2
-    exit 1
-  fi
-done
+if [[ ! -f /etc/goho/server.env ]]; then
+  printf 'Missing existing configuration: /etc/goho/server.env\n' >&2
+  exit 1
+fi
 
 cd "$REPOSITORY_DIR"
 for tool in runuser curl python3; do
@@ -30,11 +28,15 @@ runuser -u adam -- env HOME=/home/adam PATH="$SERVICE_PATH" node --version
 runuser -u adam -- env HOME=/home/adam PATH="$SERVICE_PATH" pnpm --version
 runuser -u adam -- env HOME=/home/adam PATH="$SERVICE_PATH" pnpm install --frozen-lockfile
 
-systemctl stop goho-receipts.timer
-batch_state="$(systemctl show goho-receipts.service -p ActiveState --value)"
-if [[ "$batch_state" == active || "$batch_state" == activating || "$batch_state" == deactivating ]]; then
-  printf 'A receipt batch is active. Wait for it to finish, then rerun this installer. The timer is paused.\n' >&2
-  exit 1
+if [[ -f /etc/systemd/system/goho-receipts.timer ]]; then
+  systemctl stop goho-receipts.timer
+fi
+if [[ -f /etc/systemd/system/goho-receipts.service ]]; then
+  batch_state="$(systemctl show goho-receipts.service -p ActiveState --value)"
+  if [[ "$batch_state" == active || "$batch_state" == activating || "$batch_state" == deactivating ]]; then
+    printf 'A legacy receipt batch is active. Wait for it to finish, then rerun this installer. The timer is paused.\n' >&2
+    exit 1
+  fi
 fi
 apt-get update
 apt-get install -y docker.io docker-compose-v2
@@ -66,7 +68,7 @@ os.chmod(postgres, 0o600)
 server = Path('/etc/goho/server.env')
 lines = [
     line for line in server.read_text().splitlines()
-    if not line.strip().startswith(('DATABASE_URL=', 'GOOGLE_DRIVE_UPLOAD_FOLDER_ID='))
+    if not line.strip().startswith(('DATABASE_URL=', 'GOOGLE_DRIVE_UPLOAD_FOLDER_ID=', 'GOOGLE_SERVICE_ACCOUNT_JSON_KEY_FILE=', 'GOOGLE_AUTH_SCOPES='))
 ]
 lines.append(f'DATABASE_URL=postgresql://goho:{quote(password, safe="")}@127.0.0.1:5434/goho')
 if not any(line.strip().startswith('GOHO_UPLOADS_DIRECTORY=') for line in lines):
@@ -107,15 +109,14 @@ PY
 install -o root -g root -m 0644 infra/deployment/goho-postgres/docker-compose.yml /etc/goho/compose.yml
 install -o root -g root -m 0644 infra/systemd/goho-postgres/goho-postgres.service /etc/systemd/system/goho-postgres.service
 install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.service /etc/systemd/system/goho-server.service
-install -o root -g root -m 0644 infra/systemd/goho-receipts/goho-receipts.service /etc/systemd/system/goho-receipts.service
 install -d -o root -g root -m 0755 /etc/systemd/system/goho-server.service.d
 install -o root -g root -m 0644 infra/systemd/goho-server/postgres.conf /etc/systemd/system/goho-server.service.d/postgres.conf
 
 docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml config --quiet
 docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml pull
 systemctl daemon-reload
-systemd-analyze verify /etc/systemd/system/goho-postgres.service /etc/systemd/system/goho-server.service /etc/systemd/system/goho-receipts.service
-systemctl reset-failed goho-server.service goho-receipts.service
+systemd-analyze verify /etc/systemd/system/goho-postgres.service /etc/systemd/system/goho-server.service
+systemctl reset-failed goho-server.service
 systemctl enable --now goho-postgres.service
 systemctl enable goho-server.service
 systemctl restart goho-server.service
@@ -123,19 +124,26 @@ systemctl restart goho-server.service
 server_ready=false
 for attempt in {1..30}; do
   status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 2 \
-    -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$server_port/receipts/process" || true)"
-  if [[ "$status" == 400 && "$(systemctl is-active goho-server.service)" == active ]]; then
+    "http://127.0.0.1:$server_port/health" || true)"
+  if [[ "$status" == 200 && "$(systemctl is-active goho-server.service)" == active ]]; then
     server_ready=true
     break
   fi
   sleep 1
 done
 if [[ "$server_ready" != true ]]; then
-  printf 'Server readiness failed. Inspect journalctl -u goho-server.service. The receipt timer remains paused.\n' >&2
+  printf 'Server readiness failed. Inspect journalctl -u goho-server.service. Any legacy receipt timer remains paused.\n' >&2
   exit 1
 fi
 
 docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml exec -T postgres \
   psql -U goho -d goho -c 'SELECT migration_id, name FROM goho_migrations ORDER BY migration_id;'
-systemctl enable --now goho-receipts.timer
-printf 'Goho is listening on http://127.0.0.1:%s. Postgres is on 127.0.0.1:5434. The receipt timer is enabled.\n' "$server_port"
+if [[ -f /etc/systemd/system/goho-receipts.timer ]]; then
+  systemctl disable goho-receipts.timer
+  rm -- /etc/systemd/system/goho-receipts.timer
+fi
+if [[ -f /etc/systemd/system/goho-receipts.service ]]; then
+  rm -- /etc/systemd/system/goho-receipts.service
+fi
+systemctl daemon-reload
+printf 'Goho is listening on http://127.0.0.1:%s. Postgres is on 127.0.0.1:5434. The legacy receipt timer is retired.\n' "$server_port"
