@@ -102,7 +102,7 @@ jobs:
         uses: ./.github/actions/setup-pnpm
 
       - name: Unit tests
-        run: pnpm turbo run test:unit
+        run: pnpm test:unit
 
   test-integration:
     name: test-integration
@@ -130,7 +130,7 @@ jobs:
         run: pnpm --filter @goho/infra-local infra:up
 
       - name: Integration tests
-        run: pnpm turbo run test:integration
+        run: pnpm test:integration
 
       - name: Remove integration infrastructure
         if: always()
@@ -156,4 +156,4 @@ jobs:
         uses: ./.github/actions/setup-pnpm
 
       - name: Build
-        run: pnpm turbo run build
+        run: pnpm build

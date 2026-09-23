@@ -58,7 +58,7 @@ export interface Interface {
   readonly findById: (
     receiptId: ReceiptId,
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
-  readonly list: () => Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
+  readonly list: Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
   readonly create: (
     idempotencyKey: IdempotencyKey,
     receipt: CreateReceiptRequest,
@@ -138,7 +138,7 @@ export const layer = Layer.effect(
     const crypto = yield* Crypto.Crypto;
     const sql = yield* SqlClient.SqlClient;
     const readReceipt = Effect.fn("@goho/ReceiptRepository.readReceipt")(function* (
-      receiptId: typeof ReceiptId.Type,
+      receiptId: ReceiptId,
     ) {
       const receipts = yield* sql`
         SELECT id, store_name, receipt_date::text, category,
@@ -172,9 +172,8 @@ export const layer = Layer.effect(
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
     );
-    const list = Effect.fn("@goho/ReceiptRepository.list")(
-      function* () {
-        const rows = yield* sql`
+    const list = Effect.gen(function* () {
+      const rows = yield* sql`
           SELECT r.id, r.store_name, r.receipt_date::text, r.category,
             r.subtotal::text, r.tax::text, r.total::text, r.currency,
             i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
@@ -182,34 +181,35 @@ export const layer = Layer.effect(
           LEFT JOIN receipt_items i ON i.receipt_id = r.id
           ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
         `.pipe(Effect.flatMap(decodeReceiptListRows));
-        const receipts = new Map<typeof ReceiptId.Type, ReceiptCandidate>();
-        for (const row of rows) {
-          let receipt = receipts.get(row.id);
-          if (receipt === undefined) {
-            receipt = {
-              id: row.id,
-              storeName: row.store_name,
-              receiptDate: row.receipt_date,
-              category: row.category,
-              subtotal: row.subtotal,
-              tax: row.tax,
-              total: row.total,
-              currency: row.currency,
-              items: [],
-            };
-            receipts.set(row.id, receipt);
-          }
-          if (row.item_position !== null && row.item_name !== null && row.item_amount !== null) {
-            receipt.items.push({
-              position: row.item_position,
-              name: row.item_name,
-              amount: row.item_amount,
-            });
-          }
+      const receipts = new Map<ReceiptId, ReceiptCandidate>();
+      for (const row of rows) {
+        let receipt = receipts.get(row.id);
+        if (receipt === undefined) {
+          receipt = {
+            id: row.id,
+            storeName: row.store_name,
+            receiptDate: row.receipt_date,
+            category: row.category,
+            subtotal: row.subtotal,
+            tax: row.tax,
+            total: row.total,
+            currency: row.currency,
+            items: [],
+          };
+          receipts.set(row.id, receipt);
         }
-        return yield* decodeReceiptList([...receipts.values()]);
-      },
+        if (row.item_position !== null && row.item_name !== null && row.item_amount !== null) {
+          receipt.items.push({
+            position: row.item_position,
+            name: row.item_name,
+            amount: row.item_amount,
+          });
+        }
+      }
+      return yield* decodeReceiptList([...receipts.values()]);
+    }).pipe(
       Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
+      Effect.withSpan("@goho/ReceiptRepository.list"),
     );
     const create = Effect.fn("@goho/ReceiptRepository.create")(function* (
       idempotencyKey: IdempotencyKey,

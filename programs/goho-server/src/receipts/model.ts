@@ -1,35 +1,7 @@
-import { DecimalString } from "@goho/goho-api/receipts";
+import { CalendarDate, DecimalString } from "@goho/goho-api/receipts";
 import { Array, Schema } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";
-
-const ReceiptDate = Schema.String.check(
-  Schema.makeFilter(
-    (value) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return false;
-      }
-
-      const year = Number(value.slice(0, 4));
-      const month = Number(value.slice(5, 7));
-      const day = Number(value.slice(8, 10));
-      const date = new Date(Date.UTC(year, month - 1, day));
-
-      return (
-        year >= 2025 &&
-        date.getUTCFullYear() === year &&
-        date.getUTCMonth() === month - 1 &&
-        date.getUTCDate() === day
-      );
-    },
-    {
-      expected: "a real calendar date in YYYY-MM-DD format with a year of 2025 or later",
-      toJsonSchema: () => ({
-        pattern: "^(?:202[5-9]|20[3-9][0-9]|2[1-9][0-9]{2}|[3-9][0-9]{3})-\\d{2}-\\d{2}$",
-      }),
-    },
-  ),
-);
 
 /**
  * Schema of the validated AI extraction.
@@ -41,7 +13,7 @@ export const ParsedReceipt = Schema.Struct({
   store: Schema.Struct({
     name: NonEmptyText,
   }),
-  date: ReceiptDate,
+  date: CalendarDate,
   transaction: Schema.Struct({
     items: Schema.NonEmptyArray(
       Schema.Struct({
@@ -92,7 +64,7 @@ export interface ReceiptSource extends Schema.Schema.Type<typeof ReceiptSource> 
 export const ReceiptToSave = Schema.Struct({
   source: ReceiptSource,
   storeName: NonEmptyText,
-  receiptDate: ReceiptDate,
+  receiptDate: CalendarDate,
   category: NonEmptyText,
   subtotal: DecimalString,
   tax: DecimalString,

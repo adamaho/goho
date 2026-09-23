@@ -25,7 +25,7 @@ export class Service extends Context.Service<
     readonly get: (
       receiptId: ReceiptId,
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
-    readonly list: () => Effect.Effect<ReadonlyArray<Receipt>, HttpApiError.InternalServerError>;
+    readonly list: Effect.Effect<ReadonlyArray<Receipt>, HttpApiError.InternalServerError>;
     readonly create: (
       idempotencyKey: IdempotencyKey,
       receipt: CreateReceiptRequest,
@@ -85,16 +85,13 @@ export const layer = Layer.effect(
         ),
       ),
     );
-    const list = Effect.fn("@goho/ReceiptService.list")(() =>
-      repository
-        .list()
-        .pipe(
-          Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
-            Effect.logError("Receipt listing failed", error).pipe(
-              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
-            ),
-          ),
+    const list = repository.list.pipe(
+      Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
+        Effect.logError("Receipt listing failed", error).pipe(
+          Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
         ),
+      ),
+      Effect.withSpan("@goho/ReceiptService.list"),
     );
     const busy = yield* Ref.make(false);
     const process = Effect.fn("@goho/ReceiptService.process")(function* (request: ProcessRequest) {

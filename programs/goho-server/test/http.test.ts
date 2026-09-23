@@ -3,7 +3,7 @@ import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { Array, Effect, Layer, Option } from "effect";
+import { Array, Effect, Layer } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { expect } from "vitest";
@@ -64,8 +64,8 @@ const testLayer = (
             ReceiptDependencies.layer({
               repository: {
                 create: () => Effect.succeed(receipt),
-                findById: () => Effect.succeed(Option.some(receipt)),
-                list: () => Effect.succeed([receipt]),
+                findById: () => Effect.succeedSome(receipt),
+                list: Effect.succeed([receipt]),
                 ...repository,
               },
               googleDrive: {
@@ -147,7 +147,7 @@ it.effect("returns HTTP 404 when a receipt does not exist", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(`/receipts/${receipt.id}`);
     expect(response.status).toBe(404);
-  }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeed(Option.none()) }))),
+  }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeedNone }))),
 );
 
 it.effect("rejects malformed and overlong receipt IDs at the HTTP boundary", () =>
@@ -167,13 +167,12 @@ it.effect("returns HTTP 500 without exposing receipt listing failure details", (
   }).pipe(
     Effect.provide(
       testLayer({
-        list: () =>
-          Effect.fail(
-            new ReceiptRepository.PersistenceError({
-              operation: "list",
-              cause: "private database details",
-            }),
-          ),
+        list: Effect.fail(
+          new ReceiptRepository.PersistenceError({
+            operation: "list",
+            cause: "private database details",
+          }),
+        ),
       }),
     ),
   ),
@@ -308,7 +307,7 @@ it.effect(
               Layer.succeed(Receipts.Service, {
                 create: () => Effect.die("Health must not create receipts"),
                 get: () => Effect.die("Health must not get receipts"),
-                list: () => Effect.die("Health must not list receipts"),
+                list: Effect.die("Health must not list receipts"),
                 process: () => Effect.die("Health must not process receipts"),
               }),
               receiptUploadsTest(),

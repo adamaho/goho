@@ -155,7 +155,7 @@ it.effect("migrates populated UUID receipts to BIGINT identities without losing 
 it.effect("returns an empty receipt list", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    expect(yield* repo.list()).toEqual([]);
+    expect(yield* repo.list).toEqual([]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -193,7 +193,7 @@ it.effect("lists complete receipts newest first with ordered items", () =>
         ELSE created_at
       END
     `;
-    expect(yield* repo.list()).toEqual([
+    expect(yield* repo.list).toEqual([
       {
         id: laterCreatedSaved.receiptId,
         storeName: laterCreated.storeName,

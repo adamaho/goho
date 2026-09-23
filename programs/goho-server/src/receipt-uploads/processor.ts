@@ -1,3 +1,4 @@
+import { Ai } from "@goho/core";
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
 import { Effect, Layer, Schedule, Schema } from "effect";
 
@@ -23,7 +24,14 @@ const failAs = (failureCode: ReceiptUploadFailureCode) =>
  * @category workflows
  * @since 0.1.0
  */
-export const process = Effect.fn("@goho/ReceiptUploads.process")(function* (
+export const process: (
+  job: ReceiptUploadJob,
+  metadata: { readonly id: string; readonly attempts: number },
+) => Effect.Effect<
+  void,
+  ProcessingError,
+  Ai.Service | FileStorage.Service | ReceiptRepository.Service | ReceiptUploadRepository.Service
+> = Effect.fn("@goho/ReceiptUploads.process")(function* (
   job: ReceiptUploadJob,
   metadata: { readonly id: string; readonly attempts: number },
 ) {
