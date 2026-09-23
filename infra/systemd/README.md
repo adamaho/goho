@@ -8,7 +8,6 @@ runtime configuration and the overall machine installer.
 - `goho-postgres`: starts Docker Compose and waits for database health.
 - `goho-server`: runs migrations and starts the API. `postgres.conf` adds the
   dependency on the deployed Postgres service.
-- `goho-receipts`: runs the CLI on a daily timer.
 
 Use the [deployment installer](../deployment/README.md#installation) to install
 the complete stack. Source files are copied to `/etc/goho` and

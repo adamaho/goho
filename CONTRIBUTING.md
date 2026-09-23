@@ -149,6 +149,6 @@ Use the same setup and verification commands as local development:
 pnpm check
 ```
 
-Server API contracts and clients live in `clients/<server-name>`. Server-specific
-receipt orchestration stays in `programs/goho-server`; shared Google and AI
-integrations stay in `packages/core`.
+Shared API contracts live in `packages/goho-api` and the generated client lives
+in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
+shared AI integration stays in `packages/core`.

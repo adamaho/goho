@@ -12,7 +12,6 @@ import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
-import * as ReceiptDependencies from "#test/receipts/dependencies.ts";
 
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",
@@ -61,17 +60,12 @@ const testLayer = (
       Layer.provide([
         Receipts.layer.pipe(
           Layer.provide(
-            ReceiptDependencies.layer({
-              repository: {
-                create: () => Effect.succeed(receipt),
-                findById: () => Effect.succeedSome(receipt),
-                list: Effect.succeed([receipt]),
-                ...repository,
-              },
-              googleDrive: {
-                listFiles: () =>
-                  Effect.succeed([{ id: "receipt-1", name: "receipt.png", mimeType: "image/png" }]),
-              },
+            Layer.succeed(ReceiptRepository.Service, {
+              create: () => Effect.succeed(receipt),
+              findById: () => Effect.succeedSome(receipt),
+              list: Effect.succeed([receipt]),
+              save: () => Effect.die("Unexpected repository.save call"),
+              ...repository,
             }),
           ),
         ),
@@ -262,31 +256,12 @@ it.effect("rejects invalid receipt data at the HTTP boundary", () =>
   }).pipe(Effect.provide(TestLive)),
 );
 
-it.effect("round-trips receipt results through the generated client without authentication", () =>
+it.effect("does not expose the removed receipt processing endpoint", () =>
   Effect.gen(function* () {
-    const client = yield* Client.make("");
-    const result = yield* client.receipts.process({
-      payload: { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 5 },
+    const response = yield* HttpClient.post("/receipts/process", {
+      body: yield* HttpBody.json({ rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1 }),
     });
-    expect(result).toEqual({
-      data: [{ _tag: "Processed", fileId: "receipt-1", fileName: "receipt.png" }],
-    });
-  }).pipe(Effect.provide(TestLive)),
-);
-
-it.effect("rejects invalid request inputs at the HTTP boundary", () =>
-  Effect.gen(function* () {
-    for (const payload of [
-      { rootFolderId: "", spreadsheetId: "sheet", concurrency: 1 },
-      { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 6 },
-      { rootFolderId: "root", spreadsheetId: "sheet", concurrency: 1.5 },
-    ]) {
-      const body = yield* HttpBody.json(payload);
-      const response = yield* HttpClient.post("/receipts/process", {
-        body,
-      });
-      expect(response.status).toBe(400);
-    }
+    expect(response.status).toBe(404);
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -308,7 +283,6 @@ it.effect(
                 create: () => Effect.die("Health must not create receipts"),
                 get: () => Effect.die("Health must not get receipts"),
                 list: Effect.die("Health must not list receipts"),
-                process: () => Effect.die("Health must not process receipts"),
               }),
               receiptUploadsTest(),
             ]),
