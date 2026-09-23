@@ -38,7 +38,7 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
     const receipts = yield* Receipts.Service;
     return handlers
-      .handle("list", () => receipts.list().pipe(Effect.map(withData)))
+      .handle("list", () => receipts.list.pipe(Effect.map(withData)))
       .handle("get", ({ params }) => receipts.get(params.receiptId).pipe(Effect.map(withData)))
       .handle("create", ({ headers, payload }) =>
         receipts.create(headers["idempotency-key"], payload).pipe(Effect.map(withData)),

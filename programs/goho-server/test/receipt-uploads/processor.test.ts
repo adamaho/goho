@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
-import { Effect, Fiber, Layer, Option, Ref, Schema } from "effect";
+import { Effect, Fiber, Layer, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
@@ -43,13 +43,13 @@ const dependencies = (options: {
     }),
     Layer.succeed(ReceiptRepository.Service, {
       create: () => Effect.die("Unexpected receipt create call"),
-      findById: () => Effect.succeed(Option.none()),
-      list: () => Effect.succeed([]),
+      findById: () => Effect.succeedNone,
+      list: Effect.succeed([]),
       save: () => Effect.succeed({ _tag: "Inserted", receiptId: ReceiptId.make("42") }),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
       createQueued: () => Effect.die("Unexpected createQueued call"),
-      findById: () => Effect.succeed(Option.some(upload)),
+      findById: () => Effect.succeedSome(upload),
       markProcessing: () => Effect.succeed(upload),
       markSucceeded:
         options.markSucceeded ??
