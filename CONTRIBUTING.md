@@ -38,8 +38,8 @@ completed change:
 pnpm check
 ```
 
-This runs the repository format check first, then lets Turbo run package-level
-lint and TypeScript tasks in parallel where packages define them.
+This runs the repository format and OpenAPI contract checks first, then lets
+Turbo run package-level lint, TypeScript, and unit-test tasks where defined.
 
 Useful focused commands:
 

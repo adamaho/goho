@@ -62,6 +62,9 @@ jobs:
       - name: Format check
         run: pnpm run fmt:check
 
+      - name: OpenAPI contract check
+        run: pnpm --filter @goho/goho-server openapi:check
+
   tsc:
     name: tsc
     runs-on: ubuntu-latest
