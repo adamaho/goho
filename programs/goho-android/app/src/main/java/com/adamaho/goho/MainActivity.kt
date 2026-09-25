@@ -12,16 +12,19 @@ import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.MainScreen
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    enableEdgeToEdge()
-    setContent {
-      GohoTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          MainScreen()
+        enableEdgeToEdge()
+        setContent {
+            GohoTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    MainScreen()
+                }
+            }
         }
-      }
     }
-  }
 }

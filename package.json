@@ -10,6 +10,8 @@
     "lint": "turbo run lint",
     "fmt": "oxfmt --config ./tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ./tools/oxfmt-config/src/base.json .",
+    "fmt:android": "cd programs/goho-android && ./gradlew :app:ktfmtFormat",
+    "fmt:check:android": "cd programs/goho-android && ./gradlew :app:ktfmtCheck",
     "tsc": "turbo run tsc",
     "test:unit": "turbo run test:unit",
     "test:integration": "turbo run test:integration"

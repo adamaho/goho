@@ -18,21 +18,24 @@ import com.adamaho.goho.theme.GohoTheme
 
 @Composable
 fun MainScreen(modifier: Modifier = Modifier) {
-  Column(
-    modifier = modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
-    verticalArrangement = Arrangement.Center,
-    horizontalAlignment = Alignment.CenterHorizontally,
-  ) {
-    Text(text = stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge)
-    Text(
-      text = stringResource(R.string.scanning_coming_soon),
-      style = MaterialTheme.typography.bodyLarge,
-    )
-  }
+    Column(
+        modifier = modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineLarge,
+        )
+        Text(
+            text = stringResource(R.string.scanning_coming_soon),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun MainScreenPreview() {
-  GohoTheme { MainScreen() }
+    GohoTheme { MainScreen() }
 }

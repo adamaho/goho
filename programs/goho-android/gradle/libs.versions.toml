@@ -3,6 +3,7 @@ androidGradlePlugin = "9.0.1"
 androidxActivity = "1.13.0"
 androidxComposeBom = "2026.03.01"
 kotlin = "2.3.20"
+ktfmtGradle = "0.27.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
@@ -15,3 +16,4 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmtGradle" }

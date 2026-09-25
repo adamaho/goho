@@ -182,3 +182,6 @@ jobs:
 
       - name: Build and lint
         run: ./gradlew :app:assembleDebug :app:lintDebug --no-daemon
+
+      - name: Android format check
+        run: ./gradlew :app:ktfmtCheck --no-daemon
