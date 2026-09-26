@@ -63,7 +63,7 @@ jobs:
         run: pnpm run fmt:check
 
       - name: OpenAPI contract check
-        run: pnpm --filter @goho/goho-server openapi:check
+        run: pnpm -r --if-present run openapi:check
 
   tsc:
     name: tsc
