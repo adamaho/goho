@@ -428,10 +428,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.4.0(oxlint@1.85.0)
+        version: 0.4.1(oxlint@1.85.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.7.0(oxlint@1.85.0)
+        version: 0.7.1(oxlint@1.85.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
