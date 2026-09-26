@@ -48,8 +48,21 @@ pnpm --filter @goho/goho-server db:migrate
 pnpm --filter @goho/goho-server start
 ```
 
-In a second terminal, configure and run the [CLI](../goho-cli/README.md).
-Use `pnpm --filter @goho/goho-server dev` for watch mode.
+In a second terminal, seed the local database after the server is ready:
+
+```bash
+pnpm --filter @goho/goho-server db:seed
+```
+
+The seed command creates four fictional receipts through the receipt creation
+API. It uses `http://127.0.0.1:3000` by default; set `GOHO_SERVER_URL` to target
+another local server. Stable idempotency keys make reruns return the same
+receipts without duplicates. Keep a key stable while its fixture stays the
+same, and use a new key version when changing a fixture. Seeding does not
+upload images or call OpenAI.
+
+Then configure and run the [CLI](../goho-cli/README.md). Use
+`pnpm --filter @goho/goho-server dev` for watch mode.
 
 ## Verification
 

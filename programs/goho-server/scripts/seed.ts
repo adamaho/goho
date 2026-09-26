@@ -4,14 +4,14 @@ import { type CreateReceiptRequest, IdempotencyKey } from "@goho/goho-server-cli
 import { Config, Console, Effect } from "effect";
 import { FetchHttpClient } from "effect/unstable/http";
 
-interface DemoReceipt {
+interface SeedReceipt {
   readonly key: IdempotencyKey;
   readonly payload: CreateReceiptRequest;
 }
 
-const receipts: ReadonlyArray<DemoReceipt> = [
+const receipts: ReadonlyArray<SeedReceipt> = [
   {
-    key: IdempotencyKey.make("goho-demo-v1-market"),
+    key: IdempotencyKey.make("goho-dev-seed-v1-market"),
     payload: {
       storeName: "North Star Market",
       receiptDate: "2026-09-10",
@@ -28,7 +28,7 @@ const receipts: ReadonlyArray<DemoReceipt> = [
     },
   },
   {
-    key: IdempotencyKey.make("goho-demo-v1-cafe"),
+    key: IdempotencyKey.make("goho-dev-seed-v1-cafe"),
     payload: {
       storeName: "Harbor Cafe",
       receiptDate: "2026-09-12",
@@ -44,7 +44,7 @@ const receipts: ReadonlyArray<DemoReceipt> = [
     },
   },
   {
-    key: IdempotencyKey.make("goho-demo-v1-books"),
+    key: IdempotencyKey.make("goho-dev-seed-v1-books"),
     payload: {
       storeName: "Railway Books",
       receiptDate: "2026-09-15",
@@ -60,7 +60,7 @@ const receipts: ReadonlyArray<DemoReceipt> = [
     },
   },
   {
-    key: IdempotencyKey.make("goho-demo-v1-hardware"),
+    key: IdempotencyKey.make("goho-dev-seed-v1-hardware"),
     payload: {
       storeName: "Cedar Hardware",
       receiptDate: "2026-09-18",

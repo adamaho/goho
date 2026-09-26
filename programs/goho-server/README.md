@@ -68,16 +68,3 @@ the same key and data. The complete receipt is returned under `data`.
 Invalid headers or payloads return HTTP 400 with an empty body. Conflicts return
 `{"_tag":"Conflict"}`; validation or persistence failures return HTTP 500 with
 `{"_tag":"InternalServerError"}`.
-
-## Demo receipts
-
-After starting the local server and applying migrations, add four fictional receipts:
-
-```bash
-pnpm --filter @goho/goho-server db:seed
-```
-
-The script calls the receipt creation API at `http://127.0.0.1:3000` by default.
-Set `GOHO_SERVER_URL` to use another server URL. Each fixture has a stable
-idempotency key, so rerunning the command returns the same receipts without
-creating duplicates. The script does not upload images or call OpenAI.
