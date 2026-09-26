@@ -1,0 +1,3 @@
+interface:
+  display_name: "Write OpenAPI Docs"
+  short_description: "Write brief, factual OpenAPI documentation"
