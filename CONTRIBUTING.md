@@ -29,6 +29,10 @@ Start local infrastructure when a package needs shared runtime services:
 pnpm --filter=@goho/infra-local run infra:up
 ```
 
+For the Goho server, `pnpm server:dev` starts local PostgreSQL, applies
+migrations, and runs the server in watch mode. See the
+[server setup](programs/goho-server/CONTRIBUTING.md#local-setup).
+
 ## Verification
 
 Run the full local verification command before opening a PR or committing a
