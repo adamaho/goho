@@ -60,6 +60,33 @@ pnpm fmt:check:android
 For changes elsewhere in the workspace, also run `pnpm check` from the repo
 root as described in the root contributing guide.
 
+## Generated API client
+
+The Kotlin API client is checked in under
+`app/src/main/kotlin/com/adamaho/goho/api/generated`. Normal builds and Android
+Studio can use it without running the generator. Do not edit generated files.
+When the shared API changes, regenerate the
+[OpenAPI contract](../../packages/goho-api/openapi.json) from the repository root:
+
+```bash
+pnpm --filter @goho/goho-server openapi:generate
+pnpm --filter @goho/goho-server openapi:check
+```
+
+Then update the checked-in client from `programs/goho-android`:
+
+```bash
+./gradlew :app:updateOpenApiClient
+```
+
+Commit both the contract and Kotlin changes. Android CI regenerates the client
+and fails if it differs from the committed copy. Kotlin formatting excludes the
+generated package.
+
+The server derives its OpenAPI document from the shared API at runtime. The
+generator uses the committed copy without running the server, so `openapi:check`
+fails when that copy is stale.
+
 ## Code organization and style
 
 Keep this app small while it has one screen. `MainActivity` owns the Android

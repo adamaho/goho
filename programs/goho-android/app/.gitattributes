@@ -1,0 +1,2 @@
+# Preserve OpenAPI Generator output without flagging its emitted whitespace.
+src/main/kotlin/com/adamaho/goho/api/generated/** -whitespace

@@ -38,8 +38,8 @@ jobs:
       - name: Setup pnpm and install
         uses: ./.github/actions/setup-pnpm
 
-      - name: Lint
-        run: pnpm turbo run lint
+      - name: Lint and OpenAPI contract check
+        run: pnpm turbo run lint openapi:check
 
   fmt:
     name: fmt
@@ -182,6 +182,14 @@ jobs:
 
       - name: Build and lint
         run: ./gradlew :app:assembleDebug :app:lintDebug --no-daemon
+
+      - name: Generated client check
+        run: |
+          ./gradlew :app:updateOpenApiClient --no-daemon
+          if [ -n "$(git status --porcelain --untracked-files=all -- app/src/main/kotlin/com/adamaho/goho/api/generated)" ]; then
+            git status --short --untracked-files=all -- app/src/main/kotlin/com/adamaho/goho/api/generated
+            exit 1
+          fi
 
       - name: Android format check
         run: ./gradlew :app:ktfmtCheck --no-daemon

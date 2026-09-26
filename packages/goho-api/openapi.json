@@ -1,0 +1,855 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Goho API",
+    "version": "0.0.0",
+    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts. No authentication required, bud."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "health.check",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/HealthData"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "description": "Confirms the server is awake; it does not skate over to the database or providers.",
+        "summary": "Check server liveness"
+      }
+    },
+    "/receipt-uploads": {
+      "post": {
+        "tags": ["receiptUploads"],
+        "operationId": "receiptUploads.create",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+                          "format": "uuid"
+                        },
+                        "fileName": {
+                          "type": "string"
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "enum": ["image/jpeg", "image/png", "image/webp"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["queued", "processing", "succeeded", "failed"]
+                        },
+                        "receiptId": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/components/schemas/ReceiptId"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "failureCode": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unsupported_file_type",
+                                "storage_failed",
+                                "processing_failed",
+                                "receipt_creation_failed",
+                                "internal_error"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "fileName",
+                        "contentType",
+                        "status",
+                        "receiptId",
+                        "failureCode",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The upload is missing a supported receipt image."
+          },
+          "500": {
+            "description": "The server could not store or queue the receipt image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Stores one receipt image and returns its queued status before processing starts.",
+        "summary": "Upload a receipt image",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/receipt-uploads/{uploadId}": {
+      "get": {
+        "tags": ["receiptUploads"],
+        "operationId": "receiptUploads.get",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+                          "format": "uuid"
+                        },
+                        "fileName": {
+                          "type": "string"
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "enum": ["image/jpeg", "image/png", "image/webp"]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["queued", "processing", "succeeded", "failed"]
+                        },
+                        "receiptId": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/components/schemas/ReceiptId"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "failureCode": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "unsupported_file_type",
+                                "storage_failed",
+                                "processing_failed",
+                                "receipt_creation_failed",
+                                "internal_error"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "fileName",
+                        "contentType",
+                        "status",
+                        "receiptId",
+                        "failureCode",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No receipt upload is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this receipt upload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the latest queue or processing status and the receipt ID after a clean finish.",
+        "summary": "Get receipt upload status"
+      }
+    },
+    "/receipts": {
+      "get": {
+        "tags": ["receipts"],
+        "operationId": "receipts.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Receipt"
+                      },
+                      "description": "Complete receipts, newest off the bench first; empty when none exist."
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the receipts off the bench.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every saved receipt off the bench, newest first, with its items in position order.",
+        "summary": "List receipts"
+      },
+      "post": {
+        "tags": ["receipts"],
+        "operationId": "receipts.create",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/IdempotencyKey"
+            },
+            "required": true,
+            "description": "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs."
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The `idempotency-key` header or payload is a bad pass; the response body stays empty."
+          },
+          "409": {
+            "description": "That idempotency key is already skating with different normalized receipt data or item order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ConflictEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Receipt validation or persistence missed the net.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates the receipt and items in one clean play. Reuse the key with the same normalized data and the saved receipt comes back.",
+        "summary": "Create a receipt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReceiptRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/receipts/{receiptId}": {
+      "get": {
+        "tags": ["receipts"],
+        "operationId": "receipts.get",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No receipt is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this receipt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Brings back one saved receipt with its items lined up by position.",
+        "summary": "Get a receipt"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthData": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "The server's bench status."
+          }
+        },
+        "required": ["status"],
+        "additionalProperties": false,
+        "description": "Whether the server is awake for the shift.",
+        "examples": [
+          {
+            "status": "ok"
+          }
+        ]
+      },
+      "ReceiptId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The receipt's positive number on the roster, bud.",
+        "examples": ["42"]
+      },
+      "effect_HttpApiError_InternalServerErrorEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["InternalServerError"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_NotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["NotFound"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "CalendarDate": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "description": "A real calendar date in YYYY-MM-DD format, from year 0100 through 9999.",
+        "examples": ["2026-09-13"]
+      },
+      "DecimalString": {
+        "type": "string",
+        "pattern": "^-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+        "description": "An exact decimal kept as text so no precision gets lost in the shuffle.",
+        "examples": ["10.25", "-1.50", "1e2", "1E2"]
+      },
+      "ReceiptItem": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based spot in the receipt lineup.",
+            "examples": [0]
+          },
+          "name": {
+            "type": "string",
+            "description": "Item name on the receipt.",
+            "examples": ["Apples"]
+          },
+          "amount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Item amount; negative adjustments can suit up too.",
+                "examples": ["10.25"]
+              }
+            ]
+          }
+        },
+        "required": ["position", "name", "amount"],
+        "additionalProperties": false,
+        "description": "A saved receipt line item in its original slot.",
+        "examples": [
+          {
+            "position": 0,
+            "name": "Apples",
+            "amount": "10.25"
+          }
+        ]
+      },
+      "Receipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReceiptId"
+              },
+              {
+                "description": "The receipt's roster number, kept the same on a replay."
+              }
+            ]
+          },
+          "storeName": {
+            "type": "string",
+            "description": "Store or merchant named on the receipt.",
+            "examples": ["Example Store"]
+          },
+          "receiptDate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CalendarDate"
+              },
+              {
+                "description": "Date the purchase hit the ice."
+              }
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Receipt category in the lineup.",
+            "examples": ["Groceries"]
+          },
+          "subtotal": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Amount before tax.",
+                "examples": ["10.25"]
+              }
+            ]
+          },
+          "tax": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Tax amount.",
+                "examples": ["0.75"]
+              }
+            ]
+          },
+          "total": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Final receipt total.",
+                "examples": ["11"]
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
+            "examples": ["USD", null]
+          },
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/ReceiptItem"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ReceiptItem"
+            },
+            "description": "Items lined up by ascending position."
+          }
+        },
+        "required": [
+          "id",
+          "storeName",
+          "receiptDate",
+          "category",
+          "subtotal",
+          "tax",
+          "total",
+          "currency",
+          "items"
+        ],
+        "additionalProperties": false,
+        "description": "A saved receipt with trimmed names and normalized decimals; `11.00` comes back as `11`, beauty.",
+        "examples": [
+          {
+            "id": "42",
+            "storeName": "Example Store",
+            "receiptDate": "2026-09-13",
+            "category": "Groceries",
+            "subtotal": "10.25",
+            "tax": "0.75",
+            "total": "11",
+            "currency": "USD",
+            "items": [
+              {
+                "position": 0,
+                "name": "Apples",
+                "amount": "10.25"
+              }
+            ]
+          }
+        ]
+      },
+      "ReceiptItemInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Item name on the receipt.",
+            "examples": ["Apples"]
+          },
+          "amount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Item amount; negative adjustments can suit up too.",
+                "examples": ["10.25"]
+              }
+            ]
+          }
+        },
+        "required": ["name", "amount"],
+        "additionalProperties": false,
+        "description": "One receipt line item; repeat names are fair game.",
+        "examples": [
+          {
+            "name": "Apples",
+            "amount": "10.25"
+          }
+        ]
+      },
+      "CreateReceiptRequest": {
+        "type": "object",
+        "properties": {
+          "storeName": {
+            "type": "string",
+            "description": "Store or merchant named on the receipt.",
+            "examples": ["Example Store"]
+          },
+          "receiptDate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CalendarDate"
+              },
+              {
+                "description": "Date the purchase hit the ice."
+              }
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Receipt category in the lineup.",
+            "examples": ["Groceries"]
+          },
+          "subtotal": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Amount before tax.",
+                "examples": ["10.25"]
+              }
+            ]
+          },
+          "tax": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Tax amount.",
+                "examples": ["0.75"]
+              }
+            ]
+          },
+          "total": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Final receipt total.",
+                "examples": ["11"]
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
+            "examples": ["USD", null]
+          },
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/ReceiptItemInput"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ReceiptItemInput"
+            },
+            "description": "Line items in receipt order. Shuffle the lineup and the idempotency check changes."
+          }
+        },
+        "required": [
+          "storeName",
+          "receiptDate",
+          "category",
+          "subtotal",
+          "tax",
+          "total",
+          "currency",
+          "items"
+        ],
+        "additionalProperties": false,
+        "description": "The full receipt lineup, bud. Names are trimmed and stay nonempty; amounts are not rounded, converted, or checked against the totals.",
+        "examples": [
+          {
+            "storeName": "Example Store",
+            "receiptDate": "2026-09-13",
+            "category": "Groceries",
+            "subtotal": "10.25",
+            "tax": "0.75",
+            "total": "11.00",
+            "currency": "USD",
+            "items": [
+              {
+                "name": "Apples",
+                "amount": "10.25"
+              }
+            ]
+          }
+        ]
+      },
+      "IdempotencyKey": {
+        "type": "string",
+        "pattern": "\\S",
+        "description": "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs.",
+        "examples": ["manual-entry-1"]
+      },
+      "effect_HttpApiError_ConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["Conflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {}
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "health",
+      "description": "A quick bench check for server liveness."
+    },
+    {
+      "name": "receiptUploads",
+      "description": "Single-file receipt uploads and their processing status."
+    },
+    {
+      "name": "receipts",
+      "description": "Receipt retrieval and creation plays."
+    }
+  ]
+}
