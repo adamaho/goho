@@ -7,6 +7,7 @@
     "build": "turbo run build",
     "clean": "turbo run clean && rimraf node_modules",
     "dev": "turbo run dev --ui=tui",
+    "server:dev": "turbo run dev --filter=@goho/goho-server --ui=tui",
     "lint": "turbo run lint",
     "fmt": "oxfmt --config ./tools/oxfmt-config/src/base.json .",
     "fmt:check": "oxfmt --check --config ./tools/oxfmt-config/src/base.json .",

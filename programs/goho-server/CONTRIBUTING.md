@@ -40,12 +40,11 @@ cp programs/goho-server/.env.example programs/goho-server/.env
 
 Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
 
-Start the database, apply migrations, and start the server:
+From the repository root, start PostgreSQL, apply migrations, and run the
+server in watch mode with one command:
 
 ```bash
-pnpm --filter @goho/infra-local infra:up
-pnpm --filter @goho/goho-server db:migrate
-pnpm --filter @goho/goho-server start
+pnpm server:dev
 ```
 
 In a second terminal, seed the local database after the server is ready:
@@ -61,8 +60,7 @@ receipts without duplicates. Keep a key stable while its fixture stays the
 same, and use a new key version when changing a fixture. Seeding does not
 upload images or call OpenAI.
 
-Then configure and run the [CLI](../goho-cli/README.md). Use
-`pnpm --filter @goho/goho-server dev` for watch mode.
+Then configure and run the [CLI](../goho-cli/README.md).
 
 ## Verification
 
@@ -109,11 +107,12 @@ pnpm --filter @goho/goho-server db:migrate
 
 `infra:up` starts Postgres and creates the database on its first startup.
 `db:migrate` connects to that database and creates or updates its tables. These
-are separate commands. Neither `start` nor `dev` runs migrations automatically.
-The [systemd unit](#systemd-service) runs `db:migrate`
-automatically before launching the server on each start or restart. For other
-deployments, run it explicitly before starting the new server version. CI does
-not migrate deployment databases.
+are separate commands when run directly. The root `pnpm server:dev` command
+runs them through Turbo before starting the server. Direct package `start` and
+`dev` commands do not run migrations. The [systemd unit](#systemd-service)
+runs `db:migrate` automatically before launching the server on each start or
+restart. For other deployments, run it explicitly before starting the new
+server version. CI does not migrate deployment databases.
 
 ### How the runner works
 
