@@ -1,0 +1,32 @@
+{
+  "name": "@goho/goho-mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MCP program for Goho.",
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "clean": "rimraf node_modules dist build .turbo coverage",
+    "dev": "node --watch src/main.ts",
+    "start": "node src/main.ts",
+    "lint": "oxlint .",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@adamaho/nopeus-oxlint-config": "catalog:",
+    "@adamaho/nopeus-oxlint-plugin": "catalog:",
+    "@goho/tool-oxfmt-config": "workspace:*",
+    "@goho/tool-tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:"
+  }
+}
