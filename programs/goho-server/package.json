@@ -15,8 +15,8 @@
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
     "test:unit": "vitest run --project unit",
-    "openapi:generate": "node src/openapi.ts",
-    "openapi:check": "node src/openapi.ts --check",
+    "openapi:generate": "node scripts/openapi.ts",
+    "openapi:check": "node scripts/openapi.ts --check",
     "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
     "test:integration": "vitest run --project integration"
   },

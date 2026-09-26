@@ -72,8 +72,9 @@ pnpm --filter @goho/goho-server openapi:generate
 pnpm --filter @goho/goho-server openapi:check
 ```
 
-The server and Android client both derive from the shared API definition; the
-check fails if the committed OpenAPI file is stale.
+The server derives its OpenAPI document from the shared API at runtime. The
+Android build uses the committed copy to generate its client without running
+the server, so `openapi:check` fails when that copy is stale.
 
 ## Code organization and style
 
