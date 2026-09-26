@@ -1,14 +1,14 @@
 [versions]
-androidGradlePlugin = "9.0.1"
+androidGradlePlugin = "9.4.1"
 androidxActivity = "1.13.0"
-androidxComposeBom = "2026.03.01"
-kotlin = "2.3.20"
+androidxComposeBom = "2026.09.00"
+kotlin = "2.4.20"
 ktfmtGradle = "0.27.0"
 openApiGenerator = "7.25.0"
-desugarJdkLibs = "2.0.3"
+desugarJdkLibs = "2.1.5"
 kotlinxCoroutines = "1.11.0"
 moshi = "1.15.2"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 retrofit = "3.0.0"
 
 [libraries]

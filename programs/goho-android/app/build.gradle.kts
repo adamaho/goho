@@ -53,7 +53,7 @@ openApiGenerate {
 
 android {
     namespace = "com.adamaho.goho"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.adamaho.goho"
