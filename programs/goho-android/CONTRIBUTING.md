@@ -62,19 +62,30 @@ root as described in the root contributing guide.
 
 ## Generated API client
 
-The Android build generates its Kotlin API client from the checked-in
-[OpenAPI contract](../../packages/goho-api/openapi.json) into
-`app/build/generated/openapi`. Do not edit generated files. When the shared API
-changes, regenerate and commit the contract from the repository root:
+The Kotlin API client is checked in under
+`app/src/main/kotlin/com/adamaho/goho/api/generated`. Normal builds and Android
+Studio can use it without running the generator. Do not edit generated files.
+When the shared API changes, regenerate the
+[OpenAPI contract](../../packages/goho-api/openapi.json) from the repository root:
 
 ```bash
 pnpm --filter @goho/goho-server openapi:generate
 pnpm --filter @goho/goho-server openapi:check
 ```
 
+Then update the checked-in client from `programs/goho-android`:
+
+```bash
+./gradlew :app:updateOpenApiClient
+```
+
+Commit both the contract and Kotlin changes. Android CI regenerates the client
+and fails if it differs from the committed copy. Kotlin formatting excludes the
+generated package.
+
 The server derives its OpenAPI document from the shared API at runtime. The
-Android build uses the committed copy to generate its client without running
-the server, so `openapi:check` fails when that copy is stale.
+generator uses the committed copy without running the server, so `openapi:check`
+fails when that copy is stale.
 
 ## Code organization and style
 

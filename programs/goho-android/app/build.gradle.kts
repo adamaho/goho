@@ -1,3 +1,5 @@
+import com.ncorti.ktfmt.gradle.tasks.KtfmtCheckTask
+import com.ncorti.ktfmt.gradle.tasks.KtfmtFormatTask
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
@@ -10,6 +12,18 @@ plugins {
 ktfmt { kotlinLangStyle() }
 
 val generatedClientDir = layout.buildDirectory.dir("generated/openapi")
+val checkedInClientDir =
+    layout.projectDirectory.dir("src/main/kotlin/com/adamaho/goho/api/generated")
+
+tasks.withType<KtfmtCheckTask>().configureEach { exclude("**/api/generated/**") }
+
+tasks.withType<KtfmtFormatTask>().configureEach { exclude("**/api/generated/**") }
+
+tasks.register<Sync>("updateOpenApiClient") {
+    dependsOn(tasks.named<GenerateTask>("openApiGenerate"))
+    from(generatedClientDir.map { it.dir("src/main/kotlin/com/adamaho/goho/api/generated") })
+    into(checkedInClientDir)
+}
 
 openApiGenerate {
     generatorName.set("kotlin")
@@ -56,15 +70,6 @@ android {
     }
 
     buildFeatures { compose = true }
-}
-
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        variant.sources.kotlin?.addGeneratedSourceDirectory(
-            tasks.named<GenerateTask>("openApiGenerate"),
-            GenerateTask::outputDir,
-        )
-    }
 }
 
 kotlin { jvmToolchain(17) }
