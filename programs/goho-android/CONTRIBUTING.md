@@ -8,7 +8,7 @@ screen.
 ## Prerequisites
 
 - Install [Android Studio](https://developer.android.com/studio) and use its SDK
-  Manager to install Android SDK Platform 36 and the Android SDK Build-Tools.
+  Manager to install Android SDK Platform 37 and the Android SDK Build-Tools.
 - Install a JDK 17 or newer to run Gradle. The project requests a Java 17
   toolchain, and the checked-in Gradle wrapper supplies Gradle itself.
 - Create an [Android Virtual Device](https://developer.android.com/studio/run/managing-avds)
