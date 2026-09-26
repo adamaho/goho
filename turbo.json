@@ -22,6 +22,10 @@
     "fmt:check": {
       "outputs": []
     },
+    "openapi:check": {
+      "cache": false,
+      "outputs": []
+    },
     "clean": {
       "cache": false,
       "outputs": []

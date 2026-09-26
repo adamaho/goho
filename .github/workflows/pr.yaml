@@ -38,8 +38,8 @@ jobs:
       - name: Setup pnpm and install
         uses: ./.github/actions/setup-pnpm
 
-      - name: Lint
-        run: pnpm turbo run lint
+      - name: Lint and OpenAPI contract check
+        run: pnpm turbo run lint openapi:check
 
   fmt:
     name: fmt
@@ -61,9 +61,6 @@ jobs:
 
       - name: Format check
         run: pnpm run fmt:check
-
-      - name: OpenAPI contract check
-        run: pnpm -r --if-present run openapi:check
 
   tsc:
     name: tsc

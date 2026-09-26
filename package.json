@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "pnpm fmt:check && pnpm -r --if-present run openapi:check && turbo run lint tsc test:unit",
+    "check": "pnpm fmt:check && turbo run lint tsc test:unit openapi:check",
     "build": "turbo run build",
     "clean": "turbo run clean && rimraf node_modules",
     "dev": "turbo run dev --ui=tui",
