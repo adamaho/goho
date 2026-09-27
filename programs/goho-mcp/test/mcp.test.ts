@@ -20,6 +20,7 @@ const receipt = {
 const RpcResponse = Schema.fromJsonString(
   Schema.Struct({ id: Schema.Finite, result: Schema.Unknown }),
 );
+
 const ToolList = Schema.Struct({
   tools: Schema.Array(
     Schema.Struct({
@@ -28,10 +29,12 @@ const ToolList = Schema.Struct({
     }),
   ),
 });
+
 const ListResult = Schema.Struct({
   isError: Schema.Boolean,
   structuredContent: Schema.Struct({ receipts: Schema.Array(Schema.Unknown) }),
 });
+
 const ErrorResult = Schema.Struct({
   isError: Schema.Boolean,
   content: Schema.Array(Schema.Struct({ text: Schema.String })),
@@ -40,6 +43,7 @@ const ErrorResult = Schema.Struct({
 it.effect("lists Goho receipts through MCP and reports server failures", () =>
   Effect.gen(function* () {
     const receipts = yield* Ref.make([receipt]);
+
     const ServerLive = HttpServer.serve(
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest;
@@ -48,6 +52,7 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
         return HttpServerResponse.jsonUnsafe({ data: yield* Ref.get(receipts) });
       }),
     ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
+
     const serverScope = yield* Scope.make();
     yield* Effect.addFinalizer((exit) => Scope.close(serverScope, exit));
     const serverContext = yield* Layer.buildWithScope(ServerLive, serverScope);
@@ -55,8 +60,10 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
 
     const path = yield* Path.Path;
     const mainPath = yield* path.fromFileUrl(new URL("../src/main.ts", import.meta.url));
+
     const input = yield* Queue.unbounded<string>();
     const output = yield* Queue.unbounded<string>();
+
     const child = yield* ChildProcess.make(process.execPath, [mainPath], {
       env: { GOHO_SERVER_URL: HttpServer.formatAddress(server.address) },
       extendEnv: true,
@@ -67,6 +74,7 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
       stdout: "pipe",
       stderr: "pipe",
     });
+
     yield* child.stdout.pipe(
       Stream.decodeText,
       Stream.splitLines,
@@ -76,6 +84,7 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
 
     const send = (method: string, params: unknown, id?: number) =>
       Queue.offer(input, `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+
     const request = (id: number, method: string, params: unknown) =>
       Effect.gen(function* () {
         yield* send(method, params, id);
@@ -83,6 +92,7 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
         expect(response.id).toBe(id);
         return response.result;
       });
+
     const list = (id: number) =>
       request(id, "tools/call", { name: "list_receipts", arguments: {} });
 
