@@ -38,9 +38,7 @@ export const handle = Effect.fn("@goho/CreateReceipt.handle")(function* (
 ) {
   const crypto = yield* Crypto.Crypto;
   const client = yield* GohoServerClient.Service;
-  const idempotencyKey = IdempotencyKey.make(
-    yield* crypto.randomUUIDv4.pipe(Effect.mapError(() => createFailureMessage)),
-  );
+  const idempotencyKey = IdempotencyKey.make(yield* crypto.randomUUIDv4.pipe(Effect.orDie));
   const response = yield* client.receipts
     .create({
       headers: { "idempotency-key": idempotencyKey },

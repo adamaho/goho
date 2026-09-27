@@ -2,10 +2,10 @@ import { NodeRuntime, NodeStdio } from "@effect/platform-node";
 import { Layer } from "effect";
 import { McpProtocol, McpServer } from "effect/unstable/ai";
 
-import * as Tools from "./tools/index.ts";
+import * as GohoTools from "./tools/index.ts";
 
-const ServerLive = Layer.effectDiscard(McpServer.registerToolkit(Tools.toolkit)).pipe(
-  Layer.provide(Tools.layer),
+const ServerLive = Layer.effectDiscard(McpServer.registerToolkit(GohoTools.toolkit)).pipe(
+  Layer.provide(GohoTools.layer),
   Layer.provide(
     McpServer.layerStdio({
       name: "goho-mcp",
