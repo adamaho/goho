@@ -2,4 +2,6 @@
 
 Follow the repository-wide [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-Run `pnpm check` from the repository root before submitting changes. To inspect the server manually, launch it through an MCP client and call the `hello` tool. Keep stdout reserved for MCP protocol messages; write diagnostics to stderr.
+To try `list_receipts` with local data, follow the [Goho server setup](../goho-server/CONTRIBUTING.md#local-setup). In one terminal, run `pnpm server:dev`; after it is ready, run `pnpm --filter @goho/goho-server db:seed` in another. Then launch this program through an MCP client and call `list_receipts`.
+
+Run `pnpm check` from the repository root before submitting changes. Keep stdout reserved for MCP protocol messages; write diagnostics to stderr.

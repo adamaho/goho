@@ -1,6 +1,9 @@
 # @goho/goho-mcp
 
-A local MCP server for Goho. It currently offers one tool, `hello`, which returns a greeting. It does not connect to the Goho API yet.
+A local stdio MCP server for Goho. It offers these tools:
+
+- `hello` returns a greeting.
+- `list_receipts` returns saved receipts, newest first, with their items. It takes no arguments and requires a running Goho server.
 
 Install dependencies from the repository root with `pnpm install`. Configure your MCP client to launch the server over stdio with:
 
@@ -8,4 +11,4 @@ Install dependencies from the repository root with `pnpm install`. Configure you
 pnpm --dir /absolute/path/to/goho/programs/goho-mcp start
 ```
 
-Replace `/absolute/path/to/goho` with your checkout path. The server stays running while the client is connected; it does not print a greeting directly to the terminal. The `hello` tool is available through the MCP client.
+Replace `/absolute/path/to/goho` with your checkout path. `list_receipts` connects to `http://127.0.0.1:3000` by default; set `GOHO_SERVER_URL` in the MCP server's environment if your Goho server uses another address. The MCP server stays running while the client is connected and reserves stdout for protocol messages.
