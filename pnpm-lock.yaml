@@ -435,6 +435,9 @@ importers:
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
         version: 0.7.1(oxlint@1.85.0)
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)(vitest@5.0.1(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)))
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
