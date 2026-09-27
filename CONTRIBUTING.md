@@ -20,7 +20,7 @@ use the pinned version and do not use Corepack.
 Install dependencies:
 
 ```bash
-pnpm install --frozen-lockfile
+pnpm install
 ```
 
 Start local infrastructure when a package needs shared runtime services:
@@ -32,6 +32,29 @@ pnpm --filter=@goho/infra-local run infra:up
 For the Goho server, `pnpm server:dev` starts local PostgreSQL, applies
 migrations, and runs the server in watch mode. See the
 [server setup](programs/goho-server/CONTRIBUTING.md#local-setup).
+
+## Agent-first setup
+
+From the repository root, copy this prompt into a coding agent running on your
+machine:
+
+```text
+Set up this checkout for local Goho server development. Read CONTRIBUTING.md,
+programs/goho-server/CONTRIBUTING.md, and package.json first. Check the declared
+Node.js and pnpm versions and whether Docker Compose works for my user. Reuse
+compatible installations; install missing tools directly without Corepack.
+Run pnpm install. Copy programs/goho-server/.env.example to
+programs/goho-server/.env only if the destination does not exist. If
+OPENAI_API_KEY is missing, ask me to add it to that file before starting the
+server. Never print, overwrite, or commit secrets. Once configuration is ready,
+run pnpm server:dev and wait for the server to be ready. In another terminal,
+run pnpm --filter @goho/goho-server db:seed. Run pnpm check. Report what worked
+and any steps that still need my attention.
+```
+
+The server setup runs PostgreSQL and migrations before starting watch mode. The
+seed command runs after the server is ready and can be repeated without creating
+duplicate receipts.
 
 ## Verification
 
@@ -73,6 +96,10 @@ not require category-based names. Each directory directly under `packages/*`
 must match its `package.json` name after removing the npm scope. For example,
 `@goho/billing` belongs in `packages/billing`, while `@goho/core` belongs in
 `packages/core`.
+
+Shared API contracts live in `packages/goho-api` and the generated client lives
+in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
+shared AI integration stays in `packages/core`.
 
 ## Package Imports
 
@@ -143,16 +170,3 @@ chore(goho): add contributor documentation
 feat(web): add account settings page
 fix(api): validate missing request body
 ```
-
-## Coding Agents
-
-Start coding agents from the repository root with Node.js and pnpm on `PATH`.
-Use the same setup and verification commands as local development:
-
-```bash
-pnpm check
-```
-
-Shared API contracts live in `packages/goho-api` and the generated client lives
-in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
-shared AI integration stays in `packages/core`.

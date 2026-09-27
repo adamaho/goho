@@ -180,7 +180,7 @@ This unit targets the existing `adam` user and checkout at
 ### Runtime setup
 
 Install Node.js and pnpm at the versions required by the root `package.json`,
-then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
+then run `pnpm install` in the checkout as `adam`.
 The service unit uses this explicit `PATH`:
 
 ```text
