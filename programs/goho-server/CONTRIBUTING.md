@@ -11,15 +11,6 @@ setup.
 Follow the root [development setup](../../CONTRIBUTING.md#development-setup)
 to install Node.js, pnpm, and workspace dependencies before running server commands.
 
-### OpenAI API key
-
-1. Create an API key from the
-   [OpenAI API keys](https://platform.openai.com/api-keys) page.
-2. Ensure the OpenAI project has access to the model configured by
-   `OPENAI_MODEL` and has billing configured as needed.
-3. Store the key only in `programs/goho-server/.env` as `OPENAI_API_KEY`. The local
-   environment file is ignored by Git.
-
 ## Runtime configuration
 
 Configure the environment file before starting:
@@ -27,8 +18,8 @@ Configure the environment file before starting:
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
-- `OPENAI_API_KEY`: OpenAI secret.
-- `OPENAI_MODEL`: extraction model.
+- `OPENAI_API_KEY`: nonempty local placeholder, or a real key for image extraction.
+- `OPENAI_MODEL`: model used for image extraction.
 
 ## Local Setup
 
@@ -38,7 +29,8 @@ Copy the environment template:
 cp programs/goho-server/.env.example programs/goho-server/.env
 ```
 
-Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
+The example contains a nonempty OpenAI placeholder. It is enough to start the
+server and work with receipts created through the API or seed command.
 
 From the repository root, start PostgreSQL, apply migrations, and run the
 server in watch mode with one command:
@@ -60,7 +52,11 @@ receipts without duplicates. Keep a key stable while its fixture stays the
 same, and use a new key version when changing a fixture. Seeding does not
 upload images or call OpenAI.
 
-Then configure and run the [CLI](../goho-cli/README.md).
+To process uploaded receipt images, replace the placeholder with a real
+`OPENAI_API_KEY` in the ignored `.env` file. Ensure the key has access to the
+configured `OPENAI_MODEL` and billing is enabled, then follow the
+[CLI setup](../goho-cli/README.md). An OpenAI key is not needed for local receipt
+creation, reading, or seeding.
 
 ## Verification
 
