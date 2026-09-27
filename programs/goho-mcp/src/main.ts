@@ -3,7 +3,7 @@ import { Receipt } from "@goho/goho-server-client/receipts";
 import { Effect, Layer, Schema } from "effect";
 import { McpProtocol, McpServer, Tool, Toolkit } from "effect/unstable/ai";
 
-import * as GohoServer from "./goho-server.ts";
+import * as GohoServerClient from "./goho-server-client.ts";
 
 const Hello = Tool.make("hello", {
   description: "Return a greeting from Goho.",
@@ -19,7 +19,7 @@ const ListReceipts = Tool.make("list_receipts", {
   success: Schema.Struct({ receipts: Schema.Array(Receipt) }),
   failure: Schema.String,
   failureMode: "return",
-  dependencies: [GohoServer.Service],
+  dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, true)
   .annotate(Tool.Destructive, false)
@@ -32,7 +32,7 @@ const ToolsLive = GohoToolkit.toLayer({
   hello: () => Effect.succeed("Hello, world!"),
   list_receipts: () =>
     Effect.gen(function* () {
-      const client = yield* GohoServer.Service;
+      const client = yield* GohoServerClient.Service;
       const response = yield* client.receipts.list();
       return { receipts: response.data };
     }).pipe(
@@ -41,7 +41,7 @@ const ToolsLive = GohoToolkit.toLayer({
           "Could not list receipts. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
       ),
     ),
-}).pipe(Layer.provide(GohoServer.layer));
+}).pipe(Layer.provide(GohoServerClient.layer));
 
 const ServerLive = Layer.effectDiscard(McpServer.registerToolkit(GohoToolkit)).pipe(
   Layer.provide(ToolsLive),
