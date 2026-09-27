@@ -1,9 +1,8 @@
 # Local machine deployment
 
 This setup runs the server under systemd and PostgreSQL 18 under Docker Compose.
-It targets the existing `adam` user, checkout at
-`/home/adam/github.com/adamaho/goho`, and server configuration in
-`/etc/goho/server.env`.
+It uses the service account and checkout path configured in the systemd unit,
+with server configuration in `/etc/goho/server.env`.
 
 ## Layout
 
@@ -32,8 +31,8 @@ It installs Ubuntu's `docker.io` and `docker-compose-v2` packages, enables Docke
 and creates `/etc/goho/postgres.env` with a generated password on first use.
 Reruns preserve that password and the existing application credentials, updating
 `DATABASE_URL` and adding the default `GOHO_UPLOADS_DIRECTORY` when it is absent.
-The installer creates that receipt storage directory for the `adam` service user
-with mode `0700`; include it in host backups.
+The installer creates that receipt storage directory for the configured
+service account with mode `0700`; include it in host backups.
 
 Postgres listens on `127.0.0.1:5434`. The `goho-deployment` Compose project has its
 own named data volume, separate from development and integration tests. The

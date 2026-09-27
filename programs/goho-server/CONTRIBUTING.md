@@ -11,15 +11,6 @@ setup.
 Follow the root [development setup](../../CONTRIBUTING.md#development-setup)
 to install Node.js, pnpm, and workspace dependencies before running server commands.
 
-### OpenAI API key
-
-1. Create an API key from the
-   [OpenAI API keys](https://platform.openai.com/api-keys) page.
-2. Ensure the OpenAI project has access to the model configured by
-   `OPENAI_MODEL` and has billing configured as needed.
-3. Store the key only in `programs/goho-server/.env` as `OPENAI_API_KEY`. The local
-   environment file is ignored by Git.
-
 ## Runtime configuration
 
 Configure the environment file before starting:
@@ -27,8 +18,8 @@ Configure the environment file before starting:
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
-- `OPENAI_API_KEY`: OpenAI secret.
-- `OPENAI_MODEL`: extraction model.
+- `OPENAI_API_KEY`: nonempty local placeholder, or a real key for image extraction.
+- `OPENAI_MODEL`: model used for image extraction.
 
 ## Local Setup
 
@@ -38,7 +29,8 @@ Copy the environment template:
 cp programs/goho-server/.env.example programs/goho-server/.env
 ```
 
-Set `OPENAI_API_KEY` and adjust `OPENAI_MODEL` if needed.
+The example contains a nonempty OpenAI placeholder. It is enough to start the
+server and work with receipts created through the API or seed command.
 
 From the repository root, start PostgreSQL, apply migrations, and run the
 server in watch mode with one command:
@@ -60,7 +52,11 @@ receipts without duplicates. Keep a key stable while its fixture stays the
 same, and use a new key version when changing a fixture. Seeding does not
 upload images or call OpenAI.
 
-Then configure and run the [CLI](../goho-cli/README.md).
+To process uploaded receipt images, replace the placeholder with a real
+`OPENAI_API_KEY` in the ignored `.env` file. Ensure the key has access to the
+configured `OPENAI_MODEL` and billing is enabled, then follow the
+[CLI setup](../goho-cli/README.md). An OpenAI key is not needed for local receipt
+creation, reading, or seeding.
 
 ## Verification
 
@@ -167,62 +163,8 @@ Database configuration and initial connectivity are required at server startup.
 The systemd unit applies migrations before launching the server. Direct launches
 with `start` or `dev` require the separate migration command first.
 
-## Systemd service
+## Host deployment
 
-For this machine's Docker Compose deployment and automated installation, see
-[local machine deployment](../../infra/deployment/README.md).
-
-Run the installation commands below from the repository root.
-
-This unit targets the existing `adam` user and checkout at
-`/home/adam/github.com/adamaho/goho`.
-
-### Runtime setup
-
-Install Node.js and pnpm at the versions required by the root `package.json`,
-then run `pnpm install --frozen-lockfile` in the checkout as `adam`.
-The service unit uses this explicit `PATH`:
-
-```text
-/home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin
-```
-
-Ensure both executables are available to `adam` on that path. The service does
-not load interactive shell profiles. If your tools live elsewhere, set
-`Environment="PATH=..."` with the complete path in a systemd override for each
-service. Check the versions with that same path before starting it.
-
-### Install the service
-
-```bash
-sudo install -d -o root -g adam -m 0750 /etc/goho
-sudo install -o root -g adam -m 0640 infra/deployment/goho-server/.env.example /etc/goho/server.env
-sudo install -o root -g root -m 0644 infra/systemd/goho-server/goho-server.service /etc/systemd/system/goho-server.service
-```
-
-The environment install command is for first setup; preserve an existing file.
-Configure `/etc/goho/server.env` and `DATABASE_URL` for a PostgreSQL 18 database reachable from this host.
-The database must be running when the service starts. `ExecStartPre` runs
-`db:migrate` as `adam`, using the same working directory, PATH, and environment
-file as the server. Each start or restart applies pending migrations before
-starting the HTTP server. If migrations fail, the server does not start; the
-existing `Restart=on-failure` policy retries after five seconds, subject to
-systemd's start-rate limit. Inspect migration output in the service journal.
-The unit does not provision PostgreSQL. The server listens on `127.0.0.1`
-without authentication.
-
-```bash
-sudo systemctl daemon-reload
-sudo systemd-analyze verify /etc/systemd/system/goho-server.service
-sudo systemctl enable --now goho-server.service
-journalctl -u goho-server.service
-```
-
-For an existing installation, copy the updated unit with the `sudo install`
-command above and run `sudo systemctl daemon-reload`, then restart the service
-after draining active work. Updating the checkout alone does not update the
-installed unit.
-
-The deployment installer retires any installed legacy receipt timer after the
-replacement server passes its health check. Provider failure causes appear in the
-server journal; review before sharing.
+For systemd and Docker Compose deployment, see the
+[deployment guide](../../infra/deployment/README.md). Local development uses the
+[setup above](#local-setup).

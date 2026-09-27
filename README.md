@@ -2,39 +2,34 @@
 
 Goho is organized as a pnpm and Turborepo workspace.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow,
-verification commands, workspace conventions, and commit guidelines.
+## Agent-first setup
 
-## Prerequisites
-
-Before developing in this repository, install:
-
-- [Node.js](https://nodejs.org/en/download) 24, matching `engines.node` in `package.json`
-- [pnpm](https://pnpm.io/installation) at the version pinned in `packageManager`
-- [Docker with Compose](https://docs.docker.com/get-docker/) when using local services
-
-You can give the following prompt to a coding agent running on your machine:
+From the repository root, copy this prompt into a coding agent running on your
+machine:
 
 ```text
-Configure this machine to work on the Goho project. Read README.md,
-CONTRIBUTING.md, and package.json first. Use existing Node.js and pnpm
-installations when they match the declared versions; install missing tools
-directly without Corepack. Set up Docker only if local services are needed.
-Install dependencies with pnpm and run the documented verification command.
-Report any manual steps or failures clearly.
+Set up this checkout for local Goho server development. Read README.md,
+CONTRIBUTING.md, programs/goho-server/CONTRIBUTING.md, and package.json
+first. Check the declared Node.js and pnpm versions and whether Docker Compose
+works for my user. Reuse compatible installations; install missing tools
+directly without Corepack.
+Run pnpm install. Copy programs/goho-server/.env.example to
+programs/goho-server/.env only if the destination does not exist. Keep the
+example's OpenAI placeholder for local receipt APIs and seeding; a real key is
+only needed to process uploaded images. Never print, overwrite, or commit
+secrets. Run pnpm server:dev and wait for the server to be ready. In another
+terminal, run pnpm --filter @goho/goho-server db:seed. Run pnpm check. Report
+what worked and any steps that still need my attention.
 ```
 
-## Development
+The server setup runs PostgreSQL and migrations before starting watch mode. The
+seed command runs after the server is ready and can be repeated without creating
+duplicate receipts.
 
-Follow the [development setup](./CONTRIBUTING.md#development-setup) to install
-the required tools, then run from the repository root:
+## Contributing
 
-```bash
-pnpm install --frozen-lockfile
-pnpm check
-```
-
-Coding agents use these same commands with Node.js and pnpm on `PATH`.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for first-time setup, the development
+workflow, verification commands, and workspace conventions.
 
 ## Receipt processing
 

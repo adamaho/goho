@@ -20,7 +20,7 @@ use the pinned version and do not use Corepack.
 Install dependencies:
 
 ```bash
-pnpm install --frozen-lockfile
+pnpm install
 ```
 
 Start local infrastructure when a package needs shared runtime services:
@@ -73,6 +73,10 @@ not require category-based names. Each directory directly under `packages/*`
 must match its `package.json` name after removing the npm scope. For example,
 `@goho/billing` belongs in `packages/billing`, while `@goho/core` belongs in
 `packages/core`.
+
+Shared API contracts live in `packages/goho-api` and the generated client lives
+in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
+shared AI integration stays in `packages/core`.
 
 ## Package Imports
 
@@ -143,16 +147,3 @@ chore(goho): add contributor documentation
 feat(web): add account settings page
 fix(api): validate missing request body
 ```
-
-## Coding Agents
-
-Start coding agents from the repository root with Node.js and pnpm on `PATH`.
-Use the same setup and verification commands as local development:
-
-```bash
-pnpm check
-```
-
-Shared API contracts live in `packages/goho-api` and the generated client lives
-in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
-shared AI integration stays in `packages/core`.
