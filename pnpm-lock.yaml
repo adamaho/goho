@@ -422,6 +422,9 @@ importers:
       '@effect/platform-node':
         specifier: 'catalog:'
         version: 4.0.0-rc.117(effect@4.0.0-rc.117)(redis@6.2.1)
+      '@goho/goho-server-client':
+        specifier: workspace:*
+        version: link:../../clients/goho-server
       effect:
         specifier: 'catalog:'
         version: 4.0.0-rc.117

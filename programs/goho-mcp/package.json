@@ -12,10 +12,12 @@
     "dev": "node --watch src/main.ts",
     "start": "node src/main.ts",
     "lint": "oxlint .",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test:unit": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@goho/goho-server-client": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
