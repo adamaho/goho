@@ -2,8 +2,10 @@
 
 Goho is organized as a pnpm and Turborepo workspace.
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow,
-verification commands, workspace conventions, and commit guidelines.
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for first-time setup, the development
+workflow, verification commands, and workspace conventions.
 
 ## Receipt processing
 
