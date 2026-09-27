@@ -1,9 +1,9 @@
 /* oxlint-disable nopeus/prefer-effect-platform-services -- This process-level test controls raw stdio and a disposable HTTP server. */
-import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline";
-import { test } from "node:test";
+
+import { expect, test } from "vitest";
 
 const receipt = {
   id: "42",
@@ -20,14 +20,14 @@ const receipt = {
 test("lists Goho receipts through MCP and reports server failures", async () => {
   let receipts = [receipt];
   const server = createServer((request, response) => {
-    assert.equal(request.method, "GET");
-    assert.equal(request.url, "/receipts");
+    expect(request.method).toBe("GET");
+    expect(request.url).toBe("/receipts");
     response.writeHead(200, { "content-type": "application/json" });
     response.end(JSON.stringify({ data: receipts }));
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  assert.ok(address);
+  expect(address).toBeTruthy();
 
   const child = spawn(process.execPath, ["src/main.ts"], {
     cwd: new URL("../", import.meta.url),
@@ -70,30 +70,27 @@ test("lists Goho receipts through MCP and reports server failures", async () => 
       capabilities: {},
       clientInfo: { name: "goho-mcp-test", version: "1.0.0" },
     });
-    assert.equal(initialized.result.protocolVersion, "2025-11-25");
+    expect(initialized.result.protocolVersion).toBe("2025-11-25");
     child.stdin.write(
       `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
     );
 
     const discovered = await request(2, "tools/list", {});
-    assert.deepEqual(
-      discovered.result.tools.map((tool) => tool.name),
-      ["hello", "list_receipts"],
-    );
-    assert.equal(discovered.result.tools[1].annotations.readOnlyHint, true);
+    expect(discovered.result.tools.map((tool) => tool.name)).toEqual(["hello", "list_receipts"]);
+    expect(discovered.result.tools[1].annotations.readOnlyHint).toBe(true);
 
     const listed = await callList(3);
-    assert.equal(listed.result.isError, false);
-    assert.deepEqual(listed.result.structuredContent, { receipts: [receipt] });
+    expect(listed.result.isError).toBe(false);
+    expect(listed.result.structuredContent).toEqual({ receipts: [receipt] });
 
     receipts = [];
     const empty = await callList(4);
-    assert.deepEqual(empty.result.structuredContent, { receipts: [] });
+    expect(empty.result.structuredContent).toEqual({ receipts: [] });
 
     await new Promise((resolve) => server.close(resolve));
     const unavailable = await callList(5);
-    assert.equal(unavailable.result.isError, true);
-    assert.match(unavailable.result.content[0].text, /Could not list receipts/);
+    expect(unavailable.result.isError).toBe(true);
+    expect(unavailable.result.content[0].text).toMatch(/Could not list receipts/);
   } finally {
     child.kill();
     lines.close();

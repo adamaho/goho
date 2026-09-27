@@ -13,7 +13,7 @@
     "start": "node src/main.ts",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
-    "test:unit": "node --test test/*.test.mjs"
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
@@ -29,6 +29,7 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
