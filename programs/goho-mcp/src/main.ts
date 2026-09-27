@@ -1,5 +1,5 @@
 import { NodeRuntime, NodeStdio } from "@effect/platform-node";
-import { Receipt } from "@goho/goho-server-client/receipts";
+import { Receipt, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Effect, Layer, Schema } from "effect";
 import { McpProtocol, McpServer, Tool, Toolkit } from "effect/unstable/ai";
 
@@ -26,7 +26,20 @@ const ListReceipts = Tool.make("list_receipts", {
   .annotate(Tool.Idempotent, true)
   .annotate(Tool.OpenWorld, false);
 
-const GohoToolkit = Toolkit.make(Hello, ListReceipts);
+const GetReceipt = Tool.make("get_receipt", {
+  description: "Get one saved Goho receipt, including its items, by receipt ID.",
+  parameters: Schema.Struct({ receipt_id: ReceiptId }),
+  success: Schema.Struct({ receipt: Receipt }),
+  failure: Schema.String,
+  failureMode: "return",
+  dependencies: [GohoServerClient.Service],
+})
+  .annotate(Tool.Readonly, true)
+  .annotate(Tool.Destructive, false)
+  .annotate(Tool.Idempotent, true)
+  .annotate(Tool.OpenWorld, false);
+
+const GohoToolkit = Toolkit.make(Hello, ListReceipts, GetReceipt);
 
 const ToolsLive = GohoToolkit.toLayer({
   hello: () => Effect.succeed("Hello, world!"),
@@ -39,6 +52,18 @@ const ToolsLive = GohoToolkit.toLayer({
       Effect.mapError(
         () =>
           "Could not list receipts. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
+      ),
+    ),
+  get_receipt: ({ receipt_id }) =>
+    Effect.gen(function* () {
+      const client = yield* GohoServerClient.Service;
+      const response = yield* client.receipts.get({ params: { receiptId: receipt_id } });
+      return { receipt: response.data };
+    }).pipe(
+      Effect.mapError((cause) =>
+        cause._tag === "NotFound"
+          ? `Receipt ${receipt_id} was not found.`
+          : "Could not get receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
       ),
     ),
 }).pipe(Layer.provide(GohoServerClient.layer));
