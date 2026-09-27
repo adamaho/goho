@@ -5,7 +5,8 @@
   "description": "MCP program for Goho.",
   "type": "module",
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "scripts": {
     "clean": "rimraf node_modules dist build .turbo coverage",
