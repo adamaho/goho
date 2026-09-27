@@ -24,25 +24,28 @@ export const tool = Tool.make("create_receipt", {
   .annotate(Tool.Idempotent, false)
   .annotate(Tool.OpenWorld, false);
 
+const createFailureMessage =
+  "Could not create receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
+
 /**
  * Handles a create receipt request with the Goho server client.
  *
  * @category tools
  * @since 0.1.0
  */
-export const handle = (payload: CreateReceiptRequest) =>
-  Effect.gen(function* () {
-    const crypto = yield* Crypto.Crypto;
-    const client = yield* GohoServerClient.Service;
-    const idempotencyKey = IdempotencyKey.make(yield* crypto.randomUUIDv4);
-    const response = yield* client.receipts.create({
+export const handle = Effect.fn("@goho/CreateReceipt.handle")(function* (
+  payload: CreateReceiptRequest,
+) {
+  const crypto = yield* Crypto.Crypto;
+  const client = yield* GohoServerClient.Service;
+  const idempotencyKey = IdempotencyKey.make(
+    yield* crypto.randomUUIDv4.pipe(Effect.mapError(() => createFailureMessage)),
+  );
+  const response = yield* client.receipts
+    .create({
       headers: { "idempotency-key": idempotencyKey },
       payload,
-    });
-    return { receipt: response.data };
-  }).pipe(
-    Effect.mapError(
-      () =>
-        "Could not create receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
-    ),
-  );
+    })
+    .pipe(Effect.mapError(() => createFailureMessage));
+  return { receipt: response.data };
+});

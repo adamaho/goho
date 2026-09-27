@@ -29,15 +29,20 @@ export const tool = Tool.make("get_receipt", {
  * @category tools
  * @since 0.1.0
  */
-export const handle = ({ receipt_id }: { readonly receipt_id: ReceiptId }) =>
-  Effect.gen(function* () {
-    const client = yield* GohoServerClient.Service;
-    const response = yield* client.receipts.get({ params: { receiptId: receipt_id } });
-    return { receipt: response.data };
-  }).pipe(
-    Effect.mapError((cause) =>
-      cause._tag === "NotFound"
-        ? `Receipt ${receipt_id} was not found.`
-        : "Could not get receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
-    ),
-  );
+export const handle = Effect.fn("@goho/GetReceipt.handle")(function* ({
+  receipt_id,
+}: {
+  readonly receipt_id: ReceiptId;
+}) {
+  const client = yield* GohoServerClient.Service;
+  const response = yield* client.receipts
+    .get({ params: { receiptId: receipt_id } })
+    .pipe(
+      Effect.mapError((cause) =>
+        cause._tag === "NotFound"
+          ? `Receipt ${receipt_id} was not found.`
+          : "Could not get receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
+      ),
+    );
+  return { receipt: response.data };
+});
