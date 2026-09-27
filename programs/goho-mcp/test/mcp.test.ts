@@ -1,6 +1,6 @@
 import { NodeHttpServer, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Context, Effect, Exit, Layer, Path, Queue, Ref, Schema, Scope, Stream } from "effect";
+import { Effect, Layer, Path, Queue, Ref, Schema, Stream } from "effect";
 import { HttpServer, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 import { ChildProcess } from "effect/unstable/process";
 import { expect } from "vitest";
@@ -40,24 +40,8 @@ const ErrorResult = Schema.Struct({
   content: Schema.Array(Schema.Struct({ text: Schema.String })),
 });
 
-it.effect("lists Goho receipts through MCP and reports server failures", () =>
+const startMcpClient = (baseUrl: string) =>
   Effect.gen(function* () {
-    const receipts = yield* Ref.make([receipt]);
-
-    const ServerLive = HttpServer.serve(
-      Effect.gen(function* () {
-        const request = yield* HttpServerRequest.HttpServerRequest;
-        expect(request.method).toBe("GET");
-        expect(request.url).toBe("/receipts");
-        return HttpServerResponse.jsonUnsafe({ data: yield* Ref.get(receipts) });
-      }),
-    ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
-
-    const serverScope = yield* Scope.make();
-    yield* Effect.addFinalizer((exit) => Scope.close(serverScope, exit));
-    const serverContext = yield* Layer.buildWithScope(ServerLive, serverScope);
-    const server = Context.get(serverContext, HttpServer.HttpServer);
-
     const path = yield* Path.Path;
     const mainPath = yield* path.fromFileUrl(new URL("../src/main.ts", import.meta.url));
 
@@ -65,7 +49,7 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
     const output = yield* Queue.unbounded<string>();
 
     const child = yield* ChildProcess.make(process.execPath, [mainPath], {
-      env: { GOHO_SERVER_URL: HttpServer.formatAddress(server.address) },
+      env: { GOHO_SERVER_URL: baseUrl },
       extendEnv: true,
       stdin: {
         stream: Stream.fromQueue(input).pipe(Stream.encodeText),
@@ -93,9 +77,6 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
         return response.result;
       });
 
-    const list = (id: number) =>
-      request(id, "tools/call", { name: "list_receipts", arguments: {} });
-
     const initialized = yield* Schema.decodeUnknownEffect(
       Schema.Struct({ protocolVersion: Schema.String }),
     )(
@@ -108,22 +89,55 @@ it.effect("lists Goho receipts through MCP and reports server failures", () =>
     expect(initialized.protocolVersion).toBe("2025-11-25");
     yield* send("notifications/initialized", undefined);
 
-    const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
-      yield* request(2, "tools/list", {}),
+    return {
+      request,
+      list: (id: number) => request(id, "tools/call", { name: "list_receipts", arguments: {} }),
+    };
+  });
+
+it.effect("lists populated and empty Goho receipts through MCP", () =>
+  Effect.gen(function* () {
+    const receipts = yield* Ref.make([receipt]);
+
+    const ServerLive = HttpServer.serve(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.method).toBe("GET");
+        expect(request.url).toBe("/receipts");
+        return HttpServerResponse.jsonUnsafe({ data: yield* Ref.get(receipts) });
+      }),
+    ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
+
+    yield* Effect.gen(function* () {
+      const server = yield* HttpServer.HttpServer;
+      const client = yield* startMcpClient(HttpServer.formatAddress(server.address));
+
+      const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
+        yield* client.request(2, "tools/list", {}),
+      );
+      expect(discovered.tools.map((tool) => tool.name)).toEqual(["hello", "list_receipts"]);
+      expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
+
+      const listed = yield* Schema.decodeUnknownEffect(ListResult)(yield* client.list(3));
+      expect(listed.isError).toBe(false);
+      expect(listed.structuredContent).toEqual({ receipts: [receipt] });
+
+      yield* Ref.set(receipts, []);
+      const empty = yield* Schema.decodeUnknownEffect(ListResult)(yield* client.list(4));
+      expect(empty.structuredContent).toEqual({ receipts: [] });
+    }).pipe(Effect.provide(ServerLive));
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("returns an MCP tool error when Goho server is unavailable", () =>
+  Effect.gen(function* () {
+    const baseUrl = yield* HttpServer.HttpServer.pipe(
+      Effect.map((server) => HttpServer.formatAddress(server.address)),
+      Effect.provide(NodeHttpServer.layerTest),
     );
-    expect(discovered.tools.map((tool) => tool.name)).toEqual(["hello", "list_receipts"]);
-    expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
+    const client = yield* startMcpClient(baseUrl);
 
-    const listed = yield* Schema.decodeUnknownEffect(ListResult)(yield* list(3));
-    expect(listed.isError).toBe(false);
-    expect(listed.structuredContent).toEqual({ receipts: [receipt] });
-
-    yield* Ref.set(receipts, []);
-    const empty = yield* Schema.decodeUnknownEffect(ListResult)(yield* list(4));
-    expect(empty.structuredContent).toEqual({ receipts: [] });
-
-    yield* Scope.close(serverScope, Exit.succeed(undefined));
-    const unavailable = yield* Schema.decodeUnknownEffect(ErrorResult)(yield* list(5));
+    const unavailable = yield* Schema.decodeUnknownEffect(ErrorResult)(yield* client.list(2));
     expect(unavailable.isError).toBe(true);
     expect(unavailable.content[0]?.text).toMatch(/Could not list receipts/);
   }).pipe(Effect.provide(NodeServices.layer)),
