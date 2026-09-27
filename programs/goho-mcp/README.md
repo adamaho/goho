@@ -2,7 +2,6 @@
 
 A local stdio MCP server for Goho. It offers these tools:
 
-- `hello` returns a greeting.
 - `list_receipts` returns saved receipts, newest first, with their items. It takes no arguments.
 - `get_receipt` takes a positive integer `receipt_id` and returns that receipt with its items.
 - `create_receipt` saves supplied receipt details and items, generating an idempotency key for the request.
