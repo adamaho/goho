@@ -35,6 +35,11 @@ const ListResult = Schema.Struct({
   structuredContent: Schema.Struct({ receipts: Schema.Array(Schema.Unknown) }),
 });
 
+const GetResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ receipt: Schema.Unknown }),
+});
+
 const ErrorResult = Schema.Struct({
   isError: Schema.Boolean,
   content: Schema.Array(Schema.Struct({ text: Schema.String })),
@@ -92,6 +97,11 @@ const startMcpClient = (baseUrl: string) =>
     return {
       request,
       list: (id: number) => request(id, "tools/call", { name: "list_receipts", arguments: {} }),
+      get: (id: number, receiptId: string) =>
+        request(id, "tools/call", {
+          name: "get_receipt",
+          arguments: { receipt_id: receiptId },
+        }),
     };
   });
 
@@ -115,7 +125,11 @@ it.effect("lists populated and empty Goho receipts through MCP", () =>
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools.map((tool) => tool.name)).toEqual(["hello", "list_receipts"]);
+      expect(discovered.tools.map((tool) => tool.name)).toEqual([
+        "hello",
+        "list_receipts",
+        "get_receipt",
+      ]);
       expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
 
       const listed = yield* Schema.decodeUnknownEffect(ListResult)(yield* client.list(3));
@@ -141,4 +155,53 @@ it.effect("returns an MCP tool error when Goho server is unavailable", () =>
     expect(unavailable.isError).toBe(true);
     expect(unavailable.content[0]?.text).toMatch(/Could not list receipts/);
   }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+const GetReceiptServerLive = HttpServer.serve(
+  Effect.gen(function* () {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    expect(request.method).toBe("GET");
+
+    if (request.url === "/receipts/42") {
+      return HttpServerResponse.jsonUnsafe({ data: receipt });
+    }
+    if (request.url === "/receipts/999") {
+      return HttpServerResponse.jsonUnsafe({ _tag: "NotFound" }, { status: 404 });
+    }
+    return HttpServerResponse.empty({ status: 500 });
+  }),
+).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
+
+it.effect("gets a saved receipt by ID through MCP", () =>
+  Effect.gen(function* () {
+    const server = yield* HttpServer.HttpServer;
+    const client = yield* startMcpClient(HttpServer.formatAddress(server.address));
+
+    const found = yield* Schema.decodeUnknownEffect(GetResult)(yield* client.get(2, "42"));
+    expect(found.isError).toBe(false);
+    expect(found.structuredContent).toEqual({ receipt });
+  }).pipe(Effect.provide([GetReceiptServerLive, NodeServices.layer])),
+);
+
+it.effect("reports a missing receipt by ID through MCP", () =>
+  Effect.gen(function* () {
+    const server = yield* HttpServer.HttpServer;
+    const client = yield* startMcpClient(HttpServer.formatAddress(server.address));
+
+    const missing = yield* Schema.decodeUnknownEffect(ErrorResult)(yield* client.get(2, "999"));
+    expect(missing.isError).toBe(true);
+    expect(missing.content[0]?.text).toContain("Receipt 999 was not found.");
+  }).pipe(Effect.provide([GetReceiptServerLive, NodeServices.layer])),
+);
+
+it.effect("rejects an invalid receipt ID through MCP", () =>
+  Effect.gen(function* () {
+    const server = yield* HttpServer.HttpServer;
+    const client = yield* startMcpClient(HttpServer.formatAddress(server.address));
+
+    const invalid = yield* Schema.decodeUnknownEffect(ErrorResult)(yield* client.get(2, "0"));
+    expect(invalid.isError).toBe(true);
+    expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'get_receipt'");
+    expect(invalid.content[0]?.text).toContain("receipt_id");
+  }).pipe(Effect.provide([GetReceiptServerLive, NodeServices.layer])),
 );
