@@ -99,7 +99,7 @@ settings = dict(
     for line in Path('/etc/goho/server.env').read_text().splitlines()
     if '=' in line and not line.lstrip().startswith('#')
 )
-port = settings.get('GOHO_SERVER_PORT', '3000').strip()
+port = settings.get('GOHO_SERVER_PORT', '13000').strip()
 if not port.isdecimal() or not 1 <= int(port) <= 65535:
     raise SystemExit('Invalid GOHO_SERVER_PORT in /etc/goho/server.env')
 print(port)
