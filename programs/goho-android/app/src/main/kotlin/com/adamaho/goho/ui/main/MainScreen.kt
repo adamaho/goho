@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -40,13 +42,22 @@ enum class ServerConnectionStatus {
     Unavailable,
 }
 
+enum class UploadStatus {
+    Ready,
+    Uploading,
+    Submitted,
+    Failed,
+}
+
 @Composable
 fun MainScreen(
     scannedImageUri: Uri?,
     isOpeningScanner: Boolean,
     @StringRes scanError: Int?,
     serverStatus: ServerConnectionStatus,
+    uploadStatus: UploadStatus,
     onScanClick: () -> Unit,
+    onUploadClick: () -> Unit,
     onRetryServerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -74,7 +85,12 @@ fun MainScreen(
         }
 
     Column(
-        modifier = modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .safeDrawingPadding()
+                .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -108,9 +124,19 @@ fun MainScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
         } else {
+            val uploadStatusText =
+                when (uploadStatus) {
+                    UploadStatus.Ready -> R.string.scan_ready
+                    UploadStatus.Uploading -> R.string.upload_progress
+                    UploadStatus.Submitted -> R.string.upload_submitted
+                    UploadStatus.Failed -> R.string.upload_failed
+                }
             Text(
-                text = stringResource(R.string.scan_ready),
+                text = stringResource(uploadStatusText),
                 style = MaterialTheme.typography.bodyLarge,
+                color =
+                    if (uploadStatus == UploadStatus.Failed) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface,
             )
             receiptPreview.value?.let { image ->
                 Spacer(modifier = Modifier.height(16.dp))
@@ -127,17 +153,47 @@ fun MainScreen(
             Text(text = stringResource(error), color = MaterialTheme.colorScheme.error)
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onScanClick, enabled = !isOpeningScanner) {
-            Text(
-                text =
-                    stringResource(
-                        if (isOpeningScanner) R.string.scan_opening
-                        else if (scannedImageUri == null) R.string.scan_receipt
-                        else R.string.scan_another_receipt
-                    )
-            )
+        if (scannedImageUri != null && uploadStatus != UploadStatus.Submitted) {
+            Button(
+                onClick = onUploadClick,
+                enabled = !isOpeningScanner && uploadStatus != UploadStatus.Uploading,
+            ) {
+                Text(
+                    text =
+                        stringResource(
+                            when (uploadStatus) {
+                                UploadStatus.Failed -> R.string.upload_retry
+                                else -> R.string.upload_receipt
+                            }
+                        )
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(
+                onClick = onScanClick,
+                enabled = uploadStatus != UploadStatus.Uploading && !isOpeningScanner,
+            ) {
+                Text(
+                    text =
+                        stringResource(
+                            if (isOpeningScanner) R.string.scan_opening
+                            else R.string.scan_another_receipt
+                        )
+                )
+            }
+        } else {
+            Button(onClick = onScanClick, enabled = !isOpeningScanner) {
+                Text(
+                    text =
+                        stringResource(
+                            if (isOpeningScanner) R.string.scan_opening
+                            else if (scannedImageUri == null) R.string.scan_receipt
+                            else R.string.scan_another_receipt
+                        )
+                )
+            }
         }
-        if (isOpeningScanner) {
+        if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
@@ -153,7 +209,9 @@ private fun MainScreenPreview() {
             isOpeningScanner = false,
             scanError = null,
             serverStatus = ServerConnectionStatus.Connected,
+            uploadStatus = UploadStatus.Ready,
             onScanClick = {},
+            onUploadClick = {},
             onRetryServerClick = {},
         )
     }

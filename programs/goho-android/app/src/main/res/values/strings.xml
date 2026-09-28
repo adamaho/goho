@@ -12,4 +12,9 @@
     <string name="server_connected">Goho server reachable</string>
     <string name="server_unavailable">Can’t reach Goho server</string>
     <string name="server_retry">Retry connection</string>
+    <string name="upload_receipt">Upload receipt</string>
+    <string name="upload_progress">Uploading receipt…</string>
+    <string name="upload_submitted">Receipt submitted for processing</string>
+    <string name="upload_failed">Upload failed. Please try again.</string>
+    <string name="upload_retry">Retry upload</string>
 </resources>
