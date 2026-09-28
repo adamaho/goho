@@ -14,6 +14,7 @@ ktfmt { kotlinLangStyle() }
 val generatedClientDir = layout.buildDirectory.dir("generated/openapi")
 val checkedInClientDir =
     layout.projectDirectory.dir("src/main/kotlin/com/adamaho/goho/api/generated")
+val gohoServerUrl = providers.gradleProperty("gohoServerUrl").orElse("http://127.0.0.1:3000").get()
 
 tasks.withType<KtfmtCheckTask>().configureEach { exclude("**/api/generated/**") }
 
@@ -61,6 +62,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "GOHO_SERVER_URL", "\"$gohoServerUrl\"")
     }
 
     compileOptions {
@@ -69,7 +71,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 kotlin { jvmToolchain(17) }
