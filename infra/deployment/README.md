@@ -34,10 +34,13 @@ Reruns preserve that password and the existing application credentials, updating
 The installer creates that receipt storage directory for the configured
 service account with mode `0700`; include it in host backups.
 
-Postgres listens on `127.0.0.1:5434`. The `goho-deployment` Compose project has its
-own named data volume, separate from development and integration tests. The
-Compose definition is installed at `/etc/goho/compose.yml`; no reset command or
-backups are included.
+The deployment API defaults to `127.0.0.1:13000` and Postgres listens on
+`127.0.0.1:5434`, leaving ports `3000` and `5432` for development. Existing
+installations keep their configured API port until `/etc/goho/server.env` is
+updated and `goho-server.service` is restarted. The `goho-deployment` Compose
+project has its own named data volume, separate from development and integration
+tests. The Compose definition is installed at `/etc/goho/compose.yml`; no reset
+command or backups are included.
 
 The installer updates the Goho service unit and adds a server dependency on
 `goho-postgres.service`. That unit waits for Postgres health before server
