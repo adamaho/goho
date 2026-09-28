@@ -48,6 +48,7 @@ const dependencies = (options: {
       save: () => Effect.succeed({ _tag: "Inserted", receiptId: ReceiptId.make("42") }),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
+      list: Effect.succeed([]),
       createQueued: () => Effect.die("Unexpected createQueued call"),
       findById: () => Effect.succeedSome(upload),
       markProcessing: () => Effect.succeed(upload),

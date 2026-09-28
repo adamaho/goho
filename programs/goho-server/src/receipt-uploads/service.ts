@@ -52,6 +52,10 @@ const toPublic = (upload: ReceiptUpload): PublicReceiptUpload => ({
  * @since 0.1.0
  */
 export interface Interface {
+  readonly list: Effect.Effect<
+    ReadonlyArray<PublicReceiptUpload>,
+    HttpApiError.InternalServerError
+  >;
   readonly create: (
     input: UploadInput,
   ) => Effect.Effect<PublicReceiptUpload, HttpApiError.InternalServerError>;
@@ -142,6 +146,16 @@ export const layer = Layer.effect(
       ),
     );
 
-    return Service.of({ create, get });
+    const list = repository.list.pipe(
+      Effect.map((uploads) => uploads.map(toPublic)),
+      Effect.catchTag("GohoServer.ReceiptUploadRepository.PersistenceError", (error) =>
+        Effect.logError("Receipt upload listing failed", error).pipe(
+          Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+        ),
+      ),
+      Effect.withSpan("@goho/ReceiptUploads.list"),
+    );
+
+    return Service.of({ create, get, list });
   }),
 );

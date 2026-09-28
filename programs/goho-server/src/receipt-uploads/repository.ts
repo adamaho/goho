@@ -58,6 +58,7 @@ type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
  * @since 0.1.0
  */
 export interface Interface {
+  readonly list: Effect.Effect<ReadonlyArray<ReceiptUpload>, PersistenceError>;
   readonly createQueued: (
     upload: QueuedReceiptUpload,
   ) => Effect.Effect<ReceiptUpload, PersistenceError>;
@@ -212,6 +213,17 @@ export const layer = Layer.effect(
       const row = rows.at(0);
       return row === undefined ? yield* resolveMiss(uploadId, "failed") : fromRow(row);
     });
-    return Service.of({ createQueued, findById, markProcessing, markSucceeded, markFailed });
+    const list = sql`
+      SELECT id, file_id, file_name, content_type, status, receipt_id,
+        failure_code, created_at::text, updated_at::text
+      FROM receipt_uploads
+      ORDER BY created_at DESC, id DESC
+    `.pipe(
+      Effect.flatMap(decodeRows),
+      Effect.map((rows) => rows.map(fromRow)),
+      Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
+      Effect.withSpan("@goho/ReceiptUploadRepository.list"),
+    );
+    return Service.of({ list, createQueued, findById, markProcessing, markSucceeded, markFailed });
   }),
 );

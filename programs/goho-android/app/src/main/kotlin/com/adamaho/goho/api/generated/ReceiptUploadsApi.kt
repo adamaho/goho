@@ -9,7 +9,7 @@ import com.squareup.moshi.Json
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorInternalServerErrorEncoded
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorNotFoundEncoded
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
-import com.adamaho.goho.api.generated.model.ReceiptUploadsGet200Response
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200Response
 
 import okhttp3.MultipartBody
 
@@ -40,9 +40,22 @@ interface ReceiptUploadsApi {
      *  - 500: The server could not retrieve this receipt upload.
      *
      * @param uploadId 
-     * @return [ReceiptUploadsGet200Response]
+     * @return [ReceiptUploadsCreate202Response]
      */
     @GET("receipt-uploads/{uploadId}")
-    suspend fun receiptUploadsGet(@Path("uploadId") uploadId: java.util.UUID): Response<ReceiptUploadsGet200Response>
+    suspend fun receiptUploadsGet(@Path("uploadId") uploadId: java.util.UUID): Response<ReceiptUploadsCreate202Response>
+
+    /**
+     * GET receipt-uploads
+     * List receipt uploads
+     * Pulls every receipt upload off the bench, newest first, with its current status.
+     * Responses:
+     *  - 200: Success
+     *  - 500: The server could not pull the uploads off the bench.
+     *
+     * @return [ReceiptUploadsList200Response]
+     */
+    @GET("receipt-uploads")
+    suspend fun receiptUploadsList(): Response<ReceiptUploadsList200Response>
 
 }

@@ -155,6 +155,108 @@
           },
           "required": true
         }
+      },
+      "get": {
+        "tags": ["receiptUploads"],
+        "operationId": "receiptUploads.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+                            "format": "uuid"
+                          },
+                          "fileName": {
+                            "type": "string"
+                          },
+                          "contentType": {
+                            "type": "string",
+                            "enum": ["image/jpeg", "image/png", "image/webp"]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": ["queued", "processing", "succeeded", "failed"]
+                          },
+                          "receiptId": {
+                            "anyOf": [
+                              {
+                                "$ref": "#/components/schemas/ReceiptId"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "failureCode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "unsupported_file_type",
+                                  "storage_failed",
+                                  "processing_failed",
+                                  "receipt_creation_failed",
+                                  "internal_error"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileName",
+                          "contentType",
+                          "status",
+                          "receiptId",
+                          "failureCode",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the uploads off the bench.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every receipt upload off the bench, newest first, with its current status.",
+        "summary": "List receipt uploads"
       }
     },
     "/receipt-uploads/{uploadId}": {

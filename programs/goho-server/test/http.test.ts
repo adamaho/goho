@@ -47,6 +47,7 @@ const receiptUploadsTest = (overrides: Partial<ReceiptUploads.Interface> = {}) =
     ReceiptUploads.Service.of({
       create: () => Effect.succeed(receiptUpload),
       get: () => Effect.succeed(receiptUpload),
+      list: Effect.succeed([receiptUpload]),
       ...overrides,
     }),
   );
@@ -118,6 +119,12 @@ it.effect("uploads one receipt image and retrieves its status through the genera
     expect(yield* client.receiptUploads.get({ params: { uploadId: receiptUpload.id } })).toEqual({
       data: receiptUpload,
     });
+  }).pipe(Effect.provide(TestLive)),
+);
+it.effect("lists receipt uploads through the generated client", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    expect(yield* client.receiptUploads.list()).toEqual({ data: [receiptUpload] });
   }).pipe(Effect.provide(TestLive)),
 );
 
