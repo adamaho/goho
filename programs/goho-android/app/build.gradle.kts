@@ -82,6 +82,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.play.services.mlkit.document.scanner)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.kotlin.reflect)

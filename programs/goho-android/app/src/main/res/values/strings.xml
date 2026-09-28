@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">Goho</string>
-    <string name="scanning_coming_soon">Receipt scanning is coming soon.</string>
+    <string name="scan_receipt">Scan receipt</string>
+    <string name="scan_another_receipt">Scan another receipt</string>
+    <string name="scan_prompt">Capture a receipt with your camera.</string>
+    <string name="scan_opening">Opening scanner…</string>
+    <string name="scan_ready">Receipt captured</string>
+    <string name="scan_failed">Could not open the scanner. Please try again.</string>
+    <string name="scan_no_image">The scanner did not return an image. Please try again.</string>
+    <string name="scan_image_description">Scanned receipt</string>
 </resources>
