@@ -2,8 +2,8 @@
 
 Follow the repository-wide [CONTRIBUTING.md](../../CONTRIBUTING.md) for commits
 and shared checks. This guide covers the standalone Android project in this
-directory; it does not require the Goho server to run the current placeholder
-screen.
+directory. Scanning works without the Goho server; the connection status needs
+one running on port 3000.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ directory and put its `platform-tools` directory on `PATH` so `adb` is available
 
 In Android Studio, open `programs/goho-android` as a project, wait for Gradle
 sync, select the `app` run configuration and an emulator or connected device,
-then click Run. The app currently shows a static receipt-scanning placeholder.
+then click Run.
 
 Or, from the repository root, build and install with the checked-in wrapper:
 
@@ -40,6 +40,12 @@ from its app icon. The debug APK is at
 `app/build/outputs/apk/debug/app-debug.apk`. See the official
 [command-line build guide](https://developer.android.com/build/building-cmdline)
 for other build and install options.
+
+The debug app defaults to `http://127.0.0.1:3000`. To check connectivity from
+an emulator or connected phone without exposing the unauthenticated server on
+the network, run `adb reverse tcp:3000 tcp:3000` before opening Goho. With
+multiple devices connected, add `-s <device-id>` to the `adb` command. An HTTPS
+server URL can be supplied at build time with `-PgohoServerUrl=https://...`.
 
 ## Verification
 

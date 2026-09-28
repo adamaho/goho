@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -33,12 +34,20 @@ import com.adamaho.goho.theme.GohoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+enum class ServerConnectionStatus {
+    Checking,
+    Connected,
+    Unavailable,
+}
+
 @Composable
 fun MainScreen(
     scannedImageUri: Uri?,
     isOpeningScanner: Boolean,
     @StringRes scanError: Int?,
+    serverStatus: ServerConnectionStatus,
     onScanClick: () -> Unit,
+    onRetryServerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -73,6 +82,25 @@ fun MainScreen(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineLarge,
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        val serverStatusText =
+            when (serverStatus) {
+                ServerConnectionStatus.Checking -> R.string.server_checking
+                ServerConnectionStatus.Connected -> R.string.server_connected
+                ServerConnectionStatus.Unavailable -> R.string.server_unavailable
+            }
+        Text(
+            text = stringResource(serverStatusText),
+            color =
+                if (serverStatus == ServerConnectionStatus.Unavailable)
+                    MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (serverStatus == ServerConnectionStatus.Unavailable) {
+            TextButton(onClick = onRetryServerClick) {
+                Text(text = stringResource(R.string.server_retry))
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
         if (scannedImageUri == null) {
             Text(
@@ -124,7 +152,9 @@ private fun MainScreenPreview() {
             scannedImageUri = null,
             isOpeningScanner = false,
             scanError = null,
+            serverStatus = ServerConnectionStatus.Connected,
             onScanClick = {},
+            onRetryServerClick = {},
         )
     }
 }
