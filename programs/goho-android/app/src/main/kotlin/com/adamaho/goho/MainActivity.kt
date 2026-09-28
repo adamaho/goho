@@ -17,26 +17,35 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.adamaho.goho.api.generated.HealthApi
+import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.HealthData
+import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.MainScreen
 import com.adamaho.goho.ui.main.ServerConnectionStatus
+import com.adamaho.goho.ui.main.UploadStatus
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody
+import okio.BufferedSink
 
 class MainActivity : ComponentActivity() {
     private var scannedImageUri by mutableStateOf<Uri?>(null)
     private var scanError by mutableStateOf<Int?>(null)
     private var isOpeningScanner by mutableStateOf(false)
     private var serverStatus by mutableStateOf(ServerConnectionStatus.Checking)
+    private var uploadStatus by mutableStateOf(UploadStatus.Ready)
 
     private val healthApi by lazy {
         ApiClient(
@@ -44,6 +53,14 @@ class MainActivity : ComponentActivity() {
                 okHttpClientBuilder = OkHttpClient.Builder().callTimeout(5, TimeUnit.SECONDS),
             )
             .createService(HealthApi::class.java)
+    }
+
+    private val receiptUploadsApi by lazy {
+        ApiClient(
+                baseUrl = BuildConfig.GOHO_SERVER_URL,
+                okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
+            )
+            .createService(ReceiptUploadsApi::class.java)
     }
 
     private val scannerLauncher =
@@ -57,6 +74,7 @@ class MainActivity : ComponentActivity() {
                 if (imageUri != null) {
                     scannedImageUri = imageUri
                     scanError = null
+                    uploadStatus = UploadStatus.Ready
                 } else {
                     scanError = R.string.scan_no_image
                 }
@@ -78,7 +96,9 @@ class MainActivity : ComponentActivity() {
                         isOpeningScanner = isOpeningScanner,
                         scanError = scanError,
                         serverStatus = serverStatus,
+                        uploadStatus = uploadStatus,
                         onScanClick = ::openScanner,
+                        onUploadClick = ::uploadReceipt,
                         onRetryServerClick = ::checkServer,
                     )
                 }
@@ -110,7 +130,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openScanner() {
-        if (isOpeningScanner) return
+        if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
 
         isOpeningScanner = true
         scanError = null
@@ -133,5 +153,51 @@ class MainActivity : ComponentActivity() {
                 scanError = R.string.scan_failed
                 Log.e("GohoScanner", "Could not open document scanner", error)
             }
+    }
+
+    private fun uploadReceipt() {
+        val imageUri = scannedImageUri ?: return
+        if (
+            isOpeningScanner ||
+                uploadStatus == UploadStatus.Uploading ||
+                uploadStatus == UploadStatus.Submitted
+        )
+            return
+
+        uploadStatus = UploadStatus.Uploading
+        val body =
+            object : RequestBody() {
+                override fun contentType() = "image/jpeg".toMediaType()
+
+                override fun isOneShot() = true
+
+                override fun writeTo(sink: BufferedSink) {
+                    val input =
+                        contentResolver.openInputStream(imageUri)
+                            ?: throw IOException("Scanned receipt image is unavailable")
+                    input.use { it.copyTo(sink.outputStream()) }
+                }
+            }
+        val file = MultipartBody.Part.createFormData("file", "receipt.jpg", body)
+        lifecycleScope.launch {
+            uploadStatus =
+                try {
+                    val response = receiptUploadsApi.receiptUploadsCreate(file)
+                    val status = response.body()?.data?.status
+                    if (
+                        response.code() == 202 &&
+                            status != null &&
+                            status != ReceiptUploadsCreate202ResponseData.Status.failed
+                    ) {
+                        UploadStatus.Submitted
+                    } else {
+                        UploadStatus.Failed
+                    }
+                } catch (error: Exception) {
+                    if (error is CancellationException) throw error
+                    Log.w("GohoUpload", "Receipt upload failed", error)
+                    UploadStatus.Failed
+                }
+        }
     }
 }
