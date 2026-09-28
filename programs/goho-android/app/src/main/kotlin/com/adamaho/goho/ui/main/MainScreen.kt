@@ -161,10 +161,8 @@ fun MainScreen(
                 Text(
                     text =
                         stringResource(
-                            when (uploadStatus) {
-                                UploadStatus.Failed -> R.string.upload_retry
-                                else -> R.string.upload_receipt
-                            }
+                            if (uploadStatus == UploadStatus.Failed) R.string.upload_retry
+                            else R.string.upload_receipt
                         )
                 )
             }
@@ -182,7 +180,10 @@ fun MainScreen(
                 )
             }
         } else {
-            Button(onClick = onScanClick, enabled = !isOpeningScanner) {
+            Button(
+                onClick = onScanClick,
+                enabled = !isOpeningScanner && uploadStatus != UploadStatus.Uploading,
+            ) {
                 Text(
                     text =
                         stringResource(

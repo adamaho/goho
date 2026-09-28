@@ -30,7 +30,8 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
           return yield* uploads.create(input).pipe(Effect.map(withData));
         }),
       )
-      .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)));
+      .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))
+      .handle("list", () => uploads.list.pipe(Effect.map(withData)));
   }),
 );
 

@@ -23,7 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.ReceiptUploadsGet200ResponseData
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -35,10 +35,10 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class ReceiptUploadsGet200Response (
+data class ReceiptUploadsList200Response (
 
     @Json(name = "data")
-    val `data`: ReceiptUploadsGet200ResponseData
+    val `data`: kotlin.collections.List<ReceiptUploadsList200ResponseDataInner>
 
 ) {
 

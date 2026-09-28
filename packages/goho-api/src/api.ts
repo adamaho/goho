@@ -85,6 +85,21 @@ export const api = HttpApi.make("goho-server")
           ),
       )
       .add(
+        HttpApiEndpoint.get("list", "/receipt-uploads", {
+          success: DataResponse(Schema.Array(ReceiptUpload)),
+          error: [
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not pull the uploads off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List receipt uploads")
+          .annotate(
+            OpenApi.Description,
+            "Pulls every receipt upload off the bench, newest first, with its current status.",
+          ),
+      )
+      .add(
         HttpApiEndpoint.get("get", "/receipt-uploads/:uploadId", {
           params: { uploadId: ReceiptUploadId },
           success: DataResponse(ReceiptUpload),

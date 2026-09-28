@@ -41,7 +41,7 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class ReceiptUploadsGet200ResponseData (
+data class ReceiptUploadsList200ResponseDataInner (
 
     @Json(name = "id")
     val id: java.util.UUID,
@@ -50,17 +50,17 @@ data class ReceiptUploadsGet200ResponseData (
     val fileName: kotlin.String,
 
     @Json(name = "contentType")
-    val contentType: ReceiptUploadsGet200ResponseData.ContentType,
+    val contentType: ReceiptUploadsList200ResponseDataInner.ContentType,
 
     @Json(name = "status")
-    val status: ReceiptUploadsGet200ResponseData.Status,
+    val status: ReceiptUploadsList200ResponseDataInner.Status,
 
     /* The receipt's positive number on the roster, bud. */
     @Json(name = "receiptId")
     val receiptId: kotlin.String?,
 
     @Json(name = "failureCode")
-    val failureCode: ReceiptUploadsGet200ResponseData.FailureCode?,
+    val failureCode: ReceiptUploadsList200ResponseDataInner.FailureCode?,
 
     @Json(name = "createdAt")
     val createdAt: kotlin.String,

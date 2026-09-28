@@ -18,11 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.adamaho.goho.api.generated.HealthApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
+import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.HealthData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.MainScreen
+import com.adamaho.goho.ui.main.ReceiptOverview
+import com.adamaho.goho.ui.main.ReceiptOverviewState
 import com.adamaho.goho.ui.main.ServerConnectionStatus
 import com.adamaho.goho.ui.main.UploadStatus
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -46,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private var isOpeningScanner by mutableStateOf(false)
     private var serverStatus by mutableStateOf(ServerConnectionStatus.Checking)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
+    private var overviewState by mutableStateOf(ReceiptOverviewState())
 
     private val healthApi by lazy {
         ApiClient(
@@ -61,6 +65,14 @@ class MainActivity : ComponentActivity() {
                 okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
             )
             .createService(ReceiptUploadsApi::class.java)
+    }
+
+    private val receiptsApi by lazy {
+        ApiClient(
+                baseUrl = BuildConfig.GOHO_SERVER_URL,
+                okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
+            )
+            .createService(ReceiptsApi::class.java)
     }
 
     private val scannerLauncher =
@@ -91,20 +103,34 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    MainScreen(
-                        scannedImageUri = scannedImageUri,
-                        isOpeningScanner = isOpeningScanner,
-                        scanError = scanError,
-                        serverStatus = serverStatus,
-                        uploadStatus = uploadStatus,
-                        onScanClick = ::openScanner,
-                        onUploadClick = ::uploadReceipt,
-                        onRetryServerClick = ::checkServer,
-                    )
+                    if (scannedImageUri == null) {
+                        ReceiptOverview(
+                            state = overviewState,
+                            serverStatus = serverStatus,
+                            uploadStatus = uploadStatus,
+                            isOpeningScanner = isOpeningScanner,
+                            scanError = scanError,
+                            onScanClick = ::openScanner,
+                            onRefreshClick = ::refreshHistory,
+                            onRetryServerClick = ::checkServer,
+                        )
+                    } else {
+                        MainScreen(
+                            scannedImageUri = scannedImageUri,
+                            isOpeningScanner = isOpeningScanner,
+                            scanError = scanError,
+                            serverStatus = serverStatus,
+                            uploadStatus = uploadStatus,
+                            onScanClick = ::openScanner,
+                            onUploadClick = ::uploadReceipt,
+                            onRetryServerClick = ::checkServer,
+                        )
+                    }
                 }
             }
         }
         checkServer()
+        refreshHistory()
     }
 
     private fun checkServer() {
@@ -129,6 +155,35 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun refreshHistory() {
+        if (overviewState.loading) return
+
+        overviewState = overviewState.copy(loading = true)
+        lifecycleScope.launch {
+            try {
+                val uploadsResponse = receiptUploadsApi.receiptUploadsList()
+                val receiptsResponse = receiptsApi.receiptsList()
+                val uploads = uploadsResponse.body()?.data
+                val receipts = receiptsResponse.body()?.data
+                overviewState =
+                    if (
+                        uploadsResponse.isSuccessful &&
+                            receiptsResponse.isSuccessful &&
+                            uploads != null &&
+                            receipts != null
+                    ) {
+                        ReceiptOverviewState(uploads = uploads, receipts = receipts)
+                    } else {
+                        overviewState.copy(loading = false, error = true)
+                    }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                Log.w("GohoReceipts", "Receipt listing failed", error)
+                overviewState = overviewState.copy(loading = false, error = true)
+            }
+        }
+    }
+
     private fun openScanner() {
         if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
 
@@ -136,7 +191,7 @@ class MainActivity : ComponentActivity() {
         scanError = null
         val options =
             GmsDocumentScannerOptions.Builder()
-                .setGalleryImportAllowed(false)
+                .setGalleryImportAllowed(true)
                 .setPageLimit(1)
                 .setResultFormats(RESULT_FORMAT_JPEG)
                 .setScannerMode(SCANNER_MODE_FULL)
@@ -189,6 +244,8 @@ class MainActivity : ComponentActivity() {
                             status != null &&
                             status != ReceiptUploadsCreate202ResponseData.Status.failed
                     ) {
+                        scannedImageUri = null
+                        refreshHistory()
                         UploadStatus.Submitted
                     } else {
                         UploadStatus.Failed

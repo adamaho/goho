@@ -59,6 +59,23 @@ const createReceipt = Effect.gen(function* () {
   return ReceiptId.make(String(rows[0]!.id));
 });
 
+it.effect("lists uploads newest first with their durable statuses", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const older = yield* makeUpload;
+    const newer = yield* makeUpload;
+    yield* repo.createQueued(older);
+    yield* repo.createQueued(newer);
+    yield* repo.markProcessing(newer.id);
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`UPDATE receipt_uploads SET created_at = '2026-09-19' WHERE id = ${older.id}`;
+    expect((yield* repo.list).map(({ id, status }) => ({ id, status }))).toEqual([
+      { id: newer.id, status: "processing" },
+      { id: older.id, status: "queued" },
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
 it.effect("creates a queued upload and finds it by ID", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
