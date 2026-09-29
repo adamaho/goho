@@ -47,6 +47,8 @@ const receiptUploadsTest = (overrides: Partial<ReceiptUploads.Interface> = {}) =
     ReceiptUploads.Service.of({
       create: () => Effect.succeed(receiptUpload),
       get: () => Effect.succeed(receiptUpload),
+      getImage: () =>
+        Effect.succeed({ bytes: new Uint8Array([1, 2, 3]), contentType: "image/png" }),
       list: Effect.succeed([receiptUpload]),
       ...overrides,
     }),
@@ -125,6 +127,32 @@ it.effect("lists receipt uploads through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
     expect(yield* client.receiptUploads.list()).toEqual({ data: [receiptUpload] });
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns the scanned image with its MIME type and private cache policy", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/receipts/${receipt.id}/image`);
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toBe("image/png");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(new Uint8Array(yield* response.arrayBuffer)).toEqual(new Uint8Array([1, 2, 3]));
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns HTTP 404 when a receipt has no uploaded image", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/receipts/${receipt.id}/image`);
+    expect(response.status).toBe(404);
+  }).pipe(
+    Effect.provide(testLayer({}, { getImage: () => Effect.fail(new HttpApiError.NotFound()) })),
+  ),
+);
+
+it.effect("rejects malformed receipt IDs for image retrieval", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.get("/receipts/not-an-integer/image");
+    expect(response.status).toBe(400);
   }).pipe(Effect.provide(TestLive)),
 );
 

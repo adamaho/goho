@@ -65,6 +65,9 @@ export interface Interface {
   readonly findById: (
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<Option.Option<ReceiptUpload>, PersistenceError>;
+  readonly findByReceiptId: (
+    receiptId: ReceiptId,
+  ) => Effect.Effect<Option.Option<ReceiptUpload>, PersistenceError>;
   readonly markProcessing: (
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<ReceiptUpload, TransitionError>;
@@ -135,6 +138,18 @@ export const layer = Layer.effect(
         return row === undefined ? Option.none() : Option.some(fromRow(row));
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
+    );
+    const findByReceiptId = Effect.fn("@goho/ReceiptUploadRepository.findByReceiptId")(
+      function* (receiptId: ReceiptId) {
+        const rows = yield* sql`
+          SELECT id, file_id, file_name, content_type, status, receipt_id,
+            failure_code, created_at::text, updated_at::text
+          FROM receipt_uploads WHERE receipt_id = ${receiptId} AND status = 'succeeded'
+        `.pipe(Effect.flatMap(decodeRows));
+        const row = rows.at(0);
+        return row === undefined ? Option.none() : Option.some(fromRow(row));
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "findByReceiptId", cause })),
     );
     const resolveMiss = Effect.fn("@goho/ReceiptUploadRepository.resolveMiss")(function* (
       uploadId: ReceiptUploadId,
@@ -224,6 +239,14 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
       Effect.withSpan("@goho/ReceiptUploadRepository.list"),
     );
-    return Service.of({ list, createQueued, findById, markProcessing, markSucceeded, markFailed });
+    return Service.of({
+      list,
+      createQueued,
+      findById,
+      findByReceiptId,
+      markProcessing,
+      markSucceeded,
+      markFailed,
+    });
   }),
 );

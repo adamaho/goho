@@ -160,6 +160,33 @@ export const api = HttpApi.make("goho-server")
           ),
       )
       .add(
+        HttpApiEndpoint.get("getImage", "/receipts/:receiptId/image", {
+          params: { receiptId: ReceiptId },
+          success: HttpApiSchema.WithHeaders(
+            Schema.Uint8Array.pipe(
+              HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }),
+            ),
+            Schema.Struct({
+              "content-type": Schema.String,
+              "cache-control": Schema.String,
+            }),
+          ),
+          error: [
+            HttpApiError.NotFound.annotate({
+              description: "No scanned image is linked to this receipt, bud.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not retrieve this receipt image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a receipt image")
+          .annotate(
+            OpenApi.Description,
+            "Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.",
+          ),
+      )
+      .add(
         HttpApiEndpoint.post("create", "/receipts", {
           headers: { "idempotency-key": IdempotencyKey },
           payload: CreateReceiptRequest,

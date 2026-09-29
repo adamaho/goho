@@ -51,6 +51,7 @@ const dependencies = (options: {
       list: Effect.succeed([]),
       createQueued: () => Effect.die("Unexpected createQueued call"),
       findById: () => Effect.succeedSome(upload),
+      findByReceiptId: () => Effect.succeedNone,
       markProcessing: () => Effect.succeed(upload),
       markSucceeded:
         options.markSucceeded ??

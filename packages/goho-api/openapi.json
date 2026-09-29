@@ -551,6 +551,66 @@
         "description": "Brings back one saved receipt with its items lined up by position.",
         "summary": "Get a receipt"
       }
+    },
+    "/receipts/{receiptId}/image": {
+      "get": {
+        "tags": ["receipts"],
+        "operationId": "receipts.getImage",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "cache-control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No scanned image is linked to this receipt, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this receipt image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.",
+        "summary": "Get a receipt image"
+      }
     }
   },
   "components": {
