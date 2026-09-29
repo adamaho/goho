@@ -60,8 +60,8 @@ a second terminal at the repository root:
 GOHO_SERVER_URL=http://127.0.0.1:3000 pnpm --filter @goho/goho-server db:seed
 ```
 
-This creates four fictional receipts through the API. The seed command is
-idempotent, so running it again does not duplicate them.
+This creates four fictional receipts through the API. The seed command skips
+when any receipt already exists, so running it again does not duplicate them.
 
 ## Connect an MCP client
 
@@ -97,8 +97,8 @@ while the client is connected and reserves stdout for protocol messages.
   arguments. After seeding a fresh database, it returns four receipts.
 - `get_receipt` takes a positive integer `receipt_id`. Use an ID returned by
   `list_receipts` to inspect its items.
-- `create_receipt` saves supplied receipt details and items, generating an
-  idempotency key for the request. Ask your client to create a fictional receipt
+- `create_receipt` saves supplied receipt details and items. Each call saves a
+  new receipt. Ask your client to create a fictional receipt
   for Example Store on 2026-09-13 in the Groceries category, with USD
   subtotal $10.25, tax $0.75, total $11.00, and one Apple item for $10.25.
   Then call `get_receipt` with the returned ID.

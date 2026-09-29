@@ -12,15 +12,12 @@ const ServerLive = HttpServer.serve(
     const request = yield* HttpServerRequest.HttpServerRequest;
     expect(request.method).toBe("POST");
     expect(request.url).toBe("/receipts");
-    expect(request.headers["idempotency-key"]).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
     expect(yield* request.json).toEqual(createPayload);
     return HttpServerResponse.jsonUnsafe({ data: receipt });
   }),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
 
-it.effect("creates a receipt with a generated idempotency key through MCP", () =>
+it.effect("creates a receipt through MCP", () =>
   Effect.gen(function* () {
     const server = yield* HttpServer.HttpServer;
     const client = yield* startMcpClient(HttpServer.formatAddress(server.address));

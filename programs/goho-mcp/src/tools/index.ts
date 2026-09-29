@@ -1,4 +1,3 @@
-import { NodeCrypto } from "@effect/platform-node";
 import { Layer } from "effect";
 import { Toolkit } from "effect/unstable/ai";
 
@@ -17,7 +16,7 @@ import * as ListReceipts from "./list-receipts.ts";
 export const toolkit = Toolkit.make(ListReceipts.tool, GetReceipt.tool, CreateReceipt.tool);
 
 /**
- * Runs receipt tool handlers with their client and crypto dependencies.
+ * Runs receipt tool handlers with their client dependency.
  *
  * @category layers
  * @since 0.1.0
@@ -28,4 +27,4 @@ export const layer = toolkit
     get_receipt: GetReceipt.handle,
     create_receipt: CreateReceipt.handle,
   })
-  .pipe(Layer.provide([GohoServerClient.layer, NodeCrypto.layer]));
+  .pipe(Layer.provide(GohoServerClient.layer));

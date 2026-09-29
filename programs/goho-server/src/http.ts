@@ -57,9 +57,7 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
           ),
         ),
       )
-      .handle("create", ({ headers, payload }) =>
-        receipts.create(headers["idempotency-key"], payload).pipe(Effect.map(withData)),
-      );
+      .handle("create", ({ payload }) => receipts.create(payload).pipe(Effect.map(withData)));
   }),
 );
 

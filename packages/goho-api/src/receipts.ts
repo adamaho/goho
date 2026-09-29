@@ -5,32 +5,6 @@ const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
 });
 
 /**
- * Caller-supplied token identifying one receipt creation request.
- *
- * @category models
- * @since 0.1.0
- */
-export const IdempotencyKey = Schema.String.check(
-  Schema.makeFilter((value) => value.trim().length > 0, {
-    expected: "a non-whitespace idempotency key",
-    toJsonSchema: () => ({ pattern: "\\S" }),
-  }),
-).annotate({
-  identifier: "IdempotencyKey",
-  description:
-    "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs.",
-  examples: ["manual-entry-1"],
-});
-
-/**
- * Decoded receipt creation idempotency token.
- *
- * @category models
- * @since 0.1.0
- */
-export type IdempotencyKey = typeof IdempotencyKey.Type;
-
-/**
  * Real calendar date encoded as YYYY-MM-DD.
  *
  * @category models
@@ -137,8 +111,7 @@ const ReceiptItemInput = Schema.Struct({
 export const CreateReceiptRequest = Schema.Struct({
   ...ReceiptFields,
   items: Schema.NonEmptyArray(ReceiptItemInput).annotate({
-    description:
-      "Line items in receipt order. Shuffle the lineup and the idempotency check changes.",
+    description: "Line items in receipt order.",
   }),
 }).annotate({
   identifier: "CreateReceiptRequest",

@@ -57,14 +57,11 @@ HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 ### Create a receipt
 
-`POST /receipts` creates a receipt and its ordered items atomically. Supply an
-`idempotency-key` header and the JSON body shown in Swagger.
+`POST /receipts` creates a receipt and its ordered items atomically from the
+JSON body shown in Swagger. Every successful call saves a new receipt.
 
-Names are trimmed and decimal strings normalized (`11.00` becomes `11`). Reuse
-the same key and normalized data to retrieve the stored receipt with HTTP 200.
-Changed data or item order returns HTTP 409. After a lost response, retry with
-the same key and data. The complete receipt is returned under `data`.
+Names are trimmed and decimal strings normalized (`11.00` becomes `11`). The
+complete receipt is returned under `data`.
 
-Invalid headers or payloads return HTTP 400 with an empty body. Conflicts return
-`{"_tag":"Conflict"}`; validation or persistence failures return HTTP 500 with
-`{"_tag":"InternalServerError"}`.
+Invalid payloads return HTTP 400 with an empty body; validation or persistence
+failures return HTTP 500 with `{"_tag":"InternalServerError"}`.

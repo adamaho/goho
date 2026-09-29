@@ -426,17 +426,7 @@
       "post": {
         "tags": ["receipts"],
         "operationId": "receipts.create",
-        "parameters": [
-          {
-            "name": "idempotency-key",
-            "in": "header",
-            "schema": {
-              "$ref": "#/components/schemas/IdempotencyKey"
-            },
-            "required": true,
-            "description": "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs."
-          }
-        ],
+        "parameters": [],
         "security": [],
         "responses": {
           "200": {
@@ -457,17 +447,7 @@
             }
           },
           "400": {
-            "description": "The `idempotency-key` header or payload is a bad pass; the response body stays empty."
-          },
-          "409": {
-            "description": "That idempotency key is already skating with different normalized receipt data or item order.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_ConflictEncoded"
-                }
-              }
-            }
+            "description": "The payload is a bad pass; the response body stays empty."
           },
           "500": {
             "description": "Receipt validation or persistence missed the net.",
@@ -480,7 +460,7 @@
             }
           }
         },
-        "description": "Creates the receipt and items in one clean play. Reuse the key with the same normalized data and the saved receipt comes back.",
+        "description": "Creates the receipt and items in one clean play. Every call saves a new receipt.",
         "summary": "Create a receipt",
         "requestBody": {
           "content": {
@@ -946,7 +926,7 @@
             "items": {
               "$ref": "#/components/schemas/ReceiptItemInput"
             },
-            "description": "Line items in receipt order. Shuffle the lineup and the idempotency check changes."
+            "description": "Line items in receipt order."
           }
         },
         "required": [
@@ -978,23 +958,6 @@
             ]
           }
         ]
-      },
-      "IdempotencyKey": {
-        "type": "string",
-        "pattern": "\\S",
-        "description": "Your receipt-creation play call, bud. It stays unique across receipts, never expires, and treats case and whitespace as different inputs.",
-        "examples": ["manual-entry-1"]
-      },
-      "effect_HttpApiError_ConflictEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["Conflict"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
       }
     },
     "securitySchemes": {}

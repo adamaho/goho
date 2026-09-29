@@ -10,7 +10,7 @@ import {
 } from "effect/unstable/httpapi";
 
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
-import { CreateReceiptRequest, IdempotencyKey, Receipt, ReceiptId } from "./receipts.ts";
+import { CreateReceiptRequest, Receipt, ReceiptId } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
 
 // Payload schemas
@@ -188,17 +188,11 @@ export const api = HttpApi.make("goho-server")
       )
       .add(
         HttpApiEndpoint.post("create", "/receipts", {
-          headers: { "idempotency-key": IdempotencyKey },
           payload: CreateReceiptRequest,
           success: DataResponse(Receipt),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The `idempotency-key` header or payload is a bad pass; the response body stays empty.",
-            }),
-            HttpApiError.Conflict.annotate({
-              description:
-                "That idempotency key is already skating with different normalized receipt data or item order.",
+              description: "The payload is a bad pass; the response body stays empty.",
             }),
             HttpApiError.InternalServerError.annotate({
               description: "Receipt validation or persistence missed the net.",
@@ -206,21 +200,9 @@ export const api = HttpApi.make("goho-server")
           ],
         })
           .annotate(OpenApi.Summary, "Create a receipt")
-          // Swagger displays parameter descriptions separately from referenced schema metadata.
-          .annotate(OpenApi.Transform, (operation) => ({
-            ...operation,
-            parameters: operation.parameters.map((parameter: OpenApi.OpenAPISpecParameter) =>
-              parameter.in === "header" && parameter.name === "idempotency-key"
-                ? {
-                    ...parameter,
-                    description: Schema.resolveAnnotations(IdempotencyKey)?.description,
-                  }
-                : parameter,
-            ),
-          }))
           .annotate(
             OpenApi.Description,
-            "Creates the receipt and items in one clean play. Reuse the key with the same normalized data and the saved receipt comes back.",
+            "Creates the receipt and items in one clean play. Every call saves a new receipt.",
           ),
       ),
   );
