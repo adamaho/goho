@@ -10,7 +10,6 @@ import { expect } from "vitest";
 import * as Migrations from "#src/database/migrations.ts";
 import receiptsMigration from "#src/database/migrations/0001-receipts.ts";
 import createReceiptMigration from "#src/database/migrations/0002-create-receipt.ts";
-import * as Transaction from "#src/database/transaction.ts";
 import * as Repository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
 
@@ -56,10 +55,7 @@ const DatabaseLive = Layer.effectContext(
   }),
 ).pipe(Layer.provide(NodeCrypto.layer));
 
-const ServiceLive = Receipts.layer.pipe(
-  Layer.provide(Transaction.layer),
-  Layer.provideMerge(DatabaseLive),
-);
+const ServiceLive = Receipts.layer.pipe(Layer.provideMerge(DatabaseLive));
 
 const LegacyDatabaseLive = Layer.effectContext(
   Effect.gen(function* () {

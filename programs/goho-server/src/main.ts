@@ -11,7 +11,6 @@ import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
 import * as Database from "./database/client.ts";
-import * as Transaction from "./database/transaction.ts";
 import * as FileStorage from "./file-storage.ts";
 import * as Http from "./http.ts";
 import * as ReceiptUploadProcessor from "./receipt-uploads/processor.ts";
@@ -25,13 +24,12 @@ import * as Ai from "./services/ai.ts";
 const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(NodeCrypto.layer));
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer;
 const ReceiptUploadQueueLive = ReceiptUploadQueue.layer;
-const TransactionLive = Transaction.layer;
 const FileStorageLive = Layer.unwrap(
   Config.String("GOHO_UPLOADS_DIRECTORY").pipe(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
-const ReceiptsLive = Receipts.layer.pipe(Layer.provide([RepositoryLive, TransactionLive]));
+const ReceiptsLive = Receipts.layer.pipe(Layer.provide(RepositoryLive));
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     FileStorageLive,
@@ -47,7 +45,6 @@ const ReceiptUploadWorkerLive = ReceiptUploadProcessor.layer.pipe(
     ReceiptUploadQueueLive,
     ReceiptUploadRepositoryLive,
     RepositoryLive,
-    TransactionLive,
   ]),
 );
 const ServerLive = HttpRouter.serve(

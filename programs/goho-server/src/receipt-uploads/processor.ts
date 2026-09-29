@@ -1,8 +1,8 @@
 import { Ai } from "@goho/core";
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
 import { Effect, Layer, Schedule, Schema } from "effect";
+import { SqlClient } from "effect/unstable/sql";
 
-import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as ReceiptExtraction from "#src/receipts/extraction.ts";
 import * as ReceiptModel from "#src/receipts/model.ts";
@@ -35,7 +35,7 @@ export const process: (
   | FileStorage.Service
   | ReceiptRepository.Service
   | ReceiptUploadRepository.Service
-  | Transaction.Service
+  | SqlClient.SqlClient
 > = Effect.fn("@goho/ReceiptUploads.process")(function* (
   job: ReceiptUploadJob,
   metadata: { readonly id: string; readonly attempts: number },
@@ -44,7 +44,7 @@ export const process: (
     const uploads = yield* ReceiptUploadRepository.Service;
     const storage = yield* FileStorage.Service;
     const receipts = yield* ReceiptRepository.Service;
-    const transaction = yield* Transaction.Service;
+    const sql = yield* SqlClient.SqlClient;
 
     const upload = yield* uploads.markProcessing(job.uploadId).pipe(
       Effect.catchTag("GohoServer.ReceiptUploadRepository.UploadNotFound", () =>
@@ -62,8 +62,8 @@ export const process: (
       fileName: upload.fileName,
       contentType: upload.contentType,
     }).pipe(failAs("processing_failed"));
-    yield* transaction
-      .run(
+    yield* sql
+      .withTransaction(
         Effect.gen(function* () {
           const result = yield* receipts
             .save(

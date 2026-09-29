@@ -7,7 +7,6 @@ import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
-import * as Transaction from "#src/database/transaction.ts";
 import { FileId } from "#src/file-storage.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
@@ -49,7 +48,6 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
 const ProcessorLive = Layer.mergeAll(
   ReceiptUploadRepository.layer,
   ReceiptRepository.layer.pipe(Layer.provide(NodeCrypto.layer)),
-  Transaction.layer,
   StorageLive,
   Layer.succeed(Ai.Service, {
     generateObject: ({ schema }) =>

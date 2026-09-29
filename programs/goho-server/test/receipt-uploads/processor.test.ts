@@ -6,7 +6,6 @@ import { Effect, Fiber, Layer, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
-import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
 import type { ReceiptUpload } from "#src/receipt-uploads/model.ts";
@@ -14,6 +13,7 @@ import * as Processor from "#src/receipt-uploads/processor.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import { parsedReceipt } from "#test/receipts/fixtures.ts";
+import * as TestSqlClient from "#test/sql-client.ts";
 
 const upload: ReceiptUpload = {
   id: ReceiptUploadId.make("7d89d8f7-6f0c-4df2-a2a9-94771638ac99"),
@@ -33,7 +33,7 @@ const dependencies = (options: {
   readonly markFailed?: ReceiptUploadRepository.Interface["markFailed"];
 }) =>
   Layer.mergeAll(
-    Layer.succeed(Transaction.Service, Transaction.Service.of({ run: (effect) => effect })),
+    TestSqlClient.layer,
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
       get: options.storageGet ?? (() => Effect.succeed(new Uint8Array([1, 2, 3]))),

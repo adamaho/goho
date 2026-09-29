@@ -8,11 +8,11 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { expect } from "vitest";
 
-import * as Transaction from "#src/database/transaction.ts";
 import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as TestSqlClient from "#test/sql-client.ts";
 
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",
@@ -64,7 +64,7 @@ const testLayer = (
       Layer.provide([
         Receipts.layer.pipe(
           Layer.provide([
-            Layer.succeed(Transaction.Service, Transaction.Service.of({ run: (effect) => effect })),
+            TestSqlClient.layer,
             Layer.succeed(ReceiptRepository.Service, {
               create: () => Effect.succeed(receipt),
               findById: () => Effect.succeedSome(receipt),
