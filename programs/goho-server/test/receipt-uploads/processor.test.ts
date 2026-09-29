@@ -6,6 +6,7 @@ import { Effect, Fiber, Layer, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
+import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
 import type { ReceiptUpload } from "#src/receipt-uploads/model.ts";
@@ -32,6 +33,7 @@ const dependencies = (options: {
   readonly markFailed?: ReceiptUploadRepository.Interface["markFailed"];
 }) =>
   Layer.mergeAll(
+    Layer.succeed(Transaction.Service, Transaction.Service.of({ run: (effect) => effect })),
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
       get: options.storageGet ?? (() => Effect.succeed(new Uint8Array([1, 2, 3]))),

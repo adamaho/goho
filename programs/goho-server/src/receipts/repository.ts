@@ -68,6 +68,7 @@ export interface Interface {
 
 /**
  * Receipt persistence; callers decide how failures affect their workflow.
+ * Callers own transaction boundaries for operations spanning multiple writes.
  *
  * @category models
  * @since 0.1.0
@@ -224,9 +225,8 @@ export const layer = Layer.effect(
           "SHA-256",
           new TextEncoder().encode(JSON.stringify(receipt)),
         );
-        return yield* sql.withTransaction(
-          Effect.gen(function* () {
-            const inserted = yield* sql`
+        return yield* Effect.gen(function* () {
+          const inserted = yield* sql`
               INSERT INTO receipts (
                 idempotency_key, fingerprint, store_name, receipt_date,
                 category, subtotal, tax, total, currency
@@ -236,30 +236,29 @@ export const layer = Layer.effect(
                 ${receipt.currency}
               ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
             `.pipe(Effect.flatMap(decodeInserted));
-            const row = inserted.at(0);
-            if (row === undefined) {
-              const existing = yield* sql`
+          const row = inserted.at(0);
+          if (row === undefined) {
+            const existing = yield* sql`
                 SELECT id FROM receipts
                 WHERE idempotency_key = ${key} AND fingerprint = ${receiptFingerprint}
               `.pipe(Effect.flatMap(decodeInserted));
-              const existingRow = existing.at(0);
-              if (existingRow === undefined) return { _tag: "Conflict" } as const;
-              return {
-                _tag: "Receipt",
-                receipt: yield* readReceipt(existingRow.id),
-              } as const;
-            }
-            yield* sql`INSERT INTO receipt_items ${sql.insert(
-              Array.map(receipt.items, (item, position) => ({
-                receipt_id: row.id,
-                position,
-                name: item.name,
-                amount: item.amount,
-              })),
-            )}`;
-            return { _tag: "Receipt", receipt: yield* readReceipt(row.id) } as const;
-          }),
-        );
+            const existingRow = existing.at(0);
+            if (existingRow === undefined) return { _tag: "Conflict" } as const;
+            return {
+              _tag: "Receipt",
+              receipt: yield* readReceipt(existingRow.id),
+            } as const;
+          }
+          yield* sql`INSERT INTO receipt_items ${sql.insert(
+            Array.map(receipt.items, (item, position) => ({
+              receipt_id: row.id,
+              position,
+              name: item.name,
+              amount: item.amount,
+            })),
+          )}`;
+          return { _tag: "Receipt", receipt: yield* readReceipt(row.id) } as const;
+        });
       }).pipe(Effect.mapError((cause) => new PersistenceError({ operation: "create", cause })));
       if (outcome._tag === "Conflict") {
         return yield* new IdempotencyConflict({ idempotencyKey });
@@ -269,9 +268,7 @@ export const layer = Layer.effect(
     const save = Effect.fn("@goho/ReceiptRepository.save")(
       function* (input: ReceiptToSave) {
         const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
-        return yield* sql.withTransaction(
-          Effect.gen(function* () {
-            const inserted = yield* sql`
+        const inserted = yield* sql`
           INSERT INTO receipts (
             source_provider, source_file_id, source_file_name, store_name, receipt_date,
             category, subtotal, tax, total, currency, extraction_version, extracted_payload
@@ -282,25 +279,23 @@ export const layer = Layer.effect(
             ${receipt.extractionVersion}, ${JSON.stringify(receipt.extractedPayload)}::jsonb
           ) ON CONFLICT (source_provider, source_file_id) DO NOTHING RETURNING id
         `.pipe(Effect.flatMap(decodeInserted));
-            const row = inserted.at(0);
-            if (row === undefined) {
-              const existing = yield* sql`
+        const row = inserted.at(0);
+        if (row === undefined) {
+          const existing = yield* sql`
             SELECT id FROM receipts
             WHERE source_provider = ${receipt.source.provider} AND source_file_id = ${receipt.source.fileId}
           `.pipe(Effect.flatMap(decodeExisting));
-              return { _tag: "AlreadyExists", receiptId: existing[0].id } satisfies SaveResult;
-            }
-            yield* sql`INSERT INTO receipt_items ${sql.insert(
-              receipt.items.map((item) => ({
-                receipt_id: row.id,
-                position: item.position,
-                name: item.name,
-                amount: item.amount,
-              })),
-            )}`;
-            return { _tag: "Inserted", receiptId: row.id } satisfies SaveResult;
-          }),
-        );
+          return { _tag: "AlreadyExists", receiptId: existing[0].id } satisfies SaveResult;
+        }
+        yield* sql`INSERT INTO receipt_items ${sql.insert(
+          receipt.items.map((item) => ({
+            receipt_id: row.id,
+            position: item.position,
+            name: item.name,
+            amount: item.amount,
+          })),
+        )}`;
+        return { _tag: "Inserted", receiptId: row.id } satisfies SaveResult;
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "save", cause })),
     );

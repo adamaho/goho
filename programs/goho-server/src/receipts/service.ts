@@ -7,6 +7,8 @@ import type {
 import { Context, Effect, Layer, Option } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
+import * as Transaction from "#src/database/transaction.ts";
+
 import * as ReceiptRepository from "./repository.ts";
 
 /**
@@ -39,14 +41,19 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const repository = yield* ReceiptRepository.Service;
+    const transaction = yield* Transaction.Service;
     const create = Effect.fn("@goho/ReceiptService.create")(
       (idempotencyKey: IdempotencyKey, receipt: CreateReceiptRequest) =>
-        repository.create(idempotencyKey, receipt).pipe(
+        transaction.run(repository.create(idempotencyKey, receipt)).pipe(
           Effect.catchTags({
             "GohoServer.ReceiptRepository.IdempotencyConflict": () =>
               Effect.fail(new HttpApiError.Conflict()),
             "GohoServer.ReceiptRepository.PersistenceError": (error) =>
               Effect.logError("Receipt creation failed", error).pipe(
+                Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+              ),
+            SqlError: (error) =>
+              Effect.logError("Receipt transaction failed", error).pipe(
                 Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
               ),
           }),

@@ -11,6 +11,7 @@ import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
 import * as Database from "./database/client.ts";
+import * as Transaction from "./database/transaction.ts";
 import * as FileStorage from "./file-storage.ts";
 import * as Http from "./http.ts";
 import * as ReceiptUploadProcessor from "./receipt-uploads/processor.ts";
@@ -21,22 +22,18 @@ import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
 
-const RepositoryLive = ReceiptRepository.layer.pipe(
-  Layer.provide([Database.layer, NodeCrypto.layer]),
-);
-const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
-  Layer.provide(Database.layer),
-);
-const ReceiptUploadQueueLive = ReceiptUploadQueue.layer.pipe(Layer.provide(Database.layer));
+const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(NodeCrypto.layer));
+const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer;
+const ReceiptUploadQueueLive = ReceiptUploadQueue.layer;
+const TransactionLive = Transaction.layer;
 const FileStorageLive = Layer.unwrap(
   Config.String("GOHO_UPLOADS_DIRECTORY").pipe(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
-const ReceiptsLive = Receipts.layer.pipe(Layer.provide(RepositoryLive));
+const ReceiptsLive = Receipts.layer.pipe(Layer.provide([RepositoryLive, TransactionLive]));
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
-    Database.layer,
     FileStorageLive,
     NodeCrypto.layer,
     ReceiptUploadQueueLive,
@@ -50,6 +47,7 @@ const ReceiptUploadWorkerLive = ReceiptUploadProcessor.layer.pipe(
     ReceiptUploadQueueLive,
     ReceiptUploadRepositoryLive,
     RepositoryLive,
+    TransactionLive,
   ]),
 );
 const ServerLive = HttpRouter.serve(
@@ -65,4 +63,6 @@ const ServerLive = HttpRouter.serve(
     }),
   ),
 );
-Layer.launch(Layer.merge(ServerLive, ReceiptUploadWorkerLive)).pipe(NodeRuntime.runMain);
+Layer.launch(
+  Layer.merge(ServerLive, ReceiptUploadWorkerLive).pipe(Layer.provide(Database.layer)),
+).pipe(NodeRuntime.runMain);

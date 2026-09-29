@@ -8,6 +8,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { expect } from "vitest";
 
+import * as Transaction from "#src/database/transaction.ts";
 import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
@@ -62,7 +63,8 @@ const testLayer = (
     Http.layer.pipe(
       Layer.provide([
         Receipts.layer.pipe(
-          Layer.provide(
+          Layer.provide([
+            Layer.succeed(Transaction.Service, Transaction.Service.of({ run: (effect) => effect })),
             Layer.succeed(ReceiptRepository.Service, {
               create: () => Effect.succeed(receipt),
               findById: () => Effect.succeedSome(receipt),
@@ -70,7 +72,7 @@ const testLayer = (
               save: () => Effect.die("Unexpected repository.save call"),
               ...repository,
             }),
-          ),
+          ]),
         ),
         receiptUploadsTest(receiptUploads),
       ]),

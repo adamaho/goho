@@ -10,7 +10,9 @@ import { expect } from "vitest";
 import * as Migrations from "#src/database/migrations.ts";
 import receiptsMigration from "#src/database/migrations/0001-receipts.ts";
 import createReceiptMigration from "#src/database/migrations/0002-create-receipt.ts";
+import * as Transaction from "#src/database/transaction.ts";
 import * as Repository from "#src/receipts/repository.ts";
+import * as Receipts from "#src/receipts/service.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
@@ -53,6 +55,11 @@ const DatabaseLive = Layer.effectContext(
     return services;
   }),
 ).pipe(Layer.provide(NodeCrypto.layer));
+
+const ServiceLive = Receipts.layer.pipe(
+  Layer.provide(Transaction.layer),
+  Layer.provideMerge(DatabaseLive),
+);
 
 const LegacyDatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
@@ -282,7 +289,10 @@ it.effect("concurrent equivalent creates return one receipt and item set", () =>
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     const results = yield* Effect.all(
-      [repo.create(idempotencyKey, receiptInput), repo.create(idempotencyKey, receiptInput)],
+      [
+        sql.withTransaction(repo.create(idempotencyKey, receiptInput)),
+        sql.withTransaction(repo.create(idempotencyKey, receiptInput)),
+      ],
       { concurrency: 2 },
     );
     expect(results[0]).toEqual(results[1]);
@@ -296,13 +306,29 @@ it.effect("rolls back an API-created receipt when an item insert fails", () =>
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
-    const result = yield* repo.create(idempotencyKey, receiptInput).pipe(Effect.result);
+    const result = yield* sql
+      .withTransaction(repo.create(idempotencyKey, receiptInput))
+      .pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe(
       "GohoServer.ReceiptRepository.PersistenceError",
     );
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("rolls back a service-created receipt when an item insert fails", () =>
+  Effect.gen(function* () {
+    const service = yield* Receipts.Service;
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
+
+    const result = yield* service.create(idempotencyKey, receiptInput).pipe(Effect.result);
+
+    expect(Result.isFailure(result) && result.failure._tag).toBe("InternalServerError");
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
+  }).pipe(Effect.provide(ServiceLive)),
 );
 
 it.effect("persists receipt totals, provenance, repeated items and exact decimal amounts", () =>
@@ -363,7 +389,10 @@ it.effect("concurrent saves of one source create only one receipt and item set",
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
-    const results = yield* Effect.all([repo.save(receipt), repo.save(receipt)], { concurrency: 2 });
+    const results = yield* Effect.all(
+      [sql.withTransaction(repo.save(receipt)), sql.withTransaction(repo.save(receipt))],
+      { concurrency: 2 },
+    );
     expect(results.map((result) => result._tag).sort()).toEqual(["AlreadyExists", "Inserted"]);
     expect(results[0].receiptId).toBe(results[1].receiptId);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
@@ -376,7 +405,7 @@ it.effect("rolls back the receipt when an item insert fails", () =>
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
-    const result = yield* repo.save(receipt).pipe(Effect.result);
+    const result = yield* sql.withTransaction(repo.save(receipt)).pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe(
       "GohoServer.ReceiptRepository.PersistenceError",
     );

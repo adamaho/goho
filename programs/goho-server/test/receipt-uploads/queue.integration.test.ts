@@ -1,18 +1,22 @@
 import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Postgres } from "@goho/core";
+import { Ai, Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { Config, Context, Crypto, Effect, Layer, Redacted, Ref, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
+import * as Transaction from "#src/database/transaction.ts";
 import { FileId } from "#src/file-storage.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
+import * as Processor from "#src/receipt-uploads/processor.ts";
 import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
+import * as ReceiptRepository from "#src/receipts/repository.ts";
+import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const DatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
@@ -42,6 +46,16 @@ const StorageLive = Layer.succeed(FileStorage.Service, {
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([DatabaseLive, NodeCrypto.layer, QueueLive, RepositoryLive, StorageLive]),
 );
+const ProcessorLive = Layer.mergeAll(
+  ReceiptUploadRepository.layer,
+  ReceiptRepository.layer.pipe(Layer.provide(NodeCrypto.layer)),
+  Transaction.layer,
+  StorageLive,
+  Layer.succeed(Ai.Service, {
+    generateObject: ({ schema }) =>
+      Schema.decodeUnknownEffect(schema)(parsedReceipt).pipe(Effect.orDie),
+  }),
+).pipe(Layer.provideMerge(DatabaseLive));
 
 const makeJob = Effect.gen(function* () {
   const crypto = yield* Crypto.Crypto;
@@ -173,6 +187,62 @@ it.effect("keeps pending work across queue layer restarts", () =>
 
     expect(taken).toEqual(job);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("saves the receipt and links its upload in one transaction", () =>
+  Effect.gen(function* () {
+    const uploads = yield* ReceiptUploadRepository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const job = yield* makeJob;
+    yield* uploads.createQueued({
+      id: job.uploadId,
+      fileId: FileId.make("processed-file"),
+      fileName: "receipt.png",
+      contentType: "image/png",
+    });
+
+    yield* Processor.process(job, { id: job.uploadId, attempts: 1 });
+
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 3 }]);
+    expect(
+      yield* sql`
+      SELECT status, receipt_id IS NOT NULL AS linked
+      FROM receipt_uploads WHERE id = ${job.uploadId}
+    `,
+    ).toEqual([{ status: "succeeded", linked: true }]);
+  }).pipe(Effect.provide(ProcessorLive)),
+);
+
+it.effect("rolls back the receipt and items when linking the upload fails", () =>
+  Effect.gen(function* () {
+    const uploads = yield* ReceiptUploadRepository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const job = yield* makeJob;
+    yield* uploads.createQueued({
+      id: job.uploadId,
+      fileId: FileId.make("processed-file"),
+      fileName: "receipt.png",
+      contentType: "image/png",
+    });
+    yield* sql`
+      ALTER TABLE receipt_uploads ADD CONSTRAINT reject_success CHECK (status <> 'succeeded')
+    `;
+
+    const result = yield* Processor.process(job, { id: job.uploadId, attempts: 1 }).pipe(
+      Effect.result,
+    );
+
+    expect(result._tag).toBe("Failure");
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
+    expect(
+      yield* sql`
+      SELECT status, receipt_id IS NOT NULL AS linked
+      FROM receipt_uploads WHERE id = ${job.uploadId}
+    `,
+    ).toEqual([{ status: "processing", linked: false }]);
+  }).pipe(Effect.provide(ProcessorLive)),
 );
 
 it.live(
