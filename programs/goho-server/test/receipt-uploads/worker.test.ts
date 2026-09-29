@@ -10,8 +10,8 @@ import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
 import type { ReceiptUpload } from "#src/receipt-uploads/model.ts";
-import * as Processor from "#src/receipt-uploads/processor.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
+import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
@@ -67,7 +67,7 @@ const dependencies = (options: {
 it.effect("stores the resulting receipt ID after processing an upload", () =>
   Effect.gen(function* () {
     const succeeded = yield* Ref.make<ReadonlyArray<string>>([]);
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
       Effect.provide(
         dependencies({
           markSucceeded: (uploadId, receiptId) =>
@@ -84,7 +84,7 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
 it.effect("discards a redelivered job for an upload that already finished", () =>
   Effect.gen(function* () {
     const succeeded = yield* Ref.make(0);
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
       Effect.provide(
         dependencies({
           storageGet: () => Effect.die("Unexpected storage.get call"),
@@ -116,13 +116,13 @@ it.effect("records a stable failure code only after the final attempt", () =>
         ),
     });
 
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
       Effect.provide(layer),
       Effect.result,
     );
     expect(yield* Ref.get(failures)).toEqual([]);
 
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 3 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 3 }).pipe(
       Effect.provide(layer),
       Effect.result,
     );
@@ -151,7 +151,7 @@ it.effect("retries the terminal status write before giving up", () =>
         ),
     });
 
-    const fiber = yield* Processor.process(
+    const fiber = yield* Worker.process(
       { uploadId: upload.id },
       { id: upload.id, attempts: 3 },
     ).pipe(Effect.provide(layer), Effect.result, Effect.forkChild);

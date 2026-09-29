@@ -14,10 +14,10 @@ import * as Database from "./database/client.ts";
 import * as Transaction from "./database/transaction.ts";
 import * as FileStorage from "./file-storage.ts";
 import * as Http from "./http.ts";
-import * as ReceiptUploadProcessor from "./receipt-uploads/processor.ts";
 import * as ReceiptUploadQueue from "./receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "./receipt-uploads/repository.ts";
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
+import * as ReceiptUploadWorker from "./receipt-uploads/worker.ts";
 import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
@@ -43,7 +43,7 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
     TransactionLive,
   ]),
 );
-const ReceiptUploadWorkerLive = ReceiptUploadProcessor.layer.pipe(
+const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
   Layer.provide([
     Ai.layer,
     FileStorageLive,
