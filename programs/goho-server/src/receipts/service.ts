@@ -55,6 +55,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const repository = yield* ReceiptRepository.Service;
+
     const create = Effect.fn("@goho/ReceiptService.create")(
       function* (receipt: CreateReceiptRequest) {
         const receiptId = yield* repository.insert(normalizeReceipt(receipt));
@@ -73,6 +74,7 @@ export const layer = Layer.effect(
         ),
       ),
     );
+
     const get = Effect.fn("@goho/ReceiptService.get")((receiptId: ReceiptId) =>
       repository.findById(receiptId).pipe(
         Effect.flatMap(
@@ -88,6 +90,7 @@ export const layer = Layer.effect(
         ),
       ),
     );
+
     const list = repository.list.pipe(
       Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
         Effect.logError("Receipt listing failed", error).pipe(
@@ -96,6 +99,7 @@ export const layer = Layer.effect(
       ),
       Effect.withSpan("@goho/ReceiptService.list"),
     );
+
     return Service.of({ create, get, list });
   }),
 );

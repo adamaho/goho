@@ -47,6 +47,7 @@ export class Service extends Context.Service<Service, Interface>()(
 ) {}
 
 const IdRow = Schema.Struct({ id: ReceiptIdFromDatabase });
+
 const ReceiptRow = Schema.Struct({
   id: ReceiptIdFromDatabase,
   store_name: Schema.String,
@@ -57,17 +58,20 @@ const ReceiptRow = Schema.Struct({
   total: DecimalString,
   currency: Schema.NullOr(Schema.String),
 });
+
 const ItemRow = Schema.Struct({
   position: Schema.Int,
   name: Schema.String,
   amount: DecimalString,
 });
+
 const ReceiptListRow = Schema.Struct({
   ...ReceiptRow.fields,
   item_position: Schema.NullOr(Schema.Int),
   item_name: Schema.NullOr(Schema.String),
   item_amount: Schema.NullOr(DecimalString),
 });
+
 const ItemInsertRow = Schema.Struct({
   receipt_id: ReceiptId,
   position: Schema.Int,
@@ -90,6 +94,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+
     const findReceiptRow = SqlSchema.findOneOption({
       Request: ReceiptId,
       Result: ReceiptRow,
@@ -99,6 +104,7 @@ export const layer = Layer.effect(
         FROM receipts WHERE id = ${receiptId}
       `,
     });
+
     const findItemRows = SqlSchema.findNonEmpty({
       Request: ReceiptId,
       Result: ItemRow,
@@ -107,6 +113,7 @@ export const layer = Layer.effect(
         FROM receipt_items WHERE receipt_id = ${receiptId} ORDER BY position
       `,
     });
+
     const insertReceiptRow = SqlSchema.findOne({
       Request: Schema.Struct({
         storeName: Schema.String,
@@ -132,6 +139,7 @@ export const layer = Layer.effect(
       Request: Schema.Array(ItemInsertRow),
       execute: (rows) => sql`INSERT INTO receipt_items ${sql.insert(rows)}`,
     });
+
     const selectListRows = SqlSchema.findAll({
       Request: Schema.Void,
       Result: ReceiptListRow,
@@ -165,6 +173,7 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
     );
     // Callers may compose this into a larger transaction, where it becomes a savepoint.
+
     const insert = Effect.fn("@goho/ReceiptRepository.insert")(
       function* (receipt: CreateReceiptRequest) {
         return yield* sql.withTransaction(
@@ -184,6 +193,7 @@ export const layer = Layer.effect(
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "insert", cause })),
     );
+
     const list = Effect.gen(function* () {
       const rows = yield* selectListRows(undefined);
       const receipts = new Map<ReceiptId, ReceiptCandidate>();
@@ -216,6 +226,7 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
       Effect.withSpan("@goho/ReceiptRepository.list"),
     );
+
     return Service.of({ findById, insert, list });
   }),
 );

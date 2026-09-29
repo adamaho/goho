@@ -45,6 +45,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+
     return Service.of({
       run: (self) =>
         sql

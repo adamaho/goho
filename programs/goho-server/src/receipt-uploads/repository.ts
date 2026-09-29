@@ -127,10 +127,12 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+
     const columns = sql.literal(`
       id, file_id, file_name, content_type, status, receipt_id,
       failure_code, created_at::text, updated_at::text
     `);
+
     const persistenceError = (operation: string) =>
       Effect.mapError((cause: unknown) => new PersistenceError({ operation, cause }));
 
@@ -139,6 +141,7 @@ export const layer = Layer.effect(
       Result: ReceiptUploadRow,
       execute: (uploadId) => sql`SELECT ${columns} FROM receipt_uploads WHERE id = ${uploadId}`,
     });
+
     const selectSucceededByReceiptId = SqlSchema.findOneOption({
       Request: ReceiptId,
       Result: ReceiptUploadRow,
@@ -147,6 +150,7 @@ export const layer = Layer.effect(
         WHERE receipt_id = ${receiptId} AND status = 'succeeded'
       `,
     });
+
     const selectAll = SqlSchema.findAll({
       Request: Schema.Void,
       Result: ReceiptUploadRow,
@@ -154,6 +158,7 @@ export const layer = Layer.effect(
         SELECT ${columns} FROM receipt_uploads ORDER BY created_at DESC, id DESC
       `,
     });
+
     const insertQueued = SqlSchema.findOne({
       Request: QueuedReceiptUpload,
       Result: ReceiptUploadRow,
@@ -163,6 +168,7 @@ export const layer = Layer.effect(
         RETURNING ${columns}
       `,
     });
+
     const updateToProcessing = SqlSchema.findOneOption({
       Request: ReceiptUploadId,
       Result: ReceiptUploadRow,
@@ -172,6 +178,7 @@ export const layer = Layer.effect(
         RETURNING ${columns}
       `,
     });
+
     const updateToSucceeded = SqlSchema.findOneOption({
       Request: Schema.Struct({
         uploadId: ReceiptUploadId,
@@ -190,6 +197,7 @@ export const layer = Layer.effect(
         RETURNING ${columns}
       `,
     });
+
     const updateToFailed = SqlSchema.findOneOption({
       Request: Schema.Struct({ uploadId: ReceiptUploadId, failureCode: ReceiptUploadFailureCode }),
       Result: ReceiptUploadRow,
@@ -205,16 +213,19 @@ export const layer = Layer.effect(
       (uploadId: ReceiptUploadId) => selectById(uploadId).pipe(Effect.map(Option.map(fromRow))),
       persistenceError("findById"),
     );
+
     const findByReceiptId = Effect.fn("@goho/ReceiptUploadRepository.findByReceiptId")(
       (receiptId: ReceiptId) =>
         selectSucceededByReceiptId(receiptId).pipe(Effect.map(Option.map(fromRow))),
       persistenceError("findByReceiptId"),
     );
+
     const list = selectAll(undefined).pipe(
       Effect.map((rows) => rows.map(fromRow)),
       persistenceError("list"),
       Effect.withSpan("@goho/ReceiptUploadRepository.list"),
     );
+
     const createQueued = Effect.fn("@goho/ReceiptUploadRepository.createQueued")(function* (
       input: QueuedReceiptUpload,
     ) {
@@ -223,6 +234,7 @@ export const layer = Layer.effect(
     }, persistenceError("createQueued"));
     // A guarded update that matched no row either lost the upload or found it in
     // a state that does not allow the requested transition.
+
     const transition = Effect.fnUntraced(function* <E>(
       operation: string,
       uploadId: ReceiptUploadId,
@@ -239,10 +251,12 @@ export const layer = Layer.effect(
         requestedStatus,
       });
     });
+
     const markProcessing = Effect.fn("@goho/ReceiptUploadRepository.markProcessing")(
       (uploadId: ReceiptUploadId) =>
         transition("markProcessing", uploadId, "processing", updateToProcessing(uploadId)),
     );
+
     const markSucceeded = Effect.fn("@goho/ReceiptUploadRepository.markSucceeded")(
       (uploadId: ReceiptUploadId, receiptId: ReceiptId, extraction: ReceiptExtraction) =>
         transition(
@@ -257,10 +271,12 @@ export const layer = Layer.effect(
           }),
         ),
     );
+
     const markFailed = Effect.fn("@goho/ReceiptUploadRepository.markFailed")(
       (uploadId: ReceiptUploadId, failureCode: ReceiptUploadFailureCode) =>
         transition("markFailed", uploadId, "failed", updateToFailed({ uploadId, failureCode })),
     );
+
     return Service.of({
       createQueued,
       findById,
