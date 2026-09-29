@@ -5,6 +5,30 @@ read and write workflow. This local stdio server exposes receipt lookup and
 creation through the existing Goho HTTP API, so it can be tested without hosting
 or an OpenAI key.
 
+## Agent-first setup
+
+From the repository root, copy this prompt into a coding agent running on your
+machine:
+
+```text
+Set up this checkout so I can test the Goho MCP locally. Read
+programs/goho-mcp/README.md, CONTRIBUTING.md,
+programs/goho-server/CONTRIBUTING.md, and package.json first. Check that Node.js,
+the pinned pnpm version, and Docker Compose are available; reuse compatible
+installations and report any missing prerequisite.
+Run pnpm install. If programs/goho-server/.env does not exist, copy it from
+programs/goho-server/.env.example. Never print, overwrite, or commit secrets.
+The example's placeholder OpenAI key is enough for these receipt tools.
+Start pnpm server:dev and wait for the dev API at http://127.0.0.1:3000. In
+another terminal, run GOHO_SERVER_URL=http://127.0.0.1:3000 pnpm --filter
+@goho/goho-server db:seed. Keep the dev API running.
+Configure my MCP client to launch programs/goho-mcp with pnpm over stdio, using
+absolute paths and the dev API. Reload the client if needed. Call list_receipts,
+get_receipt with a returned ID, and create_receipt with fictional data; then
+read the created receipt. Run pnpm check and report what worked. Only seed and
+test against the local dev API, never another Goho server.
+```
+
 ## Run locally
 
 You need Node.js 24, pnpm 12.6.0, and Docker with Compose. See the root
@@ -41,11 +65,19 @@ Use your checkout's absolute path in place of `/absolute/path/to/goho`:
 pnpm --dir /absolute/path/to/goho/programs/goho-mcp start
 ```
 
-For example, from the repository root, Codex CLI users can register it with:
+From the repository root, register it with Codex CLI:
 
 ```bash
 codex mcp add goho -- "$(command -v pnpm)" --dir "$PWD/programs/goho-mcp" start
 ```
+
+Or register it with Claude Code:
+
+```bash
+claude mcp add --transport stdio goho -- "$(command -v pnpm)" --dir "$PWD/programs/goho-mcp" start
+```
+
+Start a new session in either client and ask, "List my Goho receipts."
 
 The MCP server connects to `http://127.0.0.1:3000` by default. If your dev API
 uses another address, set `GOHO_SERVER_URL` in the MCP server's environment.
@@ -63,9 +95,3 @@ while the client is connected and reserves stdout for protocol messages.
   for Example Store on 2026-09-13 in the Groceries category, with USD
   subtotal $10.25, tax $0.75, total $11.00, and one Apple item for $10.25.
   Then call `get_receipt` with the returned ID.
-
-To run the MCP tests from the repository root:
-
-```bash
-pnpm --filter @goho/goho-mcp test:unit
-```
