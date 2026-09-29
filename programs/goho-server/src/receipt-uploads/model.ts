@@ -8,6 +8,7 @@ import { ReceiptId } from "@goho/goho-api/receipts";
 import { Schema } from "effect";
 
 import { FileId } from "#src/file-storage.ts";
+import type { ParsedReceipt } from "#src/receipts/model.ts";
 import { NonEmptyText } from "#src/schema.ts";
 
 /**
@@ -53,3 +54,14 @@ export const ReceiptUpload = Schema.Struct({
  * @since 0.1.0
  */
 export interface ReceiptUpload extends Schema.Schema.Type<typeof ReceiptUpload> {}
+
+/**
+ * Extraction result recorded when an upload succeeds.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ReceiptExtraction {
+  readonly version: number;
+  readonly payload: ParsedReceipt;
+}

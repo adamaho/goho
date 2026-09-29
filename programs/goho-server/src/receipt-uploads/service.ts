@@ -6,8 +6,8 @@ import {
 import { ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Crypto, Effect, Layer, Option, Schema } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
-import { SqlClient } from "effect/unstable/sql";
 
+import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { NonEmptyText } from "#src/schema.ts";
 
@@ -93,7 +93,7 @@ export const layer = Layer.effect(
     const storage = yield* FileStorage.Service;
     const repository = yield* ReceiptUploadRepository.Service;
     const queue = yield* ReceiptUploadQueue.Service;
-    const sql = yield* SqlClient.SqlClient;
+    const transaction = yield* Transaction.Service;
     const crypto = yield* Crypto.Crypto;
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
@@ -101,8 +101,8 @@ export const layer = Layer.effect(
         const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4);
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
-        const upload = yield* sql
-          .withTransaction(
+        const upload = yield* transaction
+          .run(
             Effect.gen(function* () {
               const created = yield* repository.createQueued({
                 id: uploadId,

@@ -2,6 +2,7 @@ import { Ai } from "@goho/core";
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
 import { Effect, Layer, Schedule, Schema } from "effect";
 
+import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as ReceiptExtraction from "#src/receipts/extraction.ts";
 import * as ReceiptModel from "#src/receipts/model.ts";
@@ -30,7 +31,11 @@ export const process: (
 ) => Effect.Effect<
   void,
   ProcessingError,
-  Ai.Service | FileStorage.Service | ReceiptRepository.Service | ReceiptUploadRepository.Service
+  | Ai.Service
+  | FileStorage.Service
+  | ReceiptRepository.Service
+  | ReceiptUploadRepository.Service
+  | Transaction.Service
 > = Effect.fn("@goho/ReceiptUploads.process")(function* (
   job: ReceiptUploadJob,
   metadata: { readonly id: string; readonly attempts: number },
@@ -39,13 +44,21 @@ export const process: (
     const uploads = yield* ReceiptUploadRepository.Service;
     const storage = yield* FileStorage.Service;
     const receipts = yield* ReceiptRepository.Service;
+    const transaction = yield* Transaction.Service;
 
+    // A finished upload means another delivery already recorded its outcome.
     const upload = yield* uploads.markProcessing(job.uploadId).pipe(
-      Effect.catchTag("GohoServer.ReceiptUploadRepository.UploadNotFound", () =>
-        Effect.logWarning("Discarding a receipt upload job without an upload row", {
-          uploadId: job.uploadId,
-        }).pipe(Effect.as(null)),
-      ),
+      Effect.catchTags({
+        "GohoServer.ReceiptUploadRepository.UploadNotFound": () =>
+          Effect.logWarning("Discarding a receipt upload job without an upload row", {
+            uploadId: job.uploadId,
+          }).pipe(Effect.as(null)),
+        "GohoServer.ReceiptUploadRepository.InvalidTransition": (error) =>
+          Effect.logInfo("Discarding a receipt upload job for a finished upload", {
+            uploadId: job.uploadId,
+            status: error.currentStatus,
+          }).pipe(Effect.as(null)),
+      }),
       failAs("internal_error"),
     );
     if (upload === null) return;
@@ -56,16 +69,18 @@ export const process: (
       fileName: upload.fileName,
       contentType: upload.contentType,
     }).pipe(failAs("processing_failed"));
-    const result = yield* receipts
-      .save(
-        ReceiptModel.prepareReceipt(parsed, {
-          provider: "file_storage",
-          fileId: upload.fileId,
-          fileName: upload.fileName,
+    const receipt = ReceiptModel.prepareReceipt(parsed);
+    const extraction = { version: ReceiptModel.extractionVersion, payload: parsed };
+    yield* transaction
+      .run(
+        Effect.gen(function* () {
+          const receiptId = yield* receipts.insert(receipt).pipe(failAs("receipt_creation_failed"));
+          yield* uploads
+            .markSucceeded(upload.id, receiptId, extraction)
+            .pipe(failAs("internal_error"));
         }),
       )
-      .pipe(failAs("receipt_creation_failed"));
-    yield* uploads.markSucceeded(upload.id, result.receiptId).pipe(failAs("internal_error"));
+      .pipe(Effect.catchTag("GohoServer.Database.TransactionError", failAs("internal_error")));
   }).pipe(
     Effect.catchTag("GohoServer.ReceiptUploads.ProcessingError", (error) =>
       Effect.gen(function* () {

@@ -10,7 +10,7 @@ import { SqlClient } from "effect/unstable/sql";
 import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
-import { QueuedReceiptUpload, ReceiptUpload } from "./model.ts";
+import { QueuedReceiptUpload, type ReceiptExtraction, ReceiptUpload } from "./model.ts";
 
 /**
  * Unexpected failure while validating or persisting an upload.
@@ -74,6 +74,7 @@ export interface Interface {
   readonly markSucceeded: (
     uploadId: ReceiptUploadId,
     receiptId: ReceiptId,
+    extraction: ReceiptExtraction,
   ) => Effect.Effect<ReceiptUpload, TransitionError>;
   readonly markFailed: (
     uploadId: ReceiptUploadId,
@@ -194,10 +195,14 @@ export const layer = Layer.effect(
     const markSucceeded = Effect.fn("@goho/ReceiptUploadRepository.markSucceeded")(function* (
       uploadId: ReceiptUploadId,
       receiptId: ReceiptId,
+      extraction: ReceiptExtraction,
     ) {
       const rows = yield* sql`
         UPDATE receipt_uploads
-        SET status = 'succeeded', receipt_id = ${receiptId}, updated_at = now()
+        SET status = 'succeeded', receipt_id = ${receiptId},
+          extraction_version = ${extraction.version},
+          extracted_payload = ${JSON.stringify(extraction.payload)}::jsonb,
+          updated_at = now()
         WHERE id = ${uploadId} AND status = 'processing'
         RETURNING id, file_id, file_name, content_type, status, receipt_id,
           failure_code, created_at::text, updated_at::text
@@ -240,13 +245,13 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/ReceiptUploadRepository.list"),
     );
     return Service.of({
-      list,
       createQueued,
       findById,
       findByReceiptId,
+      list,
+      markFailed,
       markProcessing,
       markSucceeded,
-      markFailed,
     });
   }),
 );
