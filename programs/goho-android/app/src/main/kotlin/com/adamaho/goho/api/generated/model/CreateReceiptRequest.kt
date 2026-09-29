@@ -38,7 +38,7 @@ import com.squareup.moshi.JsonClass
  * @param tax Tax amount.
  * @param total Final receipt total.
  * @param currency Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.
- * @param items Line items in receipt order. Shuffle the lineup and the idempotency check changes.
+ * @param items Line items in receipt order.
  */
 
 
@@ -72,7 +72,7 @@ data class CreateReceiptRequest (
     @Json(name = "currency")
     val currency: kotlin.String?,
 
-    /* Line items in receipt order. Shuffle the lineup and the idempotency check changes. */
+    /* Line items in receipt order. */
     @Json(name = "items")
     val items: kotlin.collections.List<ReceiptItemInput>
 

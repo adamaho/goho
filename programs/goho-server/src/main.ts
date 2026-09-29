@@ -21,9 +21,7 @@ import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
 
-const RepositoryLive = ReceiptRepository.layer.pipe(
-  Layer.provide([Database.layer, NodeCrypto.layer]),
-);
+const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(Database.layer));
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
   Layer.provide(Database.layer),
 );

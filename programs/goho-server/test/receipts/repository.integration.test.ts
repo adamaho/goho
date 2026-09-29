@@ -2,7 +2,7 @@ import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { CreateReceiptRequest, IdempotencyKey, ReceiptId } from "@goho/goho-api/receipts";
+import { CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
 import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
@@ -14,7 +14,6 @@ import * as Repository from "#src/receipts/repository.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
-const idempotencyKey = IdempotencyKey.make("manual-entry-1");
 const receiptInput = CreateReceiptRequest.make({
   storeName: "Example Store",
   receiptDate: "2024-09-01",
@@ -90,6 +89,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "bigint_receipt_ids" },
       { name: "receipt_uploads" },
       { name: "receipt_upload_file_id" },
+      { name: "drop_receipt_idempotency" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -162,7 +162,7 @@ it.effect("returns an empty receipt list", () =>
 it.effect("finds one receipt and returns none for a missing ID", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    const created = yield* repo.create(idempotencyKey, receiptInput);
+    const created = yield* repo.create(receiptInput);
     expect(yield* repo.findById(created.id)).toEqual(Option.some(created));
     expect(yield* repo.findById(ReceiptId.make("999"))).toEqual(Option.none());
   }).pipe(Effect.provide(DatabaseLive)),
@@ -184,7 +184,7 @@ it.effect("lists complete receipts newest first with ordered items", () =>
     };
     const earlierCreatedSaved = yield* repo.save(earlierCreated);
     const laterCreatedSaved = yield* repo.save(laterCreated);
-    const olderInsertedLast = yield* repo.create(idempotencyKey, receiptInput);
+    const olderInsertedLast = yield* repo.create(receiptInput);
     yield* sql`
       UPDATE receipts SET created_at = CASE id
         WHEN ${earlierCreatedSaved.receiptId} THEN '2026-09-01T00:00:00Z'::timestamptz
@@ -221,11 +221,11 @@ it.effect("lists complete receipts newest first with ordered items", () =>
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("creates a complete receipt and replays an equivalent normalized request", () =>
+it.effect("creates a complete receipt with normalized decimals on every call", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
-    const created = yield* repo.create(idempotencyKey, receiptInput);
+    const created = yield* repo.create(receiptInput);
     expect(created).toEqual({
       id: created.id,
       storeName: "Example Store",
@@ -240,54 +240,10 @@ it.effect("creates a complete receipt and replays an equivalent normalized reque
         { position: 1, name: "Adjustment", amount: "-1" },
       ],
     });
-    const replayed = yield* repo.create(
-      idempotencyKey,
-      CreateReceiptRequest.make({
-        ...receiptInput,
-        subtotal: "1.025e1",
-        tax: "0.7500",
-        total: "11.0",
-        items: [
-          { name: "Apples", amount: "12.0" },
-          { name: "Adjustment", amount: "-1.00" },
-        ],
-      }),
-    );
-    expect(replayed).toEqual(created);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
-  }).pipe(Effect.provide(DatabaseLive)),
-);
-
-it.effect("rejects reuse of an idempotency key for different normalized data", () =>
-  Effect.gen(function* () {
-    const repo = yield* Repository.Service;
-    const sql = yield* SqlClient.SqlClient;
-    const created = yield* repo.create(idempotencyKey, receiptInput);
-    const result = yield* repo
-      .create(idempotencyKey, CreateReceiptRequest.make({ ...receiptInput, total: "12" }))
-      .pipe(Effect.result);
-    expect(Result.isFailure(result) && result.failure._tag).toBe(
-      "GohoServer.ReceiptRepository.IdempotencyConflict",
-    );
-    expect(yield* sql`SELECT total::text FROM receipts WHERE id = ${created.id}`).toEqual([
-      { total: "11" },
-    ]);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
-  }).pipe(Effect.provide(DatabaseLive)),
-);
-
-it.effect("concurrent equivalent creates return one receipt and item set", () =>
-  Effect.gen(function* () {
-    const repo = yield* Repository.Service;
-    const sql = yield* SqlClient.SqlClient;
-    const results = yield* Effect.all(
-      [repo.create(idempotencyKey, receiptInput), repo.create(idempotencyKey, receiptInput)],
-      { concurrency: 2 },
-    );
-    expect(results[0]).toEqual(results[1]);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 2 }]);
+    const repeated = yield* repo.create(receiptInput);
+    expect(repeated.id).not.toBe(created.id);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 2 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 4 }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -296,7 +252,7 @@ it.effect("rolls back an API-created receipt when an item insert fails", () =>
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
-    const result = yield* repo.create(idempotencyKey, receiptInput).pipe(Effect.result);
+    const result = yield* repo.create(receiptInput).pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe(
       "GohoServer.ReceiptRepository.PersistenceError",
     );

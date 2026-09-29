@@ -47,10 +47,8 @@ pnpm --filter @goho/goho-server db:seed
 
 The seed command creates four fictional receipts through the receipt creation
 API. It uses `http://127.0.0.1:3000` by default; set `GOHO_SERVER_URL` to target
-another local server. Stable idempotency keys make reruns return the same
-receipts without duplicates. Keep a key stable while its fixture stays the
-same, and use a new key version when changing a fixture. Seeding does not
-upload images or call OpenAI.
+another local server. Seeding skips when any receipt already exists, so reruns
+do not add duplicates. Seeding does not upload images or call OpenAI.
 
 To process uploaded receipt images, replace the placeholder with a real
 `OPENAI_API_KEY` in the ignored `.env` file. Ensure the key has access to the
@@ -79,8 +77,7 @@ version, validated extraction JSON, and creation time. `receipt_items` stores
 ordered item names and amounts, linked to a receipt. Dates use `date`, creation
 times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
 Currency remains unknown with the current extraction contract. API-created
-receipts accept a currency or null and use an idempotency key instead of source
-metadata. See [receipt creation](./README.md#create-a-receipt).
+receipts accept a currency or null and have no source metadata. See [receipt creation](./README.md#create-a-receipt).
 
 Decimal strings preserve the finite numeric values supplied by the parser; they
 cannot recover precision already lost upstream.

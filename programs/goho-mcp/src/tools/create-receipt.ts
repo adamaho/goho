@@ -1,5 +1,5 @@
-import { CreateReceiptRequest, IdempotencyKey, Receipt } from "@goho/goho-server-client/receipts";
-import { Crypto, Effect, Schema } from "effect";
+import { CreateReceiptRequest, Receipt } from "@goho/goho-server-client/receipts";
+import { Effect, Schema } from "effect";
 import { Tool } from "effect/unstable/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
@@ -12,12 +12,12 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
  */
 export const tool = Tool.make("create_receipt", {
   description:
-    "Create a saved Goho receipt from supplied details. Use fictional receipt details only when the user asks for an example. Goho MCP generates the idempotency key for this call.",
+    "Create a saved Goho receipt from supplied details. Use fictional receipt details only when the user asks for an example.",
   parameters: CreateReceiptRequest,
   success: Schema.Struct({ receipt: Receipt }),
   failure: Schema.String,
   failureMode: "return",
-  dependencies: [GohoServerClient.Service, Crypto.Crypto],
+  dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, false)
   .annotate(Tool.Destructive, false)
@@ -36,14 +36,9 @@ const createFailureMessage =
 export const handle = Effect.fn("@goho/CreateReceipt.handle")(function* (
   payload: CreateReceiptRequest,
 ) {
-  const crypto = yield* Crypto.Crypto;
   const client = yield* GohoServerClient.Service;
-  const idempotencyKey = IdempotencyKey.make(yield* crypto.randomUUIDv4.pipe(Effect.orDie));
   const response = yield* client.receipts
-    .create({
-      headers: { "idempotency-key": idempotencyKey },
-      payload,
-    })
+    .create({ payload })
     .pipe(Effect.mapError(() => createFailureMessage));
   return { receipt: response.data };
 });

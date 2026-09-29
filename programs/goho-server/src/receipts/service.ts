@@ -1,9 +1,4 @@
-import type {
-  CreateReceiptRequest,
-  IdempotencyKey,
-  Receipt,
-  ReceiptId,
-} from "@goho/goho-api/receipts";
+import type { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option } from "effect";
 import { HttpApiError } from "effect/unstable/httpapi";
 
@@ -23,9 +18,8 @@ export class Service extends Context.Service<
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
     readonly list: Effect.Effect<ReadonlyArray<Receipt>, HttpApiError.InternalServerError>;
     readonly create: (
-      idempotencyKey: IdempotencyKey,
       receipt: CreateReceiptRequest,
-    ) => Effect.Effect<Receipt, HttpApiError.Conflict | HttpApiError.InternalServerError>;
+    ) => Effect.Effect<Receipt, HttpApiError.InternalServerError>;
   }
 >()("@goho/goho-server/Receipts") {}
 
@@ -39,17 +33,15 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const repository = yield* ReceiptRepository.Service;
-    const create = Effect.fn("@goho/ReceiptService.create")(
-      (idempotencyKey: IdempotencyKey, receipt: CreateReceiptRequest) =>
-        repository.create(idempotencyKey, receipt).pipe(
-          Effect.catchTags({
-            "GohoServer.ReceiptRepository.IdempotencyConflict": () =>
-              Effect.fail(new HttpApiError.Conflict()),
-            "GohoServer.ReceiptRepository.PersistenceError": (error) =>
-              Effect.logError("Receipt creation failed", error).pipe(
-                Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
-              ),
-          }),
+    const create = Effect.fn("@goho/ReceiptService.create")((receipt: CreateReceiptRequest) =>
+      repository
+        .create(receipt)
+        .pipe(
+          Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", (error) =>
+            Effect.logError("Receipt creation failed", error).pipe(
+              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+            ),
+          ),
         ),
     );
     const get = Effect.fn("@goho/ReceiptService.get")((receiptId: ReceiptId) =>

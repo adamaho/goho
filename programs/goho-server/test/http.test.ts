@@ -82,10 +82,7 @@ const TestLive = testLayer();
 it.effect("creates a receipt through the generated client and returns the complete receipt", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
-    const result = yield* client.receipts.create({
-      headers: { "idempotency-key": "manual-entry-1" },
-      payload: createPayload,
-    });
+    const result = yield* client.receipts.create({ payload: createPayload });
     expect(result).toEqual({ data: receipt });
   }).pipe(Effect.provide(TestLive)),
 );
@@ -207,39 +204,10 @@ it.effect("returns HTTP 500 without exposing receipt listing failure details", (
   ),
 );
 
-it.effect("requires an idempotency key before dispatching receipt creation", () =>
-  Effect.gen(function* () {
-    const body = yield* HttpBody.json(createPayload);
-    const response = yield* HttpClient.post("/receipts", { body });
-    expect(response.status).toBe(400);
-  }).pipe(Effect.provide(TestLive)),
-);
-
-it.effect("returns HTTP 409 when the repository reports an idempotency conflict", () =>
-  Effect.gen(function* () {
-    const body = yield* HttpBody.json(createPayload);
-    const response = yield* HttpClient.post("/receipts", {
-      body,
-      headers: { "idempotency-key": "manual-entry-1" },
-    });
-    expect(response.status).toBe(409);
-  }).pipe(
-    Effect.provide(
-      testLayer({
-        create: (idempotencyKey) =>
-          Effect.fail(new ReceiptRepository.IdempotencyConflict({ idempotencyKey })),
-      }),
-    ),
-  ),
-);
-
 it.effect("returns HTTP 500 without exposing private repository failure details", () =>
   Effect.gen(function* () {
     const body = yield* HttpBody.json(createPayload);
-    const response = yield* HttpClient.post("/receipts", {
-      body,
-      headers: { "idempotency-key": "manual-entry-1" },
-    });
+    const response = yield* HttpClient.post("/receipts", { body });
     expect(response.status).toBe(500);
     expect(yield* response.text).not.toContain("private database details");
   }).pipe(
@@ -282,10 +250,7 @@ it.effect("rejects invalid receipt data at the HTTP boundary", () =>
       },
     ]) {
       const body = yield* HttpBody.json(payload);
-      const response = yield* HttpClient.post("/receipts", {
-        body,
-        headers: { "idempotency-key": "manual-entry-1" },
-      });
+      const response = yield* HttpClient.post("/receipts", { body });
       expect(response.status).toBe(400);
     }
   }).pipe(Effect.provide(TestLive)),
