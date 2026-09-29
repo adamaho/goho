@@ -21,7 +21,7 @@ import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
 
-const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(NodeCrypto.layer));
+const RepositoryLive = ReceiptRepository.layer;
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer;
 const ReceiptUploadQueueLive = ReceiptUploadQueue.layer;
 const FileStorageLive = Layer.unwrap(
@@ -29,7 +29,7 @@ const FileStorageLive = Layer.unwrap(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
-const ReceiptsLive = Receipts.layer.pipe(Layer.provide(RepositoryLive));
+const ReceiptsLive = Receipts.layer.pipe(Layer.provide([RepositoryLive, NodeCrypto.layer]));
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     FileStorageLive,

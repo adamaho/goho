@@ -1,4 +1,4 @@
-import { NodeHttpServer } from "@effect/platform-node";
+import { NodeCrypto, NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
@@ -65,11 +65,15 @@ const testLayer = (
         Receipts.layer.pipe(
           Layer.provide([
             TestSqlClient.layer,
+            NodeCrypto.layer,
             Layer.succeed(ReceiptRepository.Service, {
-              create: () => Effect.succeed(receipt),
+              insertManual: () => Effect.succeedSome(receipt.id),
+              findByIdempotencyKey: () => Effect.succeedSome(receipt.id),
+              insertExtracted: () => Effect.die("Unexpected insertExtracted call"),
+              findBySource: () => Effect.die("Unexpected findBySource call"),
+              insertItems: () => Effect.void,
               findById: () => Effect.succeedSome(receipt),
               list: Effect.succeed([receipt]),
-              save: () => Effect.die("Unexpected repository.save call"),
               ...repository,
             }),
           ]),
@@ -217,7 +221,7 @@ it.effect("requires an idempotency key before dispatching receipt creation", () 
   }).pipe(Effect.provide(TestLive)),
 );
 
-it.effect("returns HTTP 409 when the repository reports an idempotency conflict", () =>
+it.effect("returns HTTP 409 when the idempotency key has a different fingerprint", () =>
   Effect.gen(function* () {
     const body = yield* HttpBody.json(createPayload);
     const response = yield* HttpClient.post("/receipts", {
@@ -228,8 +232,8 @@ it.effect("returns HTTP 409 when the repository reports an idempotency conflict"
   }).pipe(
     Effect.provide(
       testLayer({
-        create: (idempotencyKey) =>
-          Effect.fail(new ReceiptRepository.IdempotencyConflict({ idempotencyKey })),
+        insertManual: () => Effect.succeedNone,
+        findByIdempotencyKey: () => Effect.succeedNone,
       }),
     ),
   ),
@@ -247,10 +251,10 @@ it.effect("returns HTTP 500 without exposing private repository failure details"
   }).pipe(
     Effect.provide(
       testLayer({
-        create: () =>
+        insertManual: () =>
           Effect.fail(
             new ReceiptRepository.PersistenceError({
-              operation: "create",
+              operation: "insertManual",
               cause: "private database details",
             }),
           ),

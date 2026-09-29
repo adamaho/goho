@@ -1,6 +1,6 @@
 import { Ai } from "@goho/core";
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
-import { Effect, Layer, Schedule, Schema } from "effect";
+import { Effect, Layer, Option, Schedule, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import * as FileStorage from "#src/file-storage.ts";
@@ -65,16 +65,20 @@ export const process: (
     yield* sql
       .withTransaction(
         Effect.gen(function* () {
-          const result = yield* receipts
-            .save(
-              ReceiptModel.prepareReceipt(parsed, {
-                provider: "file_storage",
-                fileId: upload.fileId,
-                fileName: upload.fileName,
-              }),
-            )
+          const receipt = ReceiptModel.prepareReceipt(parsed, {
+            provider: "file_storage",
+            fileId: upload.fileId,
+            fileName: upload.fileName,
+          });
+          const inserted = yield* receipts
+            .insertExtracted(receipt)
             .pipe(failAs("receipt_creation_failed"));
-          yield* uploads.markSucceeded(upload.id, result.receiptId).pipe(failAs("internal_error"));
+          const receiptId = Option.isSome(inserted)
+            ? yield* receipts
+                .insertItems(inserted.value, receipt.items)
+                .pipe(failAs("receipt_creation_failed"), Effect.as(inserted.value))
+            : yield* receipts.findBySource(receipt.source).pipe(failAs("receipt_creation_failed"));
+          yield* uploads.markSucceeded(upload.id, receiptId).pipe(failAs("internal_error"));
         }),
       )
       .pipe(Effect.catchTag("SqlError", failAs("internal_error")));

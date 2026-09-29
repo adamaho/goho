@@ -44,10 +44,13 @@ const dependencies = (options: {
         Schema.decodeUnknownEffect(schema)(parsedReceipt).pipe(Effect.orDie),
     }),
     Layer.succeed(ReceiptRepository.Service, {
-      create: () => Effect.die("Unexpected receipt create call"),
+      insertManual: () => Effect.die("Unexpected insertManual call"),
+      findByIdempotencyKey: () => Effect.die("Unexpected findByIdempotencyKey call"),
+      insertExtracted: () => Effect.succeedSome(ReceiptId.make("42")),
+      findBySource: () => Effect.die("Unexpected findBySource call"),
+      insertItems: () => Effect.void,
       findById: () => Effect.succeedNone,
       list: Effect.succeed([]),
-      save: () => Effect.succeed({ _tag: "Inserted", receiptId: ReceiptId.make("42") }),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
       list: Effect.succeed([]),

@@ -1,20 +1,18 @@
 import {
   CalendarDate,
-  CreateReceiptRequest as CreateReceiptRequestSchema,
   DecimalString,
-  IdempotencyKey as IdempotencyKeySchema,
   Receipt as ReceiptSchema,
   ReceiptId,
   type CreateReceiptRequest,
   type IdempotencyKey,
   type Receipt,
 } from "@goho/goho-api/receipts";
-import { Array, BigDecimal, Context, Crypto, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
-import { ReceiptToSave } from "./model.ts";
+import { type ReceiptSource, ReceiptToSave } from "./model.ts";
 
 /**
  * Expected failure while validating or saving a receipt.
@@ -28,27 +26,6 @@ export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
 ) {}
 
 /**
- * The same idempotency key was previously used for different receipt data.
- *
- * @category errors
- * @since 0.1.0
- */
-export class IdempotencyConflict extends Schema.TaggedError<IdempotencyConflict>()(
-  "GohoServer.ReceiptRepository.IdempotencyConflict",
-  { idempotencyKey: IdempotencyKeySchema },
-) {}
-
-/**
- * Whether the receipt was inserted or already existed.
- *
- * @category models
- * @since 0.1.0
- */
-export type SaveResult =
-  | { readonly _tag: "Inserted"; readonly receiptId: ReceiptId }
-  | { readonly _tag: "AlreadyExists"; readonly receiptId: ReceiptId };
-
-/**
  * Receipt persistence operations.
  *
  * @category models
@@ -59,11 +36,23 @@ export interface Interface {
     receiptId: ReceiptId,
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
   readonly list: Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
-  readonly create: (
+  readonly insertManual: (
     idempotencyKey: IdempotencyKey,
-    receipt: CreateReceiptRequest,
-  ) => Effect.Effect<Receipt, PersistenceError | IdempotencyConflict>;
-  readonly save: (receipt: ReceiptToSave) => Effect.Effect<SaveResult, PersistenceError>;
+    fingerprint: Uint8Array,
+    receipt: Omit<CreateReceiptRequest, "items">,
+  ) => Effect.Effect<Option.Option<ReceiptId>, PersistenceError>;
+  readonly findByIdempotencyKey: (
+    idempotencyKey: IdempotencyKey,
+    fingerprint: Uint8Array,
+  ) => Effect.Effect<Option.Option<ReceiptId>, PersistenceError>;
+  readonly insertExtracted: (
+    receipt: Omit<ReceiptToSave, "items">,
+  ) => Effect.Effect<Option.Option<ReceiptId>, PersistenceError>;
+  readonly findBySource: (source: ReceiptSource) => Effect.Effect<ReceiptId, PersistenceError>;
+  readonly insertItems: (
+    receiptId: ReceiptId,
+    items: ReadonlyArray<Receipt["items"][number]>,
+  ) => Effect.Effect<void, PersistenceError>;
 }
 
 /**
@@ -110,25 +99,8 @@ type ReceiptCandidate = Omit<Receipt, "items"> & {
   readonly items: Array<Receipt["items"][number]>;
 };
 
-const normalizeDecimal = (value: DecimalString) =>
-  DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
-
-const normalizeReceipt = (receipt: CreateReceiptRequest) => ({
-  storeName: receipt.storeName,
-  receiptDate: receipt.receiptDate,
-  category: receipt.category,
-  subtotal: normalizeDecimal(receipt.subtotal),
-  tax: normalizeDecimal(receipt.tax),
-  total: normalizeDecimal(receipt.total),
-  currency: receipt.currency,
-  items: Array.map(receipt.items, (item) => ({
-    name: item.name,
-    amount: normalizeDecimal(item.amount),
-  })),
-});
-
 /**
- * Retrieves receipts and creates or saves each receipt with all its items.
+ * Retrieves receipts and performs individual database writes.
  *
  * @category models
  * @since 0.1.0
@@ -136,7 +108,6 @@ const normalizeReceipt = (receipt: CreateReceiptRequest) => ({
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const crypto = yield* Crypto.Crypto;
     const sql = yield* SqlClient.SqlClient;
     const readReceipt = Effect.fn("@goho/ReceiptRepository.readReceipt")(function* (
       receiptId: ReceiptId,
@@ -212,62 +183,40 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
       Effect.withSpan("@goho/ReceiptRepository.list"),
     );
-    const create = Effect.fn("@goho/ReceiptRepository.create")(function* (
-      idempotencyKey: IdempotencyKey,
-      input: CreateReceiptRequest,
-    ) {
-      const outcome = yield* Effect.gen(function* () {
-        const key = yield* Schema.decodeEffect(IdempotencyKeySchema)(idempotencyKey);
-        const receipt = normalizeReceipt(
-          yield* Schema.decodeEffect(CreateReceiptRequestSchema)(input),
-        );
-        const receiptFingerprint = yield* crypto.digest(
-          "SHA-256",
-          new TextEncoder().encode(JSON.stringify(receipt)),
-        );
-        return yield* Effect.gen(function* () {
-          const inserted = yield* sql`
-              INSERT INTO receipts (
-                idempotency_key, fingerprint, store_name, receipt_date,
-                category, subtotal, tax, total, currency
-              ) VALUES (
-                ${key}, ${receiptFingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
-                ${receipt.category}, ${receipt.subtotal}, ${receipt.tax}, ${receipt.total},
-                ${receipt.currency}
-              ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
-            `.pipe(Effect.flatMap(decodeInserted));
-          const row = inserted.at(0);
-          if (row === undefined) {
-            const existing = yield* sql`
-                SELECT id FROM receipts
-                WHERE idempotency_key = ${key} AND fingerprint = ${receiptFingerprint}
-              `.pipe(Effect.flatMap(decodeInserted));
-            const existingRow = existing.at(0);
-            if (existingRow === undefined) return { _tag: "Conflict" } as const;
-            return {
-              _tag: "Receipt",
-              receipt: yield* readReceipt(existingRow.id),
-            } as const;
-          }
-          yield* sql`INSERT INTO receipt_items ${sql.insert(
-            Array.map(receipt.items, (item, position) => ({
-              receipt_id: row.id,
-              position,
-              name: item.name,
-              amount: item.amount,
-            })),
-          )}`;
-          return { _tag: "Receipt", receipt: yield* readReceipt(row.id) } as const;
-        });
-      }).pipe(Effect.mapError((cause) => new PersistenceError({ operation: "create", cause })));
-      if (outcome._tag === "Conflict") {
-        return yield* new IdempotencyConflict({ idempotencyKey });
-      }
-      return outcome.receipt;
-    });
-    const save = Effect.fn("@goho/ReceiptRepository.save")(
-      function* (input: ReceiptToSave) {
-        const receipt = yield* Schema.decodeEffect(ReceiptToSave)(input);
+    const insertManual = Effect.fn("@goho/ReceiptRepository.insertManual")(
+      function* (
+        idempotencyKey: IdempotencyKey,
+        fingerprint: Uint8Array,
+        receipt: Omit<CreateReceiptRequest, "items">,
+      ) {
+        const inserted = yield* sql`
+          INSERT INTO receipts (
+            idempotency_key, fingerprint, store_name, receipt_date,
+            category, subtotal, tax, total, currency
+          ) VALUES (
+            ${idempotencyKey}, ${fingerprint}, ${receipt.storeName}, ${receipt.receiptDate},
+            ${receipt.category}, ${receipt.subtotal}, ${receipt.tax}, ${receipt.total},
+            ${receipt.currency}
+          ) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id
+        `.pipe(Effect.flatMap(decodeInserted));
+        return Option.fromNullishOr(inserted.at(0)?.id);
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "insertManual", cause })),
+    );
+    const findByIdempotencyKey = Effect.fn("@goho/ReceiptRepository.findByIdempotencyKey")(
+      function* (idempotencyKey: IdempotencyKey, fingerprint: Uint8Array) {
+        const rows = yield* sql`
+          SELECT id FROM receipts
+          WHERE idempotency_key = ${idempotencyKey} AND fingerprint = ${fingerprint}
+        `.pipe(Effect.flatMap(decodeInserted));
+        return Option.fromNullishOr(rows.at(0)?.id);
+      },
+      Effect.mapError(
+        (cause) => new PersistenceError({ operation: "findByIdempotencyKey", cause }),
+      ),
+    );
+    const insertExtracted = Effect.fn("@goho/ReceiptRepository.insertExtracted")(
+      function* (receipt: Omit<ReceiptToSave, "items">) {
         const inserted = yield* sql`
           INSERT INTO receipts (
             source_provider, source_file_id, source_file_name, store_name, receipt_date,
@@ -279,26 +228,41 @@ export const layer = Layer.effect(
             ${receipt.extractionVersion}, ${JSON.stringify(receipt.extractedPayload)}::jsonb
           ) ON CONFLICT (source_provider, source_file_id) DO NOTHING RETURNING id
         `.pipe(Effect.flatMap(decodeInserted));
-        const row = inserted.at(0);
-        if (row === undefined) {
-          const existing = yield* sql`
-            SELECT id FROM receipts
-            WHERE source_provider = ${receipt.source.provider} AND source_file_id = ${receipt.source.fileId}
-          `.pipe(Effect.flatMap(decodeExisting));
-          return { _tag: "AlreadyExists", receiptId: existing[0].id } satisfies SaveResult;
-        }
+        return Option.fromNullishOr(inserted.at(0)?.id);
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "insertExtracted", cause })),
+    );
+    const findBySource = Effect.fn("@goho/ReceiptRepository.findBySource")(
+      function* (source: ReceiptSource) {
+        const rows = yield* sql`
+          SELECT id FROM receipts
+          WHERE source_provider = ${source.provider} AND source_file_id = ${source.fileId}
+        `.pipe(Effect.flatMap(decodeExisting));
+        return rows[0].id;
+      },
+      Effect.mapError((cause) => new PersistenceError({ operation: "findBySource", cause })),
+    );
+    const insertItems = Effect.fn("@goho/ReceiptRepository.insertItems")(
+      function* (receiptId: ReceiptId, items: ReadonlyArray<Receipt["items"][number]>) {
         yield* sql`INSERT INTO receipt_items ${sql.insert(
-          receipt.items.map((item) => ({
-            receipt_id: row.id,
+          items.map((item) => ({
+            receipt_id: receiptId,
             position: item.position,
             name: item.name,
             amount: item.amount,
           })),
         )}`;
-        return { _tag: "Inserted", receiptId: row.id } satisfies SaveResult;
       },
-      Effect.mapError((cause) => new PersistenceError({ operation: "save", cause })),
+      Effect.mapError((cause) => new PersistenceError({ operation: "insertItems", cause })),
     );
-    return Service.of({ create, findById, list, save });
+    return Service.of({
+      findById,
+      list,
+      insertManual,
+      findByIdempotencyKey,
+      insertExtracted,
+      findBySource,
+      insertItems,
+    });
   }),
 );
