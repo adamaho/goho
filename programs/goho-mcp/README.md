@@ -36,7 +36,7 @@ what worked. Only seed and test against the local dev API, never another Goho
 server.
 ```
 
-## Run locally
+## Manual setup
 
 You need Node.js 24, pnpm 12.6.0, and Docker with Compose. See the root
 [contributing guide](../../CONTRIBUTING.md#prerequisites) for installation links.
