@@ -5,7 +5,7 @@ import {
 } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
@@ -104,9 +104,8 @@ const ReceiptUploadRow = Schema.Struct({
   updated_at: Schema.String,
 });
 type ReceiptUploadRow = typeof ReceiptUploadRow.Type;
-const decodeRows = Schema.decodeUnknownEffect(Schema.Array(ReceiptUploadRow));
 
-const fromRow = (row: ReceiptUploadRow) => ({
+const fromRow = (row: ReceiptUploadRow): ReceiptUpload => ({
   id: row.id,
   fileId: row.file_id,
   fileName: row.file_name,
@@ -128,34 +127,110 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+    const columns = sql.literal(`
+      id, file_id, file_name, content_type, status, receipt_id,
+      failure_code, created_at::text, updated_at::text
+    `);
+    const persistenceError = (operation: string) =>
+      Effect.mapError((cause: unknown) => new PersistenceError({ operation, cause }));
+
+    const selectById = SqlSchema.findOneOption({
+      Request: ReceiptUploadId,
+      Result: ReceiptUploadRow,
+      execute: (uploadId) => sql`SELECT ${columns} FROM receipt_uploads WHERE id = ${uploadId}`,
+    });
+    const selectSucceededByReceiptId = SqlSchema.findOneOption({
+      Request: ReceiptId,
+      Result: ReceiptUploadRow,
+      execute: (receiptId) => sql`
+        SELECT ${columns} FROM receipt_uploads
+        WHERE receipt_id = ${receiptId} AND status = 'succeeded'
+      `,
+    });
+    const selectAll = SqlSchema.findAll({
+      Request: Schema.Void,
+      Result: ReceiptUploadRow,
+      execute: () => sql`
+        SELECT ${columns} FROM receipt_uploads ORDER BY created_at DESC, id DESC
+      `,
+    });
+    const insertQueued = SqlSchema.findOne({
+      Request: QueuedReceiptUpload,
+      Result: ReceiptUploadRow,
+      execute: (upload) => sql`
+        INSERT INTO receipt_uploads (id, file_id, file_name, content_type, status)
+        VALUES (${upload.id}, ${upload.fileId}, ${upload.fileName}, ${upload.contentType}, 'queued')
+        RETURNING ${columns}
+      `,
+    });
+    const updateToProcessing = SqlSchema.findOneOption({
+      Request: ReceiptUploadId,
+      Result: ReceiptUploadRow,
+      execute: (uploadId) => sql`
+        UPDATE receipt_uploads SET status = 'processing', updated_at = now()
+        WHERE id = ${uploadId} AND status IN ('queued', 'processing')
+        RETURNING ${columns}
+      `,
+    });
+    const updateToSucceeded = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        uploadId: ReceiptUploadId,
+        receiptId: ReceiptId,
+        extractionVersion: Schema.Int,
+        extractedPayload: Schema.String,
+      }),
+      Result: ReceiptUploadRow,
+      execute: (request) => sql`
+        UPDATE receipt_uploads
+        SET status = 'succeeded', receipt_id = ${request.receiptId},
+          extraction_version = ${request.extractionVersion},
+          extracted_payload = ${request.extractedPayload}::jsonb,
+          updated_at = now()
+        WHERE id = ${request.uploadId} AND status = 'processing'
+        RETURNING ${columns}
+      `,
+    });
+    const updateToFailed = SqlSchema.findOneOption({
+      Request: Schema.Struct({ uploadId: ReceiptUploadId, failureCode: ReceiptUploadFailureCode }),
+      Result: ReceiptUploadRow,
+      execute: (request) => sql`
+        UPDATE receipt_uploads
+        SET status = 'failed', failure_code = ${request.failureCode}, updated_at = now()
+        WHERE id = ${request.uploadId} AND status IN ('queued', 'processing')
+        RETURNING ${columns}
+      `,
+    });
+
     const findById = Effect.fn("@goho/ReceiptUploadRepository.findById")(
-      function* (uploadId: ReceiptUploadId) {
-        const rows = yield* sql`
-          SELECT id, file_id, file_name, content_type, status, receipt_id,
-            failure_code, created_at::text, updated_at::text
-          FROM receipt_uploads WHERE id = ${uploadId}
-        `.pipe(Effect.flatMap(decodeRows));
-        const row = rows.at(0);
-        return row === undefined ? Option.none() : Option.some(fromRow(row));
-      },
-      Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
+      (uploadId: ReceiptUploadId) => selectById(uploadId).pipe(Effect.map(Option.map(fromRow))),
+      persistenceError("findById"),
     );
     const findByReceiptId = Effect.fn("@goho/ReceiptUploadRepository.findByReceiptId")(
-      function* (receiptId: ReceiptId) {
-        const rows = yield* sql`
-          SELECT id, file_id, file_name, content_type, status, receipt_id,
-            failure_code, created_at::text, updated_at::text
-          FROM receipt_uploads WHERE receipt_id = ${receiptId} AND status = 'succeeded'
-        `.pipe(Effect.flatMap(decodeRows));
-        const row = rows.at(0);
-        return row === undefined ? Option.none() : Option.some(fromRow(row));
-      },
-      Effect.mapError((cause) => new PersistenceError({ operation: "findByReceiptId", cause })),
+      (receiptId: ReceiptId) =>
+        selectSucceededByReceiptId(receiptId).pipe(Effect.map(Option.map(fromRow))),
+      persistenceError("findByReceiptId"),
     );
-    const resolveMiss = Effect.fn("@goho/ReceiptUploadRepository.resolveMiss")(function* (
+    const list = selectAll(undefined).pipe(
+      Effect.map((rows) => rows.map(fromRow)),
+      persistenceError("list"),
+      Effect.withSpan("@goho/ReceiptUploadRepository.list"),
+    );
+    const createQueued = Effect.fn("@goho/ReceiptUploadRepository.createQueued")(function* (
+      input: QueuedReceiptUpload,
+    ) {
+      const upload = yield* Schema.decodeEffect(QueuedReceiptUpload)(input);
+      return fromRow(yield* insertQueued(upload));
+    }, persistenceError("createQueued"));
+    // A guarded update that matched no row either lost the upload or found it in
+    // a state that does not allow the requested transition.
+    const transition = Effect.fnUntraced(function* <E>(
+      operation: string,
       uploadId: ReceiptUploadId,
       requestedStatus: ReceiptUploadStatus,
+      update: Effect.Effect<Option.Option<ReceiptUploadRow>, E>,
     ) {
+      const updated = yield* update.pipe(persistenceError(operation));
+      if (Option.isSome(updated)) return fromRow(updated.value);
       const current = yield* findById(uploadId);
       if (Option.isNone(current)) return yield* new UploadNotFound({ uploadId });
       return yield* new InvalidTransition({
@@ -164,85 +239,27 @@ export const layer = Layer.effect(
         requestedStatus,
       });
     });
-    const createQueued = Effect.fn("@goho/ReceiptUploadRepository.createQueued")(
-      function* (input: QueuedReceiptUpload) {
-        const upload = yield* Schema.decodeEffect(QueuedReceiptUpload)(input);
-        const rows = yield* sql`
-          INSERT INTO receipt_uploads (id, file_id, file_name, content_type, status)
-          VALUES (${upload.id}, ${upload.fileId}, ${upload.fileName}, ${upload.contentType}, 'queued')
-          RETURNING id, file_id, file_name, content_type, status, receipt_id,
-            failure_code, created_at::text, updated_at::text
-        `.pipe(Effect.flatMap(decodeRows));
-        return fromRow(rows[0]!);
-      },
-      Effect.mapError((cause) => new PersistenceError({ operation: "createQueued", cause })),
+    const markProcessing = Effect.fn("@goho/ReceiptUploadRepository.markProcessing")(
+      (uploadId: ReceiptUploadId) =>
+        transition("markProcessing", uploadId, "processing", updateToProcessing(uploadId)),
     );
-    const markProcessing = Effect.fn("@goho/ReceiptUploadRepository.markProcessing")(function* (
-      uploadId: ReceiptUploadId,
-    ) {
-      const rows = yield* sql`
-        UPDATE receipt_uploads SET status = 'processing', updated_at = now()
-        WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, file_id, file_name, content_type, status, receipt_id,
-          failure_code, created_at::text, updated_at::text
-      `.pipe(
-        Effect.flatMap(decodeRows),
-        Effect.mapError((cause) => new PersistenceError({ operation: "markProcessing", cause })),
-      );
-      const row = rows.at(0);
-      return row === undefined ? yield* resolveMiss(uploadId, "processing") : fromRow(row);
-    });
-    const markSucceeded = Effect.fn("@goho/ReceiptUploadRepository.markSucceeded")(function* (
-      uploadId: ReceiptUploadId,
-      receiptId: ReceiptId,
-      extraction: ReceiptExtraction,
-    ) {
-      const rows = yield* sql`
-        UPDATE receipt_uploads
-        SET status = 'succeeded', receipt_id = ${receiptId},
-          extraction_version = ${extraction.version},
-          extracted_payload = ${JSON.stringify(extraction.payload)}::jsonb,
-          updated_at = now()
-        WHERE id = ${uploadId} AND status = 'processing'
-        RETURNING id, file_id, file_name, content_type, status, receipt_id,
-          failure_code, created_at::text, updated_at::text
-      `.pipe(
-        Effect.flatMap(decodeRows),
-        Effect.mapError((cause) => new PersistenceError({ operation: "markSucceeded", cause })),
-      );
-      const row = rows.at(0);
-      return row === undefined ? yield* resolveMiss(uploadId, "succeeded") : fromRow(row);
-    });
-    const markFailed = Effect.fn("@goho/ReceiptUploadRepository.markFailed")(function* (
-      uploadId: ReceiptUploadId,
-      failureCode: ReceiptUploadFailureCode,
-    ) {
-      const failure = yield* Schema.decodeEffect(ReceiptUploadFailureCode)(failureCode).pipe(
-        Effect.mapError((cause) => new PersistenceError({ operation: "markFailed", cause })),
-      );
-      const rows = yield* sql`
-        UPDATE receipt_uploads
-        SET status = 'failed', failure_code = ${failure}, updated_at = now()
-        WHERE id = ${uploadId} AND status IN ('queued', 'processing')
-        RETURNING id, file_id, file_name, content_type, status, receipt_id,
-          failure_code, created_at::text, updated_at::text
-      `.pipe(
-        Effect.flatMap(decodeRows),
-        Effect.mapError((cause) => new PersistenceError({ operation: "markFailed", cause })),
-      );
-      const row = rows.at(0);
-      return row === undefined ? yield* resolveMiss(uploadId, "failed") : fromRow(row);
-    });
-    const list = sql`
-      SELECT id, file_id, file_name, content_type, status, receipt_id,
-        failure_code, created_at::text, updated_at::text
-      FROM receipt_uploads
-      ORDER BY created_at DESC, id DESC
-    `.pipe(
-      Effect.flatMap(decodeRows),
-      Effect.map((rows) => rows.map(fromRow)),
-      Effect.mapError((cause) => new PersistenceError({ operation: "list", cause })),
-      Effect.withSpan("@goho/ReceiptUploadRepository.list"),
+    const markSucceeded = Effect.fn("@goho/ReceiptUploadRepository.markSucceeded")(
+      (uploadId: ReceiptUploadId, receiptId: ReceiptId, extraction: ReceiptExtraction) =>
+        transition(
+          "markSucceeded",
+          uploadId,
+          "succeeded",
+          updateToSucceeded({
+            uploadId,
+            receiptId,
+            extractionVersion: extraction.version,
+            extractedPayload: JSON.stringify(extraction.payload),
+          }),
+        ),
+    );
+    const markFailed = Effect.fn("@goho/ReceiptUploadRepository.markFailed")(
+      (uploadId: ReceiptUploadId, failureCode: ReceiptUploadFailureCode) =>
+        transition("markFailed", uploadId, "failed", updateToFailed({ uploadId, failureCode })),
     );
     return Service.of({
       createQueued,
