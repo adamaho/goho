@@ -10,6 +10,7 @@ import { expect } from "vitest";
 import * as Migrations from "#src/database/migrations.ts";
 import { FileId } from "#src/file-storage.ts";
 import * as Repository from "#src/receipt-uploads/repository.ts";
+import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const DatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
@@ -102,12 +103,18 @@ it.effect("moves a queued upload through processing to its receipt", () =>
     expect((yield* repo.markProcessing(input.id)).status).toBe("processing");
 
     const receiptId = yield* createReceipt;
-    expect(yield* repo.markSucceeded(input.id, receiptId)).toMatchObject({
+    expect(
+      yield* repo.markSucceeded(input.id, receiptId, { version: 1, payload: parsedReceipt }),
+    ).toMatchObject({
       id: input.id,
       status: "succeeded",
       receiptId,
       failureCode: null,
     });
+    const sql = yield* SqlClient.SqlClient;
+    expect(
+      yield* sql`SELECT extraction_version, extracted_payload FROM receipt_uploads WHERE id = ${input.id}`,
+    ).toEqual([{ extraction_version: 1, extracted_payload: parsedReceipt }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

@@ -7,6 +7,7 @@ import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
+import * as Transaction from "#src/database/transaction.ts";
 import { FileId } from "#src/file-storage.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
@@ -40,7 +41,13 @@ const StorageLive = Layer.succeed(FileStorage.Service, {
   delete: () => Effect.void,
 });
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
-  Layer.provide([DatabaseLive, NodeCrypto.layer, QueueLive, RepositoryLive, StorageLive]),
+  Layer.provide([
+    NodeCrypto.layer,
+    QueueLive,
+    RepositoryLive,
+    StorageLive,
+    Transaction.layer.pipe(Layer.provide(DatabaseLive)),
+  ]),
 );
 
 const makeJob = Effect.gen(function* () {
@@ -134,10 +141,10 @@ it.effect("deletes the stored file when the database handoff fails", () =>
       Effect.provide(
         ReceiptUploads.layer.pipe(
           Layer.provide([
-            DatabaseLive,
             NodeCrypto.layer,
             RepositoryLive,
             storage,
+            Transaction.layer.pipe(Layer.provide(DatabaseLive)),
             unavailableQueue,
           ]),
         ),

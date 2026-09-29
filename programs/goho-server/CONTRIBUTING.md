@@ -71,21 +71,24 @@ and repository behavior in this server.
 
 ### Receipt schema
 
-`receipts` retains the source provider/file identity, original file name, store,
-receipt date, category, subtotal, tax, total, nullable currency, extraction
-version, validated extraction JSON, and creation time. `receipt_items` stores
-ordered item names and amounts, linked to a receipt. Dates use `date`, creation
-times use `timestamptz`, and amounts use `numeric` without two-decimal rounding.
-Currency remains unknown with the current extraction contract. API-created
-receipts accept a currency or null and have no source metadata. See [receipt creation](./README.md#create-a-receipt).
+`receipts` holds only receipt data: store, receipt date, category, subtotal, tax,
+total, nullable currency, and creation time. `receipt_items` stores ordered item
+names and amounts, linked to a receipt. Dates use `date`, creation times use
+`timestamptz`, and amounts use `numeric` without two-decimal rounding. Currency
+remains unknown with the current extraction contract; API-created receipts accept
+a currency or null. See [receipt creation](./README.md#create-a-receipt).
+
+`receipt_uploads` links each processed upload to its receipt and records the
+extraction version and validated extraction JSON once the upload succeeds.
 
 Decimal strings preserve the finite numeric values supplied by the parser; they
 cannot recover precision already lost upstream.
 
-The repository inserts a receipt and all its items in one transaction. For
-receipts with source provider/file metadata, the first successful save for that
-identity wins; subsequent saves return the existing receipt ID without replacing
-data or duplicating items.
+The repository inserts a receipt and all its items in one transaction; inside a
+caller's transaction the insert joins it as a savepoint. Upload processing
+inserts the receipt and marks the upload succeeded in one transaction, so the
+upload's status transition is what prevents duplicate receipts from redelivered
+jobs.
 Repeated item names are allowed because identity uses position within a receipt.
 
 ### Running migrations locally

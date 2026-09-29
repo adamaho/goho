@@ -64,10 +64,9 @@ const testLayer = (
         Receipts.layer.pipe(
           Layer.provide(
             Layer.succeed(ReceiptRepository.Service, {
-              create: () => Effect.succeed(receipt),
               findById: () => Effect.succeedSome(receipt),
+              insert: () => Effect.succeed(receipt.id),
               list: Effect.succeed([receipt]),
-              save: () => Effect.die("Unexpected repository.save call"),
               ...repository,
             }),
           ),
@@ -86,6 +85,36 @@ it.effect("creates a receipt through the generated client and returns the comple
     expect(result).toEqual({ data: receipt });
   }).pipe(Effect.provide(TestLive)),
 );
+
+it.effect("normalizes decimal strings before inserting a receipt", () => {
+  const inserted: CreateReceiptRequest[] = [];
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    yield* client.receipts.create({
+      payload: CreateReceiptRequest.make({
+        ...createPayload,
+        subtotal: "10.250",
+        tax: "7.5e-1",
+        total: "11.00",
+        items: [{ name: "Apples", amount: "12.00" }],
+      }),
+    });
+    expect(
+      inserted.map(({ subtotal, tax, total, items }) => ({ subtotal, tax, total, items })),
+    ).toEqual([
+      { subtotal: "10.25", tax: "0.75", total: "11", items: [{ name: "Apples", amount: "12" }] },
+    ]);
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        insert: (input) => {
+          inserted.push(input);
+          return Effect.succeed(receipt.id);
+        },
+      }),
+    ),
+  );
+});
 
 it.effect("lists complete receipts through the generated client", () =>
   Effect.gen(function* () {
@@ -213,10 +242,10 @@ it.effect("returns HTTP 500 without exposing private repository failure details"
   }).pipe(
     Effect.provide(
       testLayer({
-        create: () =>
+        insert: () =>
           Effect.fail(
             new ReceiptRepository.PersistenceError({
-              operation: "create",
+              operation: "insert",
               cause: "private database details",
             }),
           ),

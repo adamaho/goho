@@ -7,6 +7,7 @@ import bigintReceiptIds from "./migrations/0003-bigint-receipt-ids.ts";
 import receiptUploads from "./migrations/0004-receipt-uploads.ts";
 import receiptUploadFileId from "./migrations/0005-receipt-upload-file-id.ts";
 import dropReceiptIdempotency from "./migrations/0006-drop-receipt-idempotency.ts";
+import moveExtractionToUploads from "./migrations/0007-move-extraction-to-uploads.ts";
 
 /**
  * Explicit migration registry, shared by the migration command and tests.
@@ -23,6 +24,7 @@ export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
       "0004_receipt_uploads": receiptUploads,
       "0005_receipt_upload_file_id": receiptUploadFileId,
       "0006_drop_receipt_idempotency": dropReceiptIdempotency,
+      "0007_move_extraction_to_uploads": moveExtractionToUploads,
     }),
     table: "goho_migrations",
   });

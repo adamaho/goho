@@ -23,13 +23,9 @@ export const parsedReceipt = ParsedReceipt.make({
 });
 
 /**
- * Normalized receipt fixture for persistence tests.
+ * Receipt data prepared from the extraction fixture.
  *
  * @category models
  * @since 0.1.0
  */
-export const receipt = prepareReceipt(parsedReceipt, {
-  provider: "google_drive",
-  fileId: "receipt-1",
-  fileName: "receipt.png",
-});
+export const receipt = prepareReceipt(parsedReceipt);

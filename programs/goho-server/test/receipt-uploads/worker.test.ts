@@ -6,11 +6,12 @@ import { Effect, Fiber, Layer, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
+import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
 import type { ReceiptUpload } from "#src/receipt-uploads/model.ts";
-import * as Processor from "#src/receipt-uploads/processor.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
+import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
@@ -28,10 +29,12 @@ const upload: ReceiptUpload = {
 
 const dependencies = (options: {
   readonly storageGet?: FileStorage.Interface["get"];
+  readonly markProcessing?: ReceiptUploadRepository.Interface["markProcessing"];
   readonly markSucceeded?: ReceiptUploadRepository.Interface["markSucceeded"];
   readonly markFailed?: ReceiptUploadRepository.Interface["markFailed"];
 }) =>
   Layer.mergeAll(
+    Transaction.layerTest,
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
       get: options.storageGet ?? (() => Effect.succeed(new Uint8Array([1, 2, 3]))),
@@ -42,17 +45,16 @@ const dependencies = (options: {
         Schema.decodeUnknownEffect(schema)(parsedReceipt).pipe(Effect.orDie),
     }),
     Layer.succeed(ReceiptRepository.Service, {
-      create: () => Effect.die("Unexpected receipt create call"),
       findById: () => Effect.succeedNone,
+      insert: () => Effect.succeed(ReceiptId.make("42")),
       list: Effect.succeed([]),
-      save: () => Effect.succeed({ _tag: "Inserted", receiptId: ReceiptId.make("42") }),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
       list: Effect.succeed([]),
       createQueued: () => Effect.die("Unexpected createQueued call"),
       findById: () => Effect.succeedSome(upload),
       findByReceiptId: () => Effect.succeedNone,
-      markProcessing: () => Effect.succeed(upload),
+      markProcessing: options.markProcessing ?? (() => Effect.succeed(upload)),
       markSucceeded:
         options.markSucceeded ??
         ((_, receiptId) => Effect.succeed({ ...upload, status: "succeeded", receiptId })),
@@ -65,7 +67,7 @@ const dependencies = (options: {
 it.effect("stores the resulting receipt ID after processing an upload", () =>
   Effect.gen(function* () {
     const succeeded = yield* Ref.make<ReadonlyArray<string>>([]);
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
       Effect.provide(
         dependencies({
           markSucceeded: (uploadId, receiptId) =>
@@ -76,6 +78,29 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
       ),
     );
     expect(yield* Ref.get(succeeded)).toEqual([`${upload.id}:42`]);
+  }),
+);
+
+it.effect("discards a redelivered job for an upload that already finished", () =>
+  Effect.gen(function* () {
+    const succeeded = yield* Ref.make(0);
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+      Effect.provide(
+        dependencies({
+          storageGet: () => Effect.die("Unexpected storage.get call"),
+          markProcessing: (uploadId) =>
+            Effect.fail(
+              new ReceiptUploadRepository.InvalidTransition({
+                uploadId,
+                currentStatus: "succeeded",
+                requestedStatus: "processing",
+              }),
+            ),
+          markSucceeded: () => Ref.update(succeeded, (count) => count + 1).pipe(Effect.as(upload)),
+        }),
+      ),
+    );
+    expect(yield* Ref.get(succeeded)).toBe(0);
   }),
 );
 
@@ -91,13 +116,13 @@ it.effect("records a stable failure code only after the final attempt", () =>
         ),
     });
 
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
       Effect.provide(layer),
       Effect.result,
     );
     expect(yield* Ref.get(failures)).toEqual([]);
 
-    yield* Processor.process({ uploadId: upload.id }, { id: upload.id, attempts: 3 }).pipe(
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 3 }).pipe(
       Effect.provide(layer),
       Effect.result,
     );
@@ -126,7 +151,7 @@ it.effect("retries the terminal status write before giving up", () =>
         ),
     });
 
-    const fiber = yield* Processor.process(
+    const fiber = yield* Worker.process(
       { uploadId: upload.id },
       { id: upload.id, attempts: 3 },
     ).pipe(Effect.provide(layer), Effect.result, Effect.forkChild);
