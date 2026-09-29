@@ -1,6 +1,7 @@
 package com.adamaho.goho.ui.main
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +47,7 @@ fun ReceiptOverview(
     @StringRes scanError: Int?,
     onScanClick: () -> Unit,
     onRetryServerClick: () -> Unit,
+    onReceiptClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val pending =
@@ -174,6 +176,7 @@ fun ReceiptOverview(
         } else {
             items(state.receipts, key = { it.id }) { receipt ->
                 ListItem(
+                    modifier = Modifier.clickable { onReceiptClick(receipt.id) },
                     headlineContent = { Text(receipt.storeName) },
                     supportingContent = { Text(receipt.receiptDate) },
                     trailingContent = {
@@ -220,6 +223,7 @@ private fun ReceiptOverviewPreview() {
             scanError = null,
             onScanClick = {},
             onRetryServerClick = {},
+            onReceiptClick = {},
         )
     }
 }

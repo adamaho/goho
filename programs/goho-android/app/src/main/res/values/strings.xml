@@ -27,4 +27,13 @@
     <string name="receipts_processed_empty">No processed receipts yet.</string>
     <string name="receipts_failed_title">Needs attention</string>
     <string name="receipts_failed_item">Processing failed</string>
+    <string name="receipt_back">Back</string>
+    <string name="receipt_detail_title">Receipt</string>
+    <string name="receipt_detail_load_failed">Could not load this receipt. Check your connection.</string>
+    <string name="receipt_detail_retry">Retry</string>
+    <string name="receipt_items_title">Items</string>
+    <string name="receipt_items_empty">No items on this receipt.</string>
+    <string name="receipt_subtotal">Subtotal</string>
+    <string name="receipt_tax">Tax</string>
+    <string name="receipt_total">Total</string>
 </resources>

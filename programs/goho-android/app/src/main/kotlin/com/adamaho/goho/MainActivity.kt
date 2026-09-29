@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,15 +20,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.adamaho.goho.api.generated.HealthApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.HealthData
+import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.MainScreen
+import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
 import com.adamaho.goho.ui.main.ServerConnectionStatus
@@ -42,11 +51,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okio.BufferedSink
+
+@Serializable private data object ReceiptListRoute : NavKey
+
+@Serializable private data class ReceiptDetailRoute(val receiptId: String) : NavKey
 
 class MainActivity : ComponentActivity() {
     private var scannedImageUri by mutableStateOf<Uri?>(null)
@@ -105,20 +119,56 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+            val backStack = rememberNavBackStack(ReceiptListRoute)
             GohoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     if (scannedImageUri == null) {
-                        ReceiptOverview(
-                            state = overviewState,
-                            serverStatus = serverStatus,
-                            uploadStatus = uploadStatus,
-                            isOpeningScanner = isOpeningScanner,
-                            scanError = scanError,
-                            onScanClick = ::openScanner,
-                            onRetryServerClick = ::checkServer,
+                        NavDisplay(
+                            backStack = backStack,
+                            onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
+                            transitionSpec = {
+                                slideInHorizontally(initialOffsetX = { it }) togetherWith
+                                    slideOutHorizontally(targetOffsetX = { -it })
+                            },
+                            popTransitionSpec = {
+                                slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                                    slideOutHorizontally(targetOffsetX = { it })
+                            },
+                            predictivePopTransitionSpec = {
+                                slideInHorizontally(initialOffsetX = { -it }) togetherWith
+                                    slideOutHorizontally(targetOffsetX = { it })
+                            },
+                            entryProvider = { route ->
+                                when (route) {
+                                    ReceiptListRoute ->
+                                        NavEntry(route) {
+                                            ReceiptOverview(
+                                                state = overviewState,
+                                                serverStatus = serverStatus,
+                                                uploadStatus = uploadStatus,
+                                                isOpeningScanner = isOpeningScanner,
+                                                scanError = scanError,
+                                                onScanClick = ::openScanner,
+                                                onRetryServerClick = ::checkServer,
+                                                onReceiptClick = {
+                                                    backStack.add(ReceiptDetailRoute(it))
+                                                },
+                                            )
+                                        }
+                                    is ReceiptDetailRoute ->
+                                        NavEntry(route) {
+                                            ReceiptDetailScreen(
+                                                receiptId = route.receiptId,
+                                                loadReceipt = ::loadReceipt,
+                                                onBack = { backStack.removeLastOrNull() },
+                                            )
+                                        }
+                                    else -> error("Unknown route: $route")
+                                }
+                            },
                         )
                     } else {
                         MainScreen(
@@ -186,6 +236,16 @@ class MainActivity : ComponentActivity() {
                 }
         }
     }
+
+    private suspend fun loadReceipt(receiptId: String): Receipt? =
+        try {
+            val response = receiptsApi.receiptsGet(receiptId)
+            if (response.isSuccessful) response.body()?.data else null
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoReceipts", "Receipt detail failed to load", error)
+            null
+        }
 
     private fun refreshHistory() {
         if (overviewState.loading) {
