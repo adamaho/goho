@@ -14,6 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.adamaho.goho.api.generated.HealthApi
@@ -22,6 +23,7 @@ import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.HealthData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.MainScreen
 import com.adamaho.goho.ui.main.ReceiptOverview
@@ -36,6 +38,9 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -50,6 +55,8 @@ class MainActivity : ComponentActivity() {
     private var serverStatus by mutableStateOf(ServerConnectionStatus.Checking)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
+    private var receiptPollingJob: Job? = null
+    private var refreshAfterCurrent = false
 
     private val healthApi by lazy {
         ApiClient(
@@ -111,7 +118,6 @@ class MainActivity : ComponentActivity() {
                             isOpeningScanner = isOpeningScanner,
                             scanError = scanError,
                             onScanClick = ::openScanner,
-                            onRefreshClick = ::refreshHistory,
                             onRetryServerClick = ::checkServer,
                         )
                     } else {
@@ -130,7 +136,33 @@ class MainActivity : ComponentActivity() {
             }
         }
         checkServer()
+    }
+
+    override fun onStart() {
+        super.onStart()
         refreshHistory()
+        receiptPollingJob = lifecycleScope.launch {
+            snapshotFlow {
+                overviewState.uploads.any {
+                    it.status == ReceiptUploadsList200ResponseDataInner.Status.queued ||
+                        it.status == ReceiptUploadsList200ResponseDataInner.Status.processing
+                }
+            }
+                .collectLatest { hasPendingUploads ->
+                    if (hasPendingUploads) {
+                        while (true) {
+                            delay(5_000)
+                            if (!overviewState.loading) refreshHistory()
+                        }
+                    }
+                }
+        }
+    }
+
+    override fun onStop() {
+        receiptPollingJob?.cancel()
+        receiptPollingJob = null
+        super.onStop()
     }
 
     private fun checkServer() {
@@ -156,9 +188,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshHistory() {
-        if (overviewState.loading) return
+        if (overviewState.loading) {
+            refreshAfterCurrent = true
+            return
+        }
 
-        overviewState = overviewState.copy(loading = true)
+        overviewState = overviewState.copy(loading = true, error = false)
         lifecycleScope.launch {
             try {
                 val uploadsResponse = receiptUploadsApi.receiptUploadsList()
@@ -172,7 +207,11 @@ class MainActivity : ComponentActivity() {
                             uploads != null &&
                             receipts != null
                     ) {
-                        ReceiptOverviewState(uploads = uploads, receipts = receipts)
+                        ReceiptOverviewState(
+                            uploads = uploads,
+                            receipts = receipts,
+                            hasLoaded = true,
+                        )
                     } else {
                         overviewState.copy(loading = false, error = true)
                     }
@@ -180,6 +219,11 @@ class MainActivity : ComponentActivity() {
                 if (error is CancellationException) throw error
                 Log.w("GohoReceipts", "Receipt listing failed", error)
                 overviewState = overviewState.copy(loading = false, error = true)
+            } finally {
+                if (refreshAfterCurrent) {
+                    refreshAfterCurrent = false
+                    refreshHistory()
+                }
             }
         }
     }

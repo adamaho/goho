@@ -32,6 +32,7 @@ import com.adamaho.goho.theme.GohoTheme
 data class ReceiptOverviewState(
     val uploads: List<ReceiptUploadsList200ResponseDataInner> = emptyList(),
     val receipts: List<Receipt> = emptyList(),
+    val hasLoaded: Boolean = false,
     val loading: Boolean = false,
     val error: Boolean = false,
 )
@@ -44,7 +45,6 @@ fun ReceiptOverview(
     isOpeningScanner: Boolean,
     @StringRes scanError: Int?,
     onScanClick: () -> Unit,
-    onRefreshClick: () -> Unit,
     onRetryServerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -121,10 +121,7 @@ fun ReceiptOverview(
         item {
             Column {
                 Spacer(modifier = Modifier.height(24.dp))
-                TextButton(onClick = onRefreshClick, enabled = !state.loading) {
-                    Text(text = stringResource(R.string.receipts_refresh))
-                }
-                if (state.loading) {
+                if (state.loading && !state.hasLoaded) {
                     Text(text = stringResource(R.string.receipts_loading))
                 }
                 if (state.error) {
@@ -140,7 +137,7 @@ fun ReceiptOverview(
                 )
             }
         }
-        if (pending.isEmpty()) {
+        if (pending.isEmpty() && state.hasLoaded) {
             item { Text(text = stringResource(R.string.receipt_queue_empty)) }
         } else {
             items(pending, key = { it.id }) { upload ->
@@ -172,7 +169,7 @@ fun ReceiptOverview(
                 )
             }
         }
-        if (state.receipts.isEmpty()) {
+        if (state.receipts.isEmpty() && state.hasLoaded) {
             item { Text(text = stringResource(R.string.receipts_processed_empty)) }
         } else {
             items(state.receipts, key = { it.id }) { receipt ->
@@ -222,7 +219,6 @@ private fun ReceiptOverviewPreview() {
             isOpeningScanner = false,
             scanError = null,
             onScanClick = {},
-            onRefreshClick = {},
             onRetryServerClick = {},
         )
     }
