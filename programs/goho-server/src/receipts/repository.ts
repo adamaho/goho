@@ -68,7 +68,12 @@ const ReceiptListRow = Schema.Struct({
   item_name: Schema.NullOr(Schema.String),
   item_amount: Schema.NullOr(DecimalString),
 });
-const decodeReceiptListRows = Schema.decodeUnknownEffect(Schema.Array(ReceiptListRow));
+const ItemInsertRow = Schema.Struct({
+  receipt_id: ReceiptId,
+  position: Schema.Int,
+  name: Schema.String,
+  amount: DecimalString,
+});
 const decodeReceiptList = Schema.decodeUnknownEffect(Schema.Array(ReceiptSchema));
 
 type ReceiptCandidate = Omit<Receipt, "items"> & {
@@ -123,6 +128,23 @@ export const layer = Layer.effect(
       `,
     });
 
+    const insertItemRows = SqlSchema.void({
+      Request: Schema.Array(ItemInsertRow),
+      execute: (rows) => sql`INSERT INTO receipt_items ${sql.insert(rows)}`,
+    });
+    const selectListRows = SqlSchema.findAll({
+      Request: Schema.Void,
+      Result: ReceiptListRow,
+      execute: () => sql`
+        SELECT r.id, r.store_name, r.receipt_date::text, r.category,
+          r.subtotal::text, r.tax::text, r.total::text, r.currency,
+          i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
+        FROM receipts r
+        LEFT JOIN receipt_items i ON i.receipt_id = r.id
+        ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
+      `,
+    });
+
     const findById = Effect.fn("@goho/ReceiptRepository.findById")(
       function* (receiptId: ReceiptId) {
         const receipt = yield* findReceiptRow(receiptId);
@@ -148,14 +170,14 @@ export const layer = Layer.effect(
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const { id } = yield* insertReceiptRow(receipt);
-            yield* sql`INSERT INTO receipt_items ${sql.insert(
+            yield* insertItemRows(
               Array.map(receipt.items, (item, position) => ({
                 receipt_id: id,
                 position,
                 name: item.name,
                 amount: item.amount,
               })),
-            )}`;
+            );
             return id;
           }),
         );
@@ -163,14 +185,7 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "insert", cause })),
     );
     const list = Effect.gen(function* () {
-      const rows = yield* sql`
-          SELECT r.id, r.store_name, r.receipt_date::text, r.category,
-            r.subtotal::text, r.tax::text, r.total::text, r.currency,
-            i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
-          FROM receipts r
-          LEFT JOIN receipt_items i ON i.receipt_id = r.id
-          ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
-        `.pipe(Effect.flatMap(decodeReceiptListRows));
+      const rows = yield* selectListRows(undefined);
       const receipts = new Map<ReceiptId, ReceiptCandidate>();
       for (const row of rows) {
         let receipt = receipts.get(row.id);
