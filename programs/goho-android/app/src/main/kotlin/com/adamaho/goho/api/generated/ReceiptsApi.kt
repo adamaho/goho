@@ -4,6 +4,7 @@ import com.adamaho.goho.api.generated.infrastructure.CollectionFormats.*
 import retrofit2.http.*
 import retrofit2.Response
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.CreateReceiptRequest
@@ -46,6 +47,21 @@ interface ReceiptsApi {
      */
     @GET("receipts/{receiptId}")
     suspend fun receiptsGet(@Path("receiptId") receiptId: kotlin.String): Response<ReceiptsGet200Response>
+
+    /**
+     * GET receipts/{receiptId}/image
+     * Get a receipt image
+     * Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.
+     * Responses:
+     *  - 200: Success
+     *  - 404: No scanned image is linked to this receipt, bud.
+     *  - 500: The server could not retrieve this receipt image.
+     *
+     * @param receiptId 
+     * @return [ResponseBody]
+     */
+    @GET("receipts/{receiptId}/image")
+    suspend fun receiptsGetImage(@Path("receiptId") receiptId: kotlin.String): Response<ResponseBody>
 
     /**
      * GET receipts

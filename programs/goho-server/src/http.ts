@@ -1,7 +1,12 @@
 import { api } from "@goho/goho-api/api";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
-import { HttpApiBuilder, HttpApiError, HttpApiSwagger } from "effect/unstable/httpapi";
+import {
+  HttpApiBuilder,
+  HttpApiError,
+  HttpApiSchema,
+  HttpApiSwagger,
+} from "effect/unstable/httpapi";
 
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
@@ -38,9 +43,20 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
 const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   Effect.gen(function* () {
     const receipts = yield* Receipts.Service;
+    const uploads = yield* ReceiptUploads.Service;
     return handlers
       .handle("list", () => receipts.list.pipe(Effect.map(withData)))
       .handle("get", ({ params }) => receipts.get(params.receiptId).pipe(Effect.map(withData)))
+      .handle("getImage", ({ params }) =>
+        uploads.getImage(params.receiptId).pipe(
+          Effect.map(({ bytes, contentType }) =>
+            HttpApiSchema.withHeaders({
+              body: bytes,
+              headers: { "content-type": contentType, "cache-control": "private, no-store" },
+            }),
+          ),
+        ),
+      )
       .handle("create", ({ headers, payload }) =>
         receipts.create(headers["idempotency-key"], payload).pipe(Effect.map(withData)),
       );

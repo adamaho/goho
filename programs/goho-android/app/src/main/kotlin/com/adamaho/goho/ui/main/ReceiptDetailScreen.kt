@@ -1,11 +1,14 @@
 package com.adamaho.goho.ui.main
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,15 +25,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ReceiptDetailScreen(
     receiptId: String,
     loadReceipt: suspend (String) -> Receipt?,
+    loadReceiptImage: suspend (String) -> ByteArray?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -38,6 +47,7 @@ fun ReceiptDetailScreen(
     var receipt by remember(receiptId) { mutableStateOf<Receipt?>(null) }
     var loading by remember(receiptId) { mutableStateOf(true) }
     var failed by remember(receiptId) { mutableStateOf(false) }
+    var image by remember(receiptId) { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(receiptId, reloadKey) {
         loading = true
@@ -45,6 +55,22 @@ fun ReceiptDetailScreen(
         receipt = loadReceipt(receiptId)
         failed = receipt == null
         loading = false
+    }
+
+    LaunchedEffect(receiptId) {
+        image =
+            loadReceiptImage(receiptId)?.let { bytes ->
+                withContext(Dispatchers.Default) {
+                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                    val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
+                    if (largestDimension <= 0) return@withContext null
+                    val sampleSize =
+                        generateSequence(1) { it * 2 }.first { largestDimension / it <= 1600 }
+                    val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+                }
+            }
     }
 
     LazyColumn(
@@ -91,6 +117,16 @@ fun ReceiptDetailScreen(
                         Text(
                             text = savedReceipt.category,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                image?.let { bitmap ->
+                    item {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = stringResource(R.string.receipt_image_description),
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                            contentScale = ContentScale.Fit,
                         )
                     }
                 }

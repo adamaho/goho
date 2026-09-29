@@ -47,10 +47,12 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -163,6 +165,7 @@ class MainActivity : ComponentActivity() {
                                             ReceiptDetailScreen(
                                                 receiptId = route.receiptId,
                                                 loadReceipt = ::loadReceipt,
+                                                loadReceiptImage = ::loadReceiptImage,
                                                 onBack = { backStack.removeLastOrNull() },
                                             )
                                         }
@@ -244,6 +247,24 @@ class MainActivity : ComponentActivity() {
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             Log.w("GohoReceipts", "Receipt detail failed to load", error)
+            null
+        }
+
+    private suspend fun loadReceiptImage(receiptId: String): ByteArray? =
+        try {
+            val response = receiptsApi.receiptsGetImage(receiptId)
+            when {
+                response.code() == 404 -> null
+                response.isSuccessful ->
+                    withContext(Dispatchers.IO) { response.body()?.use { it.bytes() } }
+                else -> {
+                    Log.w("GohoReceipts", "Receipt image request failed: ${response.code()}")
+                    null
+                }
+            }
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoReceipts", "Receipt image failed to load", error)
             null
         }
 

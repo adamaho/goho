@@ -29,6 +29,7 @@
     <string name="receipts_failed_item">Processing failed</string>
     <string name="receipt_back">Back</string>
     <string name="receipt_detail_title">Receipt</string>
+    <string name="receipt_image_description">Scanned receipt image</string>
     <string name="receipt_detail_load_failed">Could not load this receipt. Check your connection.</string>
     <string name="receipt_detail_retry">Retry</string>
     <string name="receipt_items_title">Items</string>
