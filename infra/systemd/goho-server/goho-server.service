@@ -11,8 +11,11 @@ WorkingDirectory=/home/adam/github.com/adamaho/goho
 Environment=HOME=/home/adam
 Environment="PATH=/home/adam/.local/share/mise/shims:/home/adam/.local/share/pnpm:/home/adam/.local/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/etc/goho/server.env
-ExecStartPre=/usr/bin/env pnpm --filter @goho/goho-server db:migrate
-ExecStart=/usr/bin/env pnpm --filter @goho/goho-server start
+# Run node directly so systemd signals the server itself rather than a pnpm wrapper.
+ExecStartPre=/usr/bin/env node programs/goho-server/src/database/migrate.ts
+ExecStart=/usr/bin/env node programs/goho-server/src/main.ts
+# Effect's runMain exits with 130 after SIGTERM interrupts it; that is a clean stop.
+SuccessExitStatus=130
 Restart=on-failure
 RestartSec=5
 
