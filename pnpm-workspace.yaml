@@ -14,8 +14,8 @@ catalog:
   "@effect/sql-pg": 4.0.0-rc.117
   "@effect/vitest": 4.0.0-rc.117
   vitest: 5.0.1
-  "@adamaho/nopeus-oxlint-config": 0.4.1
-  "@adamaho/nopeus-oxlint-plugin": 0.7.1
+  "@adamaho/nopeus-oxlint-config": 0.5.0
+  "@adamaho/nopeus-oxlint-plugin": 0.8.0
   "@adamaho/nopeus-tsconfig": 0.3.1
   "@effect/ai-openai": 4.0.0-rc.117
   "@effect/platform-node": 4.0.0-rc.117
