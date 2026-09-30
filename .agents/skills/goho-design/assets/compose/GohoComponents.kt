@@ -256,18 +256,6 @@ fun GohoSecondaryButton(
     }
 }
 
-/** Gradient behind the FAB so rows fade out under it. Place full width at the bottom. */
-@Composable
-fun GohoBottomScrim(modifier: Modifier = Modifier) {
-    val bg = GohoTheme.colors.background
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(128.dp)
-            .background(Brush.verticalGradient(0f to bg.copy(alpha = 0f), 0.65f to bg.copy(alpha = 0.9f), 1f to bg)),
-    )
-}
-
 @Composable
 fun GohoIconButton(
     icon: ImageVector,

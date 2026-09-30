@@ -8,7 +8,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Fill: vertical gradient `accentTop` → `accent`. Pressed: `accent` → `accentPressed`.
 - Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onAccent`. Content description "Scan receipt".
 - Shadow 3dp at rest, 0.5dp pressed; 1dp top highlight white 45% → 25%.
-- Placed bottom right over a bottom scrim: a 128dp vertical gradient from transparent to `background` (0 → 90% at 65% → 100%), so rows fade out under it.
+- Placed bottom right over the list without a bottom gradient. Keep enough list padding for the final row to scroll clear of the button.
 
 ## GohoPrimaryButton
 

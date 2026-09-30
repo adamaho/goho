@@ -173,23 +173,6 @@ fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
     }
 }
 
-@Composable
-fun BottomScrim(modifier: Modifier = Modifier) {
-    val background = GohoTheme.colors.background
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(GohoSpacing.scrimHeight)
-            .background(
-                Brush.verticalGradient(
-                    0f to background.copy(alpha = 0f),
-                    0.65f to background.copy(alpha = 0.9f),
-                    1f to background,
-                )
-            )
-    )
-}
-
 /** Soften the fixed header edge without changing list layout or intercepting gestures. */
 fun Modifier.headerFade(background: Color): Modifier = drawWithCache {
     val height = GohoSpacing.headerFadeHeight.toPx().coerceAtMost(size.height)

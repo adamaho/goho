@@ -53,6 +53,7 @@ If a task seems to need one of these, stop and ask instead of inventing UI.
 Preserve these refinements when adapting the reference code or older mockups:
 
 - Keep the fixed 12dp gap below the filter and the 12dp fade from the header background to transparent over the top of the scrolling list.
+- Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
 - Center status text inside its pill container, with a minimum height that can grow for larger text. Keep the filter count badge centered too.
 
 ## Definition of done

@@ -8,7 +8,7 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 
 | Token                                        | Dark                  | Light                 | Use                                                         |
 | -------------------------------------------- | --------------------- | --------------------- | ----------------------------------------------------------- |
-| `background`                                 | `#13110F`             | `#F8F6F4`             | Screen background, bottom scrim                             |
+| `background`                                 | `#13110F`             | `#F8F6F4`             | Screen background                                           |
 | `surface`                                    | `#1D1B19`             | `#FFFFFF`             | Cards                                                       |
 | `surfaceMuted`                               | `#1D1B19`             | `#EEECE9`             | Filter track, round icon buttons, thumbnail placeholder     |
 | `surfaceMutedPressed`                        | `#2B2925`             | `#E3E1DD`             | Pressed round icon button                                   |

@@ -17,7 +17,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 - Only Processed rows are tappable; they open Receipt details.
 - Leave bottom padding in the list so the last row can scroll clear of the Scan button.
 
-**Scan FAB** bottom right over the bottom scrim. Opens the existing scan flow.
+**Scan FAB** bottom right, with no bottom gradient over the list. Opens the existing scan flow.
 
 **Empty states** (provisional; keep them plain):
 
