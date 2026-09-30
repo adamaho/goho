@@ -17,14 +17,14 @@ val Manrope =
         Font(R.font.manrope_bold, FontWeight.Bold),
     )
 
-private const val TNUM = "tnum"
+private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
 
 @Immutable
 data class GohoTypography(
     val display: TextStyle,
     val title: TextStyle,
+    val screenTitle: TextStyle,
     val wordmark: TextStyle,
-    val wordmarkCompact: TextStyle,
     val rowTitle: TextStyle,
     val button: TextStyle,
     val buttonSecondary: TextStyle,
@@ -34,7 +34,6 @@ data class GohoTypography(
     val timestamp: TextStyle,
     val section: TextStyle,
     val segment: TextStyle,
-    val segmentCompact: TextStyle,
     val label: TextStyle,
 )
 
@@ -47,7 +46,7 @@ val GohoType =
                 fontSize = 44.sp,
                 lineHeight = 48.sp,
                 letterSpacing = (-0.045).em,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         title =
             TextStyle(
@@ -56,6 +55,14 @@ val GohoType =
                 fontSize = 22.sp,
                 lineHeight = 28.sp,
                 letterSpacing = (-0.03).em,
+            ),
+        screenTitle =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                lineHeight = 30.sp,
+                letterSpacing = (-0.015).em,
             ),
         buttonSecondary =
             TextStyle(
@@ -72,14 +79,6 @@ val GohoType =
                 lineHeight = 36.sp,
                 letterSpacing = (-0.045).em,
             ),
-        wordmarkCompact =
-            TextStyle(
-                fontFamily = Manrope,
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                lineHeight = 28.sp,
-                letterSpacing = (-0.045).em,
-            ),
         timestamp =
             TextStyle(
                 fontFamily = Manrope,
@@ -87,16 +86,7 @@ val GohoType =
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 letterSpacing = 0.sp,
-                fontFeatureSettings = "'tnum' 0",
-            ),
-        segmentCompact =
-            TextStyle(
-                fontFamily = Manrope,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         rowTitle =
             TextStyle(
@@ -105,7 +95,7 @@ val GohoType =
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
                 letterSpacing = (-0.015).em,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         button =
             TextStyle(
@@ -120,7 +110,7 @@ val GohoType =
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp,
                 lineHeight = 20.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         listValue =
             TextStyle(
@@ -128,7 +118,7 @@ val GohoType =
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
                 lineHeight = 20.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         meta =
             TextStyle(
@@ -137,16 +127,16 @@ val GohoType =
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 letterSpacing = 0.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         segment =
             TextStyle(
                 fontFamily = Manrope,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
                 letterSpacing = 0.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         section =
             TextStyle(
@@ -154,7 +144,7 @@ val GohoType =
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         label =
             TextStyle(
@@ -162,7 +152,7 @@ val GohoType =
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
-                fontFeatureSettings = TNUM,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
     )
 

@@ -15,10 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.*
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.buildAnnotatedString
@@ -81,32 +78,6 @@ fun ReceiptOverview(
     val listState = rememberLazyListState()
     LaunchedEffect(attentionOnly) { listState.scrollToItem(0) }
     val c = GohoTheme.colors
-    val collapseRange =
-        with(LocalDensity.current) { (GohoSpacing.headerHeight + GohoSpacing.filterTop).toPx() }
-    var headerOffset by remember { mutableFloatStateOf(0f) }
-    val scrollConnection =
-        remember(collapseRange, entries.isNotEmpty()) {
-            object : NestedScrollConnection {
-                fun move(delta: Float): Offset {
-                    if (entries.isEmpty()) return Offset.Zero
-                    val previous = headerOffset
-                    headerOffset = (previous + delta).coerceIn(-collapseRange, 0f)
-                    return Offset(0f, headerOffset - previous)
-                }
-
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-                    if (available.y < 0f) move(available.y) else Offset.Zero
-
-                override fun onPostScroll(
-                    consumed: Offset,
-                    available: Offset,
-                    source: NestedScrollSource,
-                ): Offset = if (available.y > 0f) move(available.y) else Offset.Zero
-            }
-        }
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        if (listState.firstVisibleItemIndex > 0) headerOffset = -collapseRange
-    }
     Box(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
         Column(Modifier.fillMaxSize()) {
             ReceiptListHeader(
@@ -115,12 +86,10 @@ fun ReceiptOverview(
                 attentionOnly,
                 { attentionOnly = it },
                 locale,
-                (-headerOffset / collapseRange).coerceIn(0f, 1f),
             )
             LazyColumn(
                 state = listState,
-                modifier =
-                    Modifier.fillMaxSize().nestedScroll(scrollConnection).headerFade(c.background),
+                modifier = Modifier.fillMaxSize().headerFade(c.background),
                 contentPadding =
                     PaddingValues(
                         start = GohoSpacing.screenMargin,
@@ -319,7 +288,11 @@ private fun ReceiptRow(
             now.epochSecond - entry.uploadedAt.epochSecond < 60
     val justNowLabel = stringResource(R.string.date_just_now)
     val metadata = buildAnnotatedString {
-        if (entry.uploadedAt != null && entry.date == today) {
+        if (
+            entry.uploadedAt != null &&
+                entry.date == today &&
+                entry.uploadedAt.atZone(zone).toLocalDate() == today
+        ) {
             if (justNow) append(justNowLabel)
             else {
                 append("$date, ")

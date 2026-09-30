@@ -49,5 +49,5 @@
     <string name="scan_cancel">Cancel</string>
     <string name="upload_busy">Uploading…</string>
     <string name="scan_preview_unavailable">Preview unavailable</string>
-    <string name="receipts_filter_attention_compact">Attention</string>
+    <string name="receipts_title">Receipts</string>
 </resources>

@@ -77,7 +77,7 @@ fun ReceiptStatusPill(processing: Boolean) {
                 .padding(horizontal = GohoSpacing.pillHorizontal),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
+        CenteredPillLabel(
             stringResource(
                 if (processing) R.string.receipt_reading else R.string.receipt_not_processed
             ),
