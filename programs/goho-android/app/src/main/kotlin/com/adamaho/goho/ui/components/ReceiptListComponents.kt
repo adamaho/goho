@@ -69,23 +69,27 @@ fun ReceiptStatusPill(processing: Boolean) {
     val c = GohoTheme.colors
     val fg = if (processing) c.onAccentContainer else c.attention
     val bg = if (processing) c.accentContainer else c.attentionContainer
-    Text(
-        stringResource(
-            if (processing) R.string.receipt_reading else R.string.receipt_not_processed
-        ),
+    Box(
         modifier =
             Modifier.heightIn(min = GohoSpacing.pillHeight)
                 .clip(GohoShapes.pill)
                 .background(bg)
                 .padding(horizontal = GohoSpacing.pillHorizontal),
-        style =
-            if (processing)
-                GohoTheme.type.label.copy(
-                    brush = shimmerBrush(fg, lerpColor(fg, c.accentShimmer, 0.15f))
-                )
-            else GohoTheme.type.label,
-        color = if (processing) Color.Unspecified else fg,
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            stringResource(
+                if (processing) R.string.receipt_reading else R.string.receipt_not_processed
+            ),
+            style =
+                if (processing)
+                    GohoTheme.type.label.copy(
+                        brush = shimmerBrush(fg, lerpColor(fg, c.accentShimmer, 0.15f))
+                    )
+                else GohoTheme.type.label,
+            color = if (processing) Color.Unspecified else fg,
+        )
+    }
 }
 
 @Composable
