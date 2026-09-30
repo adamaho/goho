@@ -99,7 +99,7 @@ fun ReceiptOverview(
                     { attentionOnly = it },
                     locale,
                     Modifier.padding(horizontal = GohoSpacing.screenMargin)
-                        .padding(top = GohoSpacing.filterTop),
+                        .padding(top = GohoSpacing.filterTop, bottom = GohoSpacing.contentGap),
                 )
             LazyColumn(
                 state = listState,
