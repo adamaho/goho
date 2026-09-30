@@ -6,29 +6,30 @@ All values are dp or sp. Colors were chosen in OKLCH; hex is what Compose uses.
 
 Goho follows the system light/dark setting. Both palettes use the same token names; screens never branch on theme except where noted. The photo frame and photo viewer stay dark in both themes so receipts always sit on a dark well.
 
-| Token                                   | Dark                  | Light                 | Use                                                         |
-| --------------------------------------- | --------------------- | --------------------- | ----------------------------------------------------------- |
-| `background`                            | `#13110F`             | `#F8F6F4`             | Screen background, bottom scrim                             |
-| `surface`                               | `#1D1B19`             | `#FFFFFF`             | Cards                                                       |
-| `surfaceMuted`                          | `#1D1B19`             | `#EEECE9`             | Filter track, round icon buttons, thumbnail placeholder     |
-| `surfaceMutedPressed`                   | `#2B2925`             | `#E3E1DD`             | Pressed round icon button                                   |
-| `segmentSelected`                       | `#2B2925`             | `#FFFFFF`             | Selected filter segment                                     |
-| `surfacePressed`                        | `#24221F`             | `#F5F3F0`             | Pressed row                                                 |
-| `skeletonBase` / `skeletonShimmer`      | `#2B2925` / `#3A3733` | `#EBE9E6` / `#F8F6F4` | Amount skeleton while processing                            |
-| `photoWellCenter` / `photoWellEdge`     | `#2A2724` / `#0C0B0A` | same                  | Photo frame gradient, viewer background (edge)              |
-| `photoControl`                          | `#1D1B19` at 78%      | same                  | Expand and close buttons on the photo well (icon `#F0EEEB`) |
-| `textPrimary`                           | `#F0EEEB`             | `#1D1A16`             | Wordmark, merchants, amounts, values                        |
-| `textSecondary`                         | `#B7B4AF`             | `#58554F`             | Detail labels, merchant on details, filter text and counts  |
-| `textTertiary`                          | `#928F88`             | `#726E67`             | Dates, section labels, "—", currency prefixes               |
-| `divider`                               | white 5%              | `#1D1A16` 6%          | Row separators inside cards                                 |
-| `outline`                               | white 6%              | `#1D1A16` 8%          | Thumbnail border                                            |
-| `accent`                                | `#74D3B6`             | `#207963`             | Scan button fill (bottom), processing scan line             |
-| `accentTop`                             | `#89E2C7`             | `#2D846D`             | Scan button fill (top)                                      |
-| `accentPressed`                         | `#60BFA4`             | `#136A55`             | Scan button fill (bottom) while pressed                     |
-| `onAccent`                              | `#081D17`             | `#FFFFFF`             | Scan label and icon                                         |
-| `accentContainer` / `onAccentContainer` | `#1A342C` / `#74D3B6` | `#DAF4EA` / `#045B48` | "Reading receipt…" pill                                     |
-| `accentShimmer`                         | `#D6F4EA`             | `#53B397`             | Shimmer highlight on "Reading receipt…"                     |
-| `attention` / `attentionContainer`      | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC` | "Not processed" pill, attention count badge                 |
+| Token                                        | Dark                  | Light                 | Use                                                         |
+| -------------------------------------------- | --------------------- | --------------------- | ----------------------------------------------------------- |
+| `background`                                 | `#13110F`             | `#F8F6F4`             | Screen background, bottom scrim                             |
+| `surface`                                    | `#1D1B19`             | `#FFFFFF`             | Cards                                                       |
+| `surfaceMuted`                               | `#1D1B19`             | `#EEECE9`             | Filter track, round icon buttons, thumbnail placeholder     |
+| `surfaceMutedPressed`                        | `#2B2925`             | `#E3E1DD`             | Pressed round icon button                                   |
+| `segmentSelected`                            | `#2B2925`             | `#FFFFFF`             | Selected filter segment                                     |
+| `surfacePressed`                             | `#24221F`             | `#F5F3F0`             | Pressed row                                                 |
+| `skeletonBase` / `skeletonShimmer`           | `#2B2925` / `#3A3733` | `#EBE9E6` / `#F8F6F4` | Amount skeleton while processing                            |
+| `photoWellCenter` / `photoWellEdge`          | `#2A2724` / `#0C0B0A` | same                  | Photo frame gradient, viewer background (edge)              |
+| `photoControl`                               | `#1D1B19` at 78%      | same                  | Expand and close buttons on the photo well (icon `#F0EEEB`) |
+| `textPrimary`                                | `#F0EEEB`             | `#1D1A16`             | Wordmark, merchants, amounts, values                        |
+| `textSecondary`                              | `#B7B4AF`             | `#58554F`             | Detail labels, merchant on details, filter text and counts  |
+| `textTertiary`                               | `#928F88`             | `#726E67`             | Dates, section labels, "—", currency prefixes               |
+| `divider`                                    | white 5%              | `#1D1A16` 6%          | Row separators inside cards                                 |
+| `outline`                                    | white 6%              | `#1D1A16` 8%          | Thumbnail border                                            |
+| `accent`                                     | `#74D3B6`             | `#207963`             | Scan and primary button fill (bottom), processing scan line |
+| `accentTop`                                  | `#89E2C7`             | `#2D846D`             | Scan button fill (top)                                      |
+| `accentPressed`                              | `#60BFA4`             | `#136A55`             | Scan button fill (bottom) while pressed                     |
+| `onAccent`                                   | `#081D17`             | `#FFFFFF`             | Label and icon on Scan and primary buttons                  |
+| `buttonSecondary` / `buttonSecondaryPressed` | `#2B2925` / `#24221F` | `#EEECE9` / `#E3E1DD` | Secondary button fill                                       |
+| `accentContainer` / `onAccentContainer`      | `#1A342C` / `#74D3B6` | `#DAF4EA` / `#045B48` | "Reading receipt…" pill                                     |
+| `accentShimmer`                              | `#D6F4EA`             | `#53B397`             | Shimmer highlight on "Reading receipt…"                     |
+| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC` | "Not processed" pill, attention count badge                 |
 
 OKLCH sources (L C H): dark neutrals sit at hue 80 with chroma ≤ 0.01 (background 0.18, surface 0.225, raised 0.28); light neutrals at hue 80 (background 0.975, muted 0.945, text 0.22 / 0.45 / 0.54). Accent hue 172: dark 0.80 0.10, light 0.52 0.09. Attention hue about 50: dark 0.75 0.13, light 0.52 0.13.
 
@@ -41,9 +42,10 @@ Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in
 | Style      | Size / line height | Weight | Tracking | Use                                                                       |
 | ---------- | ------------------ | ------ | -------- | ------------------------------------------------------------------------- |
 | `display`  | 44 / 48            | 700    | −0.045em | Receipt amount on details                                                 |
+| `title`    | 22 / 28            | 700    | −0.03em  | Screen title ("New receipt" on scan preview)                              |
 | `wordmark` | 32 / 36            | 700    | −0.045em | "goho" in the list header (lowercase)                                     |
 | `rowTitle` | 16 / 22            | 600    | −0.015em | Merchant and amount in list rows; merchant on detail (in `textSecondary`) |
-| `button`   | 16 / 20            | 700    | 0        | Scan button label                                                         |
+| `button`   | 16 / 20            | 700    | 0        | Scan and primary button labels (secondary buttons use 600)                |
 | `listRow`  | 15 / 20            | 500    | 0        | Detail list labels (values use 600)                                       |
 | `meta`     | 13 / 18            | 500    | 0        | Dates, sub-lines                                                          |
 | `section`  | 13 / 18            | 600    | 0        | "Today", "Details" section labels                                         |
@@ -53,14 +55,15 @@ The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at th
 
 ## Shape
 
-| Token   | Radius | Use                                                                      |
-| ------- | ------ | ------------------------------------------------------------------------ |
-| `thumb` | 8      | Receipt thumbnails in rows                                               |
-| `card`  | 20     | Grouped list cards, detail card, photo frame                             |
-| `fab`   | 20     | Scan button                                                              |
-| `pill`  | 50%    | Status pills, count badge, filter track and segments, round icon buttons |
+| Token    | Radius | Use                                                                      |
+| -------- | ------ | ------------------------------------------------------------------------ |
+| `thumb`  | 8      | Receipt thumbnails in rows                                               |
+| `button` | 16     | Primary and secondary buttons (not fully round)                          |
+| `card`   | 20     | Grouped list cards, detail card, photo frame                             |
+| `fab`    | 20     | Scan button                                                              |
+| `pill`   | 50%    | Status pills, count badge, filter track and segments, round icon buttons |
 
-Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card` and `fab`.
+Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
 ## Spacing and layout
 
@@ -84,6 +87,8 @@ Shadows stay small and crisp. Dark mode relies on a 1dp top highlight; light mod
 | Selected filter segment | 1dp black shadow, top highlight white 6%               | 1dp shadow `#1D1A16`, no highlight                            |
 | Scan FAB at rest        | 3dp black shadow, top highlight white 45%              | 3dp shadow in `#104638`, top highlight white 22%              |
 | Scan FAB pressed        | 0.5dp, highlight 25%                                   | 0.5dp, highlight 12%                                          |
+| Primary button          | 2dp shadow, highlight 45% → pressed 0.5dp, 25%         | 2dp shadow in `#104638`, highlight 22% → 0.5dp, 12%           |
+| Secondary button        | 1dp shadow, highlight 6% → pressed flat                | flat, no shadow or highlight                                  |
 | Round icon button       | none; fill steps to `surfaceMutedPressed` when pressed | same                                                          |
 
 The top highlight is a 1dp line drawn inside the clipped shape at the top edge, not an inset shadow.

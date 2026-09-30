@@ -22,9 +22,11 @@ private const val TNUM = "tnum"
 @Immutable
 data class GohoTypography(
     val display: TextStyle,
+    val title: TextStyle,
     val wordmark: TextStyle,
     val rowTitle: TextStyle,
     val button: TextStyle,
+    val buttonSecondary: TextStyle,
     val listRow: TextStyle,
     val listValue: TextStyle,
     val meta: TextStyle,
@@ -43,6 +45,21 @@ val GohoType =
                 lineHeight = 48.sp,
                 letterSpacing = (-0.045).em,
                 fontFeatureSettings = TNUM,
+            ),
+        title =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                lineHeight = 28.sp,
+                letterSpacing = (-0.03).em,
+            ),
+        buttonSecondary =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
             ),
         wordmark =
             TextStyle(

@@ -138,7 +138,7 @@ fun rememberShimmerBrush(base: Color, highlight: Color): Brush {
     }
 }
 
-// ---------- Scan button and icon button ----------
+// ---------- Buttons ----------
 
 @Composable
 private fun GohoButtonBase(
@@ -199,6 +199,60 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
     ) {
         Icon(scanIcon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onAccent)
         Text("Scan", style = GohoTheme.type.button, color = c.onAccent)
+    }
+}
+
+@Composable
+fun GohoPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
+    val c = GohoTheme.colors
+    GohoButtonBase(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        minHeight = 52.dp,
+        shape = GohoShapes.button,
+        restElevation = 2.dp,
+        shadowColor = c.accentShadow,
+        fill = { p ->
+            Brush.verticalGradient(listOf(lerpColor(c.accentTop, c.accent, p), lerpColor(c.accent, c.accentPressed, p)))
+        },
+        highlightAlpha = { p -> c.highlightAlpha * (1f - 0.45f * p) },
+        contentPadding = PaddingValues(horizontal = 20.dp),
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onAccent)
+        Text(text, style = GohoTheme.type.button, color = c.onAccent)
+    }
+}
+
+@Composable
+fun GohoSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
+    val c = GohoTheme.colors
+    GohoButtonBase(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        minHeight = 52.dp,
+        shape = GohoShapes.button,
+        restElevation = if (c.isDark) 1.dp else 0.dp, // flat in light
+        shadowColor = c.shadow,
+        fill = { p -> SolidColor(lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)) },
+        highlightAlpha = { p -> if (c.isDark) 0.06f * (1f - p) else 0f },
+        contentPadding = PaddingValues(horizontal = 20.dp),
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.textPrimary)
+        Text(text, style = GohoTheme.type.buttonSecondary, color = c.textPrimary)
     }
 }
 

@@ -5,6 +5,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 object GohoShapes {
+    val button = RoundedCornerShape(16.dp)
     val thumb = RoundedCornerShape(8.dp)
     val card = RoundedCornerShape(20.dp)
     val fab = RoundedCornerShape(20.dp)

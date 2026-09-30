@@ -5,6 +5,8 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
+Design handoff and mockups: September 30, 2026.
+
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with tabular figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
@@ -17,13 +19,13 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
 6. **No ripples.** Press feedback is the Goho press: scale to 97%, move down 1dp, shadow drops, fill darkens, spring back on release. Use `indication = null` plus the press modifier. Never a sunken or inset-shadow pressed state.
-7. **Rounded, by role.** Thumbnail 8dp; cards, photo frame and FAB 20dp; pills, badges, filter and icon buttons fully round.
+7. **Rounded, by role.** Thumbnail 8dp; primary and secondary buttons 16dp (not pills); cards, photo frame and FAB 20dp; pills, badges, filter and icon buttons fully round.
 8. **No bottom navigation.** The list screen has a floating Scan button at the bottom right.
 9. **Light and dark, following the system.** Both palettes share token names (`GohoLightColors`, `GohoDarkColors`). Never branch on theme in screens; the only exceptions are baked into the components (card edges, top highlights). The photo frame and photo viewer are dark in both themes.
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, and a read-only details screen for processed receipts with an expandable photo.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with an expandable photo.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -34,15 +36,24 @@ The app currently supports: the receipts list with All and Needs attention filte
 - Retaking a photo
 - A details screen for receipts that are processing or failed processing (those rows are not tappable)
 - Monthly totals, account or settings entry points, overflow menus
+- Server connection status indicators
 
 If a task seems to need one of these, stop and ask instead of inventing UI.
 
 ## How to work
 
-1. Read `references/tokens.md`, then drop `assets/compose/GohoTheme.kt` into the app's theme package (adjust the package name and font resources) and wrap the app in `GohoTheme { }`.
+1. Read `references/tokens.md` and extend the existing app theme with the tokens needed for the requested screen. Use `assets/compose/GohoTheme.kt` as a reference; preserve the app's existing theme integration and bundled font resources.
 2. Build the primitives in `references/components.md`. `assets/compose/GohoComponents.kt` is a reference implementation of them; it has not been compiled, so treat it as a strong starting point and fix any API drift against the project's Compose version.
 3. Build screens from `references/screens.md`, which has the layout top to bottom with measurements, copy, states and behavior.
-4. Compare against the mockups in `assets/mockups/` if present (exported from the design canvas). The written spec wins if they disagree.
+4. Compare against the mockups listed in `assets/mockups/README.md`. The written spec wins if they disagree.
+5. Verify the requested behavior against the current Goho server and Android flow before implementing it. Mockups do not establish backend support.
+
+## Approved receipt-list refinements
+
+Preserve these refinements when adapting the reference code or older mockups:
+
+- Keep the fixed 12dp gap below the filter and the 12dp fade from the header background to transparent over the top of the scrolling list.
+- Center status text inside its pill container, with a minimum height that can grow for larger text. Keep the filter count badge centered too.
 
 ## Definition of done
 

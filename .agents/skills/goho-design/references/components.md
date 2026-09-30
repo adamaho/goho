@@ -10,6 +10,18 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Shadow 3dp at rest, 0.5dp pressed; 1dp top highlight white 45% → 25%.
 - Placed bottom right over a bottom scrim: a 128dp vertical gradient from transparent to `background` (0 → 90% at 65% → 100%), so rows fade out under it.
 
+## GohoPrimaryButton
+
+- Full width inside the screen margin, 52 tall, shape `button` 16 (not a pill), horizontal padding 20.
+- Fill: vertical gradient `accentTop` → `accent`; pressed `accent` → `accentPressed`. Shadow and highlight per tokens.
+- Content: optional 18dp icon, 8dp gap, label in `button` style, color `onAccent`.
+- Disabled: whole button at 40% alpha, no press, not clickable.
+
+## GohoSecondaryButton
+
+- Same geometry. Fill `buttonSecondary`, pressed `buttonSecondaryPressed`. Label `button` style at weight 600 in `textPrimary`, optional 18dp icon.
+- Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
+
 ## GohoIconButton (round)
 
 - 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back on the details screen and close in the photo viewer.

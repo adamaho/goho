@@ -52,6 +52,8 @@ data class GohoColors(
     val accentTop: Color,
     val accentPressed: Color,
     val onAccent: Color,
+    val buttonSecondary: Color,
+    val buttonSecondaryPressed: Color,
     val accentShadow: Color,         // spot color under the Scan button
     val accentContainer: Color,
     val onAccentContainer: Color,
@@ -88,6 +90,8 @@ val GohoDarkColors = GohoColors(
     accentTop = Color(0xFF89E2C7),
     accentPressed = Color(0xFF60BFA4),
     onAccent = Color(0xFF081D17),
+    buttonSecondary = Color(0xFF2B2925),
+    buttonSecondaryPressed = Color(0xFF24221F),
     accentShadow = Color.Black,
     accentContainer = Color(0xFF1A342C),
     onAccentContainer = Color(0xFF74D3B6),
@@ -120,6 +124,8 @@ val GohoLightColors = GohoColors(
     accentTop = Color(0xFF2D846D),
     accentPressed = Color(0xFF136A55),
     onAccent = Color(0xFFFFFFFF),
+    buttonSecondary = Color(0xFFEEECE9),
+    buttonSecondaryPressed = Color(0xFFE3E1DD),
     accentShadow = Color(0xFF104638),
     accentContainer = Color(0xFFDAF4EA),
     onAccentContainer = Color(0xFF045B48),
@@ -143,9 +149,11 @@ private const val TNUM = "tnum"
 @Immutable
 data class GohoTypography(
     val display: TextStyle,
+    val title: TextStyle,
     val wordmark: TextStyle,
     val rowTitle: TextStyle,
     val button: TextStyle,
+    val buttonSecondary: TextStyle,
     val listRow: TextStyle,
     val listValue: TextStyle,
     val meta: TextStyle,
@@ -155,9 +163,11 @@ data class GohoTypography(
 
 val GohoType = GohoTypography(
     display = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 44.sp, lineHeight = 48.sp, letterSpacing = (-0.045).em, fontFeatureSettings = TNUM),
+    title = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.03).em),
     wordmark = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 36.sp, letterSpacing = (-0.045).em),
     rowTitle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.015).em, fontFeatureSettings = TNUM),
     button = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 20.sp),
+    buttonSecondary = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp),
     listRow = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = TNUM),
     listValue = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = TNUM),
     meta = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = TNUM),
@@ -169,6 +179,7 @@ val GohoType = GohoTypography(
 
 object GohoShapes {
     val thumb = RoundedCornerShape(8.dp)
+    val button = RoundedCornerShape(16.dp)
     val card = RoundedCornerShape(20.dp)
     val fab = RoundedCornerShape(20.dp)
     val pill = RoundedCornerShape(percent = 50)
@@ -192,6 +203,7 @@ object GohoSpacing {
     val sectionTop = 24.dp
     val sectionLabelBottom = 8.dp
     val fabBottom = 28.dp
+    val buttonGap = 10.dp
 }
 
 // ---------- Motion ----------

@@ -1,6 +1,6 @@
 # Goho screens
 
-Two screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
 ## 1. Receipts (list)
 
@@ -45,3 +45,20 @@ No footer and no actions on this screen.
 ## 3. Photo viewer
 
 Always dark, in both themes (wrap it in `GohoTheme(darkTheme = true)`). Full screen, `photoWellEdge` background, photo fitted, pinch to zoom and pan, round close button (GohoIconButton with `Close`) at the top left below the status bar. Back gesture closes it.
+
+## 4. Scan preview
+
+Shown after the ML Kit document scanner returns a capture. Replaces the current centered "Goho" layout.
+
+**Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`title`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
+
+**Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the space down to the status line (584 tall on a 892-tall screen). The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
+
+**Status line** (12 below the photo, `textInset` sides, `meta`, `textTertiary`): "Receipt captured, not uploaded yet".
+
+**Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
+
+- GohoPrimaryButton "Upload receipt" with an upload icon. Keeps its current behavior.
+- GohoSecondaryButton "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
+
+While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
