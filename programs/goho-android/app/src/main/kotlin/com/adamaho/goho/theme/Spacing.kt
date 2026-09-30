@@ -3,6 +3,17 @@ package com.adamaho.goho.theme
 import androidx.compose.ui.unit.dp
 
 object GohoSpacing {
+    val buttonHeight = 52.dp
+    val buttonHorizontal = 20.dp
+    val buttonGap = 10.dp
+    val buttonIcon = 18.dp
+    val buttonIconGap = 8.dp
+    val buttonElevation = 2.dp
+    val flatElevation = 0.dp
+    val previewMinHeight = 480.dp
+    val photoPadding = 24.dp
+    val photoElevation = 8.dp
+    val previewFooterTop = 16.dp
     val screenMargin = 16.dp
     val textInset = 20.dp
     val textInsetFromMargin = 4.dp // textInset - screenMargin
@@ -28,7 +39,6 @@ object GohoSpacing {
     val pillHorizontal = 9.dp
     val skeletonWidth = 52.dp
     val skeletonHeight = 12.dp
-    val scrimHeight = 128.dp
     val listBottom = 112.dp
     val fabHeight = 56.dp
     val fabStart = 18.dp

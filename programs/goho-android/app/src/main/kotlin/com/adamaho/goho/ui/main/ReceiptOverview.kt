@@ -192,7 +192,6 @@ fun ReceiptOverview(
                 }
             }
         }
-        BottomScrim(Modifier.align(Alignment.BottomCenter))
         ScanButton(
             !isOpeningScanner,
             onScanClick,

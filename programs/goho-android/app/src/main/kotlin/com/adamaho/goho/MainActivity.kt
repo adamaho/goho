@@ -24,20 +24,17 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.adamaho.goho.api.generated.HealthApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
-import com.adamaho.goho.api.generated.model.HealthData
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
-import com.adamaho.goho.ui.main.MainScreen
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
-import com.adamaho.goho.ui.main.ServerConnectionStatus
+import com.adamaho.goho.ui.main.ScanPreviewScreen
 import com.adamaho.goho.ui.main.UploadStatus
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
@@ -68,19 +65,10 @@ class MainActivity : ComponentActivity() {
     private var scannedImageUri by mutableStateOf<Uri?>(null)
     private var scanError by mutableStateOf<Int?>(null)
     private var isOpeningScanner by mutableStateOf(false)
-    private var serverStatus by mutableStateOf(ServerConnectionStatus.Checking)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
     private var receiptPollingJob: Job? = null
     private var refreshAfterCurrent = false
-
-    private val healthApi by lazy {
-        ApiClient(
-                baseUrl = BuildConfig.GOHO_SERVER_URL,
-                okHttpClientBuilder = OkHttpClient.Builder().callTimeout(5, TimeUnit.SECONDS),
-            )
-            .createService(HealthApi::class.java)
-    }
 
     private val receiptUploadsApi by lazy {
         ApiClient(
@@ -127,7 +115,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    if (scannedImageUri == null) {
+                    val capturedImage = scannedImageUri
+                    if (capturedImage == null) {
                         NavDisplay(
                             backStack = backStack,
                             onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
@@ -153,10 +142,7 @@ class MainActivity : ComponentActivity() {
                                                 isOpeningScanner = isOpeningScanner,
                                                 scanError = scanError,
                                                 onScanClick = ::openScanner,
-                                                onRetryClick = {
-                                                    checkServer()
-                                                    refreshHistory()
-                                                },
+                                                onRetryClick = ::refreshHistory,
                                                 onReceiptClick = {
                                                     backStack.add(ReceiptDetailRoute(it))
                                                 },
@@ -176,21 +162,22 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                     } else {
-                        MainScreen(
-                            scannedImageUri = scannedImageUri,
-                            isOpeningScanner = isOpeningScanner,
-                            scanError = scanError,
-                            serverStatus = serverStatus,
+                        ScanPreviewScreen(
+                            scannedImageUri = capturedImage,
                             uploadStatus = uploadStatus,
-                            onScanClick = ::openScanner,
                             onUploadClick = ::uploadReceipt,
-                            onRetryServerClick = ::checkServer,
+                            onCancelClick = {
+                                if (uploadStatus != UploadStatus.Uploading) {
+                                    scannedImageUri = null
+                                    uploadStatus = UploadStatus.Ready
+                                    scanError = null
+                                }
+                            },
                         )
                     }
                 }
             }
         }
-        checkServer()
     }
 
     override fun onStart() {
@@ -218,28 +205,6 @@ class MainActivity : ComponentActivity() {
         receiptPollingJob?.cancel()
         receiptPollingJob = null
         super.onStop()
-    }
-
-    private fun checkServer() {
-        serverStatus = ServerConnectionStatus.Checking
-        lifecycleScope.launch {
-            serverStatus =
-                try {
-                    val response = healthApi.healthCheck()
-                    if (
-                        response.isSuccessful &&
-                            response.body()?.data?.status == HealthData.Status.ok
-                    ) {
-                        ServerConnectionStatus.Connected
-                    } else {
-                        ServerConnectionStatus.Unavailable
-                    }
-                } catch (error: Exception) {
-                    if (error is CancellationException) throw error
-                    Log.w("GohoServer", "Health check failed", error)
-                    ServerConnectionStatus.Unavailable
-                }
-        }
     }
 
     private suspend fun loadReceipt(receiptId: String): Receipt? =
