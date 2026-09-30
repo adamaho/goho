@@ -140,4 +140,15 @@ class ReceiptListModelTest {
             receiptAmount("9007199254740993.01", null, Locale.US),
         )
     }
+
+    @Test
+    fun uploadDatesAcceptPostgresAndIsoOffsetFormsWithoutInventingDates() {
+        val expected = java.time.Instant.parse("2026-09-30T00:30:00.123456Z")
+        assertEquals(expected, receiptUploadInstant("2026-09-30 00:30:00.123456+00"))
+        assertEquals(expected, receiptUploadInstant("2026-09-30T00:30:00.123456+00:00"))
+        assertEquals(expected, receiptUploadInstant("2026-09-29 17:30:00.123456-07"))
+        assertEquals(expected, receiptUploadInstant("2026-09-30T06:00:00.123456+05:30"))
+        assertNull(receiptUploadInstant("not a timestamp"))
+        assertNull(receiptUploadInstant("2026-09-30 00:30:00"))
+    }
 }

@@ -6,6 +6,7 @@ import java.math.BigDecimal
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
@@ -69,7 +70,7 @@ fun receiptListEntries(
         uploads
             .filter { it.status != ReceiptUploadsList200ResponseDataInner.Status.succeeded }
             .map { upload ->
-                val instant = runCatching { Instant.parse(upload.createdAt) }.getOrNull()
+                val instant = receiptUploadInstant(upload.createdAt)
                 ReceiptListEntry(
                     key = "upload:${upload.id}",
                     receiptId = null,
@@ -128,3 +129,12 @@ fun receiptAmount(total: String, currencyCode: String?, locale: Locale): String 
         }
     return format.format(amount)
 }
+
+/** PostgreSQL timestamptz::text uses a space separator and may shorten offsets to +00. */
+internal fun receiptUploadInstant(value: String): Instant? = runCatching {
+    val timestamp = value.trim().replaceFirst(' ', 'T')
+    val normalized =
+        if (Regex("[+-]\\d{2}$").containsMatchIn(timestamp)) "$timestamp:00" else timestamp
+    OffsetDateTime.parse(normalized).toInstant()
+}
+    .getOrNull()

@@ -47,12 +47,12 @@ internal val receiptListPreviewState =
                 upload(
                     1,
                     ReceiptUploadsList200ResponseDataInner.Status.processing,
-                    "2026-09-30T11:59:50Z",
+                    "2026-09-30 11:59:50.123456+00",
                 ),
                 upload(
                     2,
                     ReceiptUploadsList200ResponseDataInner.Status.failed,
-                    "2026-09-30T10:41:00Z",
+                    "2026-09-30 10:41:00+00",
                 ),
             ),
         receipts =
