@@ -1,34 +1,34 @@
 package com.adamaho.goho.ui.main
 
+import android.text.format.DateFormat
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.style.TextOverflow
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
-import com.adamaho.goho.theme.GohoTheme
+import com.adamaho.goho.theme.*
+import com.adamaho.goho.ui.components.*
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
+import kotlinx.coroutines.delay
 
 data class ReceiptOverviewState(
     val uploads: List<ReceiptUploadsList200ResponseDataInner> = emptyList(),
@@ -41,189 +41,340 @@ data class ReceiptOverviewState(
 @Composable
 fun ReceiptOverview(
     state: ReceiptOverviewState,
-    serverStatus: ServerConnectionStatus,
-    uploadStatus: UploadStatus,
     isOpeningScanner: Boolean,
     @StringRes scanError: Int?,
     onScanClick: () -> Unit,
-    onRetryServerClick: () -> Unit,
+    onRetryClick: () -> Unit,
     onReceiptClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    previewTime: Instant? = null,
 ) {
-    val pending =
-        state.uploads.filter {
-            it.status == ReceiptUploadsList200ResponseDataInner.Status.queued ||
-                it.status == ReceiptUploadsList200ResponseDataInner.Status.processing
+    val clock by
+        produceState(initialValue = previewTime ?: Instant.now(), previewTime) {
+            if (previewTime == null)
+                while (true) {
+                    value = Instant.now()
+                    delay(30_000)
+                }
         }
-    val failed =
-        state.uploads.filter { it.status == ReceiptUploadsList200ResponseDataInner.Status.failed }
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize().safeDrawingPadding(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
+    val config = LocalConfiguration.current
+    val locale = config.locales[0]
+    val zone = ZoneId.systemDefault()
+    val today = clock.atZone(zone).toLocalDate()
+    val entries =
+        remember(state.receipts, state.uploads, zone) {
+            receiptListEntries(state.receipts, state.uploads, zone)
+        }
+    val sections = remember(entries, today, locale) { receiptListSections(entries, today, locale) }
+    val c = GohoTheme.colors
+    Box(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier.fillMaxWidth()
+                    .padding(horizontal = GohoSpacing.textInset)
+                    .padding(top = GohoSpacing.headerTop)
+                    .heightIn(min = GohoSpacing.headerHeight),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                val serverStatusText =
-                    when (serverStatus) {
-                        ServerConnectionStatus.Checking -> R.string.server_checking
-                        ServerConnectionStatus.Connected -> R.string.server_connected
-                        ServerConnectionStatus.Unavailable -> R.string.server_unavailable
-                    }
-                Text(
-                    text = stringResource(serverStatusText),
-                    color =
-                        if (serverStatus == ServerConnectionStatus.Unavailable)
-                            MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (serverStatus == ServerConnectionStatus.Unavailable) {
-                    TextButton(onClick = onRetryServerClick) {
-                        Text(text = stringResource(R.string.server_retry))
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                if (uploadStatus == UploadStatus.Submitted) {
-                    Text(text = stringResource(R.string.upload_submitted))
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                Text(text = stringResource(R.string.scan_prompt))
-                scanError?.let { error ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(error),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onScanClick, enabled = !isOpeningScanner) {
-                    Text(
-                        text =
-                            stringResource(
-                                if (isOpeningScanner) R.string.scan_opening
-                                else R.string.scan_receipt
-                            )
-                    )
-                }
-                if (isOpeningScanner) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    CircularProgressIndicator()
-                }
-            }
-        }
-        item {
-            Column {
-                Spacer(modifier = Modifier.height(24.dp))
-                if (state.loading && !state.hasLoaded) {
-                    Text(text = stringResource(R.string.receipts_loading))
-                }
-                if (state.error) {
-                    Text(
-                        text = stringResource(R.string.receipts_load_failed),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.receipt_queue_title),
-                    style = MaterialTheme.typography.titleLarge,
+                    stringResource(R.string.goho_wordmark),
+                    style = GohoTheme.type.wordmark,
+                    color = c.textPrimary,
                 )
             }
-        }
-        if (pending.isEmpty() && state.hasLoaded) {
-            item { Text(text = stringResource(R.string.receipt_queue_empty)) }
-        } else {
-            items(pending, key = { it.id }) { upload ->
-                ListItem(
-                    headlineContent = { Text(upload.fileName) },
-                    supportingContent = {
-                        Text(
-                            text =
-                                stringResource(
-                                    if (
-                                        upload.status ==
-                                            ReceiptUploadsList200ResponseDataInner.Status.queued
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding =
+                    PaddingValues(
+                        start = GohoSpacing.screenMargin,
+                        end = GohoSpacing.screenMargin,
+                        bottom = GohoSpacing.listBottom,
+                    ),
+            ) {
+                if (state.error)
+                    item("load-error") {
+                        ListNotice(
+                            stringResource(R.string.receipts_load_failed),
+                            stringResource(R.string.receipt_detail_retry),
+                            onRetryClick,
+                        )
+                    }
+                scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
+                if (isOpeningScanner)
+                    item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
+                if (entries.isEmpty())
+                    item("empty") {
+                        when {
+                            state.loading || !state.hasLoaded && !state.error ->
+                                ListNotice(stringResource(R.string.receipts_loading))
+                            state.hasLoaded && !state.error ->
+                                Column(
+                                    Modifier.fillParentMaxHeight()
+                                        .fillMaxWidth()
+                                        .padding(horizontal = GohoSpacing.textInsetFromMargin),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Text(
+                                        stringResource(R.string.receipts_empty_title),
+                                        style = GohoTheme.type.rowTitle,
+                                        color = c.textPrimary,
                                     )
-                                        R.string.upload_queued
-                                    else R.string.upload_processing
-                                ) + " · " + upload.createdAt.take(16)
-                        )
-                    },
-                )
-                HorizontalDivider()
-            }
-        }
-        item {
-            Column {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.receipts_processed_title),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
-        }
-        if (state.receipts.isEmpty() && state.hasLoaded) {
-            item { Text(text = stringResource(R.string.receipts_processed_empty)) }
-        } else {
-            items(state.receipts, key = { it.id }) { receipt ->
-                ListItem(
-                    modifier = Modifier.clickable { onReceiptClick(receipt.id) },
-                    headlineContent = { Text(receipt.storeName) },
-                    supportingContent = { Text(receipt.receiptDate) },
-                    trailingContent = {
-                        Text(
-                            text = listOfNotNull(receipt.total, receipt.currency).joinToString(" ")
-                        )
-                    },
-                )
-                HorizontalDivider()
-            }
-        }
-        if (failed.isNotEmpty()) {
-            item {
-                Column {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = stringResource(R.string.receipts_failed_title),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                                    Spacer(Modifier.height(GohoSpacing.sectionLabelBottom))
+                                    Text(
+                                        stringResource(R.string.receipts_empty_body),
+                                        style = GohoTheme.type.meta,
+                                        color = c.textTertiary,
+                                    )
+                                }
+                        }
+                    }
+                sections.forEach { section ->
+                    item("section:${section.group}") {
+                        Column {
+                            Text(
+                                sectionTitle(section.group, locale, today.year),
+                                style = GohoTheme.type.section,
+                                color = c.textTertiary,
+                                modifier =
+                                    Modifier.padding(
+                                            start = GohoSpacing.textInsetFromMargin,
+                                            top = GohoSpacing.sectionTop,
+                                            bottom = GohoSpacing.sectionLabelBottom,
+                                        )
+                                        .semantics { heading() },
+                            )
+                            ReceiptCard {
+                                section.entries.forEachIndexed { index, entry ->
+                                    key(entry.key) {
+                                        ReceiptRow(
+                                            entry,
+                                            clock,
+                                            locale,
+                                            zone,
+                                            config.fontScale >= 1.3f ||
+                                                config.screenWidthDp <
+                                                    GohoSpacing.compactWidth.value,
+                                            onReceiptClick,
+                                        )
+                                        if (index < section.entries.lastIndex) ReceiptDivider()
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            items(failed, key = { it.id }) { upload ->
-                ListItem(
-                    headlineContent = { Text(upload.fileName) },
-                    supportingContent = {
-                        Text(text = stringResource(R.string.receipts_failed_item))
-                    },
+        }
+        BottomScrim(Modifier.align(Alignment.BottomCenter))
+        ScanButton(
+            !isOpeningScanner,
+            onScanClick,
+            Modifier.align(Alignment.BottomEnd)
+                .padding(end = GohoSpacing.screenMargin, bottom = GohoSpacing.fabBottom),
+        )
+    }
+}
+
+@Composable
+private fun sectionTitle(group: ReceiptDateGroup, locale: Locale, year: Int): String =
+    when (group.period) {
+        ReceiptDatePeriod.Today -> stringResource(R.string.date_today)
+        ReceiptDatePeriod.Yesterday -> stringResource(R.string.date_yesterday)
+        ReceiptDatePeriod.ThisWeek -> stringResource(R.string.date_this_week)
+        ReceiptDatePeriod.LastWeek -> stringResource(R.string.date_last_week)
+        ReceiptDatePeriod.Unknown -> stringResource(R.string.date_unknown)
+        ReceiptDatePeriod.Month ->
+            group.month!!.format(
+                DateTimeFormatter.ofPattern(
+                    DateFormat.getBestDateTimePattern(
+                        locale,
+                        if (group.month!!.year == year) "MMMM" else "MMMMyyyy",
+                    ),
+                    locale,
                 )
-                HorizontalDivider()
+            )
+    }
+
+@Composable
+private fun ListNotice(message: String, action: String? = null, onAction: () -> Unit = {}) {
+    val c = GohoTheme.colors
+    Column(
+        Modifier.fillMaxWidth()
+            .padding(
+                horizontal = GohoSpacing.textInsetFromMargin,
+                vertical = GohoSpacing.contentGap,
+            )
+    ) {
+        Text(
+            message,
+            style = GohoTheme.type.meta,
+            color = c.textSecondary,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        if (action != null) {
+            val interaction = remember { MutableInteractionSource() }
+            val pressed by interaction.collectIsPressedAsState()
+            Box(
+                Modifier.heightIn(min = GohoSpacing.headerHeight)
+                    .clip(GohoShapes.pill)
+                    .background(if (pressed) c.surfaceMutedPressed else c.surfaceMuted)
+                    .clickable(
+                        interaction,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onAction,
+                    )
+                    .padding(horizontal = GohoSpacing.cardPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(action, style = GohoTheme.type.button, color = c.textPrimary)
             }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun ReceiptOverviewPreview() {
-    GohoTheme {
-        ReceiptOverview(
-            state = ReceiptOverviewState(),
-            serverStatus = ServerConnectionStatus.Connected,
-            uploadStatus = UploadStatus.Ready,
-            isOpeningScanner = false,
-            scanError = null,
-            onScanClick = {},
-            onRetryServerClick = {},
-            onReceiptClick = {},
+private fun ReceiptRow(
+    entry: ReceiptListEntry,
+    now: Instant,
+    locale: Locale,
+    zone: ZoneId,
+    expanded: Boolean,
+    onReceiptClick: (String) -> Unit,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val title =
+        entry.merchant
+            ?: stringResource(
+                if (entry.status == ReceiptListStatus.Processing) R.string.receipt_new
+                else R.string.receipt_unknown
+            )
+    val today = now.atZone(zone).toLocalDate()
+    val date =
+        when (entry.date) {
+            null -> stringResource(R.string.date_unknown)
+            today -> stringResource(R.string.date_today)
+            today.minusDays(1) -> stringResource(R.string.date_yesterday)
+            else ->
+                entry.date.format(
+                    DateTimeFormatter.ofPattern(
+                        DateFormat.getBestDateTimePattern(
+                            locale,
+                            if (entry.date.year == today.year) "EEEMMMd" else "EEEMMMdy",
+                        ),
+                        locale,
+                    )
+                )
+        }
+    val metadata =
+        if (entry.uploadedAt != null && entry.date == today) {
+            if (
+                entry.status == ReceiptListStatus.Processing &&
+                    entry.uploadedAt <= now &&
+                    now.epochSecond - entry.uploadedAt.epochSecond < 60
+            )
+                stringResource(R.string.date_just_now)
+            else
+                "$date, ${entry.uploadedAt.atZone(zone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))}"
+        } else date
+    val clickable =
+        entry.receiptId?.let { id ->
+            Modifier.clickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                onClick = { onReceiptClick(id) },
+            )
+        } ?: Modifier
+    Row(
+        Modifier.fillMaxWidth()
+            .then(clickable)
+            .background(if (pressed) c.surfacePressed else c.surface)
+            .heightIn(min = GohoSpacing.rowMinHeight)
+            .semantics(mergeDescendants = true) {}
+            .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),
+        horizontalArrangement = Arrangement.spacedBy(GohoSpacing.thumbToText),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)
+                .clip(GohoShapes.thumb)
+                .background(c.surfaceMuted)
+                .border(GohoSpacing.hairline, c.outline, GohoShapes.thumb)
+        )
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(GohoSpacing.lineGap),
+        ) {
+            if (expanded) {
+                Text(
+                    title,
+                    style = GohoTheme.type.rowTitle,
+                    color =
+                        if (entry.status == ReceiptListStatus.Processed) c.textPrimary
+                        else c.textSecondary,
+                )
+                ReceiptRowAmount(entry, locale)
+                Text(metadata, style = GohoTheme.type.meta, color = c.textTertiary)
+                if (entry.status != ReceiptListStatus.Processed)
+                    ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(GohoSpacing.contentGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        title,
+                        modifier = Modifier.weight(1f),
+                        style = GohoTheme.type.rowTitle,
+                        color =
+                            if (entry.status == ReceiptListStatus.Processed) c.textPrimary
+                            else c.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Box(Modifier.widthIn(max = GohoSpacing.amountMaxWidth)) {
+                        ReceiptRowAmount(entry, locale)
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sectionLabelBottom),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        metadata,
+                        modifier = Modifier.weight(1f),
+                        style = GohoTheme.type.meta,
+                        color = c.textTertiary,
+                    )
+                    if (entry.status != ReceiptListStatus.Processed)
+                        ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiptRowAmount(entry: ReceiptListEntry, locale: Locale) {
+    val c = GohoTheme.colors
+    if (entry.status == ReceiptListStatus.Processing) {
+        Box(
+            Modifier.size(GohoSpacing.skeletonWidth, GohoSpacing.skeletonHeight)
+                .clip(GohoShapes.pill)
+                .background(shimmerBrush(c.skeletonBase, c.skeletonShimmer))
+        )
+    } else {
+        Text(
+            entry.total?.let {
+                listOfNotNull(entry.currency, receiptAmount(it, entry.currency, locale))
+                    .joinToString(" ")
+            } ?: "—",
+            style = GohoTheme.type.rowTitle,
+            color = if (entry.total == null) c.textTertiary else c.textPrimary,
         )
     }
 }

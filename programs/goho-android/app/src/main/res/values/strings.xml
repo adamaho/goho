@@ -37,4 +37,18 @@
     <string name="receipt_subtotal">Subtotal</string>
     <string name="receipt_tax">Tax</string>
     <string name="receipt_total">Total</string>
+    <string name="goho_wordmark" translatable="false">goho</string>
+    <string name="scan_short">Scan</string>
+    <string name="receipt_reading">Reading receipt…</string>
+    <string name="receipt_not_processed">Not processed</string>
+    <string name="receipt_new">New receipt</string>
+    <string name="receipt_unknown">Unknown receipt</string>
+    <string name="receipts_empty_title">No receipts yet</string>
+    <string name="receipts_empty_body">Tap Scan to add your first one.</string>
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
+    <string name="date_this_week">Earlier this week</string>
+    <string name="date_last_week">Last week</string>
+    <string name="date_unknown">Date unavailable</string>
+    <string name="date_just_now">Just now</string>
 </resources>

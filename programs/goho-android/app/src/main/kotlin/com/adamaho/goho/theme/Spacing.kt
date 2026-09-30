@@ -18,4 +18,25 @@ object GohoSpacing {
     val sectionTop = 24.dp
     val sectionLabelBottom = 8.dp
     val fabBottom = 28.dp
+    val hairline = 1.dp
+    val headerHeight = 44.dp
+    val headerTop = 4.dp
+    val lineGap = 5.dp
+    val contentGap = 12.dp
+    val pillHeight = 22.dp
+    val pillHorizontal = 9.dp
+    val skeletonWidth = 52.dp
+    val skeletonHeight = 12.dp
+    val scrimHeight = 128.dp
+    val listBottom = 112.dp
+    val fabHeight = 56.dp
+    val fabStart = 18.dp
+    val fabEnd = 22.dp
+    val fabIcon = 22.dp
+    val fabIconGap = 9.dp
+    val fabElevation = 3.dp
+    val pressedElevation = 0.5.dp
+    val iconStroke = 2.dp
+    val compactWidth = 360.dp
+    val amountMaxWidth = 148.dp
 }
