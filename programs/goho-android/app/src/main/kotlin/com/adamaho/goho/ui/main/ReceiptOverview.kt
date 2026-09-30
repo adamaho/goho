@@ -103,7 +103,7 @@ fun ReceiptOverview(
                 )
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().headerFade(c.background),
                 contentPadding =
                     PaddingValues(
                         start = GohoSpacing.screenMargin,

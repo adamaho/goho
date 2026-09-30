@@ -21,6 +21,7 @@ object GohoSpacing {
     val hairline = 1.dp
     val headerHeight = 44.dp
     val headerTop = 4.dp
+    val headerFadeHeight = 12.dp
     val lineGap = 5.dp
     val contentGap = 12.dp
     val pillHeight = 22.dp

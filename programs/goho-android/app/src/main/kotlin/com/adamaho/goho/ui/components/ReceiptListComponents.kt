@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.res.stringResource
@@ -183,4 +184,15 @@ fun BottomScrim(modifier: Modifier = Modifier) {
                 )
             )
     )
+}
+
+/** Soften the fixed header edge without changing list layout or intercepting gestures. */
+fun Modifier.headerFade(background: Color): Modifier = drawWithCache {
+    val height = GohoSpacing.headerFadeHeight.toPx().coerceAtMost(size.height)
+    val brush =
+        Brush.verticalGradient(listOf(background, background.copy(alpha = 0f)), endY = height)
+    onDrawWithContent {
+        drawContent()
+        drawRect(brush, size = Size(size.width, height))
+    }
 }
