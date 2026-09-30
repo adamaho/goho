@@ -52,9 +52,9 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`title`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
 
-**Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the space down to the status line (584 tall on a 892-tall screen). The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
+**Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the available space above the footer. The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
 
-**Status line** (12 below the photo, `textInset` sides, `meta`, `textTertiary`): "Receipt captured, not uploaded yet".
+**Status line:** show upload progress or an upload failure only. The ready state has no status line or warning about the receipt not being uploaded. This approved refinement supersedes the status line in the supplied mockups.
 
 **Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
 

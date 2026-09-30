@@ -117,22 +117,25 @@ internal fun ScanPreviewContent(
                 loading,
                 Modifier.weight(1f).padding(horizontal = GohoSpacing.screenMargin),
             )
-            Text(
-                stringResource(
-                    when (uploadStatus) {
-                        UploadStatus.Ready -> R.string.scan_ready
-                        UploadStatus.Uploading -> R.string.upload_progress
-                        UploadStatus.Submitted -> R.string.upload_submitted
-                        UploadStatus.Failed -> R.string.upload_failed
-                    }
-                ),
-                style = GohoTheme.type.meta,
-                color = if (uploadStatus == UploadStatus.Failed) c.attention else c.textTertiary,
-                modifier =
-                    Modifier.padding(horizontal = GohoSpacing.textInset)
-                        .padding(top = GohoSpacing.contentGap)
-                        .semantics { liveRegion = LiveRegionMode.Polite },
-            )
+            val statusText =
+                when (uploadStatus) {
+                    UploadStatus.Ready -> null
+                    UploadStatus.Uploading -> R.string.upload_progress
+                    UploadStatus.Submitted -> R.string.upload_submitted
+                    UploadStatus.Failed -> R.string.upload_failed
+                }
+            if (statusText != null) {
+                Text(
+                    stringResource(statusText),
+                    style = GohoTheme.type.meta,
+                    color =
+                        if (uploadStatus == UploadStatus.Failed) c.attention else c.textTertiary,
+                    modifier =
+                        Modifier.padding(horizontal = GohoSpacing.textInset)
+                            .padding(top = GohoSpacing.contentGap)
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
             Column(
                 Modifier.padding(horizontal = GohoSpacing.screenMargin)
                     .padding(top = GohoSpacing.previewFooterTop),
