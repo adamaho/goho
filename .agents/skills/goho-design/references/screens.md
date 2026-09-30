@@ -6,8 +6,8 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Wordmark "goho" (`wordmark`, `textPrimary`), inset 4dp, in a 44-tall row. Nothing else in the header.
-- **Segmented filter** 16dp below: "All {count}" and "Needs attention {badge}". Needs attention shows receipts in the Not processed state.
+- Title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a 44dp row.
+- Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
 
 **List**
 
@@ -50,7 +50,7 @@ Always dark, in both themes (wrap it in `GohoTheme(darkTheme = true)`). Full scr
 
 Shown after the ML Kit document scanner returns a capture. Replaces the current centered "Goho" layout.
 
-**Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`title`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
+**Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`screenTitle`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
 
 **Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the available space above the footer. The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
 

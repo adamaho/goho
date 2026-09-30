@@ -37,19 +37,19 @@ Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on back
 
 ## Typography
 
-Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Every style that can contain a number sets `fontFeatureSettings = "tnum"`.
+Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times all use proportional figures. Metadata and labels use zero tracking.
 
-| Style      | Size / line height | Weight | Tracking | Use                                                                       |
-| ---------- | ------------------ | ------ | -------- | ------------------------------------------------------------------------- |
-| `display`  | 44 / 48            | 700    | −0.045em | Receipt amount on details                                                 |
-| `title`    | 22 / 28            | 700    | −0.03em  | Screen title ("New receipt" on scan preview)                              |
-| `wordmark` | 32 / 36            | 700    | −0.045em | "goho" in the list header (lowercase)                                     |
-| `rowTitle` | 16 / 22            | 600    | −0.015em | Merchant and amount in list rows; merchant on detail (in `textSecondary`) |
-| `button`   | 16 / 20            | 700    | 0        | Scan and primary button labels (secondary buttons use 600)                |
-| `listRow`  | 15 / 20            | 500    | 0        | Detail list labels (values use 600)                                       |
-| `meta`     | 13 / 18            | 500    | 0        | Dates, sub-lines                                                          |
-| `section`  | 13 / 18            | 600    | 0        | "Today", "Details" section labels                                         |
-| `label`    | 12 / 16            | 600    | 0        | Pills, badges                                                             |
+| Style         | Size / line height | Weight | Tracking | Use                                                                       |
+| ------------- | ------------------ | ------ | -------- | ------------------------------------------------------------------------- |
+| `display`     | 44 / 48            | 700    | −0.045em | Receipt amount on details                                                 |
+| `title`       | 22 / 28            | 700    | −0.03em  | Screen title ("New receipt" on scan preview)                              |
+| `screenTitle` | 24 / 30            | 700    | −0.015em | “Receipts” list title                                                     |
+| `rowTitle`    | 16 / 22            | 600    | −0.015em | Merchant and amount in list rows; merchant on detail (in `textSecondary`) |
+| `button`      | 16 / 20            | 700    | 0        | Scan and primary button labels (secondary buttons use 600)                |
+| `listRow`     | 15 / 20            | 500    | 0        | Detail list labels (values use 600)                                       |
+| `meta`        | 13 / 18            | 500    | 0        | Dates, sub-lines                                                          |
+| `section`     | 13 / 18            | 600    | 0        | "Today", "Details" section labels                                         |
+| `label`       | 12 / 16            | 600    | 0        | Pills, badges                                                             |
 
 The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at the same size as the number in rows, and at 28sp beside a 44sp display amount.
 
@@ -69,12 +69,12 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 
 - 4dp grid.
 - `screenMargin` = 16: edges of cards, the filter and the FAB.
-- `textInset` = 20: text that sits directly on the background (wordmark, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
+- `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
 - Detail list row: height 47, label left, value right.
 - Section spacing: 24 above a section label, 8 below it.
-- Header: wordmark row is 44 tall and starts at the status bar inset + 4dp.
+- Header: screen title row is 44 tall and starts at the status bar inset + 4dp.
 - Bottom: FAB sits 28dp above the navigation bar inset, 16dp from the right.
 
 ## Elevation and shadow
@@ -96,7 +96,14 @@ The top highlight is a 1dp line drawn inside the clipped shape at the top edge, 
 ## Motion
 
 - **Press:** progress `p` goes 0→1 with `tween(90ms)` on press and back with `spring(dampingRatio = 0.55f, stiffness = 700f)` on release (the overshoot gives the friendly bounce). Scale = 1 − 0.03·p, translationY = 1dp·p, shadow and fill interpolate with p clamped to 0..1.
-- **Filter switch:** selected segment background and text color animate over 160ms.
+- **Filter switch:** selected tab fill expands from 86% width and 90% height with `spring(dampingRatio = 0.6f, stiffness = 240f)`. Only the fill grows and gently overshoots; label geometry and touch targets stay fixed. Clamp selection progress for colors and elevation, keep the surface opaque, and switch immediately with reduced motion.
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Reduced motion:** when the animator duration scale is 0, shimmer is static and the press has no spring overshoot.
+
+## Receipt header and timestamps
+
+- List title: “Receipts”, using `screenTitle` (24sp / 30sp).
+- Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition.
+- `timestamp`: Manrope 500, 13sp / 18sp, zero tracking, proportional digit widths.
+- Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.

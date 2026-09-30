@@ -18,7 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
@@ -78,29 +80,13 @@ fun ReceiptOverview(
     val c = GohoTheme.colors
     Box(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
         Column(Modifier.fillMaxSize()) {
-            Box(
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = GohoSpacing.textInset)
-                    .padding(top = GohoSpacing.headerTop)
-                    .heightIn(min = GohoSpacing.headerHeight),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(
-                    stringResource(R.string.goho_wordmark),
-                    style = GohoTheme.type.wordmark,
-                    color = c.textPrimary,
-                )
-            }
-            if (entries.isNotEmpty())
-                ReceiptFilter(
-                    entries.size,
-                    entries.count { it.status == ReceiptListStatus.NotProcessed },
-                    attentionOnly,
-                    { attentionOnly = it },
-                    locale,
-                    Modifier.padding(horizontal = GohoSpacing.screenMargin)
-                        .padding(top = GohoSpacing.filterTop, bottom = GohoSpacing.contentGap),
-                )
+            ReceiptListHeader(
+                entries.size,
+                entries.count { it.status == ReceiptListStatus.NotProcessed },
+                attentionOnly,
+                { attentionOnly = it },
+                locale,
+            )
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().headerFade(c.background),
@@ -295,17 +281,34 @@ private fun ReceiptRow(
                     )
                 )
         }
-    val metadata =
-        if (entry.uploadedAt != null && entry.date == today) {
-            if (
-                entry.status == ReceiptListStatus.Processing &&
-                    entry.uploadedAt <= now &&
-                    now.epochSecond - entry.uploadedAt.epochSecond < 60
-            )
-                stringResource(R.string.date_just_now)
-            else
-                "$date, ${entry.uploadedAt.atZone(zone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))}"
-        } else date
+    val justNow =
+        entry.status == ReceiptListStatus.Processing &&
+            entry.uploadedAt != null &&
+            entry.uploadedAt <= now &&
+            now.epochSecond - entry.uploadedAt.epochSecond < 60
+    val justNowLabel = stringResource(R.string.date_just_now)
+    val metadata = buildAnnotatedString {
+        if (
+            entry.uploadedAt != null &&
+                entry.date == today &&
+                entry.uploadedAt.atZone(zone).toLocalDate() == today
+        ) {
+            if (justNow) append(justNowLabel)
+            else {
+                append("$date, ")
+                withStyle(GohoTheme.type.timestamp.toSpanStyle()) {
+                    append(
+                        entry.uploadedAt
+                            .atZone(zone)
+                            .format(
+                                DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                                    .withLocale(locale)
+                            )
+                    )
+                }
+            }
+        } else append(date)
+    }
     val clickable =
         entry.receiptId?.let { id ->
             Modifier.clickable(
@@ -325,7 +328,7 @@ private fun ReceiptRow(
         horizontalArrangement = Arrangement.spacedBy(GohoSpacing.thumbToText),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ReceiptThumbnail(entry.receiptId, thumbnails)
+        ReceiptThumbnail(entry.receiptId, entry.status, thumbnails)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(GohoSpacing.lineGap),

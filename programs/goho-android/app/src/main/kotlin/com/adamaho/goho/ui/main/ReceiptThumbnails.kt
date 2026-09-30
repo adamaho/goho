@@ -3,15 +3,21 @@ package com.adamaho.goho.ui.main
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -22,7 +28,10 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
-/** A screen-scoped, bounded cache; failed/missing images stay neutral until the next visit. */
+/**
+ * A screen-scoped, bounded cache; failed/missing images use a receipt placeholder until the next
+ * visit.
+ */
 internal class ReceiptThumbnails(private val loadImage: suspend (String) -> ByteArray?) {
     private data class Result(val bitmap: Bitmap?)
 
@@ -74,27 +83,84 @@ internal fun receiptThumbnailSampleSize(width: Int, height: Int): Int {
 }
 
 @Composable
-internal fun ReceiptThumbnail(receiptId: String?, thumbnails: ReceiptThumbnails) {
+internal fun ReceiptThumbnail(
+    receiptId: String?,
+    status: ReceiptListStatus,
+    thumbnails: ReceiptThumbnails,
+) {
     val c = GohoTheme.colors
     var visible by remember { mutableStateOf(false) }
     val bitmap by
         produceState<Bitmap?>(null, receiptId, visible, thumbnails) {
             value = if (visible && receiptId != null) thumbnails.get(receiptId) else null
         }
+    val background =
+        when (status) {
+            ReceiptListStatus.Processed -> c.surfaceMuted
+            ReceiptListStatus.Processing -> c.accentContainer
+            ReceiptListStatus.NotProcessed -> c.attentionContainer
+        }
     Box(
         Modifier.size(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)
             .onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
             .clip(GohoShapes.thumb)
-            .background(c.surfaceMuted)
-            .border(GohoSpacing.hairline, c.outline, GohoShapes.thumb)
+            .background(background)
+            .border(GohoSpacing.hairline, c.outline, GohoShapes.thumb),
+        contentAlignment = Alignment.Center,
     ) {
-        bitmap?.let {
+        val image = bitmap
+        if (image != null) {
             Image(
-                it.asImageBitmap(),
+                image.asImageBitmap(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),
             )
+        } else ReceiptPlaceholder(status)
+    }
+}
+
+@Composable
+private fun ReceiptPlaceholder(status: ReceiptListStatus) {
+    val c = GohoTheme.colors
+    val color =
+        when (status) {
+            ReceiptListStatus.Processed -> c.textSecondary
+            ReceiptListStatus.Processing -> c.onAccentContainer
+            ReceiptListStatus.NotProcessed -> c.attention
+        }
+    Canvas(Modifier.size(GohoSpacing.placeholderWidth, GohoSpacing.placeholderHeight)) {
+        val stroke = GohoSpacing.placeholderStroke.toPx()
+        fun point(x: Float, y: Float) = Offset(size.width * x, size.height * y)
+        fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
+            drawLine(color, point(x1, y1), point(x2, y2), stroke, StrokeCap.Round)
+        val paper =
+            Path().apply {
+                moveTo(size.width * 0.14f, size.height * 0.08f)
+                lineTo(size.width * 0.86f, size.height * 0.08f)
+                lineTo(size.width * 0.86f, size.height * 0.9f)
+                lineTo(size.width * 0.68f, size.height * 0.81f)
+                lineTo(size.width * 0.5f, size.height * 0.9f)
+                lineTo(size.width * 0.32f, size.height * 0.81f)
+                lineTo(size.width * 0.14f, size.height * 0.9f)
+                close()
+            }
+        drawPath(paper, color, style = Stroke(stroke))
+        when (status) {
+            ReceiptListStatus.NotProcessed -> {
+                line(0.5f, 0.3f, 0.5f, 0.52f)
+                drawCircle(color, stroke / 2, point(0.5f, 0.66f))
+            }
+            ReceiptListStatus.Processing -> {
+                line(0.3f, 0.29f, 0.7f, 0.29f)
+                line(0.02f, 0.49f, 0.98f, 0.49f)
+                line(0.3f, 0.69f, 0.56f, 0.69f)
+            }
+            ReceiptListStatus.Processed -> {
+                line(0.3f, 0.29f, 0.7f, 0.29f)
+                line(0.3f, 0.47f, 0.7f, 0.47f)
+                line(0.3f, 0.65f, 0.56f, 0.65f)
+            }
         }
     }
 }

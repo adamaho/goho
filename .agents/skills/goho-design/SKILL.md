@@ -7,7 +7,7 @@ description: Goho's visual design system and screen specs for the native Android
 
 Design handoff and mockups: September 30, 2026.
 
-Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with tabular figures, grouped cards, and buttons that press down with a small spring.
+Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with proportional figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
 
@@ -15,7 +15,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 1. **Use the tokens.** Every color, text style, shape, spacing value and motion spec comes from `GohoTheme` (see `assets/compose/GohoTheme.kt`). No hard-coded hex values, dp values or `MaterialTheme.typography` styles in screens.
 2. **One accent, used on purpose.** Jade (`accent`) marks the primary action, the Scan button, the processing state and "Add" chips. Nothing decorative is jade. Attention states use `attention` orange. There is no blue, yellow or red in the UI.
-3. **Numbers are tabular.** Every amount, date and count uses a style with `fontFeatureSettings = "tnum"`.
+3. **Use proportional numbers.** Disable tabular figures throughout the app, including amounts, dates, counts and times. Use natural digit widths and zero tracking for metadata and labels; never use a monospaced font.
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
 6. **No ripples.** Press feedback is the Goho press: scale to 97%, move down 1dp, shadow drops, fill darkens, spring back on release. Use `indication = null` plus the press modifier. Never a sunken or inset-shadow pressed state.
@@ -52,9 +52,11 @@ If a task seems to need one of these, stop and ask instead of inventing UI.
 
 Preserve these refinements when adapting the reference code or older mockups:
 
-- Keep the fixed 12dp gap below the filter and the 12dp fade from the header background to transparent over the top of the scrolling list.
+- Title the list “Receipts”. Keep smaller, separate filter tabs below the title in a fixed header (selected pill, no enclosing track), with no scroll-driven resizing or movement. Keep 44dp filter tap targets, both counts, a 12dp gap below the header, and the 12dp top fade.
+- Sort each receipt day newest upload first, including successfully processed uploads. Rows without upload timestamps follow in stable server order; do not invent a timestamp for manual receipts.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
-- Center status text inside its pill container, with a minimum height that can grow for larger text. Keep the filter count badge centered too.
+- Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
+- Center the visible text bounds inside status pills and filter count badges, rather than the font line box. Keep a minimum height that can grow for larger text.
 
 ## Definition of done
 

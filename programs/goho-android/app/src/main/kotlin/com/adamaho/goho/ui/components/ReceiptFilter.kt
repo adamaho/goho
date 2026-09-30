@@ -1,8 +1,7 @@
 package com.adamaho.goho.ui.components
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -15,8 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import java.text.NumberFormat
@@ -33,16 +35,16 @@ fun ReceiptFilter(
 ) {
     val c = GohoTheme.colors
     Row(
-        modifier
-            .clip(GohoShapes.pill)
-            .background(c.surfaceMuted)
-            .padding(GohoSpacing.filterPadding)
-            .selectableGroup(),
+        modifier.selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(GohoSpacing.filterGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         FilterSegment(!attentionOnly, { onSelect(false) }) {
-            Text(stringResource(R.string.receipts_filter_all), style = GohoTheme.type.segment)
+            Text(
+                stringResource(R.string.receipts_filter_all),
+                style = GohoTheme.type.segment,
+                maxLines = 1,
+            )
             Text(
                 NumberFormat.getIntegerInstance(locale).format(total),
                 style = GohoTheme.type.segment,
@@ -54,6 +56,8 @@ fun ReceiptFilter(
                 stringResource(R.string.receipts_failed_title),
                 modifier = Modifier.weight(1f, fill = false),
                 style = GohoTheme.type.segment,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (attention > 0)
                 Box(
@@ -66,10 +70,10 @@ fun ReceiptFilter(
                         .padding(horizontal = GohoSpacing.filterPadding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
+                    CenteredPillLabel(
                         NumberFormat.getIntegerInstance(locale).format(attention),
-                        style = GohoTheme.type.label,
-                        color = c.attention,
+                        GohoTheme.type.label,
+                        c.attention,
                     )
                 }
         }
@@ -87,35 +91,25 @@ private fun FilterSegment(
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val reduced = rememberReducedMotion()
-    val fill by
-        animateColorAsState(
-            if (selected) c.segmentSelected else Color.Transparent,
-            if (reduced) snap() else tween(GohoMotion.SEGMENT_MILLIS),
+    val selection by
+        animateFloatAsState(
+            if (selected) 1f else 0f,
+            if (reduced) snap() else GohoMotion.filterSelection,
             label = "Filter selection",
         )
-    val shadow =
-        if (selected)
-            Modifier.shadow(
-                GohoSpacing.hairline,
-                GohoShapes.pill,
-                ambientColor = c.shadow,
-                spotColor = c.shadow,
-            )
-        else Modifier
-    androidx.compose.runtime.CompositionLocalProvider(
+    val press = progress.coerceIn(0f, 1f)
+    val colorProgress = selection.coerceIn(0f, 1f)
+    // Keep the surface opaque throughout the transition so the shadow cannot show through it.
+    val fill = lerp(lerp(c.background, c.segmentSelected, colorProgress), c.surfacePressed, press)
+    val elevation = GohoSpacing.hairline * colorProgress * (1f - press)
+    CompositionLocalProvider(
         androidx.compose.material3.LocalContentColor provides
-            if (selected) c.textPrimary else c.textSecondary
+            lerp(c.textSecondary, c.textPrimary, colorProgress)
     ) {
-        Row(
+        // The visible tab is compact; its surrounding space remains tappable.
+        Box(
             modifier
                 .gohoPress { progress }
-                .then(shadow)
-                .clip(GohoShapes.pill)
-                .background(fill)
-                .then(
-                    if (selected && c.isDark) Modifier.topHighlight(Color.White.copy(alpha = 0.06f))
-                    else Modifier
-                )
                 .selectable(
                     selected,
                     interactionSource = interaction,
@@ -124,13 +118,44 @@ private fun FilterSegment(
                     onClick = onClick,
                 )
                 .heightIn(min = GohoSpacing.headerHeight)
-                .padding(
-                    horizontal = GohoSpacing.segmentHorizontal,
-                    vertical = GohoSpacing.filterPadding,
-                ),
-            horizontalArrangement = Arrangement.spacedBy(GohoSpacing.segmentCountGap),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
+                .padding(vertical = GohoSpacing.filterTouchInset),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box {
+                // Only the fill springs; the label and touch target keep their size and position.
+                Box(
+                    Modifier.matchParentSize()
+                        .graphicsLayer {
+                            scaleX = 1f - GohoMotion.FILTER_FILL_WIDTH_REVEAL * (1f - selection)
+                            scaleY = 1f - GohoMotion.FILTER_FILL_HEIGHT_REVEAL * (1f - selection)
+                        }
+                        .shadow(
+                            elevation,
+                            GohoShapes.pill,
+                            ambientColor = c.shadow,
+                            spotColor = c.shadow,
+                        )
+                        .clip(GohoShapes.pill)
+                        .background(fill)
+                        .then(
+                            if (c.isDark)
+                                Modifier.topHighlight(
+                                    Color.White.copy(alpha = 0.06f * colorProgress)
+                                )
+                            else Modifier
+                        )
+                )
+                Row(
+                    Modifier.heightIn(min = GohoSpacing.filterVisualHeight)
+                        .padding(
+                            horizontal = GohoSpacing.segmentHorizontal,
+                            vertical = GohoSpacing.filterPadding,
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(GohoSpacing.segmentCountGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
+            }
+        }
     }
 }

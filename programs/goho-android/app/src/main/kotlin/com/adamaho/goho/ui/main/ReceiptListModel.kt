@@ -60,7 +60,7 @@ fun receiptListEntries(
             receiptId = receipt.id,
             merchant = receipt.storeName,
             date = runCatching { LocalDate.parse(receipt.receiptDate) }.getOrNull(),
-            uploadedAt = null,
+            uploadedAt = upload?.let { receiptUploadInstant(it.createdAt) },
             total = receipt.total,
             currency = receipt.currency,
             status = ReceiptListStatus.Processed,
@@ -85,10 +85,9 @@ fun receiptListEntries(
                         else ReceiptListStatus.Processing,
                 )
             }
+    // Stable ties preserve the server's newest-created-first order for manual receipts.
     return (saved + unfinished).sortedWith(
-        compareByDescending<ReceiptListEntry> { it.date }
-            .thenByDescending { it.uploadedAt }
-            .thenBy { it.key }
+        compareByDescending<ReceiptListEntry> { it.date }.thenByDescending { it.uploadedAt }
     )
 }
 

@@ -26,29 +26,32 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 - 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back on the details screen and close in the photo viewer.
 
-## GohoSegmentedFilter
+## ReceiptFilter
 
-- Track: `surfaceMuted`, fully round, 3dp padding, 2dp gap, wraps its content (not full width).
-- Segment: 34 tall, 14 horizontal padding, fully round, text 14sp weight 600.
-- Selected: fill `segmentSelected`, 1dp shadow (plus a 6% top highlight in dark only), text `textPrimary`. Unselected: transparent, text `textSecondary`.
-- "All" shows its count in `textSecondary` after a 7dp gap. "Needs attention" shows a count badge: min 20×20, fully round, `attentionContainer` fill, `attention` text, `label` style. Hide the badge when the count is 0.
+- Separate tabs below the title, with a 6dp gap and no enclosing track. The selected tab has a subtle pill surface; unselected tabs blend into the header background.
+- Tab: 36dp visible pill within a minimum 44dp tap target, 10dp horizontal padding, fully round, text 13sp weight 600.
+- Selected: fill `segmentSelected`, 1dp shadow (plus a 6% top highlight in dark only), text `textPrimary`. Unselected: visually blends into `background`, text `textSecondary`. Animate an opaque surface between `background` and `segmentSelected`; never fade a shadowed surface through transparency. Use a gentle spring for the fill reveal while keeping label geometry and touch targets fixed. Synchronize elevation, highlight and label color with the same selection progress, clamped to 0–1; only the fill scale may overshoot.
+- "All" shows its count in `textSecondary` after a 5dp gap. "Needs attention" shows a count badge: min 20×20, fully round, `attentionContainer` fill, `attention` text, `label` style. Hide the badge when the count is 0.
 
 ## GohoStatusPill
 
-- Height 22, horizontal padding 9, fully round, `label` style.
+- Height at least 22, horizontal padding 9, fully round, `label` style. Center the visible glyph bounds so font ascent/descent does not make text look off-center.
 - Tones: `Accent` (`accentContainer` / `onAccentContainer`) for "Reading receipt…", with the shimmer; `Attention` (`attentionContainer` / `attention`) for "Not processed".
 
 ## ReceiptThumbnail
 
 - 40×48, shape `thumb` 8, image cropped center, 1dp border in `outline`.
 - Processing: overlay the top 45% with `accent` at 18% and draw a 1.5dp `accent` line at its bottom edge (a static "scan line").
-- No image yet: `surfaceMuted` fill.
+- Missing photo (including manually created receipts): `surfaceMuted` with a centered receipt outline in `textSecondary`.
+- Processing without a photo: `accentContainer` with a receipt outline and scan line in `onAccentContainer`.
+- Failed upload: `attentionContainer` with a receipt outline and attention mark in `attention`.
+- Placeholder icons are decorative; the row and status pill provide the accessible description.
 
 ## ReceiptRow
 
 Row inside a card: `thumbnail | column(line 1, line 2)`.
 
-- Line 1: merchant (`rowTitle`, `textPrimary`, single line, ellipsis) … trailing amount (`rowTitle`, tnum).
+- Line 1: merchant (`rowTitle`, `textPrimary`, single line, ellipsis) … trailing amount (`rowTitle`, proportional figures).
 - Line 2 (5dp below): date (`meta`, `textTertiary`) … optional trailing status pill.
 - States:
   - **Processed:** amount in `textPrimary`. Foreign currency: prefix like "US$" in `textTertiary`, number in `textPrimary`. Tappable; opens details.

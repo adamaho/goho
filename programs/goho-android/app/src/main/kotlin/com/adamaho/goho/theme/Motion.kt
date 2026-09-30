@@ -12,6 +12,8 @@ object GohoMotion {
     val pressIn: AnimationSpec<Float> = tween(durationMillis = 90)
     val pressOut: AnimationSpec<Float> = spring(dampingRatio = 0.55f, stiffness = 700f)
     val pressOutReduced: AnimationSpec<Float> = snap()
-    const val SEGMENT_MILLIS = 160
+    val filterSelection: AnimationSpec<Float> = spring(dampingRatio = 0.6f, stiffness = 240f)
+    const val FILTER_FILL_WIDTH_REVEAL = 0.14f
+    const val FILTER_FILL_HEIGHT_REVEAL = 0.10f
     const val SHIMMER_MILLIS = 1800
 }
