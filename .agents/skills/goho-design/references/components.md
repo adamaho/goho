@@ -67,8 +67,8 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 ## DetailList
 
-- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 600, `textPrimary`, tnum) right, dividers between rows. Read-only.
-- A value that wasn't read shows "—" in `textTertiary`.
+- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 600, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
+- A value that wasn't read shows "—" in `textTertiary`. Allow rows to grow for wrapped values; stack labels above values on narrow screens or with larger text.
 
 ## PhotoFrame
 

@@ -25,7 +25,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with an expandable photo.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with a photo. The expanded photo viewer is the next planned increment.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -57,6 +57,13 @@ Preserve these refinements when adapting the reference code or older mockups:
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
 - Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
 - Center the visible text bounds inside status pills and filter count badges, rather than the font line box. Keep a minimum height that can grow for larger text.
+
+## Receipt details rollout
+
+- The first details PR covers the back control, merchant/amount/date hero, static photo frame and read-only metadata card. Add the expandable viewer in the next increment; show no inactive expand control.
+- Preserve the existing category, item and subtotal/tax/total information during the rollout. Category may appear as a read-only metadata row.
+- Format dates and numeric amounts for the phone locale. Use the receipt currency, falling back to its code if it is not a registered currency; never assume a currency when the server returns null.
+- Missing photos show “No receipt photo available”. Keep receipt loading and retry states accessible, with back navigation available.
 
 ## Definition of done
 

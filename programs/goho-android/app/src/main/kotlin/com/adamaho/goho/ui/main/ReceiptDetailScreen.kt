@@ -1,37 +1,29 @@
 package com.adamaho.goho.ui.main
 
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
+import com.adamaho.goho.theme.*
+import com.adamaho.goho.ui.components.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Currency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -46,18 +38,16 @@ fun ReceiptDetailScreen(
     var reloadKey by remember { mutableIntStateOf(0) }
     var receipt by remember(receiptId) { mutableStateOf<Receipt?>(null) }
     var loading by remember(receiptId) { mutableStateOf(true) }
-    var failed by remember(receiptId) { mutableStateOf(false) }
     var image by remember(receiptId) { mutableStateOf<ImageBitmap?>(null) }
+    var imageLoading by remember(receiptId) { mutableStateOf(true) }
 
     LaunchedEffect(receiptId, reloadKey) {
         loading = true
-        failed = false
         receipt = loadReceipt(receiptId)
-        failed = receipt == null
         loading = false
     }
-
-    LaunchedEffect(receiptId) {
+    LaunchedEffect(receiptId, reloadKey) {
+        imageLoading = true
         image =
             loadReceiptImage(receiptId)?.let { bytes ->
                 withContext(Dispatchers.Default) {
@@ -71,105 +61,181 @@ fun ReceiptDetailScreen(
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
                 }
             }
+        imageLoading = false
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize().safeDrawingPadding(),
-        contentPadding = PaddingValues(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        item {
-            Column {
-                TextButton(onClick = onBack) { Text(stringResource(R.string.receipt_back)) }
-                Text(
-                    text = stringResource(R.string.receipt_detail_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-            }
+    val c = GohoTheme.colors
+    val config = LocalConfiguration.current
+    val locale = config.locales[0]
+    val stacked = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
+    Column(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
+        Box(
+            Modifier.fillMaxWidth()
+                .heightIn(min = GohoSpacing.detailTopBarHeight)
+                .padding(horizontal = GohoSpacing.screenMargin),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            ReceiptBackButton(onBack)
         }
-
-        if (loading) {
-            item { CircularProgressIndicator() }
-        } else if (failed) {
-            item {
-                Column {
-                    Text(
-                        text = stringResource(R.string.receipt_detail_load_failed),
-                        color = MaterialTheme.colorScheme.error,
+        val saved = receipt
+        if (loading || saved == null) {
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = GohoSpacing.textInset),
+                verticalArrangement =
+                    Arrangement.spacedBy(GohoSpacing.contentGap, Alignment.CenterVertically),
+            ) {
+                Text(
+                    stringResource(
+                        if (loading) R.string.receipt_detail_loading
+                        else R.string.receipt_detail_load_failed
+                    ),
+                    style = GohoTheme.type.meta,
+                    color = c.textSecondary,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+                if (!loading)
+                    GohoActionButton(
+                        stringResource(R.string.receipt_detail_retry),
+                        { reloadKey++ },
+                        primary = false,
                     )
-                    TextButton(onClick = { reloadKey++ }) {
-                        Text(stringResource(R.string.receipt_detail_retry))
-                    }
-                }
             }
         } else {
-            receipt?.let { savedReceipt ->
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = savedReceipt.storeName,
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                        Text(
-                            text = savedReceipt.receiptDate,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = savedReceipt.category,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+            val date =
+                remember(saved.receiptDate) {
+                    runCatching { LocalDate.parse(saved.receiptDate) }.getOrNull()
                 }
-                image?.let { bitmap ->
-                    item {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = stringResource(R.string.receipt_image_description),
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
-                            contentScale = ContentScale.Fit,
-                        )
-                    }
-                }
-                item {
-                    Text(
-                        text = stringResource(R.string.receipt_items_title),
-                        style = MaterialTheme.typography.titleLarge,
+            val fullDate =
+                date?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale))
+                    ?: saved.receiptDate.ifBlank { "—" }
+            val shortDate =
+                date?.format(
+                    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
+                ) ?: saved.receiptDate.ifBlank { "—" }
+            val code = saved.currency?.takeIf { it.isNotBlank() }
+            val currency = code?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
+            // There is no home-currency setting in the API; use the phone locale for presentation.
+            val homeCurrency = runCatching { Currency.getInstance(locale).currencyCode }.getOrNull()
+            val foreign = code != null && code != homeCurrency
+            val prefix = if (foreign) currency?.getSymbol(locale) ?: code.orEmpty() else ""
+            val amount = receiptAmount(saved.total, saved.currency, locale)
+            val total = if (prefix.isEmpty()) amount else "$prefix $amount"
+            val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
+            val rows = buildList {
+                add(stringResource(R.string.receipt_merchant) to merchant)
+                add(stringResource(R.string.receipt_date) to shortDate)
+                if (saved.category.isNotBlank())
+                    add(stringResource(R.string.receipt_category) to saved.category)
+                add(stringResource(R.string.receipt_total) to total)
+                if (foreign)
+                    add(
+                        stringResource(R.string.receipt_currency) to
+                            (currency?.getDisplayName(locale) ?: code.orEmpty())
                     )
-                }
-                if (savedReceipt.items.isEmpty()) {
-                    item { Text(stringResource(R.string.receipt_items_empty)) }
-                } else {
-                    items(savedReceipt.items, key = { it.position }) { receiptItem ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            Text(
-                                text = receiptItem.name,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(text = receiptItem.amount)
-                        }
-                        HorizontalDivider()
+            }
+            LazyColumn(
+                Modifier.fillMaxSize().headerFade(c.background),
+                contentPadding =
+                    PaddingValues(
+                        start = GohoSpacing.screenMargin,
+                        end = GohoSpacing.screenMargin,
+                        bottom = GohoSpacing.detailBottom,
+                    ),
+            ) {
+                item("hero") {
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = GohoSpacing.textInsetFromMargin)
+                            .padding(top = GohoSpacing.contentGap),
+                        verticalArrangement = Arrangement.spacedBy(GohoSpacing.detailHeroGap),
+                    ) {
+                        Text(
+                            merchant,
+                            style = GohoTheme.type.rowTitle,
+                            color = c.textSecondary,
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        Text(
+                            buildAnnotatedString {
+                                if (prefix.isNotEmpty())
+                                    withStyle(
+                                        GohoTheme.type.currencyPrefix
+                                            .copy(color = c.textTertiary)
+                                            .toSpanStyle()
+                                    ) {
+                                        append("$prefix ")
+                                    }
+                                append(amount)
+                            },
+                            style = GohoTheme.type.display,
+                            color = c.textPrimary,
+                        )
+                        Text(fullDate, style = GohoTheme.type.meta, color = c.textTertiary)
                     }
                 }
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ReceiptAmountRow(
-                            label = stringResource(R.string.receipt_subtotal),
-                            amount = savedReceipt.subtotal,
+                item("photo") {
+                    Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
+                        ReceiptDetailPhoto(image, imageLoading)
+                    }
+                }
+                item("details") {
+                    DetailSectionHeading(stringResource(R.string.receipt_details_section))
+                    ReceiptCard {
+                        rows.forEachIndexed { index, (label, value) ->
+                            if (index > 0) ReceiptDetailDivider()
+                            ReceiptDetailRow(label, value, stacked)
+                        }
+                    }
+                }
+                // Keep the existing item and totals content available during the layout rollout.
+                item("items-heading") {
+                    DetailSectionHeading(stringResource(R.string.receipt_items_title))
+                }
+                if (saved.items.isEmpty())
+                    item("items-empty") {
+                        Text(
+                            stringResource(R.string.receipt_items_empty),
+                            style = GohoTheme.type.meta,
+                            color = c.textSecondary,
+                            modifier =
+                                Modifier.padding(horizontal = GohoSpacing.textInsetFromMargin),
                         )
-                        ReceiptAmountRow(
-                            label = stringResource(R.string.receipt_tax),
-                            amount = savedReceipt.tax,
+                    }
+                else
+                    items(saved.items, key = { "item:${it.position}" }) { item ->
+                        Column(
+                            Modifier.padding(
+                                horizontal = GohoSpacing.textInsetFromMargin,
+                                vertical = GohoSpacing.detailRowVertical,
+                            )
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(GohoSpacing.contentGap),
+                            ) {
+                                Text(
+                                    item.name,
+                                    Modifier.weight(1f),
+                                    style = GohoTheme.type.listRow,
+                                    color = c.textPrimary,
+                                )
+                                Text(
+                                    item.amount,
+                                    style = GohoTheme.type.listValue,
+                                    color = c.textPrimary,
+                                )
+                            }
+                        }
+                    }
+                item("totals") {
+                    Column(Modifier.padding(top = GohoSpacing.contentGap)) {
+                        ReceiptDetailRow(
+                            stringResource(R.string.receipt_subtotal),
+                            saved.subtotal,
+                            stacked,
                         )
-                        ReceiptAmountRow(
-                            label = stringResource(R.string.receipt_total),
-                            amount =
-                                listOfNotNull(savedReceipt.total, savedReceipt.currency)
-                                    .joinToString(" "),
-                            prominent = true,
-                        )
+                        ReceiptDetailRow(stringResource(R.string.receipt_tax), saved.tax, stacked)
+                        ReceiptDetailRow(stringResource(R.string.receipt_total), total, stacked)
                     }
                 }
             }
@@ -178,15 +244,17 @@ fun ReceiptDetailScreen(
 }
 
 @Composable
-private fun ReceiptAmountRow(label: String, amount: String, prominent: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        val style =
-            if (prominent) MaterialTheme.typography.titleMedium
-            else MaterialTheme.typography.bodyLarge
-        Text(text = label, style = style)
-        Text(text = amount, style = style)
-    }
+private fun DetailSectionHeading(text: String) {
+    Text(
+        text,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            Modifier.padding(
+                    start = GohoSpacing.textInsetFromMargin,
+                    top = GohoSpacing.sectionTop,
+                    bottom = GohoSpacing.sectionLabelBottom,
+                )
+                .semantics { heading() },
+    )
 }

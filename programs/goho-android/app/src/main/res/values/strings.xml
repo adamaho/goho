@@ -50,4 +50,12 @@
     <string name="upload_busy">Uploading…</string>
     <string name="scan_preview_unavailable">Preview unavailable</string>
     <string name="receipts_title">Receipts</string>
+    <string name="receipt_details_section">Details</string>
+    <string name="receipt_merchant">Merchant</string>
+    <string name="receipt_date">Date</string>
+    <string name="receipt_category">Category</string>
+    <string name="receipt_currency">Currency</string>
+    <string name="receipt_detail_loading">Loading receipt…</string>
+    <string name="receipt_photo_loading">Loading photo…</string>
+    <string name="receipt_photo_missing">No receipt photo available</string>
 </resources>
