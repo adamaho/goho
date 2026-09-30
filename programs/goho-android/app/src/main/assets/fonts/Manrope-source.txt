@@ -1,0 +1,6 @@
+Manrope by Mikhail Sharanda and Mirko Velimirovic.
+Source: https://raw.githubusercontent.com/google/fonts/b31870aff700ab7a1d74fa0c6887d95beb9e0037/ofl/manrope/Manrope%5Bwght%5D.ttf
+License: SIL Open Font License 1.1 (OFL-Manrope.txt).
+Static weights 500, 600, and 700 instantiated with fontTools 4.66.1
+using instantiateVariableFont(font, {"wght": weight}, inplace=True).
+Static fonts support the app minimum of Android API 24.

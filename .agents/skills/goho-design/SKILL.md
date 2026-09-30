@@ -26,6 +26,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, and a read-only details screen for processed receipts with an expandable photo.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
+
 - Search
 - Editing receipt details, categories or notes
 - Sharing or exporting

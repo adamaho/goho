@@ -1,51 +1,89 @@
 package com.adamaho.goho.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme =
-    darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
+private val LocalGohoColors = staticCompositionLocalOf { GohoLightColors }
 
-private val LightColorScheme =
-    lightColorScheme(
-        primary = Purple40,
-        secondary = PurpleGrey40,
-        tertiary = Pink40,
+object GohoTheme {
+    val colors: GohoColors
+        @Composable get() = LocalGohoColors.current
 
-        /* Other default colors to override
-        background = Color(0xFFFFFBFE),
-        surface = Color(0xFFFFFBFE),
-        onPrimary = Color.White,
-        onSecondary = Color.White,
-        onTertiary = Color.White,
-        onBackground = Color(0xFF1C1B1F),
-        onSurface = Color(0xFF1C1B1F),
-        */
-    )
+    val type: GohoTypography
+        get() = GohoType
+}
 
 @Composable
-fun GohoTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit,
-) {
-    val colorScheme =
-        when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                val context = LocalContext.current
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            }
-            darkTheme -> DarkColorScheme
-            else -> LightColorScheme
-        }
-
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+fun GohoTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val colors = if (darkTheme) GohoDarkColors else GohoLightColors
+    CompositionLocalProvider(LocalGohoColors provides colors) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) GohoDarkColorScheme else GohoLightColorScheme,
+            typography = GohoMaterialTypography,
+            shapes = GohoMaterialShapes,
+            content = content,
+        )
+    }
 }
+
+private fun GohoColors.materialColorScheme() =
+    (if (isDark) darkColorScheme() else lightColorScheme()).copy(
+        primary = accent,
+        onPrimary = onAccent,
+        primaryContainer = accentContainer,
+        onPrimaryContainer = onAccentContainer,
+        inversePrimary = if (isDark) GohoLightColors.accent else GohoDarkColors.accent,
+        secondary = accent,
+        onSecondary = onAccent,
+        secondaryContainer = accentContainer,
+        onSecondaryContainer = onAccentContainer,
+        tertiary = attention,
+        onTertiary = onAccent,
+        tertiaryContainer = attentionContainer,
+        onTertiaryContainer = attention,
+        background = background,
+        onBackground = textPrimary,
+        surface = surface,
+        onSurface = textPrimary,
+        surfaceVariant = surfaceMuted,
+        onSurfaceVariant = textSecondary,
+        surfaceTint = Color.Transparent,
+        inverseSurface = if (isDark) GohoLightColors.surface else GohoDarkColors.surface,
+        inverseOnSurface = if (isDark) GohoLightColors.textPrimary else GohoDarkColors.textPrimary,
+        error = attention,
+        onError = onAccent,
+        errorContainer = attentionContainer,
+        onErrorContainer = attention,
+        outline = textTertiary,
+        outlineVariant = divider,
+        scrim = Color.Black,
+        surfaceBright = segmentSelected,
+        surfaceDim = background,
+        surfaceContainerLowest = background,
+        surfaceContainerLow = surface,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surfaceMuted,
+        surfaceContainerHighest = segmentSelected,
+        // Fixed roles keep the same colors across both system themes.
+        primaryFixed = GohoLightColors.accentContainer,
+        primaryFixedDim = GohoDarkColors.accent,
+        onPrimaryFixed = GohoDarkColors.onAccent,
+        onPrimaryFixedVariant = GohoLightColors.onAccentContainer,
+        secondaryFixed = GohoLightColors.accentContainer,
+        secondaryFixedDim = GohoDarkColors.accent,
+        onSecondaryFixed = GohoDarkColors.onAccent,
+        onSecondaryFixedVariant = GohoLightColors.onAccentContainer,
+        tertiaryFixed = GohoLightColors.attentionContainer,
+        tertiaryFixedDim = GohoDarkColors.attention,
+        onTertiaryFixed = GohoLightColors.textPrimary,
+        onTertiaryFixedVariant = GohoLightColors.textPrimary,
+    )
+
+private val GohoLightColorScheme = GohoLightColors.materialColorScheme()
+private val GohoDarkColorScheme = GohoDarkColors.materialColorScheme()
