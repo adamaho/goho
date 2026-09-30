@@ -2,7 +2,6 @@ package com.adamaho.goho.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -15,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -94,16 +94,17 @@ private fun FilterSegment(
     val selection by
         animateFloatAsState(
             if (selected) 1f else 0f,
-            if (reduced) snap() else tween(GohoMotion.SEGMENT_MILLIS),
+            if (reduced) snap() else GohoMotion.filterSelection,
             label = "Filter selection",
         )
     val press = progress.coerceIn(0f, 1f)
+    val colorProgress = selection.coerceIn(0f, 1f)
     // Keep the surface opaque throughout the transition so the shadow cannot show through it.
-    val fill = lerp(lerp(c.background, c.segmentSelected, selection), c.surfacePressed, press)
-    val elevation = GohoSpacing.hairline * selection * (1f - press)
+    val fill = lerp(lerp(c.background, c.segmentSelected, colorProgress), c.surfacePressed, press)
+    val elevation = GohoSpacing.hairline * colorProgress * (1f - press)
     CompositionLocalProvider(
         androidx.compose.material3.LocalContentColor provides
-            lerp(c.textSecondary, c.textPrimary, selection)
+            lerp(c.textSecondary, c.textPrimary, colorProgress)
     ) {
         // The visible tab is compact; its surrounding space remains tappable.
         Box(
@@ -120,29 +121,41 @@ private fun FilterSegment(
                 .padding(vertical = GohoSpacing.filterTouchInset),
             contentAlignment = Alignment.Center,
         ) {
-            Row(
-                Modifier.shadow(
-                        elevation,
-                        GohoShapes.pill,
-                        ambientColor = c.shadow,
-                        spotColor = c.shadow,
-                    )
-                    .clip(GohoShapes.pill)
-                    .background(fill)
-                    .then(
-                        if (c.isDark)
-                            Modifier.topHighlight(Color.White.copy(alpha = 0.06f * selection))
-                        else Modifier
-                    )
-                    .heightIn(min = GohoSpacing.filterVisualHeight)
-                    .padding(
-                        horizontal = GohoSpacing.segmentHorizontal,
-                        vertical = GohoSpacing.filterPadding,
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(GohoSpacing.segmentCountGap),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
+            Box {
+                // Only the fill springs; the label and touch target keep their size and position.
+                Box(
+                    Modifier.matchParentSize()
+                        .graphicsLayer {
+                            scaleX = 1f - GohoMotion.FILTER_FILL_WIDTH_REVEAL * (1f - selection)
+                            scaleY = 1f - GohoMotion.FILTER_FILL_HEIGHT_REVEAL * (1f - selection)
+                        }
+                        .shadow(
+                            elevation,
+                            GohoShapes.pill,
+                            ambientColor = c.shadow,
+                            spotColor = c.shadow,
+                        )
+                        .clip(GohoShapes.pill)
+                        .background(fill)
+                        .then(
+                            if (c.isDark)
+                                Modifier.topHighlight(
+                                    Color.White.copy(alpha = 0.06f * colorProgress)
+                                )
+                            else Modifier
+                        )
+                )
+                Row(
+                    Modifier.heightIn(min = GohoSpacing.filterVisualHeight)
+                        .padding(
+                            horizontal = GohoSpacing.segmentHorizontal,
+                            vertical = GohoSpacing.filterPadding,
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(GohoSpacing.segmentCountGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content,
+                )
+            }
         }
     }
 }

@@ -96,7 +96,7 @@ The top highlight is a 1dp line drawn inside the clipped shape at the top edge, 
 ## Motion
 
 - **Press:** progress `p` goes 0→1 with `tween(90ms)` on press and back with `spring(dampingRatio = 0.55f, stiffness = 700f)` on release (the overshoot gives the friendly bounce). Scale = 1 − 0.03·p, translationY = 1dp·p, shadow and fill interpolate with p clamped to 0..1.
-- **Filter switch:** selected tab fill, shadow and text color ease together over 240ms. Keep the fill opaque throughout the fade; reduced motion switches immediately.
+- **Filter switch:** selected tab fill expands from 86% width and 90% height with `spring(dampingRatio = 0.6f, stiffness = 240f)`. Only the fill grows and gently overshoots; label geometry and touch targets stay fixed. Clamp selection progress for colors and elevation, keep the surface opaque, and switch immediately with reduced motion.
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Reduced motion:** when the animator duration scale is 0, shimmer is static and the press has no spring overshoot.
