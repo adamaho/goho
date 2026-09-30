@@ -51,4 +51,6 @@
     <string name="date_last_week">Last week</string>
     <string name="date_unknown">Date unavailable</string>
     <string name="date_just_now">Just now</string>
+    <string name="receipts_filter_all">All</string>
+    <string name="receipts_attention_empty">Nothing needs attention</string>
 </resources>

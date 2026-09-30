@@ -38,5 +38,11 @@ object GohoSpacing {
     val pressedElevation = 0.5.dp
     val iconStroke = 2.dp
     val compactWidth = 360.dp
+    val filterTop = 16.dp
+    val filterPadding = 3.dp
+    val filterGap = 2.dp
+    val segmentHorizontal = 14.dp
+    val segmentCountGap = 7.dp
+    val badgeSize = 20.dp
     val amountMaxWidth = 148.dp
 }

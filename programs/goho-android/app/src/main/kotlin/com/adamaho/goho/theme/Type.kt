@@ -29,6 +29,7 @@ data class GohoTypography(
     val listValue: TextStyle,
     val meta: TextStyle,
     val section: TextStyle,
+    val segment: TextStyle,
     val label: TextStyle,
 )
 
@@ -90,6 +91,13 @@ val GohoType =
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 fontFeatureSettings = TNUM,
+            ),
+        segment =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
             ),
         section =
             TextStyle(

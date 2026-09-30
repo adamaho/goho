@@ -138,3 +138,9 @@ internal fun receiptUploadInstant(value: String): Instant? = runCatching {
     OffsetDateTime.parse(normalized).toInstant()
 }
     .getOrNull()
+
+fun filterReceiptEntries(
+    entries: List<ReceiptListEntry>,
+    attentionOnly: Boolean,
+): List<ReceiptListEntry> =
+    if (attentionOnly) entries.filter { it.status == ReceiptListStatus.NotProcessed } else entries
