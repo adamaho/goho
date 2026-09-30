@@ -149,12 +149,13 @@ class MainActivity : ComponentActivity() {
                                         NavEntry(route) {
                                             ReceiptOverview(
                                                 state = overviewState,
-                                                serverStatus = serverStatus,
-                                                uploadStatus = uploadStatus,
                                                 isOpeningScanner = isOpeningScanner,
                                                 scanError = scanError,
                                                 onScanClick = ::openScanner,
-                                                onRetryServerClick = ::checkServer,
+                                                onRetryClick = {
+                                                    checkServer()
+                                                    refreshHistory()
+                                                },
                                                 onReceiptClick = {
                                                     backStack.add(ReceiptDetailRoute(it))
                                                 },
