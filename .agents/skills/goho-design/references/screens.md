@@ -6,8 +6,8 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Wordmark "goho" (`wordmark`, `textPrimary`), inset 4dp, in a 44-tall row. Nothing else in the header.
-- **Segmented filter** 16dp below: "All {count}" and "Needs attention {badge}". Needs attention shows receipts in the Not processed state.
+- Wordmark "goho" (`wordmark`, `textPrimary`), inset 4dp, in a 44-tall row. At the top of the list, the filter sits below this row.
+- **Segmented filter** 16dp below at the top of the list: "All {count}" and "Needs attention {badge}". On upward scroll, move it beside the wordmark and compact it to "All {count}" and "Attention {badge}"; keep its full accessible names. Restore the expanded header when scrolling back to the top. Needs attention shows receipts in the Not processed state.
 
 **List**
 

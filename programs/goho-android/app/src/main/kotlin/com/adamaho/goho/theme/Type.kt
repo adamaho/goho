@@ -24,14 +24,17 @@ data class GohoTypography(
     val display: TextStyle,
     val title: TextStyle,
     val wordmark: TextStyle,
+    val wordmarkCompact: TextStyle,
     val rowTitle: TextStyle,
     val button: TextStyle,
     val buttonSecondary: TextStyle,
     val listRow: TextStyle,
     val listValue: TextStyle,
     val meta: TextStyle,
+    val timestamp: TextStyle,
     val section: TextStyle,
     val segment: TextStyle,
+    val segmentCompact: TextStyle,
     val label: TextStyle,
 )
 
@@ -68,6 +71,32 @@ val GohoType =
                 fontSize = 32.sp,
                 lineHeight = 36.sp,
                 letterSpacing = (-0.045).em,
+            ),
+        wordmarkCompact =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                lineHeight = 28.sp,
+                letterSpacing = (-0.045).em,
+            ),
+        timestamp =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = "'tnum' 0",
+            ),
+        segmentCompact =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = TNUM,
             ),
         rowTitle =
             TextStyle(
@@ -107,6 +136,7 @@ val GohoType =
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
+                letterSpacing = 0.sp,
                 fontFeatureSettings = TNUM,
             ),
         segment =
@@ -115,6 +145,8 @@ val GohoType =
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = TNUM,
             ),
         section =
             TextStyle(

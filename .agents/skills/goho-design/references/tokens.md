@@ -37,7 +37,7 @@ Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on back
 
 ## Typography
 
-Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Every style that can contain a number sets `fontFeatureSettings = "tnum"`.
+Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Amounts, dates and counts use `fontFeatureSettings = "tnum"`. The `timestamp` style disables `tnum` and uses zero tracking to keep times naturally spaced.
 
 | Style      | Size / line height | Weight | Tracking | Use                                                                       |
 | ---------- | ------------------ | ------ | -------- | ------------------------------------------------------------------------- |
@@ -100,3 +100,10 @@ The top highlight is a 1dp line drawn inside the clipped shape at the top edge, 
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Reduced motion:** when the animator duration scale is 0, shimmer is static and the press has no spring overshoot.
+
+## Compact receipt header and timestamps
+
+- `wordmarkCompact`: Manrope 700, 24sp / 28sp, −0.045em tracking.
+- `segmentCompact`: Manrope 600, 12sp / 16sp, zero tracking, tabular counts.
+- `timestamp`: Manrope 500, 13sp / 18sp, zero tracking, normal digit widths (`tnum` disabled). Use only for the time portion of a receipt date label.
+- Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.

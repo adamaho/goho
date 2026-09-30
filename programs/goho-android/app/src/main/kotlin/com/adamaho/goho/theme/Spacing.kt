@@ -52,6 +52,12 @@ object GohoSpacing {
     val filterTop = 16.dp
     val filterPadding = 3.dp
     val filterGap = 2.dp
+    val compactSegmentHorizontal = 8.dp
+    val compactSegmentGap = 4.dp
+    val headerWordmarkGap = 12.dp
+    val placeholderWidth = 20.dp
+    val placeholderHeight = 28.dp
+    val placeholderStroke = 1.5.dp
     val segmentHorizontal = 14.dp
     val segmentCountGap = 7.dp
     val badgeSize = 20.dp

@@ -17,6 +17,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.lerp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.lerp
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import java.text.NumberFormat
@@ -30,8 +36,15 @@ fun ReceiptFilter(
     onSelect: (Boolean) -> Unit,
     locale: Locale,
     modifier: Modifier = Modifier,
+    collapseProgress: Float = 0f,
 ) {
     val c = GohoTheme.colors
+    val style = lerp(GohoTheme.type.segment, GohoTheme.type.segmentCompact, collapseProgress)
+    val allLabel = stringResource(R.string.receipts_filter_all)
+    val attentionLabel = stringResource(R.string.receipts_failed_title)
+    val compactAttentionLabel = stringResource(R.string.receipts_filter_attention_compact)
+    val totalText = NumberFormat.getIntegerInstance(locale).format(total)
+    val attentionText = NumberFormat.getIntegerInstance(locale).format(attention)
     Row(
         modifier
             .clip(GohoShapes.pill)
@@ -41,19 +54,34 @@ fun ReceiptFilter(
         horizontalArrangement = Arrangement.spacedBy(GohoSpacing.filterGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FilterSegment(!attentionOnly, { onSelect(false) }) {
-            Text(stringResource(R.string.receipts_filter_all), style = GohoTheme.type.segment)
+        FilterSegment(
+            !attentionOnly,
+            { onSelect(false) },
+            Modifier,
+            collapseProgress,
+        ) {
+            Text(allLabel, style = style, maxLines = 1)
             Text(
-                NumberFormat.getIntegerInstance(locale).format(total),
-                style = GohoTheme.type.segment,
+                totalText,
+                style = style,
                 color = c.textSecondary,
             )
         }
-        FilterSegment(attentionOnly, { onSelect(true) }, Modifier.weight(1f, fill = false)) {
+        FilterSegment(
+            attentionOnly,
+            { onSelect(true) },
+            Modifier.weight(1f, fill = false),
+            collapseProgress,
+        ) {
             Text(
-                stringResource(R.string.receipts_failed_title),
-                modifier = Modifier.weight(1f, fill = false),
-                style = GohoTheme.type.segment,
+                if (collapseProgress >= 0.5f) compactAttentionLabel else attentionLabel,
+                modifier =
+                    Modifier.weight(1f, fill = false).clearAndSetSemantics {
+                        text = AnnotatedString(attentionLabel)
+                    },
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (attention > 0)
                 Box(
@@ -67,7 +95,7 @@ fun ReceiptFilter(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        NumberFormat.getIntegerInstance(locale).format(attention),
+                        attentionText,
                         style = GohoTheme.type.label,
                         color = c.attention,
                     )
@@ -81,6 +109,7 @@ private fun FilterSegment(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    collapseProgress: Float,
     content: @Composable RowScope.() -> Unit,
 ) {
     val c = GohoTheme.colors
@@ -125,10 +154,22 @@ private fun FilterSegment(
                 )
                 .heightIn(min = GohoSpacing.headerHeight)
                 .padding(
-                    horizontal = GohoSpacing.segmentHorizontal,
+                    horizontal =
+                        lerp(
+                            GohoSpacing.segmentHorizontal,
+                            GohoSpacing.compactSegmentHorizontal,
+                            collapseProgress,
+                        ),
                     vertical = GohoSpacing.filterPadding,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(GohoSpacing.segmentCountGap),
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    lerp(
+                        GohoSpacing.segmentCountGap,
+                        GohoSpacing.compactSegmentGap,
+                        collapseProgress,
+                    )
+                ),
             verticalAlignment = Alignment.CenterVertically,
             content = content,
         )

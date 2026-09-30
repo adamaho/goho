@@ -31,6 +31,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Track: `surfaceMuted`, fully round, 3dp padding, 2dp gap, wraps its content (not full width).
 - Segment: 34 tall, 14 horizontal padding, fully round, text 14sp weight 600.
 - Selected: fill `segmentSelected`, 1dp shadow (plus a 6% top highlight in dark only), text `textPrimary`. Unselected: transparent, text `textSecondary`.
+- While collapsed, use 12sp text, 8dp horizontal segment padding, and 4dp count gaps; keep at least 44dp tap targets. The compact wordmark is 24sp / 28sp.
 - "All" shows its count in `textSecondary` after a 7dp gap. "Needs attention" shows a count badge: min 20×20, fully round, `attentionContainer` fill, `attention` text, `label` style. Hide the badge when the count is 0.
 
 ## GohoStatusPill
@@ -42,7 +43,10 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 - 40×48, shape `thumb` 8, image cropped center, 1dp border in `outline`.
 - Processing: overlay the top 45% with `accent` at 18% and draw a 1.5dp `accent` line at its bottom edge (a static "scan line").
-- No image yet: `surfaceMuted` fill.
+- Missing photo (including manually created receipts): `surfaceMuted` with a centered receipt outline in `textSecondary`.
+- Processing without a photo: `accentContainer` with a receipt outline and scan line in `onAccentContainer`.
+- Failed upload: `attentionContainer` with a receipt outline and attention mark in `attention`.
+- Placeholder icons are decorative; the row and status pill provide the accessible description.
 
 ## ReceiptRow
 

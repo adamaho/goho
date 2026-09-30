@@ -15,7 +15,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 1. **Use the tokens.** Every color, text style, shape, spacing value and motion spec comes from `GohoTheme` (see `assets/compose/GohoTheme.kt`). No hard-coded hex values, dp values or `MaterialTheme.typography` styles in screens.
 2. **One accent, used on purpose.** Jade (`accent`) marks the primary action, the Scan button, the processing state and "Add" chips. Nothing decorative is jade. Attention states use `attention` orange. There is no blue, yellow or red in the UI.
-3. **Numbers are tabular.** Every amount, date and count uses a style with `fontFeatureSettings = "tnum"`.
+3. **Numbers are tabular.** Amounts, dates and counts use tabular figures. Times use the `timestamp` style with normal digit widths and zero tracking so narrow digits do not appear spaced apart.
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
 6. **No ripples.** Press feedback is the Goho press: scale to 97%, move down 1dp, shadow drops, fill darkens, spring back on release. Use `indication = null` plus the press modifier. Never a sunken or inset-shadow pressed state.
@@ -52,8 +52,9 @@ If a task seems to need one of these, stop and ask instead of inventing UI.
 
 Preserve these refinements when adapting the reference code or older mockups:
 
-- Keep the fixed 12dp gap below the filter and the 12dp fade from the header background to transparent over the top of the scrolling list.
+- Collapse the filter beside the wordmark while scrolling up, reducing both text sizes and horizontal padding. Keep 44dp filter tap targets, both counts, a 12dp gap below the header, and the 12dp top fade. Expand again when scrolling back to the top.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
+- Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
 - Center status text inside its pill container, with a minimum height that can grow for larger text. Keep the filter count badge centered too.
 
 ## Definition of done
