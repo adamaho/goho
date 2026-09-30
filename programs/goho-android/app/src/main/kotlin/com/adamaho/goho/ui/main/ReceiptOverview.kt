@@ -135,7 +135,7 @@ fun ReceiptOverview(
                             Text(
                                 sectionTitle(section.group, locale, today.year),
                                 style = GohoTheme.type.section,
-                                color = c.textSecondary,
+                                color = c.textTertiary,
                                 modifier =
                                     Modifier.padding(
                                             start = GohoSpacing.textInsetFromMargin,
@@ -246,7 +246,6 @@ private fun ReceiptRow(
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val progress by pressProgress(interaction)
     val title =
         entry.merchant
             ?: stringResource(
@@ -283,13 +282,12 @@ private fun ReceiptRow(
         } else date
     val clickable =
         entry.receiptId?.let { id ->
-            Modifier.gohoPress { progress }
-                .clickable(
-                    interaction,
-                    indication = null,
-                    role = Role.Button,
-                    onClick = { onReceiptClick(id) },
-                )
+            Modifier.clickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                onClick = { onReceiptClick(id) },
+            )
         } ?: Modifier
     Row(
         Modifier.fillMaxWidth()
