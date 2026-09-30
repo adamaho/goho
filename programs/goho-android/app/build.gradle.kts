@@ -92,7 +92,6 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.play.services.mlkit.document.scanner)
 
-    testImplementation(libs.junit)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
