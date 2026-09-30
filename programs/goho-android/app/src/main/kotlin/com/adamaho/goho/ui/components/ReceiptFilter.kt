@@ -1,6 +1,6 @@
 package com.adamaho.goho.ui.components
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,24 +91,19 @@ private fun FilterSegment(
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val reduced = rememberReducedMotion()
-    val fill by
-        animateColorAsState(
-            if (selected) c.segmentSelected else Color.Transparent,
+    val selection by
+        animateFloatAsState(
+            if (selected) 1f else 0f,
             if (reduced) snap() else tween(GohoMotion.SEGMENT_MILLIS),
             label = "Filter selection",
         )
-    val shadow =
-        if (selected)
-            Modifier.shadow(
-                GohoSpacing.hairline,
-                GohoShapes.pill,
-                ambientColor = c.shadow,
-                spotColor = c.shadow,
-            )
-        else Modifier
+    val press = progress.coerceIn(0f, 1f)
+    // Keep the surface opaque throughout the transition so the shadow cannot show through it.
+    val fill = lerp(lerp(c.background, c.segmentSelected, selection), c.surfacePressed, press)
+    val elevation = GohoSpacing.hairline * selection * (1f - press)
     CompositionLocalProvider(
         androidx.compose.material3.LocalContentColor provides
-            if (selected) c.textPrimary else c.textSecondary
+            lerp(c.textSecondary, c.textPrimary, selection)
     ) {
         // The visible tab is compact; its surrounding space remains tappable.
         Box(
@@ -125,12 +121,17 @@ private fun FilterSegment(
             contentAlignment = Alignment.Center,
         ) {
             Row(
-                Modifier.then(shadow)
+                Modifier.shadow(
+                        elevation,
+                        GohoShapes.pill,
+                        ambientColor = c.shadow,
+                        spotColor = c.shadow,
+                    )
                     .clip(GohoShapes.pill)
                     .background(fill)
                     .then(
-                        if (selected && c.isDark)
-                            Modifier.topHighlight(Color.White.copy(alpha = 0.06f))
+                        if (c.isDark)
+                            Modifier.topHighlight(Color.White.copy(alpha = 0.06f * selection))
                         else Modifier
                     )
                     .heightIn(min = GohoSpacing.filterVisualHeight)
