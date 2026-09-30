@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.res.stringResource
@@ -68,23 +69,27 @@ fun ReceiptStatusPill(processing: Boolean) {
     val c = GohoTheme.colors
     val fg = if (processing) c.onAccentContainer else c.attention
     val bg = if (processing) c.accentContainer else c.attentionContainer
-    Text(
-        stringResource(
-            if (processing) R.string.receipt_reading else R.string.receipt_not_processed
-        ),
+    Box(
         modifier =
             Modifier.heightIn(min = GohoSpacing.pillHeight)
                 .clip(GohoShapes.pill)
                 .background(bg)
                 .padding(horizontal = GohoSpacing.pillHorizontal),
-        style =
-            if (processing)
-                GohoTheme.type.label.copy(
-                    brush = shimmerBrush(fg, lerpColor(fg, c.accentShimmer, 0.15f))
-                )
-            else GohoTheme.type.label,
-        color = if (processing) Color.Unspecified else fg,
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            stringResource(
+                if (processing) R.string.receipt_reading else R.string.receipt_not_processed
+            ),
+            style =
+                if (processing)
+                    GohoTheme.type.label.copy(
+                        brush = shimmerBrush(fg, lerpColor(fg, c.accentShimmer, 0.15f))
+                    )
+                else GohoTheme.type.label,
+            color = if (processing) Color.Unspecified else fg,
+        )
+    }
 }
 
 @Composable
@@ -183,4 +188,15 @@ fun BottomScrim(modifier: Modifier = Modifier) {
                 )
             )
     )
+}
+
+/** Soften the fixed header edge without changing list layout or intercepting gestures. */
+fun Modifier.headerFade(background: Color): Modifier = drawWithCache {
+    val height = GohoSpacing.headerFadeHeight.toPx().coerceAtMost(size.height)
+    val brush =
+        Brush.verticalGradient(listOf(background, background.copy(alpha = 0f)), endY = height)
+    onDrawWithContent {
+        drawContent()
+        drawRect(brush, size = Size(size.width, height))
+    }
 }

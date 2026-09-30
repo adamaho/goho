@@ -78,7 +78,16 @@ private fun ListPreview(state: ReceiptOverviewState) {
                     }
                 }
             }
-        ReceiptOverview(state, false, null, {}, {}, {}, previewTime = previewTime)
+        ReceiptOverview(
+            state,
+            false,
+            null,
+            {},
+            {},
+            {},
+            loadReceiptImage = { null },
+            previewTime = previewTime,
+        )
     }
 }
 

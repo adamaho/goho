@@ -3,14 +3,15 @@ package com.adamaho.goho.ui.main
 import android.text.format.DateFormat
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +47,7 @@ fun ReceiptOverview(
     onScanClick: () -> Unit,
     onRetryClick: () -> Unit,
     onReceiptClick: (String) -> Unit,
+    loadReceiptImage: suspend (String) -> ByteArray?,
     modifier: Modifier = Modifier,
     previewTime: Instant? = null,
 ) {
@@ -65,7 +67,14 @@ fun ReceiptOverview(
         remember(state.receipts, state.uploads, zone) {
             receiptListEntries(state.receipts, state.uploads, zone)
         }
-    val sections = remember(entries, today, locale) { receiptListSections(entries, today, locale) }
+    var attentionOnly by rememberSaveable { mutableStateOf(false) }
+    val filtered = remember(entries, attentionOnly) { filterReceiptEntries(entries, attentionOnly) }
+    val sections =
+        remember(filtered, today, locale) { receiptListSections(filtered, today, locale) }
+    val currentLoadImage by rememberUpdatedState(loadReceiptImage)
+    val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }
+    val listState = rememberLazyListState()
+    LaunchedEffect(attentionOnly) { listState.scrollToItem(0) }
     val c = GohoTheme.colors
     Box(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
         Column(Modifier.fillMaxSize()) {
@@ -82,8 +91,19 @@ fun ReceiptOverview(
                     color = c.textPrimary,
                 )
             }
+            if (entries.isNotEmpty())
+                ReceiptFilter(
+                    entries.size,
+                    entries.count { it.status == ReceiptListStatus.NotProcessed },
+                    attentionOnly,
+                    { attentionOnly = it },
+                    locale,
+                    Modifier.padding(horizontal = GohoSpacing.screenMargin)
+                        .padding(top = GohoSpacing.filterTop, bottom = GohoSpacing.contentGap),
+                )
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                modifier = Modifier.fillMaxSize().headerFade(c.background),
                 contentPadding =
                     PaddingValues(
                         start = GohoSpacing.screenMargin,
@@ -102,10 +122,10 @@ fun ReceiptOverview(
                 scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
                 if (isOpeningScanner)
                     item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
-                if (entries.isEmpty())
+                if (filtered.isEmpty())
                     item("empty") {
                         when {
-                            state.loading || !state.hasLoaded && !state.error ->
+                            !state.hasLoaded && (state.loading || !state.error) ->
                                 ListNotice(stringResource(R.string.receipts_loading))
                             state.hasLoaded && !state.error ->
                                 Column(
@@ -115,14 +135,19 @@ fun ReceiptOverview(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                 ) {
-                                    Text(
-                                        stringResource(R.string.receipts_empty_title),
-                                        style = GohoTheme.type.rowTitle,
-                                        color = c.textPrimary,
-                                    )
+                                    if (!attentionOnly || entries.isEmpty())
+                                        Text(
+                                            stringResource(R.string.receipts_empty_title),
+                                            style = GohoTheme.type.rowTitle,
+                                            color = c.textPrimary,
+                                        )
                                     Spacer(Modifier.height(GohoSpacing.sectionLabelBottom))
                                     Text(
-                                        stringResource(R.string.receipts_empty_body),
+                                        stringResource(
+                                            if (attentionOnly && entries.isNotEmpty())
+                                                R.string.receipts_attention_empty
+                                            else R.string.receipts_empty_body
+                                        ),
                                         style = GohoTheme.type.meta,
                                         color = c.textTertiary,
                                     )
@@ -156,6 +181,7 @@ fun ReceiptOverview(
                                                 config.screenWidthDp <
                                                     GohoSpacing.compactWidth.value,
                                             onReceiptClick,
+                                            thumbnails,
                                         )
                                         if (index < section.entries.lastIndex) ReceiptDivider()
                                     }
@@ -242,6 +268,7 @@ private fun ReceiptRow(
     zone: ZoneId,
     expanded: Boolean,
     onReceiptClick: (String) -> Unit,
+    thumbnails: ReceiptThumbnails,
 ) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -299,12 +326,7 @@ private fun ReceiptRow(
         horizontalArrangement = Arrangement.spacedBy(GohoSpacing.thumbToText),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)
-                .clip(GohoShapes.thumb)
-                .background(c.surfaceMuted)
-                .border(GohoSpacing.hairline, c.outline, GohoShapes.thumb)
-        )
+        ReceiptThumbnail(entry.receiptId, thumbnails)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(GohoSpacing.lineGap),

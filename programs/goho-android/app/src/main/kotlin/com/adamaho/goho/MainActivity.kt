@@ -149,6 +149,7 @@ class MainActivity : ComponentActivity() {
                                         NavEntry(route) {
                                             ReceiptOverview(
                                                 state = overviewState,
+                                                loadReceiptImage = ::loadReceiptImage,
                                                 isOpeningScanner = isOpeningScanner,
                                                 scanError = scanError,
                                                 onScanClick = ::openScanner,
