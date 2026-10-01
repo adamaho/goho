@@ -5,7 +5,7 @@ Shared TypeScript configurations for this Turborepo.
 ## Exports
 
 - `@goho/tool-tsconfig/base`: strict baseline compiler defaults.
-- `@goho/tool-tsconfig/service`: NodeNext defaults and Effect diagnostics for services.
+- `@goho/tool-tsconfig/program`: NodeNext defaults and Effect diagnostics for programs.
 - `@goho/tool-tsconfig/app-vite`: bundler and React defaults for Vite workspaces.
 
 ## Usage in a workspace package
@@ -24,7 +24,7 @@ Shared TypeScript configurations for this Turborepo.
 
 ```json
 {
-  "extends": "@goho/tool-tsconfig/service",
+  "extends": "@goho/tool-tsconfig/program",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"
@@ -32,3 +32,10 @@ Shared TypeScript configurations for this Turborepo.
   "include": ["src/**/*.ts"]
 }
 ```
+
+## Effect API stability
+
+The program configuration inherits Effect diagnostics from
+`@adamaho/nopeus-tsconfig/effect`, which disables `unstableApiUsage` while retaining
+the remaining diagnostics. Goho uses Effect's HTTP, SQL, AI, and persistence APIs,
+which retain `@stability unstable` annotations in Effect 4.0.

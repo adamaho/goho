@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { Multipart } from "effect/unstable/http";
+import { Multipart } from "effect/http";
 import {
   HttpApi,
   HttpApiEndpoint,
@@ -7,7 +7,7 @@ import {
   HttpApiGroup,
   HttpApiSchema,
   OpenApi,
-} from "effect/unstable/httpapi";
+} from "effect/http-api";
 
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "./receipts.ts";

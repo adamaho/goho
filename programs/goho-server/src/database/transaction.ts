@@ -1,5 +1,5 @@
 import { Context, Effect, identity, Layer, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 /**
  * The database could not begin, commit, or roll back a transaction.

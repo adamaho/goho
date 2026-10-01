@@ -7,7 +7,7 @@ receipt schemas and types are re-exported so consumers only need this package.
 ```ts
 import { make } from "@goho/goho-server-client/client";
 import { Effect } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 
 const listReceipts = Effect.gen(function* () {
   const client = yield* make("http://127.0.0.1:3000");

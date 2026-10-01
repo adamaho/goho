@@ -3,7 +3,7 @@ import {
   type ReceiptUploadContentType,
 } from "@goho/goho-server-client/receipt-uploads";
 import { Console, Effect, FileSystem, Path } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";

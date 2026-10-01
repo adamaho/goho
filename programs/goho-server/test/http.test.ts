@@ -4,8 +4,8 @@ import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
 import { Array, Effect, Layer } from "effect";
-import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
-import { HttpApiError } from "effect/unstable/httpapi";
+import { HttpBody, HttpClient, HttpRouter } from "effect/http";
+import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import * as Transaction from "#src/database/transaction.ts";

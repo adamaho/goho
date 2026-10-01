@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, type Schema } from "effect";
-import { AiError, LanguageModel, type Prompt } from "effect/unstable/ai";
+import { AiError, LanguageModel, type Prompt } from "effect/ai";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Models

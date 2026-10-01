@@ -5,7 +5,7 @@ import {
   type ReceiptId,
 } from "@goho/goho-api/receipts";
 import { Array, BigDecimal, Context, Effect, Layer, Option } from "effect";
-import { HttpApiError } from "effect/unstable/httpapi";
+import { HttpApiError } from "effect/http-api";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";

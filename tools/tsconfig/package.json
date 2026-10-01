@@ -8,7 +8,7 @@
   },
   "exports": {
     "./base": "./src/base.json",
-    "./service": "./src/service.json",
+    "./program": "./src/program.json",
     "./app-vite": "./src/app-vite.json"
   },
   "scripts": {

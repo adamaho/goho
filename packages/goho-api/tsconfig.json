@@ -1,5 +1,5 @@
 {
-  "extends": "@goho/tool-tsconfig/service",
+  "extends": "@goho/tool-tsconfig/program",
   "compilerOptions": {
     "rootDir": "src"
   },

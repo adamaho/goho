@@ -1,7 +1,7 @@
 import { NodeHttpServer, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Effect, Layer, Ref, Schema } from "effect";
-import { HttpServer, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
+import { HttpServer, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
 import { receipt } from "#test/fixtures/receipt.ts";
