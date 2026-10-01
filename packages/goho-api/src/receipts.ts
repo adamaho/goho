@@ -78,10 +78,10 @@ const ReceiptFields = {
   subtotal: DecimalString.annotateKey({ description: "Amount before tax.", examples: ["10.25"] }),
   tax: DecimalString.annotateKey({ description: "Tax amount.", examples: ["0.75"] }),
   total: DecimalString.annotateKey({ description: "Final receipt total.", examples: ["11"] }),
-  currency: Schema.NullOr(Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/))).annotate({
+  currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)).annotate({
     description:
-      "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
-    examples: ["USD", null],
+      "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
+    examples: ["CAD", "USD"],
   }),
 };
 

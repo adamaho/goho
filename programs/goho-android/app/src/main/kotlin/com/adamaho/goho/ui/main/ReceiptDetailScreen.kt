@@ -118,14 +118,14 @@ fun ReceiptDetailScreen(
                 date?.format(
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
                 ) ?: saved.receiptDate.ifBlank { "—" }
-            val code = saved.currency?.takeIf { it.isNotBlank() }
-            val currency = code?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
+            val code = saved.currency
+            val currency = runCatching { Currency.getInstance(code) }.getOrNull()
             // There is no home-currency setting in the API; use the phone locale for presentation.
             val homeCurrency = runCatching { Currency.getInstance(locale).currencyCode }.getOrNull()
-            val foreign = code != null && code != homeCurrency
-            val prefix = currency?.getSymbol(locale) ?: code.orEmpty()
+            val foreign = code != homeCurrency
+            val prefix = currency?.getSymbol(locale) ?: code
             val amount = receiptAmount(saved.total, locale)
-            fun withCurrency(value: String) = if (prefix.isEmpty()) value else "$prefix $value"
+            fun withCurrency(value: String) = "$prefix $value"
             val total = withCurrency(amount)
             val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
             val rows = buildList {
@@ -145,7 +145,7 @@ fun ReceiptDetailScreen(
                 if (foreign)
                     add(
                         stringResource(R.string.receipt_currency) to
-                            (currency?.getDisplayName(locale) ?: code.orEmpty())
+                            (currency?.getDisplayName(locale) ?: code)
                     )
             }
             LazyColumn(
@@ -172,18 +172,16 @@ fun ReceiptDetailScreen(
                         )
                         Text(
                             buildAnnotatedString {
-                                if (prefix.isNotEmpty())
-                                    withStyle(
-                                        (if (foreign) GohoTheme.type.currencyPrefix
-                                            else GohoTheme.type.display)
-                                            .copy(
-                                                color =
-                                                    if (foreign) c.textTertiary else c.textPrimary
-                                            )
-                                            .toSpanStyle()
-                                    ) {
-                                        append(prefix)
-                                    }
+                                withStyle(
+                                    (if (foreign) GohoTheme.type.currencyPrefix
+                                        else GohoTheme.type.display)
+                                        .copy(
+                                            color = if (foreign) c.textTertiary else c.textPrimary
+                                        )
+                                        .toSpanStyle()
+                                ) {
+                                    append(prefix)
+                                }
                                 append(amount)
                             },
                             style = GohoTheme.type.display,

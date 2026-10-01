@@ -12,6 +12,8 @@ const systemPrompt = `Extract the receipt into the required structured receipt o
 - Apply item-specific adjustments before expanding quantities. When a quantity line shows a combined price, divide the adjusted total evenly across the expanded item entries so their prices sum to the adjusted line total.
 - Infer one transaction category from the purchased items.
 - Format the receipt date as YYYY-MM-DD.
+- Return transaction.currency as a required uppercase three-letter currency code (for example CAD, USD, or EUR), never null or omitted.
+- Identify the currency from explicit codes or symbols and the store's location. A bare $ symbol alone does not establish USD. Use CAD when the receipt provides no clues that identify another currency.
 - Return all prices, subtotal, tax, and total as numeric values without currency symbols.
 - Preserve monetary values exactly as displayed on the receipt; do not convert currencies.
 - Ignore payment methods, loyalty identifiers, and unrelated barcodes unless they are needed to identify the store or receipt date.`;

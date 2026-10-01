@@ -757,17 +757,10 @@
             ]
           },
           "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Z]{3}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
-            "examples": ["USD", null]
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
+            "examples": ["CAD", "USD"]
           },
           "items": {
             "type": "array",
@@ -903,17 +896,10 @@
             ]
           },
           "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Z]{3}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Three-letter currency code, or null when nobody knows, bud. Codes are not checked against a registry.",
-            "examples": ["USD", null]
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
+            "examples": ["CAD", "USD"]
           },
           "items": {
             "type": "array",

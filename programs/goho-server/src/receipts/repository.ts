@@ -56,7 +56,7 @@ const ReceiptRow = Schema.Struct({
   subtotal: DecimalString,
   tax: DecimalString,
   total: DecimalString,
-  currency: Schema.NullOr(Schema.String),
+  currency: Schema.String,
 });
 
 const ItemRow = Schema.Struct({
@@ -122,7 +122,7 @@ export const layer = Layer.effect(
         subtotal: DecimalString,
         tax: DecimalString,
         total: DecimalString,
-        currency: Schema.NullOr(Schema.String),
+        currency: ReceiptSchema.fields.currency,
       }),
       Result: IdRow,
       execute: (receipt) => sql`

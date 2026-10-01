@@ -20,7 +20,7 @@ const createPayload = CreateReceiptRequest.make({
   subtotal: "10.25",
   tax: "0.75",
   total: "11",
-  currency: null,
+  currency: "CAD",
   items: [{ name: "Apples", amount: "11" }],
 });
 
@@ -254,6 +254,16 @@ it.effect("returns HTTP 500 without exposing private repository failure details"
   ),
 );
 
+it.effect("rejects missing, null, and malformed currency at the HTTP boundary", () =>
+  Effect.gen(function* () {
+    for (const currency of [undefined, null, "", "cad", "CA", "CAD "]) {
+      const body = yield* HttpBody.json({ ...createPayload, currency });
+      const response = yield* HttpClient.post("/receipts", { body });
+      expect(response.status).toBe(400);
+    }
+  }).pipe(Effect.provide(TestLive)),
+);
+
 it.effect("rejects invalid receipt data at the HTTP boundary", () =>
   Effect.gen(function* () {
     for (const payload of [
@@ -264,7 +274,7 @@ it.effect("rejects invalid receipt data at the HTTP boundary", () =>
         subtotal: "10.25",
         tax: "0.75",
         total: "11",
-        currency: null,
+        currency: "CAD",
         items: [{ name: "Apples", amount: "11" }],
       },
       {
@@ -274,7 +284,7 @@ it.effect("rejects invalid receipt data at the HTTP boundary", () =>
         subtotal: "10.25",
         tax: "0.75",
         total: "11",
-        currency: null,
+        currency: "CAD",
         items: [],
       },
     ]) {
