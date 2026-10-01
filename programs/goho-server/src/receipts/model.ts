@@ -1,4 +1,4 @@
-import { CalendarDate, type CreateReceiptRequest, DecimalString } from "@goho/goho-api/receipts";
+import { CalendarDate, CreateReceiptRequest, DecimalString } from "@goho/goho-api/receipts";
 import { Array, Schema } from "effect";
 
 import { NonEmptyText } from "#src/schema.ts";
@@ -15,6 +15,7 @@ export const ParsedReceipt = Schema.Struct({
   }),
   date: CalendarDate,
   transaction: Schema.Struct({
+    currency: CreateReceiptRequest.fields.currency,
     items: Schema.NonEmptyArray(
       Schema.Struct({
         name: NonEmptyText,
@@ -42,11 +43,10 @@ export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> 
  * @category constants
  * @since 0.1.0
  */
-export const extractionVersion = 1;
+export const extractionVersion = 2;
 
 /**
  * Converts a validated extraction into receipt data without rounding amounts.
- * Defaults to CAD because the current extraction contract does not supply currency.
  *
  * @category models
  * @since 0.1.0
@@ -58,7 +58,7 @@ export const prepareReceipt = (parsed: ParsedReceipt): CreateReceiptRequest => (
   subtotal: DecimalString.make(String(parsed.transaction.subtotal)),
   tax: DecimalString.make(String(parsed.transaction.tax)),
   total: DecimalString.make(String(parsed.transaction.total)),
-  currency: "CAD",
+  currency: parsed.transaction.currency,
   items: Array.map(parsed.transaction.items, (item) => ({
     name: item.name.replace(/\s+\(\d+\)$/, ""),
     amount: DecimalString.make(String(item.price)),

@@ -10,6 +10,7 @@ export const parsedReceipt = ParsedReceipt.make({
   store: { name: "Example Store" },
   date: "2026-09-01",
   transaction: {
+    currency: "CAD",
     category: "Groceries",
     items: [
       { name: "Apples (2)", price: 0.3333333333333333 },

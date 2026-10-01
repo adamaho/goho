@@ -759,7 +759,7 @@
           "currency": {
             "type": "string",
             "pattern": "^[A-Z]{3}$",
-            "description": "Three-letter currency code for all items and totals. CAD comes off the bench when no currency is supplied. Codes are not checked against a registry.",
+            "description": "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
             "examples": ["CAD", "USD"]
           },
           "items": {
@@ -896,19 +896,10 @@
             ]
           },
           "currency": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Z]{3}$",
-                "description": "Three-letter currency code for all items and totals. CAD comes off the bench when no currency is supplied. Codes are not checked against a registry.",
-                "examples": ["CAD", "USD"]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Three-letter currency code for all items and totals, or null to use CAD, bud. Codes are not checked against a registry.",
-            "examples": ["CAD", "USD", null]
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "description": "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
+            "examples": ["CAD", "USD"]
           },
           "items": {
             "type": "array",

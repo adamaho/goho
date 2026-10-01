@@ -9,7 +9,7 @@ import { expect } from "vitest";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
-import type { ReceiptUpload } from "#src/receipt-uploads/model.ts";
+import type { ReceiptExtraction, ReceiptUpload } from "#src/receipt-uploads/model.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
@@ -28,6 +28,7 @@ const upload: ReceiptUpload = {
 };
 
 const dependencies = (options: {
+  readonly currency?: string;
   readonly insertReceipt?: ReceiptRepository.Interface["insert"];
   readonly storageGet?: FileStorage.Interface["get"];
   readonly markProcessing?: ReceiptUploadRepository.Interface["markProcessing"];
@@ -43,7 +44,10 @@ const dependencies = (options: {
     }),
     Layer.succeed(Ai.Service, {
       generateObject: ({ schema }) =>
-        Schema.decodeUnknownEffect(schema)(parsedReceipt).pipe(Effect.orDie),
+        Schema.decodeUnknownEffect(schema)({
+          ...parsedReceipt,
+          transaction: { ...parsedReceipt.transaction, currency: options.currency ?? "CAD" },
+        }).pipe(Effect.orDie),
     }),
     Layer.succeed(ReceiptRepository.Service, {
       findById: () => Effect.succeedNone,
@@ -69,22 +73,34 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
   Effect.gen(function* () {
     const succeeded = yield* Ref.make<ReadonlyArray<string>>([]);
     const receipts = yield* Ref.make<ReadonlyArray<CreateReceiptRequest>>([]);
+    const extractions = yield* Ref.make<ReadonlyArray<ReceiptExtraction>>([]);
     yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
       Effect.provide(
         dependencies({
+          currency: "USD",
           insertReceipt: (receipt) =>
             Ref.update(receipts, (values) => [...values, receipt]).pipe(
               Effect.as(ReceiptId.make("42")),
             ),
-          markSucceeded: (uploadId, receiptId) =>
+          markSucceeded: (uploadId, receiptId, extraction) =>
             Ref.update(succeeded, (values) => [...values, `${uploadId}:${receiptId}`]).pipe(
+              Effect.andThen(Ref.update(extractions, (values) => [...values, extraction])),
               Effect.as({ ...upload, status: "succeeded", receiptId }),
             ),
         }),
       ),
     );
     expect(yield* Ref.get(succeeded)).toEqual([`${upload.id}:42`]);
-    expect((yield* Ref.get(receipts)).map((receipt) => receipt.currency)).toEqual(["CAD"]);
+    expect((yield* Ref.get(receipts)).map((receipt) => receipt.currency)).toEqual(["USD"]);
+    expect(yield* Ref.get(extractions)).toEqual([
+      {
+        version: 2,
+        payload: {
+          ...parsedReceipt,
+          transaction: { ...parsedReceipt.transaction, currency: "USD" },
+        },
+      },
+    ]);
   }),
 );
 

@@ -26,7 +26,7 @@ const receiptInput = CreateReceiptRequest.make({
   subtotal: "10.250",
   tax: "7.5e-1",
   total: "11.00",
-  currency: null,
+  currency: "CAD",
   items: [
     { name: "Apples", amount: "12.00" },
     { name: "Adjustment", amount: "-1.0" },
@@ -221,13 +221,13 @@ it.effect("backfills missing currency to CAD and preserves explicit currencies a
   ),
 );
 
-it.effect("defaults null currency to CAD and preserves explicit currency on receipt creation", () =>
+it.effect("preserves the required currency on receipt creation", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
-    for (const currency of [null, "CAD", "USD", "XYZ"]) {
+    for (const currency of ["CAD", "USD", "XYZ"]) {
       const id = yield* repo.insert({ ...receiptInput, currency });
       const saved = Option.getOrThrow(yield* repo.findById(id));
-      expect(saved.currency).toBe(currency ?? "CAD");
+      expect(saved.currency).toBe(currency);
       expect((yield* repo.list).find((entry) => entry.id === id)).toEqual(saved);
     }
   }).pipe(Effect.provide(DatabaseLive)),
@@ -243,7 +243,9 @@ it.effect("returns an empty receipt list", () =>
 it.effect("moves extraction results onto uploads and drops receipt source metadata", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const payload = JSON.stringify(parsedReceipt);
+    const { currency: _, ...transaction } = parsedReceipt.transaction;
+    const legacyParsedReceipt = { ...parsedReceipt, transaction };
+    const payload = JSON.stringify(legacyParsedReceipt);
     const [uploaded] = yield* sql`
       INSERT INTO receipts (
         source_provider, source_file_id, source_file_name, store_name, receipt_date,
@@ -275,7 +277,7 @@ it.effect("moves extraction results onto uploads and drops receipt source metada
     expect(
       yield* sql`SELECT receipt_id::text AS receipt_id, extraction_version, extracted_payload FROM receipt_uploads`,
     ).toEqual([
-      { receipt_id: uploaded!.id, extraction_version: 1, extracted_payload: parsedReceipt },
+      { receipt_id: uploaded!.id, extraction_version: 1, extracted_payload: legacyParsedReceipt },
     ]);
     expect(yield* sql`SELECT store_name FROM receipts ORDER BY id`).toEqual([
       { store_name: "Uploaded Store" },

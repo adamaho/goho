@@ -80,7 +80,7 @@ const ReceiptFields = {
   total: DecimalString.annotateKey({ description: "Final receipt total.", examples: ["11"] }),
   currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)).annotate({
     description:
-      "Three-letter currency code for all items and totals. CAD comes off the bench when no currency is supplied. Codes are not checked against a registry.",
+      "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
     examples: ["CAD", "USD"],
   }),
 };
@@ -110,11 +110,6 @@ const ReceiptItemInput = Schema.Struct({
  */
 export const CreateReceiptRequest = Schema.Struct({
   ...ReceiptFields,
-  currency: Schema.NullOr(ReceiptFields.currency).annotate({
-    description:
-      "Three-letter currency code for all items and totals, or null to use CAD, bud. Codes are not checked against a registry.",
-    examples: ["CAD", "USD", null],
-  }),
   items: Schema.NonEmptyArray(ReceiptItemInput).annotate({
     description: "Line items in receipt order.",
   }),

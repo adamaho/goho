@@ -38,7 +38,7 @@ import com.squareup.moshi.JsonClass
  * @param subtotal Amount before tax.
  * @param tax Tax amount.
  * @param total Final receipt total.
- * @param currency Three-letter currency code for all items and totals. CAD comes off the bench when no currency is supplied. Codes are not checked against a registry.
+ * @param currency Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.
  * @param items Items lined up by ascending position.
  */
 
@@ -73,7 +73,7 @@ data class Receipt (
     @Json(name = "total")
     val total: kotlin.String,
 
-    /* Three-letter currency code for all items and totals. CAD comes off the bench when no currency is supplied. Codes are not checked against a registry. */
+    /* Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry. */
     @Json(name = "currency")
     val currency: kotlin.String,
 

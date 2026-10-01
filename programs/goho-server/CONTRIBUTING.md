@@ -76,8 +76,11 @@ total, currency, and creation time. `receipt_items` stores ordered item
 names and amounts, linked to a receipt. Dates use `date`, creation times use
 `timestamptz`, and amounts use `numeric` without two-decimal rounding. Currency
 applies to every item and total and defaults to CAD. The migration backfills
-existing null currencies and makes the column non-null. Scanned receipts use CAD;
-API-created receipts accept an explicit currency or null to use CAD. See [receipt creation](./README.md#create-a-receipt).
+existing null currencies and makes the column non-null. Both API creation and
+GPT extraction require an explicit three-letter currency code; null and missing
+currency are rejected. Extraction preserves the receipt's currency and uses CAD
+when the receipt gives no clues identifying another currency. Extraction version 2
+records this required field. See [receipt creation](./README.md#create-a-receipt).
 
 `receipt_uploads` links each processed upload to its receipt and records the
 extraction version and validated extraction JSON once the upload succeeds.

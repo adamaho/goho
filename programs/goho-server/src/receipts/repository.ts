@@ -122,7 +122,7 @@ export const layer = Layer.effect(
         subtotal: DecimalString,
         tax: DecimalString,
         total: DecimalString,
-        currency: Schema.NullOr(Schema.String),
+        currency: ReceiptSchema.fields.currency,
       }),
       Result: IdRow,
       execute: (receipt) => sql`
@@ -130,7 +130,7 @@ export const layer = Layer.effect(
           store_name, receipt_date, category, subtotal, tax, total, currency
         ) VALUES (
           ${receipt.storeName}, ${receipt.receiptDate}, ${receipt.category},
-          ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency ?? "CAD"}
+          ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency}
         ) RETURNING id
       `,
     });
