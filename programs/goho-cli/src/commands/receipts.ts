@@ -1,6 +1,6 @@
 import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/unstable/cli";
+import { Argument, Command } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";

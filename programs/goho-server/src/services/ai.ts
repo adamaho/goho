@@ -1,7 +1,7 @@
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai";
 import { Ai } from "@goho/core";
 import { Config, Effect, Layer } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 
 const OpenAiClientLive = OpenAiClient.layerConfig({
   apiKey: Config.Redacted("OPENAI_API_KEY"),

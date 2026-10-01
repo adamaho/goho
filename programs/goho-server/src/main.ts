@@ -8,7 +8,7 @@ import {
   NodeRuntime,
 } from "@effect/platform-node";
 import { Config, Layer, Schema } from "effect";
-import { HttpRouter } from "effect/unstable/http";
+import { HttpRouter } from "effect/http";
 
 import * as Database from "./database/client.ts";
 import * as Transaction from "./database/transaction.ts";

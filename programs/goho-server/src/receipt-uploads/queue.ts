@@ -1,6 +1,6 @@
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { Context, Effect, Layer, Schedule, Schema } from "effect";
-import { PersistedQueue } from "effect/unstable/persistence";
+import { PersistedQueue } from "effect/persistence";
 
 import * as QueueConstants from "#src/queues/constants.ts";
 

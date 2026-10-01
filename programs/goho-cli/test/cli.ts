@@ -5,8 +5,8 @@ import {
   HttpServerRequest,
   HttpServerResponse,
   type HttpServerResponse as HttpServerResponseType,
-} from "effect/unstable/http";
-import { ChildProcess } from "effect/unstable/process";
+} from "effect/http";
+import { ChildProcess } from "effect/process";
 
 /**
  * Captured output from one CLI process.

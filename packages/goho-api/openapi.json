@@ -646,20 +646,20 @@
         "responses": {
           "200": {
             "description": "Success",
-            "headers": {
-              "cache-control": {
-                "schema": {
-                  "type": "string"
-                },
-                "required": true
-              }
-            },
             "content": {
               "application/octet-stream": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
+              }
+            },
+            "headers": {
+              "cache-control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
               }
             }
           },
@@ -691,30 +691,6 @@
   },
   "components": {
     "schemas": {
-      "HealthData": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["ok"],
-            "description": "The server's bench status."
-          }
-        },
-        "required": ["status"],
-        "additionalProperties": false,
-        "description": "Whether the server is awake for the shift.",
-        "examples": [
-          {
-            "status": "ok"
-          }
-        ]
-      },
-      "ReceiptId": {
-        "type": "string",
-        "pattern": "^[1-9]\\d{0,18}$",
-        "description": "The receipt's positive number on the roster, bud.",
-        "examples": ["42"]
-      },
       "effect_HttpApiError_InternalServerErrorEncoded": {
         "type": "object",
         "properties": {
@@ -725,77 +701,6 @@
         },
         "required": ["_tag"],
         "additionalProperties": false
-      },
-      "effect_HttpApiError_NotFoundEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["NotFound"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
-      "effect_HttpApiError_ConflictEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["Conflict"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
-      "CalendarDate": {
-        "type": "string",
-        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-        "description": "A real calendar date in YYYY-MM-DD format, from year 0100 through 9999.",
-        "examples": ["2026-09-13"]
-      },
-      "DecimalString": {
-        "type": "string",
-        "pattern": "^-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-        "description": "An exact decimal kept as text so no precision gets lost in the shuffle.",
-        "examples": ["10.25", "-1.50", "1e2", "1E2"]
-      },
-      "ReceiptItem": {
-        "type": "object",
-        "properties": {
-          "position": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Zero-based spot in the receipt lineup.",
-            "examples": [0]
-          },
-          "name": {
-            "type": "string",
-            "description": "Item name on the receipt.",
-            "examples": ["Apples"]
-          },
-          "amount": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DecimalString"
-              },
-              {
-                "description": "Item amount; negative adjustments can suit up too.",
-                "examples": ["10.25"]
-              }
-            ]
-          }
-        },
-        "required": ["position", "name", "amount"],
-        "additionalProperties": false,
-        "description": "A saved receipt line item in its original slot.",
-        "examples": [
-          {
-            "position": 0,
-            "name": "Apples",
-            "amount": "10.25"
-          }
-        ]
       },
       "Receipt": {
         "type": "object",
@@ -916,9 +821,15 @@
           }
         ]
       },
-      "ReceiptItemInput": {
+      "ReceiptItem": {
         "type": "object",
         "properties": {
+          "position": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based spot in the receipt lineup.",
+            "examples": [0]
+          },
           "name": {
             "type": "string",
             "description": "Item name on the receipt.",
@@ -936,15 +847,34 @@
             ]
           }
         },
-        "required": ["name", "amount"],
+        "required": ["position", "name", "amount"],
         "additionalProperties": false,
-        "description": "One receipt line item; repeat names are fair game.",
+        "description": "A saved receipt line item in its original slot.",
         "examples": [
           {
+            "position": 0,
             "name": "Apples",
             "amount": "10.25"
           }
         ]
+      },
+      "DecimalString": {
+        "type": "string",
+        "pattern": "^-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+        "description": "An exact decimal kept as text so no precision gets lost in the shuffle.",
+        "examples": ["10.25", "-1.50", "1e2", "1E2"]
+      },
+      "CalendarDate": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "description": "A real calendar date in YYYY-MM-DD format, from year 0100 through 9999.",
+        "examples": ["2026-09-13"]
+      },
+      "ReceiptId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The receipt's positive number on the roster, bud.",
+        "examples": ["42"]
       },
       "CreateReceiptRequest": {
         "type": "object",
@@ -1049,6 +979,76 @@
                 "amount": "10.25"
               }
             ]
+          }
+        ]
+      },
+      "ReceiptItemInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Item name on the receipt.",
+            "examples": ["Apples"]
+          },
+          "amount": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DecimalString"
+              },
+              {
+                "description": "Item amount; negative adjustments can suit up too.",
+                "examples": ["10.25"]
+              }
+            ]
+          }
+        },
+        "required": ["name", "amount"],
+        "additionalProperties": false,
+        "description": "One receipt line item; repeat names are fair game.",
+        "examples": [
+          {
+            "name": "Apples",
+            "amount": "10.25"
+          }
+        ]
+      },
+      "effect_HttpApiError_NotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["NotFound"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_ConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["Conflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "HealthData": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "The server's bench status."
+          }
+        },
+        "required": ["status"],
+        "additionalProperties": false,
+        "description": "Whether the server is awake for the shift.",
+        "examples": [
+          {
+            "status": "ok"
           }
         ]
       }

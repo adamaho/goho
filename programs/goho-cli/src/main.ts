@@ -2,7 +2,7 @@
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect } from "effect";
-import { Command } from "effect/unstable/cli";
+import { Command } from "effect/cli";
 
 import { receiptsCommand } from "./commands/receipts.ts";
 import * as GohoServer from "./goho-server.ts";

@@ -4,7 +4,7 @@ import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
 import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";

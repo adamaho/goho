@@ -1,5 +1,5 @@
 import { api } from "@goho/goho-api/api";
-import { HttpApiClient } from "effect/unstable/httpapi";
+import { HttpApiClient } from "effect/http-api";
 
 /**
  * Derives the Goho client from its HTTP API contract.

@@ -7,6 +7,27 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnostics": true,
+        "ignoreEffectErrorsInTscExitCode": false,
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "returnEffectInGen": "error",
+          "effectInVoidSuccess": "error",
+          "lazyPromiseInEffectSync": "error",
+          "promiseInEffectSuccess": "error",
+          "schemaSyncInEffect": "error",
+          "leakingRequirements": "error",
+          "floatingEffectInVitest": "error",
+          "lazyEffect": "error",
+          "preferSucceedSomeOrNone": "error",
+          "unnecessaryTypeofType": "error",
+          "unstableApiUsage": "off"
+        }
+      }
+    ]
   }
 }

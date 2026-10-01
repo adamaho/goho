@@ -1,5 +1,5 @@
 import { Layer } from "effect";
-import { Toolkit } from "effect/unstable/ai";
+import { Toolkit } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 

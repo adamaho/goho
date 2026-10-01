@@ -78,7 +78,7 @@ const ReceiptFields = {
   subtotal: DecimalString.annotateKey({ description: "Amount before tax.", examples: ["10.25"] }),
   tax: DecimalString.annotateKey({ description: "Tax amount.", examples: ["0.75"] }),
   total: DecimalString.annotateKey({ description: "Final receipt total.", examples: ["11"] }),
-  currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/)).annotate({
+  currency: Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/u)).annotate({
     description:
       "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
     examples: ["CAD", "USD"],
@@ -145,7 +145,7 @@ export interface CreateReceiptRequest extends Schema.Schema.Type<typeof CreateRe
  * @category models
  * @since 0.1.0
  */
-export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/))
+export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u))
   .annotate({
     identifier: "ReceiptId",
     description: "The receipt's positive number on the roster, bud.",

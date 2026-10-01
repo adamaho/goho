@@ -1,12 +1,7 @@
 import { api } from "@goho/goho-api/api";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
-import {
-  HttpApiBuilder,
-  HttpApiError,
-  HttpApiSchema,
-  HttpApiSwagger,
-} from "effect/unstable/httpapi";
+import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
 
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";

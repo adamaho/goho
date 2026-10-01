@@ -1,6 +1,6 @@
 import * as Client from "@goho/goho-server-client/client";
 import { Config, Context, Effect, Layer } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 
 type ClientShape = Effect.Success<ReturnType<typeof Client.make>>;
 

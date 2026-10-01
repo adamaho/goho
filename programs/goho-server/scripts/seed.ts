@@ -2,7 +2,7 @@ import { NodeRuntime } from "@effect/platform-node";
 import { make } from "@goho/goho-server-client/client";
 import type { CreateReceiptRequest } from "@goho/goho-server-client/receipts";
 import { Config, Console, Effect } from "effect";
-import { FetchHttpClient } from "effect/unstable/http";
+import { FetchHttpClient } from "effect/http";
 
 const receipts: ReadonlyArray<CreateReceiptRequest> = [
   {

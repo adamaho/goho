@@ -32,3 +32,14 @@ Shared TypeScript configurations for this Turborepo.
   "include": ["src/**/*.ts"]
 }
 ```
+
+## Effect API stability
+
+The service configuration permits Effect's `@stability unstable` APIs because
+Goho already depends on its HTTP, SQL, AI, and persistence modules. Effect 4.0
+retains these annotations even though the core package is stable.
+
+Only `unstableApiUsage` is disabled. The remaining Effect diagnostics, including
+the error severities from `@adamaho/nopeus-tsconfig/effect`, remain enabled. Those
+plugin options are repeated locally because TypeScript replaces the inherited
+`plugins` array; keep them aligned when updating the upstream configuration.

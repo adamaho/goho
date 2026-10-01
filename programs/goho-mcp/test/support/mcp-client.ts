@@ -1,5 +1,5 @@
 import { Effect, Path, Queue, Schema, Stream } from "effect";
-import { ChildProcess } from "effect/unstable/process";
+import { ChildProcess } from "effect/process";
 import { expect } from "vitest";
 
 const RpcResponse = Schema.fromJsonString(

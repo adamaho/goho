@@ -1,7 +1,7 @@
 import { PgClient } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Config, Effect, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
 import * as Postgres from "#src/database/postgres.ts";

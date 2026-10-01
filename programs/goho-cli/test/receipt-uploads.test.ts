@@ -1,6 +1,6 @@
 import { NodeServices } from "@effect/platform-node";
 import { Effect, FileSystem, Path, Stream } from "effect";
-import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/unstable/http";
+import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import { runCommand, withJsonResponse, withResponse } from "./cli.ts";

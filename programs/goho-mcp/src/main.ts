@@ -1,6 +1,6 @@
 import { NodeRuntime, NodeStdio } from "@effect/platform-node";
 import { Layer } from "effect";
-import { McpProtocol, McpServer } from "effect/unstable/ai";
+import { McpProtocol, McpServer } from "effect/ai";
 
 import * as GohoTools from "./tools/index.ts";
 

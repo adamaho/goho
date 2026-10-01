@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 /** Receipt currency applies to every item and total; preserve explicit currencies. */
 export default Effect.gen(function* () {

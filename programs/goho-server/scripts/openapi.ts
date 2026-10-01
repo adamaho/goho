@@ -1,7 +1,7 @@
 import { NodeFileSystem, NodePath, NodeRuntime } from "@effect/platform-node";
 import { api } from "@goho/goho-api/api";
 import { Effect, FileSystem, Layer, Path, Schema } from "effect";
-import { OpenApi } from "effect/unstable/httpapi";
+import { OpenApi } from "effect/http-api";
 import { format } from "oxfmt";
 
 class OpenApiCommandError extends Schema.TaggedError<OpenApiCommandError>()(

@@ -1,6 +1,6 @@
 import { Receipt, ReceiptId } from "@goho/goho-server-client/receipts";
 import { Effect, Schema } from "effect";
-import { Tool } from "effect/unstable/ai";
+import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
