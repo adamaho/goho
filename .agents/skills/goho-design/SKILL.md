@@ -60,7 +60,7 @@ Preserve these refinements when adapting the reference code or older mockups:
 
 ## Approved receipt-details refinements
 
-- Follow the updated layout: hero, photo, Items card when nonempty, then Details.
+- Follow the updated layout: hero, photo, Items card when nonempty, then Details. Show only the “Items” heading; omit the item count.
 - Put Total at the bottom of Items and omit a second Total in Details. With no items, put Total in Details. Keep the server-provided category, Subtotal and Tax in Details as requested.
 - Item names wrap up to two lines at normal text sizes; allow more space for larger text. Amounts use exactly two decimals with no per-item currency symbols.
 - Use the receipt currency; fall back to its code if it is not registered, and never assume a currency when the server returns null. Use the phone locale to choose local versus foreign presentation.

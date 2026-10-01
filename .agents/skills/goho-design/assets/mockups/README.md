@@ -14,4 +14,4 @@ Rendered from the Goho design canvas at 2x (824×1784 for phone screens).
 
 The "Reading receipt…" shimmer and the amount skeleton are captured mid-animation as static frames. The mockups are visual references only; when a mockup and `references/*.md` disagree, the written spec wins.
 
-Approved app refinements: tap the details photo to open the viewer without an expand button; keep the app portrait-only. The landscape mockup is retained as reference only.
+Approved app refinements: tap the details photo to open the viewer without an expand button; keep the app portrait-only; omit the item count beside the Items heading. The landscape mockup is retained as reference only.

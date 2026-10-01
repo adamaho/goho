@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.buildAnnotatedString
@@ -200,14 +199,7 @@ fun ReceiptDetailScreen(
                 }
                 if (saved.items.isNotEmpty()) {
                     item("items") {
-                        DetailSectionHeading(
-                            stringResource(R.string.receipt_items_title),
-                            pluralStringResource(
-                                R.plurals.receipt_item_count,
-                                saved.items.size,
-                                saved.items.size,
-                            ),
-                        )
+                        DetailSectionHeading(stringResource(R.string.receipt_items_title))
                         ReceiptItemsCard(
                             saved.items.sortedBy { it.position },
                             amount,
@@ -236,25 +228,17 @@ fun ReceiptDetailScreen(
 }
 
 @Composable
-private fun DetailSectionHeading(text: String, count: String? = null) {
-    Row(
-        Modifier.fillMaxWidth()
-            .padding(
-                start = GohoSpacing.textInsetFromMargin,
-                end = GohoSpacing.textInsetFromMargin,
-                top = GohoSpacing.sectionTop,
-                bottom = GohoSpacing.sectionLabelBottom,
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text,
-            style = GohoTheme.type.section,
-            color = GohoTheme.colors.textTertiary,
-            modifier = Modifier.semantics { heading() },
-        )
-        if (count != null)
-            Text(count, style = GohoTheme.type.meta, color = GohoTheme.colors.textTertiary)
-    }
+private fun DetailSectionHeading(text: String) {
+    Text(
+        text,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            Modifier.padding(
+                    start = GohoSpacing.textInsetFromMargin,
+                    top = GohoSpacing.sectionTop,
+                    bottom = GohoSpacing.sectionLabelBottom,
+                )
+                .semantics { heading() },
+    )
 }

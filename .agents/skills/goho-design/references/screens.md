@@ -38,7 +38,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 **Items** (24 below the photo; only when the receipt has line items):
 
-- Header row inset to `textInset`: "Items" (`section`, `textTertiary`) on the left, count on the right ("4 items", "1 item"; `meta`, `textTertiary`). 8dp below it, the ItemsCard.
+- Header inset to `textInset`: "Items" (`section`, `textTertiary`), with no item count. 8dp below it, the ItemsCard.
 - Items appear in receipt order.
 
 **Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
