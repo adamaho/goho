@@ -49,6 +49,17 @@ export class InvalidTransition extends Schema.TaggedError<InvalidTransition>()(
   },
 ) {}
 
+/**
+ * Only failed uploads may be deleted directly.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class DeletionNotAllowed extends Schema.TaggedError<DeletionNotAllowed>()(
+  "GohoServer.ReceiptUploadRepository.DeletionNotAllowed",
+  { uploadId: ReceiptUploadId, currentStatus: ReceiptUploadStatus },
+) {}
+
 type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
 
 /**
@@ -58,6 +69,9 @@ type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
  * @since 0.1.0
  */
 export interface Interface {
+  readonly deleteFailed: (
+    uploadId: ReceiptUploadId,
+  ) => Effect.Effect<FileId, PersistenceError | UploadNotFound | DeletionNotAllowed>;
   readonly list: Effect.Effect<ReadonlyArray<ReceiptUpload>, PersistenceError>;
   readonly createQueued: (
     upload: QueuedReceiptUpload,
@@ -142,6 +156,15 @@ export const layer = Layer.effect(
       execute: (uploadId) => sql`SELECT ${columns} FROM receipt_uploads WHERE id = ${uploadId}`,
     });
 
+    const deleteFailedRow = SqlSchema.findOneOption({
+      Request: ReceiptUploadId,
+      Result: Schema.Struct({ file_id: FileId }),
+      execute: (uploadId) => sql`
+        DELETE FROM receipt_uploads WHERE id = ${uploadId} AND status = 'failed'
+        RETURNING file_id
+      `,
+    });
+
     const selectSucceededByReceiptId = SqlSchema.findOneOption({
       Request: ReceiptId,
       Result: ReceiptUploadRow,
@@ -214,6 +237,17 @@ export const layer = Layer.effect(
       persistenceError("findById"),
     );
 
+    const deleteFailed = Effect.fn("@goho/ReceiptUploadRepository.deleteFailed")(function* (
+      uploadId: ReceiptUploadId,
+    ) {
+      // Guard deletion in SQL so active or successful work cannot lose its upload.
+      const deleted = yield* deleteFailedRow(uploadId).pipe(persistenceError("deleteFailed"));
+      if (Option.isSome(deleted)) return deleted.value.file_id;
+      const current = yield* findById(uploadId);
+      if (Option.isNone(current)) return yield* new UploadNotFound({ uploadId });
+      return yield* new DeletionNotAllowed({ uploadId, currentStatus: current.value.status });
+    });
+
     const findByReceiptId = Effect.fn("@goho/ReceiptUploadRepository.findByReceiptId")(
       (receiptId: ReceiptId) =>
         selectSucceededByReceiptId(receiptId).pipe(Effect.map(Option.map(fromRow))),
@@ -279,6 +313,7 @@ export const layer = Layer.effect(
 
     return Service.of({
       createQueued,
+      deleteFailed,
       findById,
       findByReceiptId,
       list,

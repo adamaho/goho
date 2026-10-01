@@ -2,7 +2,20 @@ import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
-import { Config, Context, Crypto, Effect, Layer, Redacted, Ref, Schema } from "effect";
+import {
+  Config,
+  Context,
+  Crypto,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Redacted,
+  Ref,
+  Result,
+  Schema,
+} from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { expect } from "vitest";
 
@@ -207,4 +220,110 @@ it.live(
       expect(yield* Ref.get(attempts)).toEqual([1, 2, 3]);
     }).pipe(Effect.provide(QueueLive)),
   15_000,
+);
+
+it.effect(
+  "deletes a failed upload and its photo, rolling back when cleanup fails and allowing retry",
+  () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "goho-upload-delete-test-" });
+      const storage = yield* FileStorage.Service.pipe(
+        Effect.provide(FileStorage.layerFileSystem({ directory })),
+      );
+      const repo = yield* ReceiptUploadRepository.Service;
+      let failCleanup = true;
+      const deleted: FileId[] = [];
+      const uploads = yield* ReceiptUploads.Service.pipe(
+        Effect.provide(
+          ReceiptUploads.layer.pipe(
+            Layer.provide([
+              NodeCrypto.layer,
+              QueueLive,
+              RepositoryLive,
+              Transaction.layer.pipe(Layer.provide(DatabaseLive)),
+              Layer.succeed(FileStorage.Service, {
+                ...storage,
+                delete: (fileId) =>
+                  Effect.suspend(() => {
+                    deleted.push(fileId);
+                    return failCleanup
+                      ? Effect.fail(
+                          new FileStorage.StorageError({
+                            operation: "delete",
+                            cause: "private storage details",
+                          }),
+                        )
+                      : storage.delete(fileId);
+                  }),
+              }),
+            ]),
+          ),
+        ),
+      );
+      const created = yield* uploads.create({
+        name: "receipt.png",
+        contentType: "image/png",
+        bytes: new Uint8Array([1, 2, 3]),
+      });
+      for (const status of ["queued", "processing"] as const) {
+        if (status === "processing") yield* repo.markProcessing(created.id);
+        const rejected = yield* uploads.delete(created.id).pipe(Effect.result);
+        expect(Result.isFailure(rejected) && rejected.failure._tag).toBe("Conflict");
+        expect(deleted).toEqual([]);
+      }
+      yield* repo.markFailed(created.id, "processing_failed");
+      const failedUpload = Option.getOrThrow(yield* repo.findById(created.id));
+      const filePath = path.join(directory, failedUpload.fileId);
+      const failure = yield* uploads.delete(created.id).pipe(Effect.result);
+      expect(Result.isFailure(failure) && failure.failure._tag).toBe("InternalServerError");
+      expect(yield* repo.findById(created.id)).toEqual(Option.some(failedUpload));
+      expect(yield* fs.exists(filePath)).toBe(true);
+      failCleanup = false;
+      yield* uploads.delete(created.id);
+      expect(yield* fs.exists(filePath)).toBe(false);
+      expect(yield* repo.findById(created.id)).toEqual(Option.none());
+      expect(yield* uploads.list).toEqual([]);
+      const repeated = yield* uploads.delete(created.id).pipe(Effect.result);
+      expect(Result.isFailure(repeated) && repeated.failure._tag).toBe("NotFound");
+      expect(deleted).toEqual([failedUpload.fileId, failedUpload.fileId]);
+    }).pipe(Effect.provide([RepositoryLive, DatabaseLive, NodeServices.layer])),
+);
+
+const MissingPhotoLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "goho-upload-missing-test-" });
+    const storage = FileStorage.layerFileSystem({ directory }).pipe(
+      Layer.provide(NodeServices.layer),
+    );
+    return ReceiptUploads.layer.pipe(
+      Layer.provideMerge([
+        NodeCrypto.layer,
+        QueueLive,
+        RepositoryLive,
+        storage,
+        Transaction.layer.pipe(Layer.provide(DatabaseLive)),
+      ]),
+    );
+  }),
+).pipe(Layer.provide(NodeServices.layer));
+
+it.effect("deletes a failed upload even when its photo is already missing", () =>
+  Effect.gen(function* () {
+    const uploads = yield* ReceiptUploads.Service;
+    const repo = yield* ReceiptUploadRepository.Service;
+    const created = yield* uploads.create({
+      name: "receipt.png",
+      contentType: "image/png",
+      bytes: new Uint8Array([1]),
+    });
+    yield* repo.markFailed(created.id, "storage_failed");
+    const upload = Option.getOrThrow(yield* repo.findById(created.id));
+    const storage = yield* FileStorage.Service;
+    yield* storage.delete(upload.fileId);
+    yield* uploads.delete(created.id);
+    expect(yield* repo.findById(created.id)).toEqual(Option.none());
+  }).pipe(Effect.provide(MissingPhotoLive)),
 );

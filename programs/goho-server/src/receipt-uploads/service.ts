@@ -35,6 +35,11 @@ export const UploadInput = Schema.Struct({
  */
 export interface UploadInput extends Schema.Schema.Type<typeof UploadInput> {}
 
+const deletionFailed = (error: unknown) =>
+  Effect.logError("Receipt upload deletion failed", error).pipe(
+    Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+  );
+
 const toPublic = (upload: ReceiptUpload): PublicReceiptUpload => ({
   id: upload.id,
   fileName: upload.fileName,
@@ -53,6 +58,12 @@ const toPublic = (upload: ReceiptUpload): PublicReceiptUpload => ({
  * @since 0.1.0
  */
 export interface Interface {
+  readonly delete: (
+    uploadId: ReceiptUploadId,
+  ) => Effect.Effect<
+    void,
+    HttpApiError.NotFound | HttpApiError.Conflict | HttpApiError.InternalServerError
+  >;
   readonly list: Effect.Effect<
     ReadonlyArray<PublicReceiptUpload>,
     HttpApiError.InternalServerError
@@ -72,7 +83,7 @@ export interface Interface {
 }
 
 /**
- * Creates uploads and retrieves their durable status.
+ * Creates uploads, retrieves their durable status, and deletes failed uploads.
  *
  * @category services
  * @since 0.1.0
@@ -95,6 +106,25 @@ export const layer = Layer.effect(
     const queue = yield* ReceiptUploadQueue.Service;
     const transaction = yield* Transaction.Service;
     const crypto = yield* Crypto.Crypto;
+
+    const deleteUpload = Effect.fn("@goho/ReceiptUploads.deleteUpload")(
+      (uploadId: ReceiptUploadId) =>
+        transaction.run(
+          Effect.gen(function* () {
+            const fileId = yield* repository.deleteFailed(uploadId);
+            yield* storage.delete(fileId);
+          }),
+        ),
+      Effect.catchTags({
+        "GohoServer.ReceiptUploadRepository.UploadNotFound": () =>
+          Effect.fail(new HttpApiError.NotFound()),
+        "GohoServer.ReceiptUploadRepository.DeletionNotAllowed": () =>
+          Effect.fail(new HttpApiError.Conflict()),
+        "GohoServer.ReceiptUploadRepository.PersistenceError": deletionFailed,
+        "GohoServer.FileStorage.StorageError": deletionFailed,
+        "GohoServer.Database.TransactionError": deletionFailed,
+      }),
+    );
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
       function* (input: UploadInput) {
@@ -183,6 +213,6 @@ export const layer = Layer.effect(
       ),
     );
 
-    return Service.of({ create, get, getImage, list });
+    return Service.of({ create, delete: deleteUpload, get, getImage, list });
   }),
 );

@@ -100,6 +100,29 @@ export const api = HttpApi.make("goho-server")
           ),
       )
       .add(
+        HttpApiEndpoint.delete("delete", "/receipt-uploads/:uploadId", {
+          params: { uploadId: ReceiptUploadId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.NotFound.annotate({
+              description: "No receipt upload is wearing that number, bud.",
+            }),
+            HttpApiError.Conflict.annotate({
+              description:
+                "Only failed uploads can be deleted; this upload has a different status.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not delete this upload and its stored image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a failed receipt upload")
+          .annotate(
+            OpenApi.Description,
+            "Clears a failed upload and its original image off the bench. Queued, processing, and succeeded uploads return 409; delete the receipt to remove a successful scan.",
+          ),
+      )
+      .add(
         HttpApiEndpoint.get("get", "/receipt-uploads/:uploadId", {
           params: { uploadId: ReceiptUploadId },
           success: DataResponse(ReceiptUpload),
