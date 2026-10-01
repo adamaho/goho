@@ -46,13 +46,17 @@ const DatabaseLive = Layer.effectContext(
     return services;
   }),
 ).pipe(Layer.provide(NodeCrypto.layer));
+
 const QueueLive = ReceiptUploadQueue.layer.pipe(Layer.provideMerge(DatabaseLive));
+
 const RepositoryLive = ReceiptUploadRepository.layer.pipe(Layer.provide(DatabaseLive));
+
 const StorageLive = Layer.succeed(FileStorage.Service, {
   put: () => Effect.succeed(FileId.make("drive-file")),
   get: () => Effect.succeed(new Uint8Array([1])),
   delete: () => Effect.void,
 });
+
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     NodeCrypto.layer,

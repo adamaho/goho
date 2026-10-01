@@ -55,6 +55,7 @@ const QueueLive = Layer.effect(Service, Service.make).pipe(
   Layer.provide(PersistedQueue.layer),
   Layer.provide(StoreLive),
 );
+
 const CleanupLive = PersistedQueue.layerCleanup().pipe(Layer.provide(StoreLive));
 
 /**

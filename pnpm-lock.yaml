@@ -193,11 +193,11 @@ catalogs:
       specifier: 0.5.0
       version: 0.5.0
     '@adamaho/nopeus-oxlint-plugin':
-      specifier: 0.8.0
-      version: 0.8.0
+      specifier: 0.9.0
+      version: 0.9.0
     '@adamaho/nopeus-tsconfig':
-      specifier: 0.3.1
-      version: 0.3.1
+      specifier: 0.3.2
+      version: 0.3.2
     '@effect/ai-openai':
       specifier: 4.0.0
       version: 4.0.0
@@ -269,7 +269,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -311,7 +311,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)(vitest@5.0.3(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)))
@@ -351,7 +351,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -391,7 +391,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@goho/tool-oxfmt-config':
         specifier: workspace:*
         version: link:../../tools/oxfmt-config
@@ -434,7 +434,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)(vitest@5.0.3(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)))
@@ -489,7 +489,7 @@ importers:
         version: 0.5.0(oxlint@1.86.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.8.0(oxlint@1.86.0)
+        version: 0.9.0(oxlint@1.86.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.0(effect@4.0.0)(vitest@5.0.3(@types/node@24.19.0)(vite@8.3.2(@types/node@24.19.0)))
@@ -531,7 +531,7 @@ importers:
     devDependencies:
       '@adamaho/nopeus-tsconfig':
         specifier: 'catalog:'
-        version: 0.3.1
+        version: 0.3.2
       '@effect/tsgo':
         specifier: 'catalog:'
         version: 0.47.2
@@ -550,14 +550,14 @@ packages:
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-oxlint-plugin@0.8.0':
-    resolution: {integrity: sha512-9zUpNmaQIaHOu+YICXyQumwBEySWM73BlZgotgefboeCYNcL2n+922o1V9R9RhSiZoJ5O56Qx0ABaI+/5uozsA==}
+  '@adamaho/nopeus-oxlint-plugin@0.9.0':
+    resolution: {integrity: sha512-BGqbN7USuRKCGblj8+Alr/hZX+CsdZaangoPjwjzBqGC7PyNwuQGBYHTtw1Q+I8nVg0vhIwFeZPDmAn98VelEg==}
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-tsconfig@0.3.1':
-    resolution: {integrity: sha512-mpCNIT+TUFcF9BIF5ln2Qk07vAGoZ/u4vrWLPTfbmE6yGcu6mFCO/3kMDgg8sXnf7n5SBh+h1v/QmisP9Y0SMQ==}
+  '@adamaho/nopeus-tsconfig@0.3.2':
+    resolution: {integrity: sha512-7Jn28uFscKEOBaaJjRAkg6N0SWC54FPzcy86Hf0TT4LnB7D40lsk0EqYpbG+rNSQMa3ECPyLeWO+LerkyA6k3g==}
 
   '@effect/ai-openai@4.0.0':
     resolution: {integrity: sha512-WjLvyFW4urzXkNy+Ki1YQE912yOxMYHps5gbiPfiUDghuHz0hfA+jzprGL8vj4fTwZI56TIwkviKRqfQNwka7w==}
@@ -1003,8 +1003,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxlint/plugins@1.81.0':
-    resolution: {integrity: sha512-HhD8kd3r6XpelZkhxhRty/po8V6yK1VV63Eq4kSsOS2IoHUywG3DV2EX+z/ZHw46aLI74Y6aA604NRiAqLKW9w==}
+  '@oxlint/plugins@1.86.0':
+    resolution: {integrity: sha512-JeAiaaRMyUiUEQHQ7zBsJn1aEdbLyt1HJsOs4XKIIlATNxcvWRrRxneZA+RF4G03cQobq3IhTqSfyLhOFv03qA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@redis/bloom@6.3.0':
@@ -1683,13 +1683,13 @@ snapshots:
     dependencies:
       oxlint: 1.86.0
 
-  '@adamaho/nopeus-oxlint-plugin@0.8.0(oxlint@1.86.0)':
+  '@adamaho/nopeus-oxlint-plugin@0.9.0(oxlint@1.86.0)':
     dependencies:
-      '@oxlint/plugins': 1.81.0
+      '@oxlint/plugins': 1.86.0
       oxc-resolver: 11.24.2
       oxlint: 1.86.0
 
-  '@adamaho/nopeus-tsconfig@0.3.1': {}
+  '@adamaho/nopeus-tsconfig@0.3.2': {}
 
   '@effect/ai-openai@4.0.0(effect@4.0.0)':
     dependencies:
@@ -1963,7 +1963,7 @@ snapshots:
   '@oxlint/binding-win32-x64-msvc@1.86.0':
     optional: true
 
-  '@oxlint/plugins@1.81.0': {}
+  '@oxlint/plugins@1.86.0': {}
 
   '@redis/bloom@6.3.0(@redis/client@6.3.0)':
     dependencies:
