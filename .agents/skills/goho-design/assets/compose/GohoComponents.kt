@@ -664,36 +664,58 @@ fun GohoItemsCard(
 @Composable
 fun GohoPhotoFrame(
     height: Dp,
-    expandIcon: ImageVector,
-    onExpand: () -> Unit,
     modifier: Modifier = Modifier,
-    photo: @Composable BoxScope.() -> Unit, // Image with ContentScale.Fit
+    onOpen: (() -> Unit)? = null, // only a loaded details photo opens the viewer
+    photo: @Composable BoxScope.() -> Unit,
 ) {
     val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
     Box(
-        modifier
-            .fillMaxWidth()
-            .height(height)
+        modifier.fillMaxWidth().height(height)
+            .gohoPressTransform { progress }
+            .then(if (onOpen != null) Modifier.clickable(
+                interactionSource = interaction, indication = null, role = Role.Button,
+                onClickLabel = "View receipt photo", onClick = onOpen,
+            ).semantics { contentDescription = "View receipt photo" } else Modifier)
             .clip(GohoShapes.card)
             .background(Brush.radialGradient(listOf(c.photoWellCenter, c.photoWellEdge))),
         contentAlignment = Alignment.Center,
+        content = photo,
+    )
+}
+
+/** Close button for the photo viewer. Same look in both themes. */
+@Composable
+fun GohoPhotoControlButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 20.dp,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    Box(
+        modifier
+            .gohoPressTransform { progress }
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(c.photoControl)
+            .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        photo()
-        val interaction = remember { MutableInteractionSource() }
-        val progress by pressProgress(interaction)
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .padding(10.dp)
-                .gohoPressTransform { progress }
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(c.photoControl)
-                .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
-                .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onExpand),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(expandIcon, contentDescription = "Expand photo", modifier = Modifier.size(17.dp), tint = Color(0xFFF0EEEB)) // on the dark photo well in both themes
-        }
+        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(iconSize), tint = Color(0xFFF0EEEB))
     }
 }
+
+// Photo viewer: build from references/screens.md section 3. Suggested pieces:
+// - Zoom and pan: Modifier.pointerInput { detectTransformGestures(...) } plus
+//   detectTapGestures(onTap = toggle controls, onDoubleTap = { offset -> animate to 2.5x at offset }),
+//   with scale and offset held in Animatable so springs and the double-tap animation share state.
+// - Swipe to close at fit: detectVerticalDragGestures, mapping drag distance to translationY,
+//   scale (min 0.86 at 300dp) and background alpha (down to 0.55).
+// - Controls: wrap GohoPhotoControlButton in AnimatedVisibility(fadeIn/fadeOut 200ms) driven by the
+//   same flag that shows and hides system bars via WindowInsetsControllerCompat.

@@ -13,6 +13,10 @@ object GohoSpacing {
     val previewMinHeight = 480.dp
     val photoPadding = 24.dp
     val photoElevation = 8.dp
+    val photoCloseIcon = 20.dp
+    val photoCloseTop = 4.dp
+    val photoDismissDistance = 120.dp
+    val photoDragRange = 300.dp
     val previewFooterTop = 16.dp
     val screenMargin = 16.dp
     val textInset = 20.dp

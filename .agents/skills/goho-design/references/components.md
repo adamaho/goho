@@ -24,7 +24,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 ## GohoIconButton (round)
 
-- 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back on the details screen and close in the photo viewer.
+- 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back on the details screen. The photo viewer's close button is a GohoPhotoControlButton.
 
 ## ReceiptFilter
 
@@ -92,8 +92,14 @@ One formatter for every amount in the app (list rows, hero, items, total):
 ## PhotoFrame
 
 - Full width inside the screen margin, shape `card` 20, radial gradient `photoWellCenter` → `photoWellEdge` behind the photo (drawn with `ContentScale.Fit`).
-- Expand button: 44dp circle 10dp from the bottom-right corner, fill `photoControl`, 1dp inner border white 8%, 17dp expand icon in `#F0EEEB`. The frame and button look the same in both themes. Content description "Expand photo".
+- The loaded photo area is the viewer tap target, with a “View receipt photo” accessibility action and Goho press feedback. Do not draw an expand button. Loading and missing photos have no click action.
+
+## GohoPhotoControlButton
+
+- The close button in the photo viewer.
+- 44dp circle, fill `photoControl` (`#1D1B19` at 78%), 1dp inner border white at 8%, 17–20dp icon in `#F0EEEB`. Same look in both themes, because it always sits on a dark well or a photo.
+- Uses the Goho press.
 
 ## Icons
 
-Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Manrope: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, expand `OpenInFull`, scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).
+Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Manrope: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).

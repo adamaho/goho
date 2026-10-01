@@ -1,6 +1,7 @@
 package com.adamaho.goho.theme
 
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -16,4 +17,17 @@ object GohoMotion {
     const val FILTER_FILL_WIDTH_REVEAL = 0.14f
     const val FILTER_FILL_HEIGHT_REVEAL = 0.10f
     const val SHIMMER_MILLIS = 1800
+}
+
+object GohoPhotoMotion {
+    const val MAX_ZOOM = 4f
+    const val DOUBLE_TAP_ZOOM = 2.5f
+    const val MIN_DRAG_SCALE = 0.86f
+    const val MIN_BACKGROUND_ALPHA = 0.55f
+    const val ENTER_SCALE = 0.96f
+    const val DISMISS_VELOCITY_DP = 1000f
+    val zoom: AnimationSpec<Float> = tween(300, easing = FastOutSlowInEasing)
+    val settle: AnimationSpec<Float> = spring(dampingRatio = 0.8f, stiffness = 400f)
+    val visibility: AnimationSpec<Float> = tween(220)
+    val controls: AnimationSpec<Float> = tween(200)
 }

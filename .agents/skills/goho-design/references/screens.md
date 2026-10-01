@@ -34,7 +34,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 - 8dp below: amount in `display`, always two decimals. Foreign currency: prefix "US$" at 28sp in `textTertiary`, 2dp gap, then the number. Missing amount: "—" in `textTertiary`.
 - 8dp below: full date (`meta`, `textTertiary`), for example "Thursday, September 24, 2026".
 
-**Photo** (20 below, `screenMargin` sides): PhotoFrame, 200 tall. Keep it static in the current layout PR; the expand control and viewer are deferred.
+**Photo** (20 below, `screenMargin` sides): PhotoFrame, 200 tall. Tap the loaded photo area to open the viewer; no separate expand button. Expose “View receipt photo” to accessibility. Loading and missing photos are not tappable.
 
 **Items** (24 below the photo; only when the receipt has line items):
 
@@ -49,9 +49,44 @@ The screen scrolls; with items it is usually taller than one screen (about 980dp
 
 No footer and no actions on this screen.
 
-## 3. Photo viewer (future PR)
+## 3. Photo viewer
 
-Always dark, in both themes (wrap it in `GohoTheme(darkTheme = true)`). Full screen, `photoWellEdge` background, photo fitted, pinch to zoom and pan, round close button (GohoIconButton with `Close`) at the top left below the status bar. Back gesture closes it.
+Opened by tapping the photo area on the details screen. Mockups: `photo-viewer.png`, `viewer-zoomed.png`, `viewer-controls-hidden.png`, `viewer-swipe-to-close.png`, `viewer-landscape.png`.
+
+**Look**
+
+- Always dark, in light mode too: wrap the screen in `GohoTheme(darkTheme = true)`.
+- Full screen, edge to edge, background `photoWellEdge`. The photo is drawn with `ContentScale.Fit`, centered, with no frame or rounded corners.
+- One control: a close button (GohoPhotoControlButton with `Icons.Rounded.Close`, content description "Close photo") at the top left, 16dp from the left edge and 4dp below the status bar inset.
+- System bars: transparent with light icons.
+- The photo's content description is "Receipt photo, {merchant}" (or "Receipt photo" when there's no merchant).
+
+**Zoom and pan**
+
+- Scale range: 1× (fit) to 4×. Pinch past 4× resists slightly and settles back to 4×; pinch below 1× settles back to fit with a spring (`dampingRatio = 0.8f`, `stiffness = 400f`).
+- Double-tap: at fit, animates to 2.5× centered on the tap point; when zoomed, animates back to fit. 300ms, `FastOutSlowInEasing`.
+- Pan only when zoomed. The photo's edges can't be dragged inside the screen edges; at the edge, a horizontal fling stops rather than bouncing.
+- Zooming always shows the close button again.
+
+**Tap to hide controls**
+
+- A single tap on the photo toggles the close button and the system bars together (fade 200ms). Wait for the double-tap timeout before treating a tap as a single tap so double-tap doesn't flash the controls.
+- When hidden, the close button stays reachable by TalkBack (keep it in the semantics tree; only its alpha changes), and the back gesture still closes the viewer.
+
+**Swipe down to close** (only at fit)
+
+- Dragging vertically moves the photo with the finger and scales it down to a minimum of 0.86 at 300dp of drag. The background alpha fades from 100% toward 55% so the details screen shows through. Controls hide while dragging.
+- Release past 120dp, or with a downward fling faster than 1,000dp/s: close. Otherwise spring back (`dampingRatio = 0.8f`).
+- When zoomed in, vertical drags pan instead.
+
+**Open and close transition**
+
+- Preferred: a shared-element transition (`SharedTransitionLayout` with `sharedElement` on the photo) from the photo in the details screen's PhotoFrame to the full-screen photo, about 300ms, with the background fading in. Closing reverses it.
+- Acceptable fallback if shared elements are impractical: fade plus scale from 0.96, 220ms.
+
+**Rotation**
+
+- Keep the app portrait-only, including this viewer, as requested. Preserve the landscape mockup as a reference only; do not enable rotation to match it.
 
 ## 4. Scan preview
 
