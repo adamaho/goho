@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.buildAnnotatedString
@@ -35,6 +35,7 @@ fun ReceiptDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var photoOpen by rememberSaveable(receiptId) { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var receipt by remember(receiptId) { mutableStateOf<Receipt?>(null) }
     var loading by remember(receiptId) { mutableStateOf(true) }
@@ -56,7 +57,12 @@ fun ReceiptDetailScreen(
                     val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
                     if (largestDimension <= 0) return@withContext null
                     val sampleSize =
-                        generateSequence(1) { it * 2 }.first { largestDimension / it <= 1600 }
+                        generateSequence(1) { it * 2 }
+                            .first {
+                                largestDimension / it <= 4096 &&
+                                    bounds.outWidth.toLong() * bounds.outHeight / it / it <=
+                                        8_000_000
+                            }
                     val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
                     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
                 }
@@ -188,19 +194,12 @@ fun ReceiptDetailScreen(
                 }
                 item("photo") {
                     Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
-                        ReceiptDetailPhoto(image, imageLoading)
+                        ReceiptDetailPhoto(image, imageLoading) { photoOpen = true }
                     }
                 }
                 if (saved.items.isNotEmpty()) {
                     item("items") {
-                        DetailSectionHeading(
-                            stringResource(R.string.receipt_items_title),
-                            pluralStringResource(
-                                R.plurals.receipt_item_count,
-                                saved.items.size,
-                                saved.items.size,
-                            ),
-                        )
+                        DetailSectionHeading(stringResource(R.string.receipt_items_title))
                         ReceiptItemsCard(
                             saved.items.sortedBy { it.position },
                             amount,
@@ -223,28 +222,23 @@ fun ReceiptDetailScreen(
             }
         }
     }
+    image?.let { photo ->
+        if (photoOpen) ReceiptPhotoViewer(photo, receipt?.storeName.orEmpty()) { photoOpen = false }
+    }
 }
 
 @Composable
-private fun DetailSectionHeading(text: String, count: String? = null) {
-    Row(
-        Modifier.fillMaxWidth()
-            .padding(
-                start = GohoSpacing.textInsetFromMargin,
-                end = GohoSpacing.textInsetFromMargin,
-                top = GohoSpacing.sectionTop,
-                bottom = GohoSpacing.sectionLabelBottom,
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text,
-            style = GohoTheme.type.section,
-            color = GohoTheme.colors.textTertiary,
-            modifier = Modifier.semantics { heading() },
-        )
-        if (count != null)
-            Text(count, style = GohoTheme.type.meta, color = GohoTheme.colors.textTertiary)
-    }
+private fun DetailSectionHeading(text: String) {
+    Text(
+        text,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            Modifier.padding(
+                    start = GohoSpacing.textInsetFromMargin,
+                    top = GohoSpacing.sectionTop,
+                    bottom = GohoSpacing.sectionLabelBottom,
+                )
+                .semantics { heading() },
+    )
 }

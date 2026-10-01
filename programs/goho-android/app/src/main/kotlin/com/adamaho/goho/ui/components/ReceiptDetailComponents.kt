@@ -63,22 +63,41 @@ internal fun ReceiptBackButton(onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ReceiptDetailPhoto(image: ImageBitmap?, loading: Boolean) {
+internal fun ReceiptDetailPhoto(image: ImageBitmap?, loading: Boolean, onOpen: () -> Unit) {
     val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    val description = stringResource(R.string.receipt_photo_open)
     BoxWithConstraints(
         Modifier.fillMaxWidth()
             .height(GohoSpacing.detailPhotoHeight)
+            .gohoPress { progress }
+            .then(
+                if (image != null)
+                    Modifier.clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            role = Role.Button,
+                            onClickLabel = description,
+                            onClick = onOpen,
+                        )
+                        .semantics { contentDescription = description }
+                else Modifier
+            )
             .clip(GohoShapes.card)
-            .background(Brush.radialGradient(listOf(c.photoWellCenter, c.photoWellEdge)))
-            .padding(GohoSpacing.photoPadding),
+            .background(Brush.radialGradient(listOf(c.photoWellCenter, c.photoWellEdge))),
         contentAlignment = Alignment.Center,
     ) {
         if (image != null) {
             val ratio = image.width.toFloat() / image.height
-            val width = minOf(maxWidth, maxHeight * ratio)
+            val width =
+                minOf(
+                    maxWidth - GohoSpacing.photoPadding * 2,
+                    (maxHeight - GohoSpacing.photoPadding * 2) * ratio,
+                )
             Image(
                 image,
-                stringResource(R.string.receipt_image_description),
+                null,
                 Modifier.size(width, width / ratio)
                     .shadow(
                         GohoSpacing.photoElevation,

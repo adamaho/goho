@@ -5,7 +5,7 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff and mockups: updated September 30 package, imported October 1, 2026. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff and mockups: October 1, 2026 package. The approved app refinements below take precedence over older examples in the reference assets.
 
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with proportional figures, grouped cards, and buttons that press down with a small spring.
 
@@ -25,7 +25,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and a static photo.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -60,12 +60,16 @@ Preserve these refinements when adapting the reference code or older mockups:
 
 ## Approved receipt-details refinements
 
-- Follow the updated layout: hero, photo, Items card when nonempty, then Details.
+- Follow the updated layout: hero, photo, Items card when nonempty, then Details. Show only the “Items” heading; omit the item count.
 - Put Total at the bottom of Items and omit a second Total in Details. With no items, put Total in Details. Keep the server-provided category, Subtotal and Tax in Details as requested.
 - Item names wrap up to two lines at normal text sizes; allow more space for larger text. Amounts use exactly two decimals with no per-item currency symbols.
 - Use the receipt currency; fall back to its code if it is not registered, and never assume a currency when the server returns null. Use the phone locale to choose local versus foreign presentation.
-- Photo viewer work is deferred to a separate PR. Keep the photo static with no expand control in this layout PR; missing photos show “No receipt photo available”. The viewer references describe future work.
+- Missing photos show “No receipt photo available” with no expand control. Make the loaded photo area tappable to open the viewer, with an accessible “View receipt photo” action. Do not show a separate expand button, even where older mockups include one. See `references/screens.md` section 3 for zoom, hidden controls, swipe dismissal, transitions and rotation, and `assets/mockups/README.md` for all five viewer mockups.
 - Keep receipt loading and retry states accessible, with back navigation available.
+
+## Orientation
+
+Keep the app portrait-only, including the photo viewer. The landscape mockup is retained as a reference asset; it does not authorize landscape support. This user preference supersedes the handoff’s rotation behavior.
 
 ## Definition of done
 
