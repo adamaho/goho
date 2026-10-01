@@ -61,6 +61,7 @@ export class StorageError extends Schema.TaggedError<StorageError>()(
 export interface Interface {
   readonly put: (file: FileToStore) => Effect.Effect<FileId, StorageError>;
   readonly get: (fileId: FileId) => Effect.Effect<Uint8Array, StorageError>;
+  /** Succeeds when the file is already absent, so cleanup can be retried. */
   readonly delete: (fileId: FileId) => Effect.Effect<void, StorageError>;
 }
 
@@ -112,7 +113,7 @@ export const layerFileSystem = (options: { readonly directory: string }) =>
       const deleteFile = Effect.fn("@goho/FileStorage.FileSystem.deleteFile")(function* (
         fileId: FileId,
       ) {
-        yield* fileSystem.remove(storedPath(fileId));
+        yield* fileSystem.remove(storedPath(fileId), { force: true });
       }, storageError("delete"));
 
       return Service.of({ put, get, delete: deleteFile });

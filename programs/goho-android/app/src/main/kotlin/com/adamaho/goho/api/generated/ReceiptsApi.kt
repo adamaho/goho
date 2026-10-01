@@ -31,6 +31,21 @@ interface ReceiptsApi {
     suspend fun receiptsCreate(@Body createReceiptRequest: CreateReceiptRequest): Response<ReceiptsCreate200Response>
 
     /**
+     * DELETE receipts/{receiptId}
+     * Delete a receipt
+     * Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.
+     * Responses:
+     *  - 204: <No Content>
+     *  - 404: No receipt is wearing that number, bud.
+     *  - 500: The server could not delete this receipt and its stored image.
+     *
+     * @param receiptId 
+     * @return [Unit]
+     */
+    @DELETE("receipts/{receiptId}")
+    suspend fun receiptsDelete(@Path("receiptId") receiptId: kotlin.String): Response<Unit>
+
+    /**
      * GET receipts/{receiptId}
      * Get a receipt
      * Brings back one saved receipt with its items lined up by position.

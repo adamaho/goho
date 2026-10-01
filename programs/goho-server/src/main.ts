@@ -33,7 +33,9 @@ const FileStorageLive = Layer.unwrap(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
-const ReceiptsLive = Receipts.layer.pipe(Layer.provide(RepositoryLive));
+const ReceiptsLive = Receipts.layer.pipe(
+  Layer.provide([RepositoryLive, FileStorageLive, TransactionLive]),
+);
 const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
   Layer.provide([
     FileStorageLive,

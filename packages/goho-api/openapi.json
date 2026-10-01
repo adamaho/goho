@@ -530,6 +530,48 @@
         },
         "description": "Brings back one saved receipt with its items lined up by position.",
         "summary": "Get a receipt"
+      },
+      "delete": {
+        "tags": ["receipts"],
+        "operationId": "receipts.delete",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "404": {
+            "description": "No receipt is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this receipt and its stored image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.",
+        "summary": "Delete a receipt"
       }
     },
     "/receipts/{receiptId}/image": {
@@ -960,7 +1002,7 @@
     },
     {
       "name": "receipts",
-      "description": "Receipt retrieval and creation plays."
+      "description": "Receipt retrieval, creation, and deletion plays."
     }
   ]
 }

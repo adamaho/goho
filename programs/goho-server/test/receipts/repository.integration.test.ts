@@ -15,7 +15,10 @@ import receiptUploadsMigration from "#src/database/migrations/0004-receipt-uploa
 import receiptUploadFileIdMigration from "#src/database/migrations/0005-receipt-upload-file-id.ts";
 import dropReceiptIdempotencyMigration from "#src/database/migrations/0006-drop-receipt-idempotency.ts";
 import moveExtractionToUploadsMigration from "#src/database/migrations/0007-move-extraction-to-uploads.ts";
+import * as Transaction from "#src/database/transaction.ts";
+import * as FileStorage from "#src/file-storage.ts";
 import * as Repository from "#src/receipts/repository.ts";
+import * as Receipts from "#src/receipts/service.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
 
@@ -440,5 +443,98 @@ it.effect("joins the caller's transaction and rolls back with it", () =>
     expect(Result.isFailure(result) && result.failure._tag).toBe("GohoServer.Test.LaterStepFailed");
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+const insertScannedReceipt = Effect.gen(function* () {
+  const repo = yield* Repository.Service;
+  const sql = yield* SqlClient.SqlClient;
+  const receiptId = yield* repo.insert(receiptInput);
+  yield* sql`
+    INSERT INTO receipt_uploads (
+      id, file_id, file_name, content_type, status, receipt_id, extraction_version, extracted_payload
+    ) VALUES (
+      '7d89d8f7-6f0c-4df2-a2a9-94771638ac99', 'stored-photo', 'receipt.png', 'image/png',
+      'succeeded', ${receiptId}, 1, ${JSON.stringify(parsedReceipt)}::jsonb
+    )
+  `;
+  return receiptId;
+});
+
+it.effect(
+  "deletes manual and scanned receipts with their items and extraction, preserving other receipts",
+  () =>
+    Effect.gen(function* () {
+      const repo = yield* Repository.Service;
+      const sql = yield* SqlClient.SqlClient;
+      const scanned = yield* insertScannedReceipt;
+      const manual = yield* repo.insert(receiptInput);
+      const retained = yield* repo.insert(receiptInput);
+      expect(yield* repo.delete(scanned)).toEqual(Option.some({ fileId: "stored-photo" }));
+      expect(yield* repo.delete(manual)).toEqual(Option.some({ fileId: null }));
+      expect(yield* repo.delete(scanned)).toEqual(Option.none());
+      expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual([]);
+      expect(yield* sql`SELECT receipt_id::text AS receipt_id FROM receipt_items`).toEqual([
+        { receipt_id: retained },
+        { receipt_id: retained },
+      ]);
+      expect((yield* repo.list).map((entry) => entry.id)).toEqual([retained]);
+    }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("serializes concurrent deletion of the same receipt", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const receiptId = yield* insertScannedReceipt;
+    const results = yield* Effect.all([repo.delete(receiptId), repo.delete(receiptId)], {
+      concurrency: 2,
+    });
+    expect(results.filter(Option.isSome)).toEqual([Option.some({ fileId: "stored-photo" })]);
+    expect(results.filter(Option.isNone)).toHaveLength(1);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("rolls back all receipt data when photo deletion fails, then completes on retry", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const receiptId = yield* insertScannedReceipt;
+    const before = yield* repo.findById(receiptId);
+    const uploadsBefore = yield* sql`SELECT * FROM receipt_uploads`;
+    let failCleanup = true;
+    const service = yield* Receipts.Service.pipe(
+      Effect.provide(
+        Receipts.layer.pipe(
+          Layer.provide(Transaction.layer),
+          Layer.provide(
+            Layer.succeed(FileStorage.Service, {
+              put: () => Effect.die("Unexpected put"),
+              get: () => Effect.die("Unexpected get"),
+              delete: (fileId) =>
+                Effect.suspend(() => {
+                  expect(fileId).toBe("stored-photo");
+                  return failCleanup
+                    ? Effect.fail(
+                        new FileStorage.StorageError({
+                          operation: "delete",
+                          cause: "test failure",
+                        }),
+                      )
+                    : Effect.void;
+                }),
+            }),
+          ),
+        ),
+      ),
+    );
+    const result = yield* service.delete(receiptId).pipe(Effect.result);
+    expect(Result.isFailure(result) && result.failure._tag).toBe("InternalServerError");
+    expect(yield* repo.findById(receiptId)).toEqual(before);
+    expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(uploadsBefore);
+    failCleanup = false;
+    yield* service.delete(receiptId);
+    expect(yield* repo.findById(receiptId)).toEqual(Option.none());
+    expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual([]);
+    expect(yield* sql`SELECT * FROM receipt_items`).toEqual([]);
   }).pipe(Effect.provide(DatabaseLive)),
 );

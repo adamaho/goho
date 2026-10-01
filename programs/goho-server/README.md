@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Exposes receipt uploads, retrieval, creation, health checks,
+Exposes receipt uploads, retrieval, creation, deletion, health checks,
 and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
@@ -11,7 +11,7 @@ For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## API
 
-Every successful endpoint returns its payload under a top-level `data` field.
+JSON resource responses return their payload under a top-level `data` field.
 
 - `GET /health` returns HTTP 200 with `{"data":{"status":"ok"}}` when the HTTP server is running.
   This is a liveness check; it does not query PostgreSQL or OpenAI.
@@ -65,3 +65,17 @@ complete receipt is returned under `data`.
 
 Invalid payloads return HTTP 400 with an empty body; validation or persistence
 failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
+
+### Delete a receipt
+
+`DELETE /receipts/:receiptId` permanently removes the receipt, its items, linked
+upload record, original photo, and stored extraction data. It returns HTTP 204
+with no response body. Manually created receipts can also be deleted.
+
+A missing or previously deleted receipt returns HTTP 404. Malformed IDs return
+HTTP 400. Database or photo cleanup failures return HTTP 500; database changes
+roll back so deletion can be retried. An already missing photo does not block deletion.
+
+Photo storage does not participate in the database transaction. If the database
+commit fails after photo removal, the receipt may remain without its photo;
+retrying deletion completes the cleanup.

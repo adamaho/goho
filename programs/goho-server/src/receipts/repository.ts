@@ -9,6 +9,7 @@ import {
 import { Array, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
+import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
 /**
@@ -29,6 +30,9 @@ export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
  * @since 0.1.0
  */
 export interface Interface {
+  readonly delete: (
+    receiptId: ReceiptId,
+  ) => Effect.Effect<Option.Option<{ readonly fileId: FileId | null }>, PersistenceError>;
   readonly findById: (
     receiptId: ReceiptId,
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
@@ -94,6 +98,39 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+
+    const lockReceipt = SqlSchema.findOneOption({
+      Request: ReceiptId,
+      Result: IdRow,
+      execute: (receiptId) => sql`SELECT id FROM receipts WHERE id = ${receiptId} FOR UPDATE`,
+    });
+
+    const deleteUpload = SqlSchema.findOneOption({
+      Request: ReceiptId,
+      Result: Schema.Struct({ file_id: FileId }),
+      execute: (receiptId) => sql`
+        DELETE FROM receipt_uploads WHERE receipt_id = ${receiptId} RETURNING file_id
+      `,
+    });
+
+    const deleteReceiptRow = SqlSchema.void({
+      Request: ReceiptId,
+      execute: (receiptId) => sql`DELETE FROM receipts WHERE id = ${receiptId}`,
+    });
+
+    const deleteReceipt = Effect.fn("@goho/ReceiptRepository.deleteReceipt")(
+      (receiptId: ReceiptId) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            // Serialize deletes and retain the file ID until the caller's transaction commits.
+            if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
+            const upload = yield* deleteUpload(receiptId);
+            yield* deleteReceiptRow(receiptId);
+            return Option.some({ fileId: Option.isSome(upload) ? upload.value.file_id : null });
+          }),
+        ),
+      Effect.mapError((cause) => new PersistenceError({ operation: "delete", cause })),
+    );
 
     const findReceiptRow = SqlSchema.findOneOption({
       Request: ReceiptId,
@@ -227,6 +264,6 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/ReceiptRepository.list"),
     );
 
-    return Service.of({ findById, insert, list });
+    return Service.of({ delete: deleteReceipt, findById, insert, list });
   }),
 );

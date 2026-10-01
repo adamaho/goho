@@ -26,6 +26,7 @@ it.effect("stores, reads, and deletes files in its configured directory", () =>
     expect([...(yield* storage.get(fileId))]).toEqual([...bytes]);
     yield* storage.delete(fileId);
     expect(yield* fileSystem.exists(path.join(directory, fileId))).toBe(false);
+    yield* storage.delete(fileId);
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
