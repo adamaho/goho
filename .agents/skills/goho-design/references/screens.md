@@ -31,18 +31,25 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 **Hero** (12 below the bar, `textInset` sides)
 
 - Merchant (`rowTitle` in `textSecondary`).
-- 8dp below: amount in `display`. Foreign currency: prefix "US$" at 28sp in `textTertiary`, 2dp gap, then the number. Missing amount: "—" in `textTertiary`.
+- 8dp below: amount in `display`, always two decimals. Foreign currency: prefix "US$" at 28sp in `textTertiary`, 2dp gap, then the number. Missing amount: "—" in `textTertiary`.
 - 8dp below: full date (`meta`, `textTertiary`), for example "Thursday, September 24, 2026".
 
-**Photo** (20 below, `screenMargin` sides): PhotoFrame, 200 tall. Expand opens the photo viewer.
+**Photo** (20 below, `screenMargin` sides): PhotoFrame, 200 tall. Keep it static in the current layout PR; the expand control and viewer are deferred.
 
-**Details** (24 below): section label "Details", then a read-only DetailList:
+**Items** (24 below the photo; only when the receipt has line items):
 
-- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal, Tax, Total, and Currency only when it differs from the home currency (for example "US dollar"). Format monetary values consistently with the currency prefix when foreign. Keep this single breakdown in Details; do not repeat it below Items.
+- Header row inset to `textInset`: "Items" (`section`, `textTertiary`) on the left, count on the right ("4 items", "1 item"; `meta`, `textTertiary`). 8dp below it, the ItemsCard.
+- Items appear in receipt order.
+
+**Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
+
+- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal, Tax, and Currency only when it differs from the home currency (for example "US dollar"). Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
+
+The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
 No footer and no actions on this screen.
 
-## 3. Photo viewer
+## 3. Photo viewer (future PR)
 
 Always dark, in both themes (wrap it in `GohoTheme(darkTheme = true)`). Full screen, `photoWellEdge` background, photo fitted, pinch to zoom and pan, round close button (GohoIconButton with `Close`) at the top left below the status bar. Back gesture closes it.
 

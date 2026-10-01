@@ -394,8 +394,7 @@ private fun ReceiptRowAmount(entry: ReceiptListEntry, locale: Locale) {
     } else {
         Text(
             entry.total?.let {
-                listOfNotNull(entry.currency, receiptAmount(it, entry.currency, locale))
-                    .joinToString(" ")
+                listOfNotNull(entry.currency, receiptAmount(it, locale)).joinToString(" ")
             } ?: "—",
             style = GohoTheme.type.rowTitle,
             color = if (entry.total == null) c.textTertiary else c.textPrimary,

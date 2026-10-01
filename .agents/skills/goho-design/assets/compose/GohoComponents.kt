@@ -3,6 +3,10 @@
 package com.goho.ui.components // TODO: match the app's package
 
 import android.provider.Settings
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.text.NumberFormat
+import java.util.Locale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -64,10 +68,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.goho.ui.theme.GohoMotion
 import com.goho.ui.theme.GohoShapes
@@ -340,7 +346,7 @@ fun GohoSegmentedFilter(
     modifier: Modifier = Modifier,
 ) {
     val c = GohoTheme.colors
-    val labelStyle = GohoTheme.type.section.copy(fontSize = 14.sp, fontFeatureSettings = "tnum")
+    val labelStyle = GohoTheme.type.section.copy(fontSize = 14.sp, fontFeatureSettings = "'tnum' 0, 'pnum' 1")
     Row(
         modifier
             .clip(GohoShapes.pill)
@@ -551,6 +557,24 @@ fun GohoRowDivider(start: Dp = GohoSpacing.dividerStart) {
     )
 }
 
+// ---------- Money ----------
+
+/**
+ * The one money formatter for the whole app: always exactly two decimals ("3.50", "1,204.00").
+ * Returns null for a missing amount so callers render "—" (never "0.00").
+ */
+fun formatMoney(amount: BigDecimal?, locale: Locale = Locale.getDefault()): String? {
+    if (amount == null) return null
+    val nf = NumberFormat.getNumberInstance(locale).apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+        roundingMode = RoundingMode.HALF_EVEN
+        isGroupingUsed = true
+    }
+    return nf.format(amount)
+}
+// Home currency: "$" + formatMoney(x). Foreign: pass "US$" as foreignPrefix and formatMoney(x) as the number.
+
 // ---------- Detail screen pieces ----------
 
 @Composable
@@ -571,6 +595,69 @@ fun GohoDetailRow(
         Text(label, style = t.listRow, color = c.textSecondary, modifier = Modifier.weight(1f))
         if (value == null) Text("—", style = t.listValue, color = c.textTertiary)
         else Text(value, style = t.listValue, color = c.textPrimary)
+    }
+}
+
+data class ReceiptItemUi(val name: String, val amount: String?) // amount from formatMoney, no symbol
+
+@Composable
+fun GohoItemsCard(
+    items: List<ReceiptItemUi>,
+    total: String?,           // from formatMoney
+    totalPrefix: String,      // "$" for home currency, "US$" etc. for foreign
+    foreign: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val c = GohoTheme.colors
+    val t = GohoTheme.type
+    GohoCard(modifier) {
+        Column(Modifier.padding(horizontal = GohoSpacing.cardPadding)) {
+            items.forEachIndexed { index, item ->
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Text(
+                        item.name,
+                        style = t.listRow,
+                        color = c.textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (item.amount == null) Text("—", style = t.listValue, color = c.textTertiary)
+                    else Text(item.amount, style = t.listValue, color = c.textPrimary, maxLines = 1)
+                }
+                if (index < items.lastIndex) {
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(c.divider))
+                }
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(c.textPrimary.copy(alpha = if (c.isDark) 0.10f else 0.12f)),
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Total", style = t.listValue.copy(fontWeight = FontWeight.Bold), color = c.textPrimary, modifier = Modifier.weight(1f))
+                val totalStyle = t.rowTitle.copy(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.01).em)
+                if (total == null) {
+                    Text("—", style = totalStyle, color = c.textTertiary)
+                } else {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = if (foreign) c.textTertiary else c.textPrimary)) { append(totalPrefix) }
+                            withStyle(SpanStyle(color = c.textPrimary)) { append(total) }
+                        },
+                        style = totalStyle,
+                    )
+                }
+            }
+        }
     }
 }
 

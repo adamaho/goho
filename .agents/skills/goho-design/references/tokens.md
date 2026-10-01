@@ -107,3 +107,9 @@ The top highlight is a 1dp line drawn inside the clipped shape at the top edge, 
 - Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition.
 - `timestamp`: Manrope 500, 13sp / 18sp, zero tracking, proportional digit widths.
 - Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.
+
+## Receipt item card
+
+- Item rows: 14dp vertical padding, 16dp gap, 15sp / 20sp name and amount; amount weight 600.
+- Total: 15sp / 20sp weight 700 label and 17sp / 22sp weight 700 amount, −0.01em tracking.
+- Exactly two decimal places for every money amount, half-even rounding, locale grouping, proportional figures.

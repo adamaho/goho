@@ -4,7 +4,6 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.buildAnnotatedString
@@ -117,8 +117,8 @@ fun ReceiptDetailScreen(
             // There is no home-currency setting in the API; use the phone locale for presentation.
             val homeCurrency = runCatching { Currency.getInstance(locale).currencyCode }.getOrNull()
             val foreign = code != null && code != homeCurrency
-            val prefix = if (foreign) currency?.getSymbol(locale) ?: code.orEmpty() else ""
-            val amount = receiptAmount(saved.total, saved.currency, locale)
+            val prefix = currency?.getSymbol(locale) ?: code.orEmpty()
+            val amount = receiptAmount(saved.total, locale)
             fun withCurrency(value: String) = if (prefix.isEmpty()) value else "$prefix $value"
             val total = withCurrency(amount)
             val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
@@ -129,13 +129,13 @@ fun ReceiptDetailScreen(
                     add(stringResource(R.string.receipt_category) to saved.category)
                 add(
                     stringResource(R.string.receipt_subtotal) to
-                        withCurrency(receiptAmount(saved.subtotal, saved.currency, locale))
+                        withCurrency(receiptAmount(saved.subtotal, locale))
                 )
                 add(
                     stringResource(R.string.receipt_tax) to
-                        withCurrency(receiptAmount(saved.tax, saved.currency, locale))
+                        withCurrency(receiptAmount(saved.tax, locale))
                 )
-                add(stringResource(R.string.receipt_total) to total)
+                if (saved.items.isEmpty()) add(stringResource(R.string.receipt_total) to total)
                 if (foreign)
                     add(
                         stringResource(R.string.receipt_currency) to
@@ -168,11 +168,15 @@ fun ReceiptDetailScreen(
                             buildAnnotatedString {
                                 if (prefix.isNotEmpty())
                                     withStyle(
-                                        GohoTheme.type.currencyPrefix
-                                            .copy(color = c.textTertiary)
+                                        (if (foreign) GohoTheme.type.currencyPrefix
+                                            else GohoTheme.type.display)
+                                            .copy(
+                                                color =
+                                                    if (foreign) c.textTertiary else c.textPrimary
+                                            )
                                             .toSpanStyle()
                                     ) {
-                                        append("$prefix ")
+                                        append(prefix)
                                     }
                                 append(amount)
                             },
@@ -187,6 +191,26 @@ fun ReceiptDetailScreen(
                         ReceiptDetailPhoto(image, imageLoading)
                     }
                 }
+                if (saved.items.isNotEmpty()) {
+                    item("items") {
+                        DetailSectionHeading(
+                            stringResource(R.string.receipt_items_title),
+                            pluralStringResource(
+                                R.plurals.receipt_item_count,
+                                saved.items.size,
+                                saved.items.size,
+                            ),
+                        )
+                        ReceiptItemsCard(
+                            saved.items.sortedBy { it.position },
+                            amount,
+                            prefix,
+                            foreign,
+                            locale,
+                            stacked,
+                        )
+                    }
+                }
                 item("details") {
                     DetailSectionHeading(stringResource(R.string.receipt_details_section))
                     ReceiptCard {
@@ -196,64 +220,31 @@ fun ReceiptDetailScreen(
                         }
                     }
                 }
-                // Keep item information available during the layout rollout.
-                item("items-heading") {
-                    DetailSectionHeading(stringResource(R.string.receipt_items_title))
-                }
-                if (saved.items.isEmpty())
-                    item("items-empty") {
-                        Text(
-                            stringResource(R.string.receipt_items_empty),
-                            style = GohoTheme.type.meta,
-                            color = c.textSecondary,
-                            modifier =
-                                Modifier.padding(horizontal = GohoSpacing.textInsetFromMargin),
-                        )
-                    }
-                else
-                    items(saved.items, key = { "item:${it.position}" }) { item ->
-                        Column(
-                            Modifier.padding(
-                                horizontal = GohoSpacing.textInsetFromMargin,
-                                vertical = GohoSpacing.detailRowVertical,
-                            )
-                        ) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement =
-                                    Arrangement.spacedBy(GohoSpacing.contentGap),
-                            ) {
-                                Text(
-                                    item.name,
-                                    Modifier.weight(1f),
-                                    style = GohoTheme.type.listRow,
-                                    color = c.textPrimary,
-                                )
-                                Text(
-                                    item.amount,
-                                    style = GohoTheme.type.listValue,
-                                    color = c.textPrimary,
-                                )
-                            }
-                        }
-                    }
             }
         }
     }
 }
 
 @Composable
-private fun DetailSectionHeading(text: String) {
-    Text(
-        text,
-        style = GohoTheme.type.section,
-        color = GohoTheme.colors.textTertiary,
-        modifier =
-            Modifier.padding(
-                    start = GohoSpacing.textInsetFromMargin,
-                    top = GohoSpacing.sectionTop,
-                    bottom = GohoSpacing.sectionLabelBottom,
-                )
-                .semantics { heading() },
-    )
+private fun DetailSectionHeading(text: String, count: String? = null) {
+    Row(
+        Modifier.fillMaxWidth()
+            .padding(
+                start = GohoSpacing.textInsetFromMargin,
+                end = GohoSpacing.textInsetFromMargin,
+                top = GohoSpacing.sectionTop,
+                bottom = GohoSpacing.sectionLabelBottom,
+            ),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text,
+            style = GohoTheme.type.section,
+            color = GohoTheme.colors.textTertiary,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (count != null)
+            Text(count, style = GohoTheme.type.meta, color = GohoTheme.colors.textTertiary)
+    }
 }

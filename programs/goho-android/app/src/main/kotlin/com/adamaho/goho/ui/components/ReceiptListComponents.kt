@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.lerp
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
@@ -30,7 +31,11 @@ fun Modifier.topHighlight(color: Color): Modifier = drawWithContent {
 }
 
 @Composable
-fun ReceiptCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun ReceiptCard(
+    modifier: Modifier = Modifier,
+    verticalPadding: Dp = GohoSpacing.cardVerticalPadding,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val c = GohoTheme.colors
     val edge =
         if (c.isDark)
@@ -49,7 +54,7 @@ fun ReceiptCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
                 .background(c.surface)
                 .border(GohoSpacing.hairline, c.shadow.copy(alpha = 0.05f), GohoShapes.card)
     Column(
-        modifier.fillMaxWidth().then(edge).padding(vertical = GohoSpacing.cardVerticalPadding),
+        modifier.fillMaxWidth().then(edge).padding(vertical = verticalPadding),
         content = content,
     )
 }

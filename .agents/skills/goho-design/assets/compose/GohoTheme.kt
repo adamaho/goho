@@ -144,7 +144,7 @@ val Manrope = FontFamily(
     Font(R.font.manrope_bold, FontWeight.Bold),
 )
 
-private const val TNUM = "tnum"
+private const val TNUM = "'tnum' 0, 'pnum' 1"
 
 @Immutable
 data class GohoTypography(

@@ -32,6 +32,9 @@ object GohoSpacing {
     val detailPhotoHeight = 200.dp
     val detailRowVertical = 12.dp
     val detailBottom = 24.dp
+    val itemVertical = 14.dp
+    val itemGap = 16.dp
+    val itemCardTop = 2.dp
     val detailRowHeight = 47.dp
     val sectionTop = 24.dp
     val sectionLabelBottom = 8.dp
