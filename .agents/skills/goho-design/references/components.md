@@ -34,7 +34,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
 - Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
 - Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
-- Keep one mounted trash icon across the menu and confirmation states. Animate its position and size between measured slots with a gentle spring (damping 0.6, stiffness 300); snap with reduced motion.
+- Keep one mounted trash icon across the menu and confirmation states. Animate its position and size between measured slots over 250ms with FastOutSlowIn easing, without bounce or overshoot; snap with reduced motion.
 - Content changes inside the same sheet animate their height (`animateContentSize` or `AnimatedContent` with a size transform, 250ms) instead of opening a second sheet.
 - Implementation hint: M3 `ModalBottomSheet` with `containerColor = Color.Transparent`, `dragHandle = null`, `tonalElevation = 0.dp`, `scrimColor = scrim`, and the content wrapped in a padded, clipped, `sheet`-colored Box.
 

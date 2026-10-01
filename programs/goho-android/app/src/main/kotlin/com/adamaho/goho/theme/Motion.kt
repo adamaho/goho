@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.dp
 
 object GohoMotion {
     val sheetConfirmation: AnimationSpec<Float> = tween(160, delayMillis = 150)
-    val sheetIconBounds: AnimationSpec<Rect> = spring(dampingRatio = 0.6f, stiffness = 300f)
+    val sheetIconBounds: AnimationSpec<Rect> =
+        tween(SHEET_CONTENT_MILLIS, easing = FastOutSlowInEasing)
     const val SHEET_CONTENT_MILLIS = 250
     const val HOLD_DELAY_MILLIS = 150L
     const val HOLD_SCALE = 0.98f
