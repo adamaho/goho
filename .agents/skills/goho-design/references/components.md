@@ -67,8 +67,27 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 ## DetailList
 
-- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 600, `textPrimary`, tnum) right, dividers between rows. Read-only.
-- A value that wasn't read shows "—" in `textTertiary`.
+- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 600, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
+- A value that wasn't read shows "—" in `textTertiary`. Allow rows to grow for wrapped values; stack labels above values on narrow screens or with larger text.
+
+## ItemsCard
+
+The receipt's line items, given the same card treatment as Details so they read as primary content.
+
+- Card like ReceiptCard: `surface`, shape `card` 20, theme edge treatment, 16dp horizontal padding, 2dp top padding.
+- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 500, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, no currency symbol, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
+- Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 700; amount in 17/22 weight 700, tracking −0.01em, proportional figures, with the currency symbol (foreign prefix like "US$" in `textTertiary`).
+- Item amounts without symbols keep the column clean; the currency is shown once, on the Total.
+- If an item has no amount, show "—" in `textTertiary`.
+
+## Money formatting
+
+One formatter for every amount in the app (list rows, hero, items, total):
+
+- Exactly two fraction digits: `minimumFractionDigits = 2`, `maximumFractionDigits = 2`, half-even rounding, grouping separators on ("1,204.50").
+- Home currency: local symbol ("$46.78"). Foreign: the short prefix ("US$23.21"), drawn in `textTertiary` where the spec says so.
+- Item lines: the number only ("3.50").
+- Missing: "—", never "0.00".
 
 ## PhotoFrame
 

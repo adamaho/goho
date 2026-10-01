@@ -2,7 +2,7 @@ package com.adamaho.goho.ui.main
 
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
-import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -11,7 +11,6 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
-import java.util.Currency
 import java.util.Locale
 
 enum class ReceiptListStatus {
@@ -114,19 +113,17 @@ fun receiptListSections(
         .map { (group, rows) -> ReceiptListSection(group, rows) }
 }
 
-/** Currency is optional in Goho and may be an unregistered three-letter code. */
-fun receiptAmount(total: String, currencyCode: String?, locale: Locale): String {
-    val amount = BigDecimal(total)
-    val digits =
-        currencyCode
-            ?.let { runCatching { Currency.getInstance(it).defaultFractionDigits }.getOrNull() }
-            ?.takeIf { it >= 0 } ?: 2
-    val format =
-        NumberFormat.getNumberInstance(locale).apply {
-            minimumFractionDigits = digits
-            maximumFractionDigits = maxOf(digits, amount.stripTrailingZeros().scale())
+/** Shared display formatting; preserve server precision in data and round only for display. */
+fun receiptAmount(value: String?, locale: Locale): String {
+    val amount = value?.toBigDecimalOrNull() ?: return "—"
+    return NumberFormat.getNumberInstance(locale)
+        .apply {
+            minimumFractionDigits = 2
+            maximumFractionDigits = 2
+            roundingMode = RoundingMode.HALF_EVEN
+            isGroupingUsed = true
         }
-    return format.format(amount)
+        .format(amount)
 }
 
 /** PostgreSQL timestamptz::text uses a space separator and may shorten offsets to +00. */

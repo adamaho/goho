@@ -22,6 +22,9 @@ private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
 @Immutable
 data class GohoTypography(
     val display: TextStyle,
+    val currencyPrefix: TextStyle,
+    val itemTotalLabel: TextStyle,
+    val itemTotalValue: TextStyle,
     val title: TextStyle,
     val screenTitle: TextStyle,
     val wordmark: TextStyle,
@@ -46,6 +49,32 @@ val GohoType =
                 fontSize = 44.sp,
                 lineHeight = 48.sp,
                 letterSpacing = (-0.045).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        itemTotalLabel =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        itemTotalValue =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                lineHeight = 22.sp,
+                letterSpacing = (-0.01).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        currencyPrefix =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.03).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         title =
