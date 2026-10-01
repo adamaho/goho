@@ -8,6 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
+    const val SHEET_CONTENT_MILLIS = 250
+    const val HOLD_DELAY_MILLIS = 150L
+    const val HOLD_SCALE = 0.98f
     const val PRESS_SCALE = 0.03f // scale = 1 - PRESS_SCALE * progress
     val pressTranslation = 1.dp
     val pressIn: AnimationSpec<Float> = tween(durationMillis = 90)

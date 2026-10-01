@@ -10,6 +10,9 @@ Rendered from the Goho design canvas at 2x (824×1784 for phone screens).
 - `viewer-swipe-to-close.png`: Mid swipe-down, over the light details screen
 - `viewer-landscape.png`: Landscape
 - `scan-preview.png` and `scan-preview-light.png`: Scan preview, dark and light
+- `delete-1-menu.png`, `delete-2-sheet.png`, `delete-3-confirm.png` (and `-light` versions): Deleting a receipt from the details screen
+- `list-hold-1-press.png`, `list-hold-2-sheet.png` (and `-light` versions): Press and hold a row to open its options sheet
+- `list-delete-1-tap.png` to `list-delete-4-after.png` (and `-light` versions): Deleting a Not processed receipt from the list
 - `tokens.png` and `tokens-light.png`: Color, type, shape and component references
 
 The "Reading receipt…" shimmer and the amount skeleton are captured mid-animation as static frames. The mockups are visual references only; when a mockup and `references/*.md` disagree, the written spec wins.

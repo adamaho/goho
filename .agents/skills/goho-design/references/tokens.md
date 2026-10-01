@@ -30,10 +30,18 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `accentContainer` / `onAccentContainer`      | `#1A342C` / `#74D3B6` | `#DAF4EA` / `#045B48` | "Reading receipt…" pill                                     |
 | `accentShimmer`                              | `#D6F4EA`             | `#53B397`             | Shimmer highlight on "Reading receipt…"                     |
 | `attention` / `attentionContainer`           | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC` | "Not processed" pill, attention count badge                 |
+| ---                                          | ---                   | ---                   | ---                                                         |
+| `danger` / `dangerTop`                       | `#C52B2D` / `#D33B39` | `#BE2323` / `#CC3430` | Destructive button fill (bottom / top of gradient)          |
+| `dangerPressed`                              | `#B01E22`             | `#A21A1B`             | Destructive button fill (bottom) while pressed              |
+| `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`             | Label and icon on the destructive button                    |
+| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C` | Delete row icon circle and label, confirmation icon circle  |
+| `sheet`                                      | `#201E1B`             | `#FFFFFF`             | Bottom sheet surface                                        |
+| `grabber`                                    | `#3F3D39`             | `#D9D6D1`             | Sheet drag handle                                           |
+| `scrim`                                      | black 55%             | `#1D1A16` 38%         | Behind sheets                                               |
 
-OKLCH sources (L C H): dark neutrals sit at hue 80 with chroma ≤ 0.01 (background 0.18, surface 0.225, raised 0.28); light neutrals at hue 80 (background 0.975, muted 0.945, text 0.22 / 0.45 / 0.54). Accent hue 172: dark 0.80 0.10, light 0.52 0.09. Attention hue about 50: dark 0.75 0.13, light 0.52 0.13.
+OKLCH sources (L C H): dark neutrals sit at hue 80 with chroma ≤ 0.01 (background 0.18, surface 0.225, raised 0.28); light neutrals at hue 80 (background 0.975, muted 0.945, text 0.22 / 0.45 / 0.54). Accent hue 172: dark 0.80 0.10, light 0.52 0.09. Attention hue about 50: dark 0.75 0.13, light 0.52 0.13. Danger hue about 26 (true red, used only for destructive actions): button dark 0.54 0.19, light 0.52 0.19.
 
-Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on background and 5.3 / 5.1 on cards. Don't put tertiary text on `surfaceMuted` in light (4.3:1), which is why filter counts use `textSecondary`. `onAccent` on `accent` is 9.8 / 5.3; on `accentTop` in light it is 4.5. Pill text on its container is 7.5 / 7.0 (accent) and 6.0 / 5.0 (attention).
+Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on background and 5.3 / 5.1 on cards. Don't put tertiary text on `surfaceMuted` in light (4.3:1), which is why filter counts use `textSecondary`. `onAccent` on `accent` is 9.8 / 5.3; `onDanger` on `danger` is 5.6 / 6.1 (4.7 / 5.1 on the gradient top); `onDangerContainer` on `dangerContainer` is 5.5 / 5.7; on `accentTop` in light it is 4.5. Pill text on its container is 7.5 / 7.0 (accent) and 6.0 / 5.0 (attention).
 
 ## Typography
 
@@ -50,6 +58,9 @@ Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in
 | `meta`        | 13 / 18            | 500    | 0        | Dates, sub-lines                                                          |
 | `section`     | 13 / 18            | 600    | 0        | "Today", "Details" section labels                                         |
 | `label`       | 12 / 16            | 600    | 0        | Pills, badges                                                             |
+| ---           | ---                | ---    | ---      | ---                                                                       |
+| `wordmark`    | 32 / 36            | 700    | −0.045em | "goho" in the list header (lowercase)                                     |
+| `body`        | 15 / 22            | 500    | 0        | Confirmation explanations                                                 |
 
 The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at the same size as the number in rows, and at 28sp beside a 44sp display amount.
 
@@ -62,6 +73,8 @@ The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at th
 | `card`   | 20     | Grouped list cards, detail card, photo frame                             |
 | `fab`    | 20     | Scan button                                                              |
 | `pill`   | 50%    | Status pills, count badge, filter track and segments, round icon buttons |
+| ---      | ---    | ---                                                                      |
+| `sheet`  | 28     | Floating bottom sheet (all four corners)                                 |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
@@ -81,15 +94,18 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 
 Shadows stay small and crisp. Dark mode relies on a 1dp top highlight; light mode relies on a faint ring plus a soft shadow.
 
-| Element                 | Dark                                                   | Light                                                         |
-| ----------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| Cards                   | no shadow, 1dp top highlight white 3%                  | 1dp ring `#1D1A16` 5% + 1dp shadow at low alpha, no highlight |
-| Selected filter segment | 1dp black shadow, top highlight white 6%               | 1dp shadow `#1D1A16`, no highlight                            |
-| Scan FAB at rest        | 3dp black shadow, top highlight white 45%              | 3dp shadow in `#104638`, top highlight white 22%              |
-| Scan FAB pressed        | 0.5dp, highlight 25%                                   | 0.5dp, highlight 12%                                          |
-| Primary button          | 2dp shadow, highlight 45% → pressed 0.5dp, 25%         | 2dp shadow in `#104638`, highlight 22% → 0.5dp, 12%           |
-| Secondary button        | 1dp shadow, highlight 6% → pressed flat                | flat, no shadow or highlight                                  |
-| Round icon button       | none; fill steps to `surfaceMutedPressed` when pressed | same                                                          |
+| Element                 | Dark                                                        | Light                                                         |
+| ----------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
+| Cards                   | no shadow, 1dp top highlight white 3%                       | 1dp ring `#1D1A16` 5% + 1dp shadow at low alpha, no highlight |
+| Selected filter segment | 1dp black shadow, top highlight white 6%                    | 1dp shadow `#1D1A16`, no highlight                            |
+| Scan FAB at rest        | 3dp black shadow, top highlight white 45%                   | 3dp shadow in `#104638`, top highlight white 22%              |
+| Scan FAB pressed        | 0.5dp, highlight 25%                                        | 0.5dp, highlight 12%                                          |
+| Primary button          | 2dp shadow, highlight 45% → pressed 0.5dp, 25%              | 2dp shadow in `#104638`, highlight 22% → 0.5dp, 12%           |
+| Secondary button        | 1dp shadow, highlight 6% → pressed flat                     | flat, no shadow or highlight                                  |
+| Round icon button       | none; fill steps to `surfaceMutedPressed` when pressed      | same                                                          |
+| ---                     | ---                                                         | ---                                                           |
+| Destructive button      | 2dp black shadow, highlight 18% → pressed 0.5dp, 10%        | 2dp shadow in `#6E0F0F`, highlight 18% → 0.5dp, 10%           |
+| Bottom sheet            | 1dp ring white 5%, top highlight 5%, 16dp soft black shadow | 1dp ring `#1D1A16` 4%, 12dp soft shadow `#1D1A16` 30%         |
 
 The top highlight is a 1dp line drawn inside the clipped shape at the top edge, not an inset shadow.
 

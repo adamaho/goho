@@ -3,6 +3,20 @@ package com.adamaho.goho.theme
 import androidx.compose.ui.unit.dp
 
 object GohoSpacing {
+    val sheetInset = 8.dp
+    val sheetPadding = 20.dp
+    val sheetElevation = 16.dp
+    val sheetGrabberWidth = 36.dp
+    val sheetGrabberHeight = 4.dp
+    val sheetSummaryVertical = 16.dp
+    val sheetSummaryLineGap = 4.dp
+    val sheetActionHeight = 60.dp
+    val sheetActionGap = 14.dp
+    val sheetActionIconCircle = 36.dp
+    val sheetConfirmIconCircle = 52.dp
+    val sheetConfirmIcon = 24.dp
+    val sheetTitleTop = 16.dp
+    val sheetButtonsTop = 24.dp
     val buttonHeight = 52.dp
     val buttonHorizontal = 20.dp
     val buttonGap = 10.dp

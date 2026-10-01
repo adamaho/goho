@@ -60,6 +60,16 @@ data class GohoColors(
     val accentShimmer: Color,
     val attention: Color,
     val attentionContainer: Color,
+    val danger: Color,
+    val dangerTop: Color,
+    val dangerPressed: Color,
+    val onDanger: Color,
+    val dangerShadow: Color,
+    val dangerContainer: Color,
+    val onDangerContainer: Color,
+    val sheet: Color,
+    val grabber: Color,
+    val scrim: Color,
     val highlightAlpha: Float,       // 1dp top highlight on the Scan button at rest (pressed = 55% of this)
 )
 
@@ -98,6 +108,16 @@ val GohoDarkColors = GohoColors(
     accentShimmer = Color(0xFFD6F4EA),
     attention = Color(0xFFED9658),
     attentionContainer = Color(0xFF3F2717),
+    danger = Color(0xFFC52B2D),
+    dangerTop = Color(0xFFD33B39),
+    dangerPressed = Color(0xFFB01E22),
+    onDanger = Color(0xFFFFFFFF),
+    dangerShadow = Color.Black,
+    dangerContainer = Color(0xFF4D1C1B),
+    onDangerContainer = Color(0xFFF87E79),
+    sheet = Color(0xFF201E1B),
+    grabber = Color(0xFF3F3D39),
+    scrim = Color.Black.copy(alpha = 0.55f),
     highlightAlpha = 0.45f,
 )
 
@@ -132,6 +152,16 @@ val GohoLightColors = GohoColors(
     accentShimmer = Color(0xFF53B397),
     attention = Color(0xFFA34D16),
     attentionContainer = Color(0xFFFFEADC),
+    danger = Color(0xFFBE2323),
+    dangerTop = Color(0xFFCC3430),
+    dangerPressed = Color(0xFFA21A1B),
+    onDanger = Color(0xFFFFFFFF),
+    dangerShadow = Color(0xFF6E0F0F),
+    dangerContainer = Color(0xFFFFE8E7),
+    onDangerContainer = Color(0xFFB7191C),
+    sheet = Color(0xFFFFFFFF),
+    grabber = Color(0xFFD9D6D1),
+    scrim = Color(0xFF1D1A16).copy(alpha = 0.38f),
     highlightAlpha = 0.22f,
 )
 
@@ -155,6 +185,7 @@ data class GohoTypography(
     val button: TextStyle,
     val buttonSecondary: TextStyle,
     val listRow: TextStyle,
+    val body: TextStyle,
     val listValue: TextStyle,
     val meta: TextStyle,
     val section: TextStyle,
@@ -168,6 +199,7 @@ val GohoType = GohoTypography(
     rowTitle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.015).em, fontFeatureSettings = TNUM),
     button = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 20.sp),
     buttonSecondary = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp),
+    body = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 22.sp, fontFeatureSettings = TNUM),
     listRow = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = TNUM),
     listValue = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = TNUM),
     meta = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = TNUM),
@@ -182,6 +214,7 @@ object GohoShapes {
     val button = RoundedCornerShape(16.dp)
     val card = RoundedCornerShape(20.dp)
     val fab = RoundedCornerShape(20.dp)
+    val sheet = RoundedCornerShape(28.dp)
     val pill = RoundedCornerShape(percent = 50)
 }
 

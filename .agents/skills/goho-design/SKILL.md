@@ -5,7 +5,7 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff and mockups: October 1, 2026 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff and mockups: October 1, 2026 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
 
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with proportional figures, grouped cards, and buttons that press down with a small spring.
 
@@ -14,7 +14,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 ## Non-negotiables
 
 1. **Use the tokens.** Every color, text style, shape, spacing value and motion spec comes from `GohoTheme` (see `assets/compose/GohoTheme.kt`). No hard-coded hex values, dp values or `MaterialTheme.typography` styles in screens.
-2. **One accent, used on purpose.** Jade (`accent`) marks the primary action, the Scan button, the processing state and "Add" chips. Nothing decorative is jade. Attention states use `attention` orange. There is no blue, yellow or red in the UI.
+2. **One accent, used on purpose.** Jade (`accent`) marks primary actions, the Scan button and the processing state. Nothing decorative is jade. Attention states ("Not processed") use `attention` orange. Red (`danger`) is reserved for destructive actions only (deleting). There is no blue or yellow.
 3. **Use proportional numbers.** Disable tabular figures throughout the app, including amounts, dates, counts and times. Use natural digit widths and zero tracking for metadata and labels; never use a monospaced font. Format all money with the shared formatter: exactly two decimals, half-even rounding and locale grouping separators; missing amounts show “—”.
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
@@ -25,20 +25,24 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list through a shared options and confirmation sheet.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
 - Search
 - Editing receipt details, categories or notes
 - Sharing or exporting
-- Deleting receipts
+- Swipe-to-delete, multi-select deletion, and undo
 - Retaking a photo
-- A details screen for receipts that are processing or failed processing (those rows are not tappable)
-- Monthly totals, account or settings entry points, overflow menus
+- A details screen for receipts that are processing or failed processing (failed rows open receipt options; processing rows are not interactive)
+- Monthly totals, account or settings entry points, unrelated overflow actions
 - Server connection status indicators
 
 If a task seems to need one of these, stop and ask instead of inventing UI.
+
+## V2 deletion designs
+
+The new handoff defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The list implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Details overflow remains a reference for a future addition.
 
 ## How to work
 

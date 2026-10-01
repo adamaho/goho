@@ -28,6 +28,7 @@ data class ReceiptListEntry(
     val total: String?,
     val currency: String?,
     val status: ReceiptListStatus,
+    val uploadId: java.util.UUID? = null,
 )
 
 enum class ReceiptDatePeriod {
@@ -72,6 +73,7 @@ fun receiptListEntries(
                 val instant = receiptUploadInstant(upload.createdAt)
                 ReceiptListEntry(
                     key = "upload:${upload.id}",
+                    uploadId = upload.id,
                     receiptId = null,
                     merchant = null,
                     date = instant?.atZone(zone)?.toLocalDate(),

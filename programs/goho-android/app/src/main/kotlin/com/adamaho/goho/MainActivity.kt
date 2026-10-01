@@ -32,6 +32,8 @@ import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
+import com.adamaho.goho.ui.main.ReceiptListEntry
+import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
 import com.adamaho.goho.ui.main.ScanPreviewScreen
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
     private var overviewState by mutableStateOf(ReceiptOverviewState())
     private var receiptPollingJob: Job? = null
     private var refreshAfterCurrent = false
+    private var historyRevision = 0L
 
     private val receiptUploadsApi by lazy {
         ApiClient(
@@ -138,6 +141,7 @@ class MainActivity : ComponentActivity() {
                                         NavEntry(route) {
                                             ReceiptOverview(
                                                 state = overviewState,
+                                                deleteReceipt = ::deleteReceipt,
                                                 loadReceiptImage = ::loadReceiptImage,
                                                 isOpeningScanner = isOpeningScanner,
                                                 scanError = scanError,
@@ -235,12 +239,42 @@ class MainActivity : ComponentActivity() {
             null
         }
 
+    private suspend fun deleteReceipt(entry: ReceiptListEntry): Boolean {
+        if (entry.status == ReceiptListStatus.Processing) return false
+        return try {
+            val response =
+                when {
+                    entry.receiptId != null -> receiptsApi.receiptsDelete(entry.receiptId)
+                    entry.status == ReceiptListStatus.NotProcessed && entry.uploadId != null ->
+                        receiptUploadsApi.receiptUploadsDelete(entry.uploadId)
+                    else -> return false
+                }
+            if (response.code() != 204) return false
+            historyRevision++
+            overviewState =
+                overviewState.copy(
+                    receipts = overviewState.receipts.filterNot { it.id == entry.receiptId },
+                    uploads =
+                        overviewState.uploads.filterNot {
+                            it.id == entry.uploadId ||
+                                (entry.receiptId != null && it.receiptId == entry.receiptId)
+                        },
+                )
+            true
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoReceipts", "Receipt deletion failed", error)
+            false
+        }
+    }
+
     private fun refreshHistory() {
         if (overviewState.loading) {
             refreshAfterCurrent = true
             return
         }
 
+        val revision = historyRevision
         overviewState = overviewState.copy(loading = true, error = false)
         lifecycleScope.launch {
             try {
@@ -248,6 +282,12 @@ class MainActivity : ComponentActivity() {
                 val receiptsResponse = receiptsApi.receiptsList()
                 val uploads = uploadsResponse.body()?.data
                 val receipts = receiptsResponse.body()?.data
+                if (revision != historyRevision) {
+                    // A refresh started before a deletion must not bring the removed row back.
+                    overviewState = overviewState.copy(loading = false)
+                    refreshAfterCurrent = true
+                    return@launch
+                }
                 overviewState =
                     if (
                         uploadsResponse.isSuccessful &&

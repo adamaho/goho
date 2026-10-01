@@ -1,6 +1,8 @@
 # Goho screens
 
-Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Screen designs, the photo viewer, and receipt-deletion flows. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+
+The deletion flows, row options and overflow action below are v2 design references, not implemented app capabilities. Verify server support before implementing them.
 
 ## 1. Receipts (list)
 
@@ -14,10 +16,24 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 - Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ReceiptCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed.
-- Only Processed rows are tappable; they open Receipt details.
+- Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
+- Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
 - Leave bottom padding in the list so the last row can scroll clear of the Scan button.
 
 **Scan FAB** bottom right, with no bottom gradient over the list. Opens the existing scan flow.
+
+**Deleting from the list** (mockups `list-hold-1-press*.png`, `list-hold-2-sheet*.png`, and `list-delete-1-tap*.png` to `list-delete-4-after*.png`)
+Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. The sheet's summary row matches the receipt:
+
+- Processed: thumbnail, merchant, and "{amount}, {date}" (for example "$46.78, Sep 27, 2026"); the confirmation uses the details-screen sentence ("Foodland, $46.78 from Sep 27, will be removed from Goho. This can’t be undone.").
+- Not processed: as below.
+
+1. For a Not processed row, the sheet shows:
+   - Summary row: the row's thumbnail, "Unknown receipt" (or the merchant if one was read), and "Not processed, today at 8:14 AM" (`meta`, `textTertiary`; use "on Sep 26" style for other days).
+   - The destructive GohoSheetAction "Delete receipt".
+2. "Delete receipt" turns the sheet into the confirmation, exactly as on the details screen, with this body: "The unprocessed receipt from today at 8:14 AM will be removed from Goho. This can’t be undone." (Use the merchant-based sentence from the details screen when a merchant is known.)
+3. On success the sheet closes and you stay on the list. The row collapses out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
+4. Cancel, failure and in-progress behavior match the details screen.
 
 **Empty states** (provisional; keep them plain):
 
@@ -26,7 +42,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 ## 2. Receipt details (processed receipts only)
 
-**Top bar** (status bar inset, 56 tall, `screenMargin` sides): round back button on the left. No title, no other actions.
+**Top bar** (status bar inset, 56 tall, `screenMargin` sides): round back button on the left, round overflow button (`MoreHoriz`, content description "More options") on the right. No title.
 
 **Hero** (12 below the bar, `textInset` sides)
 
@@ -47,7 +63,23 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
-No footer and no actions on this screen.
+No footer on this screen.
+
+**Deleting a receipt** (mockups `delete-1-menu*.png`, `delete-2-sheet*.png`, `delete-3-confirm*.png`)
+
+1. The overflow button opens a GohoSheet with:
+   - A summary row (16dp vertical, 20dp horizontal padding, 12dp gap): the receipt's 40×48 thumbnail, merchant (`rowTitle`) and, 4dp below, "{amount}, {date}" (`meta`, `textTertiary`), for example "US$23.21, Sep 24, 2026". Missing merchant: "Unknown receipt"; missing amount: just the date.
+   - A `divider` inset 20dp.
+   - One GohoSheetAction, destructive: trash icon, "Delete receipt".
+   - 8dp bottom padding.
+2. Tapping "Delete receipt" changes the same sheet into the confirmation (animate the height; don't stack a second sheet). Padding 20, content left-aligned:
+   - 52dp `dangerContainer` circle with a 24dp `onDangerContainer` trash icon.
+   - 16dp below: "Delete this receipt?" (`title`).
+   - 8dp below (`body`: 15/22 Medium, `textSecondary`): "{merchant}, {amount} from {short date}, will be removed from Goho. This can’t be undone." Example: "Cedar Hardware, US$23.21 from Sep 24, will be removed from Goho. This can’t be undone." Drop the parts that are missing.
+   - 24dp below, stacked with a 10dp gap: GohoDangerButton "Delete receipt" (trash icon), then GohoSecondaryButton "Cancel".
+   - Use `alertdialog` semantics with the title as the label; focus moves to the title when it appears.
+3. Cancel, the scrim, drag-down or back closes the sheet without deleting.
+4. Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On success, close the sheet and the details screen together and return to the Receipts list, where the receipt is gone (no toast, no undo). On failure, keep the sheet open and replace the body text with "Couldn’t delete this receipt. Try again." in `onDangerContainer`, with the buttons re-enabled.
 
 ## 3. Photo viewer
 
