@@ -60,6 +60,7 @@ Preserve these refinements when adapting the reference code or older mockups:
 - Sort each receipt day newest upload first, including successfully processed uploads. Rows without upload timestamps follow in stable server order; do not invent a timestamp for manual receipts.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
 - Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
+- Receipt holds use only a subtle scale reduction (0.98); do not show a pressed fill or highlight. Keep one mounted trash icon across the options and confirmation sheet, moving and growing it into place with a gentle spring; snap when animations are disabled.
 - Center the visible text bounds inside status pills and filter count badges, rather than the font line box. Keep a minimum height that can grow for larger text.
 
 ## Approved receipt-details refinements

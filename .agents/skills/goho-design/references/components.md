@@ -34,6 +34,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
 - Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
 - Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
+- Keep one mounted trash icon across the menu and confirmation states. Animate its position and size between measured slots with a gentle spring (damping 0.6, stiffness 300); snap with reduced motion.
 - Content changes inside the same sheet animate their height (`animateContentSize` or `AnimatedContent` with a size transform, 250ms) instead of opening a second sheet.
 - Implementation hint: M3 `ModalBottomSheet` with `containerColor = Color.Transparent`, `dragHandle = null`, `tonalElevation = 0.dp`, `scrimColor = scrim`, and the content wrapped in a padded, clipped, `sheet`-colored Box.
 
@@ -78,7 +79,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
   - **Processing:** merchant "New receipt", date "Just now", trailing amount replaced by a 52×12 fully round shimmering skeleton, pill "Reading receipt…". Not tappable.
   - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, pill "Not processed". Tappable; opens the receipt options sheet (it has no details screen).
 - Pressed (Processed and Not processed rows): background `surfacePressed`, no scale. Cards clip their rows to the card's corners.
-- Press and hold (Processed and Not processed rows; Processing rows ignore it): while the finger is down the row shows `surfacePressed` and, once it's clear the press is a hold (after about 150ms), eases to scale 0.98 with 14dp rounded corners on the highlight, so it looks lifted inside the card. When the long-press fires (the system long-press timeout, about 400–500ms): `HapticFeedbackType.LongPress`, the row springs back to scale 1, and the receipt options sheet opens. Releasing before the timeout is a normal tap. Implement with `Modifier.combinedClickable(onClick, onLongClick, onLongClickLabel = "Receipt options")` so TalkBack offers the action.
+- Press and hold (Processed and Not processed rows; Processing rows ignore it): once it's clear the press is a hold (after about 150ms), ease to scale 0.98. Keep the normal surface fill throughout; no pressed highlight. When the long-press fires (the system long-press timeout, about 400–500ms): `HapticFeedbackType.LongPress`, the row springs back to scale 1, and the receipt options sheet opens. Releasing before the timeout is a normal tap. Implement with `Modifier.combinedClickable(onClick, onLongClick, onLongClickLabel = "Receipt options")` so TalkBack offers the action.
 - Each row has a merged content description, for example "Cedar Hardware, US$23.21, Thursday September 24" or "Unknown receipt, not processed, today 8:14 AM".
 
 ## ReceiptCard (section)

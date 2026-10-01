@@ -408,8 +408,7 @@ private fun ReceiptRow(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(GohoShapes.heldRow)
-            .background(if (pressed) c.surfacePressed else c.surface)
+            .background(c.surface)
             .heightIn(min = GohoSpacing.rowMinHeight)
             .semantics(mergeDescendants = true) {}
             .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),
