@@ -8,6 +8,8 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiError } from "effect/unstable/httpapi";
 import { expect } from "vitest";
 
+import * as Transaction from "#src/database/transaction.ts";
+import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
@@ -57,19 +59,28 @@ const receiptUploadsTest = (overrides: Partial<ReceiptUploads.Interface> = {}) =
 const testLayer = (
   repository: Partial<ReceiptRepository.Interface> = {},
   receiptUploads: Partial<ReceiptUploads.Interface> = {},
+  storage: Partial<FileStorage.Interface> = {},
 ) =>
   HttpRouter.serve(
     Http.layer.pipe(
       Layer.provide([
         Receipts.layer.pipe(
-          Layer.provide(
+          Layer.provide([
+            Transaction.layerTest,
+            Layer.succeed(FileStorage.Service, {
+              put: () => Effect.die("Unexpected storage.put"),
+              get: () => Effect.die("Unexpected storage.get"),
+              delete: () => Effect.die("Unexpected storage.delete"),
+              ...storage,
+            }),
             Layer.succeed(ReceiptRepository.Service, {
+              delete: () => Effect.succeedSome({ fileId: null }),
               findById: () => Effect.succeedSome(receipt),
               insert: () => Effect.succeed(receipt.id),
               list: Effect.succeed([receipt]),
               ...repository,
             }),
-          ),
+          ]),
         ),
         receiptUploadsTest(receiptUploads),
       ]),
@@ -319,6 +330,7 @@ it.effect(
           Http.layer.pipe(
             Layer.provide([
               Layer.succeed(Receipts.Service, {
+                delete: () => Effect.die("Health must not delete receipts"),
                 create: () => Effect.die("Health must not create receipts"),
                 get: () => Effect.die("Health must not get receipts"),
                 list: Effect.die("Health must not list receipts"),
@@ -329,4 +341,98 @@ it.effect(
         ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
       ),
     ),
+);
+
+it.effect(
+  "deletes a receipt through the generated client and returns HTTP 204 without a body",
+  () =>
+    Effect.gen(function* () {
+      const client = yield* Client.make("");
+      expect(yield* client.receipts.delete({ params: { receiptId: receipt.id } })).toBeUndefined();
+      const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
+      expect(response.status).toBe(204);
+      expect(yield* response.text).toBe("");
+    }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("deletes the original photo linked to the receipt", () => {
+  const deleted: FileStorage.FileId[] = [];
+  const fileId = FileStorage.FileId.make("stored-photo");
+  return Effect.gen(function* () {
+    const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(204);
+    expect(deleted).toEqual([fileId]);
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        { delete: () => Effect.succeedSome({ fileId }) },
+        {},
+        {
+          delete: (id) =>
+            Effect.sync(() => {
+              deleted.push(id);
+            }),
+        },
+      ),
+    ),
+  );
+});
+
+it.effect("returns HTTP 404 when deleting a missing receipt", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(404);
+  }).pipe(Effect.provide(testLayer({ delete: () => Effect.succeedNone }))),
+);
+
+it.effect("rejects malformed receipt IDs before deleting anything", () =>
+  Effect.gen(function* () {
+    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
+      expect((yield* HttpClient.del(`/receipts/${id}`)).status).toBe(400);
+    }
+  }).pipe(Effect.provide(testLayer({ delete: () => Effect.die("Must not delete") }))),
+);
+
+it.effect("returns HTTP 500 without exposing database deletion failure details", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(500);
+    expect(yield* response.text).not.toContain("private database details");
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        delete: () =>
+          Effect.fail(
+            new ReceiptRepository.PersistenceError({
+              operation: "delete",
+              cause: "private database details",
+            }),
+          ),
+      }),
+    ),
+  ),
+);
+
+it.effect("returns HTTP 500 when photo deletion fails without exposing storage details", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(500);
+    expect(yield* response.text).not.toContain("private storage details");
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        { delete: () => Effect.succeedSome({ fileId: FileStorage.FileId.make("stored-photo") }) },
+        {},
+        {
+          delete: () =>
+            Effect.fail(
+              new FileStorage.StorageError({
+                operation: "delete",
+                cause: "private storage details",
+              }),
+            ),
+        },
+      ),
+    ),
+  ),
 );

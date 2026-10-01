@@ -50,6 +50,7 @@ const dependencies = (options: {
         }).pipe(Effect.orDie),
     }),
     Layer.succeed(ReceiptRepository.Service, {
+      delete: () => Effect.die("Unexpected receipt deletion"),
       findById: () => Effect.succeedNone,
       insert: options.insertReceipt ?? (() => Effect.succeed(ReceiptId.make("42"))),
       list: Effect.succeed([]),

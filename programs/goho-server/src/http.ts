@@ -46,6 +46,7 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
     const uploads = yield* ReceiptUploads.Service;
     return handlers
       .handle("list", () => receipts.list.pipe(Effect.map(withData)))
+      .handle("delete", ({ params }) => receipts.delete(params.receiptId))
       .handle("get", ({ params }) => receipts.get(params.receiptId).pipe(Effect.map(withData)))
       .handle("getImage", ({ params }) =>
         uploads.getImage(params.receiptId).pipe(

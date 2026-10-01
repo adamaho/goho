@@ -120,7 +120,7 @@ export const api = HttpApi.make("goho-server")
       ),
     // Receipts
     HttpApiGroup.make("receipts")
-      .annotate(OpenApi.Description, "Receipt retrieval and creation plays.")
+      .annotate(OpenApi.Description, "Receipt retrieval, creation, and deletion plays.")
       .add(
         HttpApiEndpoint.get("list", "/receipts", {
           success: DataResponse(
@@ -157,6 +157,25 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Brings back one saved receipt with its items lined up by position.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/receipts/:receiptId", {
+          params: { receiptId: ReceiptId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.NotFound.annotate({
+              description: "No receipt is wearing that number, bud.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not delete this receipt and its stored image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a receipt")
+          .annotate(
+            OpenApi.Description,
+            "Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.",
           ),
       )
       .add(
