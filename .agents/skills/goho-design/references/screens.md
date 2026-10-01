@@ -38,7 +38,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 **Details** (24 below): section label "Details", then a read-only DetailList:
 
-- Merchant, Date ("Sep 24, 2026"), Total (with the currency prefix when foreign), and Currency only when it differs from the home currency (for example "US dollar").
+- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal, Tax, Total, and Currency only when it differs from the home currency (for example "US dollar"). Format monetary values consistently with the currency prefix when foreign. Keep this single breakdown in Details; do not repeat it below Items.
 
 No footer and no actions on this screen.
 

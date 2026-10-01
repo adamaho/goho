@@ -61,7 +61,7 @@ Preserve these refinements when adapting the reference code or older mockups:
 ## Receipt details rollout
 
 - The first details PR covers the back control, merchant/amount/date hero, static photo frame and read-only metadata card. Add the expandable viewer in the next increment; show no inactive expand control.
-- Preserve the existing category, item and subtotal/tax/total information during the rollout. Category may appear as a read-only metadata row.
+- Preserve category and item information during the rollout. Keep Subtotal, Tax and Total together in the Details card, with no duplicate totals block below Items. Format all three amounts consistently.
 - Format dates and numeric amounts for the phone locale. Use the receipt currency, falling back to its code if it is not a registered currency; never assume a currency when the server returns null.
 - Missing photos show “No receipt photo available”. Keep receipt loading and retry states accessible, with back navigation available.
 

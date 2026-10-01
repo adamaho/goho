@@ -119,13 +119,22 @@ fun ReceiptDetailScreen(
             val foreign = code != null && code != homeCurrency
             val prefix = if (foreign) currency?.getSymbol(locale) ?: code.orEmpty() else ""
             val amount = receiptAmount(saved.total, saved.currency, locale)
-            val total = if (prefix.isEmpty()) amount else "$prefix $amount"
+            fun withCurrency(value: String) = if (prefix.isEmpty()) value else "$prefix $value"
+            val total = withCurrency(amount)
             val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
             val rows = buildList {
                 add(stringResource(R.string.receipt_merchant) to merchant)
                 add(stringResource(R.string.receipt_date) to shortDate)
                 if (saved.category.isNotBlank())
                     add(stringResource(R.string.receipt_category) to saved.category)
+                add(
+                    stringResource(R.string.receipt_subtotal) to
+                        withCurrency(receiptAmount(saved.subtotal, saved.currency, locale))
+                )
+                add(
+                    stringResource(R.string.receipt_tax) to
+                        withCurrency(receiptAmount(saved.tax, saved.currency, locale))
+                )
                 add(stringResource(R.string.receipt_total) to total)
                 if (foreign)
                     add(
@@ -187,7 +196,7 @@ fun ReceiptDetailScreen(
                         }
                     }
                 }
-                // Keep the existing item and totals content available during the layout rollout.
+                // Keep item information available during the layout rollout.
                 item("items-heading") {
                     DetailSectionHeading(stringResource(R.string.receipt_items_title))
                 }
@@ -211,7 +220,8 @@ fun ReceiptDetailScreen(
                         ) {
                             Row(
                                 Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(GohoSpacing.contentGap),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(GohoSpacing.contentGap),
                             ) {
                                 Text(
                                     item.name,
@@ -227,17 +237,6 @@ fun ReceiptDetailScreen(
                             }
                         }
                     }
-                item("totals") {
-                    Column(Modifier.padding(top = GohoSpacing.contentGap)) {
-                        ReceiptDetailRow(
-                            stringResource(R.string.receipt_subtotal),
-                            saved.subtotal,
-                            stacked,
-                        )
-                        ReceiptDetailRow(stringResource(R.string.receipt_tax), saved.tax, stacked)
-                        ReceiptDetailRow(stringResource(R.string.receipt_total), total, stacked)
-                    }
-                }
             }
         }
     }
