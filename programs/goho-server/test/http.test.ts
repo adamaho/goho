@@ -47,6 +47,7 @@ const receiptUploadsTest = (overrides: Partial<ReceiptUploads.Interface> = {}) =
   Layer.succeed(
     ReceiptUploads.Service,
     ReceiptUploads.Service.of({
+      delete: () => Effect.void,
       create: () => Effect.succeed(receiptUpload),
       get: () => Effect.succeed(receiptUpload),
       getImage: () =>
@@ -435,4 +436,55 @@ it.effect("returns HTTP 500 when photo deletion fails without exposing storage d
       ),
     ),
   ),
+);
+
+it.effect(
+  "deletes a failed upload through the generated client and returns an empty HTTP 204",
+  () => {
+    const deleted: ReceiptUploadId[] = [];
+    return Effect.gen(function* () {
+      const client = yield* Client.make("");
+      expect(
+        yield* client.receiptUploads.delete({ params: { uploadId: receiptUpload.id } }),
+      ).toBeUndefined();
+      const response = yield* HttpClient.del(`/receipt-uploads/${receiptUpload.id}`);
+      expect(response.status).toBe(204);
+      expect(yield* response.text).toBe("");
+      expect(deleted).toEqual([receiptUpload.id, receiptUpload.id]);
+    }).pipe(
+      Effect.provide(
+        testLayer(
+          {},
+          {
+            delete: (uploadId) =>
+              Effect.sync(() => {
+                deleted.push(uploadId);
+              }),
+          },
+        ),
+      ),
+    );
+  },
+);
+
+it.effect("rejects malformed upload IDs before deletion", () =>
+  Effect.gen(function* () {
+    expect((yield* HttpClient.del("/receipt-uploads/not-a-uuid")).status).toBe(400);
+  }).pipe(Effect.provide(testLayer({}, { delete: () => Effect.die("Must not delete") }))),
+);
+
+it.effect("returns the documented status for missing, non-failed, and unavailable uploads", () =>
+  Effect.gen(function* () {
+    for (const [error, status] of [
+      [new HttpApiError.NotFound(), 404],
+      [new HttpApiError.Conflict(), 409],
+      [new HttpApiError.InternalServerError(), 500],
+    ] as const) {
+      yield* Effect.gen(function* () {
+        const response = yield* HttpClient.del(`/receipt-uploads/${receiptUpload.id}`);
+        expect(response.status).toBe(status);
+        expect(yield* response.json).toEqual({ _tag: error._tag });
+      }).pipe(Effect.provide(testLayer({}, { delete: () => Effect.fail(error) })));
+    }
+  }),
 );

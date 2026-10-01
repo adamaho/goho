@@ -16,6 +16,7 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
     const uploads = yield* ReceiptUploads.Service;
     const fileSystem = yield* FileSystem.FileSystem;
     return handlers
+      .handle("delete", ({ params }) => uploads.delete(params.uploadId))
       .handle("create", ({ payload }) =>
         Effect.gen(function* () {
           const bytes = yield* fileSystem

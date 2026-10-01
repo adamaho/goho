@@ -56,6 +56,7 @@ const dependencies = (options: {
       list: Effect.succeed([]),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
+      deleteFailed: () => Effect.die("Unexpected upload deletion"),
       list: Effect.succeed([]),
       createQueued: () => Effect.die("Unexpected createQueued call"),
       findById: () => Effect.succeedSome(upload),
@@ -184,4 +185,18 @@ it.effect("retries the terminal status write before giving up", () =>
 
     expect(yield* Ref.get(attempts)).toBe(3);
   }),
+);
+
+it.effect("discards a redelivered job after its upload has been deleted", () =>
+  Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 3 }).pipe(
+    Effect.provide(
+      dependencies({
+        markProcessing: (uploadId) =>
+          Effect.fail(new ReceiptUploadRepository.UploadNotFound({ uploadId })),
+        storageGet: () => Effect.die("Deleted upload must not read a photo"),
+        insertReceipt: () => Effect.die("Deleted upload must not create a receipt"),
+        markFailed: () => Effect.die("Deleted upload must not be recreated"),
+      }),
+    ),
+  ),
 );

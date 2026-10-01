@@ -161,3 +161,59 @@ it.effect("rejects missing uploads and invalid terminal transitions", () =>
     });
   }).pipe(Effect.provide(DatabaseLive)),
 );
+
+it.effect("deletes only failed uploads and preserves active uploads and successful scans", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const failed = yield* makeUpload;
+    yield* repo.createQueued(failed);
+    yield* repo.markFailed(failed.id, "processing_failed");
+    for (const status of ["queued", "processing", "succeeded"] as const) {
+      const input = yield* makeUpload;
+      yield* repo.createQueued(input);
+      if (status !== "queued") yield* repo.markProcessing(input.id);
+      if (status === "succeeded") {
+        yield* repo.markSucceeded(input.id, yield* createReceipt, {
+          version: 1,
+          payload: parsedReceipt,
+        });
+      }
+      const before = yield* repo.findById(input.id);
+      const result = yield* repo.deleteFailed(input.id).pipe(Effect.result);
+      expect(Result.isFailure(result) && result.failure).toMatchObject({
+        _tag: "GohoServer.ReceiptUploadRepository.DeletionNotAllowed",
+        currentStatus: status,
+      });
+      expect(yield* repo.findById(input.id)).toEqual(before);
+    }
+    expect(yield* repo.deleteFailed(failed.id)).toBe(failed.fileId);
+    expect(yield* repo.findById(failed.id)).toEqual(Option.none());
+    expect(yield* repo.list).toHaveLength(3);
+    const sql = yield* SqlClient.SqlClient;
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
+    const missing = yield* repo.deleteFailed(failed.id).pipe(Effect.result);
+    expect(Result.isFailure(missing) && missing.failure._tag).toBe(
+      "GohoServer.ReceiptUploadRepository.UploadNotFound",
+    );
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("allows only one concurrent deletion of a failed upload", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    const input = yield* makeUpload;
+    yield* repo.createQueued(input);
+    yield* repo.markFailed(input.id, "processing_failed");
+    const results = yield* Effect.all(
+      [
+        repo.deleteFailed(input.id).pipe(Effect.result),
+        repo.deleteFailed(input.id).pipe(Effect.result),
+      ],
+      { concurrency: 2 },
+    );
+    expect(results.filter(Result.isSuccess)).toHaveLength(1);
+    expect(results.filter(Result.isFailure).map((result) => result.failure._tag)).toEqual([
+      "GohoServer.ReceiptUploadRepository.UploadNotFound",
+    ]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);

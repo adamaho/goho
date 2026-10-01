@@ -6,6 +6,7 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.EffectHttpApiErrorConflictEncoded
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorInternalServerErrorEncoded
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorNotFoundEncoded
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
@@ -29,6 +30,22 @@ interface ReceiptUploadsApi {
     @Multipart
     @POST("receipt-uploads")
     suspend fun receiptUploadsCreate(@Part file: MultipartBody.Part): Response<ReceiptUploadsCreate202Response>
+
+    /**
+     * DELETE receipt-uploads/{uploadId}
+     * Delete a failed receipt upload
+     * Clears a failed upload and its original image off the bench. Queued, processing, and succeeded uploads return 409; delete the receipt to remove a successful scan.
+     * Responses:
+     *  - 204: <No Content>
+     *  - 404: No receipt upload is wearing that number, bud.
+     *  - 409: Only failed uploads can be deleted; this upload has a different status.
+     *  - 500: The server could not delete this upload and its stored image.
+     *
+     * @param uploadId 
+     * @return [Unit]
+     */
+    @DELETE("receipt-uploads/{uploadId}")
+    suspend fun receiptUploadsDelete(@Path("uploadId") uploadId: java.util.UUID): Response<Unit>
 
     /**
      * GET receipt-uploads/{uploadId}

@@ -48,6 +48,22 @@ includes a stable failure code; diagnostic details remain in server logs.
 A valid UUID with no matching upload returns HTTP 404. Malformed IDs return HTTP
 400, and retrieval failures return HTTP 500.
 
+### Delete a failed receipt upload
+
+`DELETE /receipt-uploads/:uploadId` permanently removes a failed upload and its
+original photo. It returns HTTP 204 with no response body. Failed uploads have
+`status: "failed"` and a failure code after the worker exhausts its three attempts.
+
+Queued, processing, and succeeded uploads return HTTP 409 with
+`{"_tag":"Conflict"}`. To remove a successful scan and its photo, delete its
+receipt instead. Missing or previously deleted uploads return HTTP 404, and
+malformed UUIDs return HTTP 400.
+
+Database or photo cleanup failures return HTTP 500. Database changes roll back
+so cleanup can be retried; an already missing photo does not block deletion.
+As with receipt deletion, a commit failure after photo removal can leave the
+upload without its photo until deletion is retried.
+
 ### Get a receipt
 
 `GET /receipts/:receiptId` returns one complete receipt under `data`. A valid
