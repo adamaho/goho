@@ -110,6 +110,12 @@ Do not add `@param` or `@returns` tags when they only repeat TypeScript names
 and types. Tests, fixtures, and straightforward transformations generally do
 not need JSDoc.
 
+## Formatting
+
+The root `oxfmt.config.ts` imports `@adamaho/nopeus-oxfmt-config`. Keep shared
+formatting defaults in that package and add project-specific overrides in the
+root config. Workspace packages discover the root config automatically.
+
 ## Dependency Management
 
 Prefer centralizing shared dependency versions in `pnpm-workspace.yaml` using

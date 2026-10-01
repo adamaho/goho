@@ -9,8 +9,8 @@
     "dev": "turbo run dev --ui=tui",
     "server:dev": "turbo run dev --filter=@goho/goho-server --ui=tui",
     "lint": "turbo run lint",
-    "fmt": "oxfmt --config ./tools/oxfmt-config/src/base.json .",
-    "fmt:check": "oxfmt --check --config ./tools/oxfmt-config/src/base.json .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
     "fmt:android": "cd programs/goho-android && ./gradlew :app:ktfmtFormat",
     "fmt:check:android": "cd programs/goho-android && ./gradlew :app:ktfmtCheck",
     "tsc": "turbo run tsc",
@@ -18,7 +18,7 @@
     "test:integration": "turbo run test:integration"
   },
   "devDependencies": {
-    "@goho/tool-oxfmt-config": "workspace:*",
+    "@adamaho/nopeus-oxfmt-config": "catalog:",
     "oxfmt": "catalog:",
     "rimraf": "catalog:",
     "turbo": "catalog:"

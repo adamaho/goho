@@ -25,7 +25,6 @@
     "@adamaho/nopeus-oxlint-config": "catalog:",
     "@adamaho/nopeus-oxlint-plugin": "catalog:",
     "@effect/vitest": "catalog:",
-    "@goho/tool-oxfmt-config": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
