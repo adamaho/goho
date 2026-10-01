@@ -94,7 +94,7 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
     expect((yield* Ref.get(receipts)).map((receipt) => receipt.currency)).toEqual(["USD"]);
     expect(yield* Ref.get(extractions)).toEqual([
       {
-        version: 2,
+        version: 1,
         payload: {
           ...parsedReceipt,
           transaction: { ...parsedReceipt.transaction, currency: "USD" },

@@ -79,7 +79,7 @@ applies to every item and total and defaults to CAD. The migration backfills
 existing null currencies and makes the column non-null. Both API creation and
 GPT extraction require an explicit three-letter currency code; null and missing
 currency are rejected. Extraction preserves the receipt's currency and uses CAD
-when the receipt gives no clues identifying another currency. Extraction version 2
+when the receipt gives no clues identifying another currency. Extraction version 1
 records this required field. See [receipt creation](./README.md#create-a-receipt).
 
 `receipt_uploads` links each processed upload to its receipt and records the

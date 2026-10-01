@@ -104,7 +104,7 @@ it.effect("moves a queued upload through processing to its receipt", () =>
 
     const receiptId = yield* createReceipt;
     expect(
-      yield* repo.markSucceeded(input.id, receiptId, { version: 2, payload: parsedReceipt }),
+      yield* repo.markSucceeded(input.id, receiptId, { version: 1, payload: parsedReceipt }),
     ).toMatchObject({
       id: input.id,
       status: "succeeded",
@@ -114,7 +114,7 @@ it.effect("moves a queued upload through processing to its receipt", () =>
     const sql = yield* SqlClient.SqlClient;
     expect(
       yield* sql`SELECT extraction_version, extracted_payload FROM receipt_uploads WHERE id = ${input.id}`,
-    ).toEqual([{ extraction_version: 2, extracted_payload: parsedReceipt }]);
+    ).toEqual([{ extraction_version: 1, extracted_payload: parsedReceipt }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

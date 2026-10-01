@@ -43,7 +43,7 @@ export interface ParsedReceipt extends Schema.Schema.Type<typeof ParsedReceipt> 
  * @category constants
  * @since 0.1.0
  */
-export const extractionVersion = 2;
+export const extractionVersion = 1;
 
 /**
  * Converts a validated extraction into receipt data without rounding amounts.
