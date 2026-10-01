@@ -26,6 +26,7 @@ const createPayload = CreateReceiptRequest.make({
 
 const receipt = Receipt.make({
   ...createPayload,
+  currency: "CAD",
   id: ReceiptId.make("42"),
   items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
 });

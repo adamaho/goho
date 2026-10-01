@@ -1,7 +1,7 @@
 import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
-import { ReceiptId } from "@goho/goho-api/receipts";
+import { type CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
 import { Effect, Fiber, Layer, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
@@ -28,6 +28,7 @@ const upload: ReceiptUpload = {
 };
 
 const dependencies = (options: {
+  readonly insertReceipt?: ReceiptRepository.Interface["insert"];
   readonly storageGet?: FileStorage.Interface["get"];
   readonly markProcessing?: ReceiptUploadRepository.Interface["markProcessing"];
   readonly markSucceeded?: ReceiptUploadRepository.Interface["markSucceeded"];
@@ -46,7 +47,7 @@ const dependencies = (options: {
     }),
     Layer.succeed(ReceiptRepository.Service, {
       findById: () => Effect.succeedNone,
-      insert: () => Effect.succeed(ReceiptId.make("42")),
+      insert: options.insertReceipt ?? (() => Effect.succeed(ReceiptId.make("42"))),
       list: Effect.succeed([]),
     }),
     Layer.succeed(ReceiptUploadRepository.Service, {
@@ -67,9 +68,14 @@ const dependencies = (options: {
 it.effect("stores the resulting receipt ID after processing an upload", () =>
   Effect.gen(function* () {
     const succeeded = yield* Ref.make<ReadonlyArray<string>>([]);
+    const receipts = yield* Ref.make<ReadonlyArray<CreateReceiptRequest>>([]);
     yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
       Effect.provide(
         dependencies({
+          insertReceipt: (receipt) =>
+            Ref.update(receipts, (values) => [...values, receipt]).pipe(
+              Effect.as(ReceiptId.make("42")),
+            ),
           markSucceeded: (uploadId, receiptId) =>
             Ref.update(succeeded, (values) => [...values, `${uploadId}:${receiptId}`]).pipe(
               Effect.as({ ...upload, status: "succeeded", receiptId }),
@@ -78,6 +84,7 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
       ),
     );
     expect(yield* Ref.get(succeeded)).toEqual([`${upload.id}:42`]);
+    expect((yield* Ref.get(receipts)).map((receipt) => receipt.currency)).toEqual(["CAD"]);
   }),
 );
 

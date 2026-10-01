@@ -13,7 +13,7 @@ import java.util.UUID
 
 private val previewTime = Instant.parse("2026-09-30T12:00:00Z")
 
-private fun receipt(id: String, merchant: String, date: String, total: String, currency: String?) =
+private fun receipt(id: String, merchant: String, date: String, total: String, currency: String) =
     Receipt(
         id,
         merchant,
@@ -57,7 +57,7 @@ internal val receiptListPreviewState =
             ),
         receipts =
             listOf(
-                receipt("1", "Cedar Hardware", "2026-09-25", "46.78", null),
+                receipt("1", "Cedar Hardware", "2026-09-25", "46.78", "CAD"),
                 receipt("2", "Northside Market", "2026-09-24", "52.70", "CAD"),
                 receipt("3", "Paper & Pine", "2026-09-22", "19.95", "USD"),
             ),

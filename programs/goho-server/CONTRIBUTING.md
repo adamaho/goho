@@ -72,11 +72,12 @@ and repository behavior in this server.
 ### Receipt schema
 
 `receipts` holds only receipt data: store, receipt date, category, subtotal, tax,
-total, nullable currency, and creation time. `receipt_items` stores ordered item
+total, currency, and creation time. `receipt_items` stores ordered item
 names and amounts, linked to a receipt. Dates use `date`, creation times use
 `timestamptz`, and amounts use `numeric` without two-decimal rounding. Currency
-remains unknown with the current extraction contract; API-created receipts accept
-a currency or null. See [receipt creation](./README.md#create-a-receipt).
+applies to every item and total and defaults to CAD. The migration backfills
+existing null currencies and makes the column non-null. Scanned receipts use CAD;
+API-created receipts accept an explicit currency or null to use CAD. See [receipt creation](./README.md#create-a-receipt).
 
 `receipt_uploads` links each processed upload to its receipt and records the
 extraction version and validated extraction JSON once the upload succeeds.

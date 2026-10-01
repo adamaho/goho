@@ -15,7 +15,7 @@ const receipt = {
   subtotal: "10.25",
   tax: "0.75",
   total: "11",
-  currency: null,
+  currency: "CAD",
   items: [{ position: 0, name: "Apples", amount: "11" }],
 };
 

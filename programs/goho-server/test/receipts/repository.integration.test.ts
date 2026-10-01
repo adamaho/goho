@@ -14,6 +14,7 @@ import bigintReceiptIdsMigration from "#src/database/migrations/0003-bigint-rece
 import receiptUploadsMigration from "#src/database/migrations/0004-receipt-uploads.ts";
 import receiptUploadFileIdMigration from "#src/database/migrations/0005-receipt-upload-file-id.ts";
 import dropReceiptIdempotencyMigration from "#src/database/migrations/0006-drop-receipt-idempotency.ts";
+import moveExtractionToUploadsMigration from "#src/database/migrations/0007-move-extraction-to-uploads.ts";
 import * as Repository from "#src/receipts/repository.ts";
 
 import { parsedReceipt, receipt } from "./fixtures.ts";
@@ -96,6 +97,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "receipt_upload_file_id" },
       { name: "drop_receipt_idempotency" },
       { name: "move_extraction_to_uploads" },
+      { name: "default_receipt_currency" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -163,6 +165,72 @@ it.effect("migrates populated UUID receipts to BIGINT identities without losing 
       }),
     ),
   ),
+);
+
+it.effect("backfills missing currency to CAD and preserves explicit currencies and amounts", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO receipts (store_name, receipt_date, category, subtotal, tax, total, currency)
+      VALUES
+        ('Unknown currency', '2026-09-01', 'Groceries', 10.250, 0.75, 11.00, NULL),
+        ('US Store', '2026-09-02', 'Groceries', 20, 2, 22, 'USD')
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount)
+      SELECT id, 0, 'Apples', total FROM receipts
+    `;
+
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
+
+    expect(
+      yield* sql`
+      SELECT r.currency, r.subtotal::text, r.tax::text, r.total::text, i.amount::text
+      FROM receipts r JOIN receipt_items i ON i.receipt_id = r.id ORDER BY r.id
+    `,
+    ).toEqual([
+      { currency: "CAD", subtotal: "10.250", tax: "0.75", total: "11.00", amount: "11.00" },
+      { currency: "USD", subtotal: "20", tax: "2", total: "22", amount: "22" },
+    ]);
+    expect(
+      yield* sql`
+      INSERT INTO receipts (store_name, receipt_date, category, subtotal, tax, total)
+      VALUES ('Default Store', '2026-09-03', 'Groceries', 5, 1, 6)
+      RETURNING currency
+    `,
+    ).toEqual([{ currency: "CAD" }]);
+    expect(
+      yield* sql`
+      SELECT is_nullable FROM information_schema.columns
+      WHERE table_schema = current_schema() AND table_name = 'receipts' AND column_name = 'currency'
+    `,
+    ).toEqual([{ is_nullable: "NO" }]);
+    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([]);
+  }).pipe(
+    Effect.provide(
+      migratedDatabase({
+        "0001_receipts": receiptsMigration,
+        "0002_create_receipt": createReceiptMigration,
+        "0003_bigint_receipt_ids": bigintReceiptIdsMigration,
+        "0004_receipt_uploads": receiptUploadsMigration,
+        "0005_receipt_upload_file_id": receiptUploadFileIdMigration,
+        "0006_drop_receipt_idempotency": dropReceiptIdempotencyMigration,
+        "0007_move_extraction_to_uploads": moveExtractionToUploadsMigration,
+      }),
+    ),
+  ),
+);
+
+it.effect("defaults null currency to CAD and preserves explicit currency on receipt creation", () =>
+  Effect.gen(function* () {
+    const repo = yield* Repository.Service;
+    for (const currency of [null, "CAD", "USD", "XYZ"]) {
+      const id = yield* repo.insert({ ...receiptInput, currency });
+      const saved = Option.getOrThrow(yield* repo.findById(id));
+      expect(saved.currency).toBe(currency ?? "CAD");
+      expect((yield* repo.list).find((entry) => entry.id === id)).toEqual(saved);
+    }
+  }).pipe(Effect.provide(DatabaseLive)),
 );
 
 it.effect("returns an empty receipt list", () =>
@@ -257,7 +325,7 @@ it.effect("finds one receipt and returns none for a missing ID", () =>
         subtotal: "10.250",
         tax: "0.75",
         total: "11.00",
-        currency: null,
+        currency: "CAD",
         items: [
           { position: 0, name: "Apples", amount: "12.00" },
           { position: 1, name: "Adjustment", amount: "-1.0" },
@@ -313,7 +381,7 @@ it.effect("persists repeated items and exact decimal amounts", () =>
         subtotal: "10.25",
         tax: "0.75",
         total: "11",
-        currency: null,
+        currency: "CAD",
       },
     ]);
     expect(

@@ -46,7 +46,7 @@ export const extractionVersion = 1;
 
 /**
  * Converts a validated extraction into receipt data without rounding amounts.
- * Currency is unknown because the current extraction contract does not supply it.
+ * Defaults to CAD because the current extraction contract does not supply currency.
  *
  * @category models
  * @since 0.1.0
@@ -58,7 +58,7 @@ export const prepareReceipt = (parsed: ParsedReceipt): CreateReceiptRequest => (
   subtotal: DecimalString.make(String(parsed.transaction.subtotal)),
   tax: DecimalString.make(String(parsed.transaction.tax)),
   total: DecimalString.make(String(parsed.transaction.total)),
-  currency: null,
+  currency: "CAD",
   items: Array.map(parsed.transaction.items, (item) => ({
     name: item.name.replace(/\s+\(\d+\)$/, ""),
     amount: DecimalString.make(String(item.price)),

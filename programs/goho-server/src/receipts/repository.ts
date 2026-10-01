@@ -56,7 +56,7 @@ const ReceiptRow = Schema.Struct({
   subtotal: DecimalString,
   tax: DecimalString,
   total: DecimalString,
-  currency: Schema.NullOr(Schema.String),
+  currency: Schema.String,
 });
 
 const ItemRow = Schema.Struct({
@@ -130,7 +130,7 @@ export const layer = Layer.effect(
           store_name, receipt_date, category, subtotal, tax, total, currency
         ) VALUES (
           ${receipt.storeName}, ${receipt.receiptDate}, ${receipt.category},
-          ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency}
+          ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency ?? "CAD"}
         ) RETURNING id
       `,
     });
