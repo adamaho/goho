@@ -45,6 +45,7 @@ internal fun ReceiptOptionsSheet(
     thumbnail: @Composable () -> Unit,
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
+    onDeleted: () -> Unit = onDismiss,
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
@@ -241,7 +242,7 @@ internal fun ReceiptOptionsSheet(
                                         if (success) {
                                             deleted = true
                                             state.hide()
-                                            onDismiss()
+                                            onDeleted()
                                         } else {
                                             deleting = false
                                             failed = true

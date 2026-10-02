@@ -29,9 +29,10 @@ internal fun ReceiptOptions(
     locale: Locale,
     today: LocalDate,
     zone: ZoneId,
-    thumbnails: ReceiptThumbnails,
+    thumbnail: @Composable () -> Unit,
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
+    onDeleted: () -> Unit = onDismiss,
 ) {
     val c = GohoTheme.colors
     val merchant =
@@ -101,10 +102,9 @@ internal fun ReceiptOptions(
                 )
             }
         },
-        thumbnail = {
-            ReceiptThumbnail(entry.receiptId, entry.status, thumbnails, sheetHeader = true)
-        },
+        thumbnail = thumbnail,
         onDelete = onDelete,
         onDismiss = onDismiss,
+        onDeleted = onDeleted,
     )
 }

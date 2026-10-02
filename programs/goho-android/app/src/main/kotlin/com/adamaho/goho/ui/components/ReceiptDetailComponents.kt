@@ -26,24 +26,8 @@ import com.adamaho.goho.theme.*
 @Composable
 internal fun ReceiptBackButton(onClick: () -> Unit) {
     val c = GohoTheme.colors
-    val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
-    val description = stringResource(R.string.receipt_back)
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    Box(
-        Modifier.size(GohoSpacing.headerHeight)
-            .gohoPress { progress }
-            .clip(GohoShapes.pill)
-            .background(lerp(c.surfaceMuted, c.surfaceMutedPressed, progress.coerceIn(0f, 1f)))
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
+    ReceiptDetailIconButton(stringResource(R.string.receipt_back), onClick) {
         Canvas(Modifier.size(GohoSpacing.detailBackIcon)) {
             fun point(x: Float, y: Float) =
                 Offset(size.width * (if (rtl) 1f - x else x), size.height * y)
@@ -59,6 +43,49 @@ internal fun ReceiptBackButton(onClick: () -> Unit) {
             line(0.18f, 0.5f, 0.46f, 0.22f)
             line(0.18f, 0.5f, 0.46f, 0.78f)
         }
+    }
+}
+
+@Composable
+internal fun ReceiptMoreButton(onClick: () -> Unit) {
+    val c = GohoTheme.colors
+    ReceiptDetailIconButton(stringResource(R.string.receipt_more_options), onClick) {
+        Canvas(Modifier.size(GohoSpacing.detailBackIcon)) {
+            for (x in listOf(0.2f, 0.5f, 0.8f)) {
+                drawCircle(
+                    c.textPrimary,
+                    GohoSpacing.detailMenuDotRadius.toPx(),
+                    Offset(size.width * x, size.height / 2),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReceiptDetailIconButton(
+    description: String,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    Box(
+        Modifier.size(GohoSpacing.headerHeight)
+            .gohoPress { progress }
+            .clip(GohoShapes.pill)
+            .background(lerp(c.surfaceMuted, c.surfaceMutedPressed, progress.coerceIn(0f, 1f)))
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
     }
 }
 

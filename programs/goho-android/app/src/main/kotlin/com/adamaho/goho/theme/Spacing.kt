@@ -48,6 +48,7 @@ object GohoSpacing {
     val dividerStart = 68.dp // cardPadding + thumbWidth + thumbToText
     val detailTopBarHeight = 56.dp
     val detailBackIcon = 20.dp
+    val detailMenuDotRadius = 1.5.dp
     val detailHeroGap = 8.dp
     val detailPhotoTop = 20.dp
     val detailPhotoHeight = 200.dp
