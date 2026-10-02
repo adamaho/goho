@@ -16,6 +16,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +90,7 @@ private fun FilterSegment(
     content: @Composable RowScope.() -> Unit,
 ) {
     val c = GohoTheme.colors
+    val haptics = LocalHapticFeedback.current
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val reduced = rememberReducedMotion()
@@ -115,7 +118,10 @@ private fun FilterSegment(
                     interactionSource = interaction,
                     indication = null,
                     role = Role.Tab,
-                    onClick = onClick,
+                    onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onClick()
+                    },
                 )
                 .heightIn(min = GohoSpacing.headerHeight)
                 .padding(vertical = GohoSpacing.filterTouchInset),
