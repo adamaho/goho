@@ -34,5 +34,8 @@ catalogMode: strict
 saveExact: true
 engineStrict: true
 
-# Disable the release-age gate so stable Effect releases can be installed immediately.
-minimumReleaseAge: 0
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+minimumReleaseAgeExclude:
+  - "@adamaho/*"
