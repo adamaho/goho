@@ -10,7 +10,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -60,7 +59,7 @@ internal fun ReceiptOptionsSheet(
             confirmValueChange = { !deleting || deleted },
         )
     val title =
-        stringResource(if (confirming) R.string.receipt_delete_title else R.string.receipt_options)
+        stringResource(if (confirming) R.string.receipt_delete else R.string.receipt_options)
     fun dismiss() {
         if (!deleting)
             scope.launch {
@@ -205,15 +204,7 @@ internal fun ReceiptOptionsSheet(
                             .padding(horizontal = GohoSpacing.sheetPadding)
                             .padding(bottom = GohoSpacing.sheetPadding)
                     ) {
-                        Text(
-                            title,
-                            style = GohoTheme.type.title,
-                            color = c.textPrimary,
-                            modifier =
-                                Modifier.focusRequester(focus).focusable().semantics { heading() },
-                        )
                         if (failed) {
-                            Spacer(Modifier.height(GohoSpacing.sheetErrorTop))
                             Text(
                                 stringResource(R.string.receipt_delete_failed),
                                 style = GohoTheme.type.body,
@@ -221,8 +212,8 @@ internal fun ReceiptOptionsSheet(
                                 modifier =
                                     Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             )
+                            Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
                         }
-                        Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
                         GohoActionButton(
                             stringResource(
                                 if (deleting) R.string.receipt_deleting else R.string.receipt_delete
@@ -260,6 +251,7 @@ internal fun ReceiptOptionsSheet(
                             ::dismiss,
                             primary = false,
                             enabled = !deleting,
+                            modifier = Modifier.focusRequester(focus),
                         )
                     }
                 }

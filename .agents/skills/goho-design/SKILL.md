@@ -5,11 +5,15 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff and mockups: October 1, 2026 v6 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff and mockups: October 1, 2026 v7 package. The approved app refinements below take precedence over older examples in the reference assets.
 
-Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, confident Manrope type with proportional figures, grouped cards, and buttons that press down with a small spring.
+Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
+
+## Geist typography
+
+Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 700 or Geist Mono. Apply the v7 sizes, weights and tracking in `references/tokens.md`, keeping the approved proportional digits and fixed Receipts header.
 
 ## Non-negotiables
 
@@ -40,9 +44,9 @@ The app currently supports: the receipts list with All and Needs attention filte
 
 If a task seems to need one of these, stop and ask instead of inventing UI.
 
-## V6 deletion designs
+## V7 deletion designs
 
-The v6 handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has a title and buttons, with no large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The shared implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Loaded receipt details expose the same sheet through the overflow button. Cancel stays on details; successful deletion closes the sheet before returning to the updated list.
+The v7 handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has only the shared receipt header and action buttons, with no title, large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The shared implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Loaded receipt details expose the same sheet through the overflow button. Cancel stays on details; successful deletion closes the sheet before returning to the updated list.
 
 ## How to work
 
@@ -60,7 +64,7 @@ Preserve these refinements when adapting the reference code or older mockups:
 - Sort each receipt day newest upload first, including successfully processed uploads. Rows without upload timestamps follow in stable server order; do not invent a timestamp for manual receipts.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
 - Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
-- Receipt holds use only a subtle scale reduction (0.98); do not show a pressed fill or highlight. Keep the receipt header mounted across the options and confirmation states. Animate the sheet content smoothly without stagger, bounce or a moving trash icon; snap when animations are disabled.
+- Receipt holds use only a subtle scale reduction (0.98); do not show a pressed fill or highlight. Keep the receipt header mounted across the options and confirmation states. Omit the “Delete this receipt?” heading; show Delete receipt and Cancel directly below the shared header. Animate the sheet content smoothly without stagger, bounce or a moving trash icon; snap when animations are disabled.
 - Center the visible text bounds inside status pills and filter count badges, rather than the font line box. Keep a minimum height that can grow for larger text.
 
 ## Approved receipt-details refinements

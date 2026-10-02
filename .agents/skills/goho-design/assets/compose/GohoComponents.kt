@@ -715,8 +715,8 @@ fun GohoItemsCard(
                 Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Total", style = t.listValue.copy(fontWeight = FontWeight.Bold), color = c.textPrimary, modifier = Modifier.weight(1f))
-                val totalStyle = t.rowTitle.copy(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.01).em)
+                Text("Total", style = t.listValue.copy(fontWeight = FontWeight.SemiBold), color = c.textPrimary, modifier = Modifier.weight(1f))
+                val totalStyle = t.rowTitle.copy(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.01).em)
                 if (total == null) {
                     Text("—", style = totalStyle, color = c.textTertiary)
                 } else {
@@ -900,7 +900,7 @@ fun GohoReceiptSheetHeader(
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
                 store ?: "Unknown receipt",
-                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em),
+                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.015).em),
                 color = c.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -924,19 +924,13 @@ fun GohoReceiptSheetHeader(
     }
 }
 
-/** Confirmation title; an error line appears under it only if deleting failed. */
+/** Error line above confirmation buttons; the approved sheet omits the question heading. */
 @Composable
-fun GohoDeleteQuestion(error: Boolean = false, modifier: Modifier = Modifier) {
-    val c = GohoTheme.colors
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            "Delete this receipt?",
-            style = GohoTheme.type.title,
-            color = c.textPrimary,
-            modifier = Modifier.semantics { heading() },
-        )
-        if (error) {
-            Text("Couldn’t delete this receipt. Try again.", style = GohoTheme.type.body, color = c.onDangerContainer)
-        }
-    }
+fun GohoDeleteError(modifier: Modifier = Modifier) {
+    Text(
+        "Couldn’t delete this receipt. Try again.",
+        style = GohoTheme.type.body,
+        color = GohoTheme.colors.onDangerContainer,
+        modifier = modifier,
+    )
 }

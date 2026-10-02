@@ -1,6 +1,6 @@
 # Goho components
 
-Deletion components and row interactions describe the v6 target design. Verify server support and implement them only as part of a requested deletion feature.
+Deletion components and row interactions describe the v7 target design. Verify server support and implement them only as part of a requested deletion feature.
 
 Reference implementations live in `assets/compose/GohoComponents.kt`. Every pressable uses the Goho press (`Modifier.gohoPressTransform`) with `indication = null`. Only the components below are needed; don't add others without a design.
 
@@ -21,7 +21,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 ## GohoSecondaryButton
 
-- Same geometry. Fill `buttonSecondary`, pressed `buttonSecondaryPressed`. Label `button` style at weight 600 in `textPrimary`, optional 18dp icon.
+- Same geometry. Fill `buttonSecondary`, pressed `buttonSecondaryPressed`. Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
 - Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
 
 ## GohoDangerButton
@@ -34,13 +34,13 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
 - Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
 - Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
-- Keep the receipt header mounted across states. Confirmation has no large icon or description; title and buttons appear together without stagger or bounce.
+- Keep the receipt header mounted across states. Confirmation has no title, large icon or description; buttons appear together directly below the shared header without stagger or bounce.
 - Content changes inside the same sheet animate their height (`animateContentSize`, about 280ms) instead of opening a second sheet. The receipt options sheet's header and states are specified in `screens.md` section 5.
 - Implementation hint: M3 `ModalBottomSheet` with `containerColor = Color.Transparent`, `dragHandle = null`, `tonalElevation = 0.dp`, `scrimColor = scrim`, and the content wrapped in a padded, clipped, `sheet`-colored Box.
 
 ## GohoSheetMenuItem
 
-- A traditional list item inside a sheet: 56dp tall, 20dp side padding, 16dp gap, 22dp leading icon, label 16sp SemiBold. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple.
+- A traditional list item inside a sheet: 56dp tall, 20dp side padding, 16dp gap, 22dp leading icon, label 16sp Medium. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple.
 - Destructive tone (the only one used today): icon and label in `onDangerContainer`.
 - Items sit in a list under a `divider` inset 20dp, with 6dp top and 8dp bottom padding.
 
@@ -51,7 +51,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 ## ReceiptFilter
 
 - Separate tabs below the title, with a 6dp gap and no enclosing track. The selected tab has a subtle pill surface; unselected tabs blend into the header background.
-- Tab: 36dp visible pill within a minimum 44dp tap target, 10dp horizontal padding, fully round, text 13sp weight 600.
+- Tab: 36dp visible pill within a minimum 44dp tap target, 10dp horizontal padding, fully round, text 13sp weight 500.
 - Selected: fill `segmentSelected`, 1dp shadow (plus a 6% top highlight in dark only), text `textPrimary`. Unselected: visually blends into `background`, text `textSecondary`. Animate an opaque surface between `background` and `segmentSelected`; never fade a shadowed surface through transparency. Use a gentle spring for the fill reveal while keeping label geometry and touch targets fixed. Synchronize elevation, highlight and label color with the same selection progress, clamped to 0–1; only the fill scale may overshoot.
 - "All" shows its count in `textSecondary` after a 5dp gap. "Needs attention" shows a count badge: min 20×20, fully round, `attentionContainer` fill, `attention` text, `label` style. Hide the badge when the count is 0.
 
@@ -90,7 +90,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 ## DetailList
 
-- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 600, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
+- Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 500, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
 - A value that wasn't read shows "—" in `textTertiary`. Allow rows to grow for wrapped values; stack labels above values on narrow screens or with larger text.
 
 ## ItemsCard
@@ -98,8 +98,8 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 The receipt's line items, given the same card treatment as Details so they read as primary content.
 
 - Card like ReceiptCard: `surface`, shape `card` 20, theme edge treatment, 16dp horizontal padding, 2dp top padding.
-- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 500, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, no currency symbol, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
-- Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 700; amount in 17/22 weight 700, tracking −0.01em, proportional figures, with the currency symbol (foreign prefix like "US$" in `textTertiary`).
+- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 400, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, no currency symbol, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
+- Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 600; amount in 17/22 weight 600, tracking −0.01em, proportional figures, with the currency symbol (foreign prefix like "US$" in `textTertiary`).
 - Item amounts without symbols keep the column clean; the currency is shown once, on the Total.
 - If an item has no amount, show "—" in `textTertiary`.
 
@@ -125,4 +125,4 @@ One formatter for every amount in the app (list rows, hero, items, total):
 
 ## Icons
 
-Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Manrope: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, overflow `MoreHoriz`, delete `Delete` (outlined trash), scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).
+Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Geist: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, overflow `MoreHoriz`, delete `Delete` (outlined trash), scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).

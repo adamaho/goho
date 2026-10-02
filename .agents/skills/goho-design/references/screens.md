@@ -122,29 +122,28 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 - A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
 - Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
-- Store name: 18/24 Bold, −2%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
-- 3dp below: the price in 15/20 SemiBold, proportional figures, two decimals (foreign prefix like "US$" in `textTertiary`), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Medium `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
+- Store name: 18/24 SemiBold, −1.5%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
+- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (foreign prefix like "US$" in `textTertiary`), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
 
 **Menu state** (traditional list items)
 
 - 18dp below the header: a `divider`, inset 20dp on both sides.
-- Then a list with 6dp top and 8dp bottom padding. Each item: 56dp tall, 20dp side padding, 16dp gap, a 22dp leading icon, label 16sp SemiBold. Today there's one item: "Delete receipt" with the trash icon, both in `onDangerContainer`. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple. Use `menu` / `menuitem` semantics.
+- Then a list with 6dp top and 8dp bottom padding. Each item: 56dp tall, 20dp side padding, 16dp gap, a 22dp leading icon, label 16sp Medium. Today there's one item: "Delete receipt" with the trash icon, both in `onDangerContainer`. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple. Use `menu` / `menuitem` semantics.
 
 **Confirmation state** (same sheet; never a second sheet)
 
-- 18dp below the header, padding 20: the title "Delete this receipt?" in `title` (22/28 Bold, −3%, `textPrimary`). No description line.
-- 18dp below (8dp margin plus the 10dp stack gap): GohoDangerButton "Delete receipt" (no icon), then GohoSecondaryButton "Cancel", 10dp apart, 20dp bottom padding.
-- `alertdialog` semantics labelled by the title; focus moves to the title.
+- 18dp below the header, with 20dp side padding: GohoDangerButton "Delete receipt" (no icon), then GohoSecondaryButton "Cancel", 10dp apart, 20dp bottom padding. Omit the confirmation heading and description, including where supplied mockups show them.
+- Announce the pane as "Delete receipt"; keyboard focus moves to Cancel when confirmation opens.
 
 **Behavior**
 
 - Cancel, the scrim, drag-down or back closes the sheet without deleting.
-- Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On failure, keep the sheet open, add "Couldn’t delete this receipt. Try again." under the title (4dp gap, `body`, `onDangerContainer`), and re-enable the buttons.
+- Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On failure, keep the sheet open, add "Couldn’t delete this receipt. Try again." above the buttons (`body`, `onDangerContainer`, 18dp gap below the error), and re-enable the buttons.
 
 **Motion** (photos never move; everything animates inside the sheet)
 
 - Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Use the same opening behavior from the list and details.
-- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the title and buttons together, without stagger or bounce. The v6 layout has no large confirmation icon or moving trash icon.
+- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the buttons together, without stagger or bounce. The v7 layout has no large confirmation icon or moving trash icon.
 - Delete succeeded: the sheet slides down (200ms, `FastOutLinearInEasing`) and the scrim fades. From the list, the row then folds out (250ms). From details, the details screen goes back with the normal back transition, then the row folds out on the list.
 - Cancel: the sheet slides down; nothing else changes.
 - With "Remove animations" on: no stagger or springs; the sheet and its contents crossfade, and the row disappears without folding.
