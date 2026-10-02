@@ -45,22 +45,24 @@ Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on back
 
 ## Typography
 
-Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times all use proportional figures. Metadata and labels use zero tracking.
+Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
 
-| Style         | Size / line height | Weight | Tracking | Use                                                                       |
-| ------------- | ------------------ | ------ | -------- | ------------------------------------------------------------------------- |
-| `display`     | 44 / 48            | 700    | −0.045em | Receipt amount on details                                                 |
-| `title`       | 22 / 28            | 700    | −0.03em  | Screen title ("New receipt" on scan preview)                              |
-| `screenTitle` | 24 / 30            | 700    | −0.015em | “Receipts” list title                                                     |
-| `rowTitle`    | 16 / 22            | 600    | −0.015em | Merchant and amount in list rows; merchant on detail (in `textSecondary`) |
-| `button`      | 16 / 20            | 700    | 0        | Scan and primary button labels (secondary buttons use 600)                |
-| `listRow`     | 15 / 20            | 500    | 0        | Detail list labels (values use 600)                                       |
-| `meta`        | 13 / 18            | 500    | 0        | Dates, sub-lines                                                          |
-| `section`     | 13 / 18            | 600    | 0        | "Today", "Details" section labels                                         |
-| `label`       | 12 / 16            | 600    | 0        | Pills, badges                                                             |
-| ---           | ---                | ---    | ---      | ---                                                                       |
-| `wordmark`    | 32 / 36            | 700    | −0.045em | "goho" in the list header (lowercase)                                     |
-| `body`        | 15 / 22            | 500    | 0        | Delete failure explanation                                                |
+Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, pills and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
+
+| Style      | Size / line height | Weight | Tracking | Use                                                                                          |
+| ---------- | ------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
+| `display`  | 44 / 48            | 600    | −0.035em | Receipt amount on details                                                                    |
+| `title`    | 22 / 28            | 600    | −0.025em | Screen title ("New receipt")                                                                 |
+| `wordmark` | 32 / 36            | 600    | −0.035em | "goho" in the list header (lowercase)                                                        |
+| `rowTitle` | 16 / 22            | 500    | −0.01em  | Merchant and amount in list rows; merchant on details (in `textSecondary`); sheet menu items |
+| `button`   | 16 / 20            | 600    | 0        | Scan, primary and danger button labels (secondary buttons use 500)                           |
+| `listRow`  | 15 / 20            | 400    | 0        | Detail list and item names (values use 500)                                                  |
+| `body`     | 15 / 22            | 400    | 0        | Error line above the confirmation buttons                                                    |
+| `meta`     | 13 / 18            | 400    | 0        | Dates, sub-lines                                                                             |
+| `section`  | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
+| `label`    | 12 / 16            | 500    | 0        | Pills, badges                                                                                |
+
+Sheet header: store name 18/24 SemiBold −0.015em; price 15/20 Medium with the date in 15/20 Regular `textTertiary`.
 
 The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at the same size as the number in rows, and at 28sp beside a 44sp display amount.
 
@@ -119,13 +121,15 @@ The top highlight is a 1dp line drawn inside the clipped shape at the top edge, 
 
 ## Receipt header and timestamps
 
-- List title: “Receipts”, using `screenTitle` (24sp / 30sp).
-- Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition.
-- `timestamp`: Manrope 500, 13sp / 18sp, zero tracking, proportional digit widths.
+- List title: “Receipts”, using `screenTitle` (24sp / 30sp, weight 600, −0.015em tracking).
+- Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition. Use weight 500 and retain one light haptic per completed filter click.
+- `timestamp`: Geist 400, 13sp / 18sp, zero tracking, proportional digit widths.
 - Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.
 
 ## Receipt item card
 
-- Item rows: 14dp vertical padding, 16dp gap, 15sp / 20sp name and amount; amount weight 600.
-- Total: 15sp / 20sp weight 700 label and 17sp / 22sp weight 700 amount, −0.01em tracking.
+- Item rows: 14dp vertical padding, 16dp gap, 15sp / 20sp name and amount; amount weight 500.
+- Total: 15sp / 20sp weight 600 label and 17sp / 22sp weight 600 amount, −0.01em tracking.
 - Exactly two decimal places for every money amount, half-even rounding, locale grouping, proportional figures.
+
+- Foreign hero prefix: 28sp / 36sp, weight 600, −0.025em tracking.

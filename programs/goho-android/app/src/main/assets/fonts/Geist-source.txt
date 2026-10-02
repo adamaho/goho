@@ -1,0 +1,10 @@
+Geist by Vercel and Basement Studio.
+Source: https://raw.githubusercontent.com/google/fonts/718e1db4deb9e4d9d85a0ead1b9f5fde2761ccfd/ofl/geist/Geist%5Bwght%5D.ttf
+Google Fonts revision: 718e1db4deb9e4d9d85a0ead1b9f5fde2761ccfd
+Source SHA-256: 73894e0448cae90a92b6c2f8732b7bb9acb7b94c418bff559dad4a18e1de9659
+License: SIL Open Font License 1.1 (OFL-Geist.txt).
+Static weights 400, 500, and 600 instantiated with fontTools 4.66.1
+using instantiateVariableFont(font, {"wght": weight}, inplace=True,
+                             updateFontNames=True).
+Static fonts support the app minimum of Android API 24.
+This is the proportional Geist family, not Geist Mono.
