@@ -38,6 +38,4 @@ minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true
 
 minimumReleaseAgeExclude:
-  - "@adamaho/nopeus-oxlint-config"
-  - "@adamaho/nopeus-oxlint-plugin"
-  - "@adamaho/nopeus-tsconfig"
+  - "@adamaho/*"
