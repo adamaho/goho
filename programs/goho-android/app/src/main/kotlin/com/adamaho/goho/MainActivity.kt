@@ -159,6 +159,7 @@ class MainActivity : ComponentActivity() {
                                                 loadReceipt = ::loadReceipt,
                                                 loadReceiptImage = ::loadReceiptImage,
                                                 onBack = { backStack.removeLastOrNull() },
+                                                deleteReceipt = ::deleteReceipt,
                                             )
                                         }
                                     else -> error("Unknown route: $route")

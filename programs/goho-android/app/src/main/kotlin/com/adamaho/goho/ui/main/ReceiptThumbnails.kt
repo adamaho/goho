@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -89,12 +90,28 @@ internal fun ReceiptThumbnail(
     thumbnails: ReceiptThumbnails,
     sheetHeader: Boolean = false,
 ) {
-    val c = GohoTheme.colors
     var visible by remember { mutableStateOf(false) }
     val bitmap by
         produceState<Bitmap?>(null, receiptId, visible, thumbnails) {
             value = if (visible && receiptId != null) thumbnails.get(receiptId) else null
         }
+    ReceiptThumbnail(
+        image = bitmap?.asImageBitmap(),
+        status = status,
+        sheetHeader = sheetHeader,
+        modifier = Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty },
+    )
+}
+
+/** Reuse an already loaded details photo without fetching or decoding it again. */
+@Composable
+internal fun ReceiptThumbnail(
+    image: ImageBitmap?,
+    status: ReceiptListStatus,
+    sheetHeader: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    val c = GohoTheme.colors
     val shape = if (sheetHeader) GohoShapes.sheetThumb else GohoShapes.thumb
     val background =
         when (status) {
@@ -103,20 +120,19 @@ internal fun ReceiptThumbnail(
             ReceiptListStatus.NotProcessed -> c.attentionContainer
         }
     Box(
-        Modifier.size(
+        modifier
+            .size(
                 if (sheetHeader) GohoSpacing.sheetThumbWidth else GohoSpacing.thumbWidth,
                 if (sheetHeader) GohoSpacing.sheetThumbHeight else GohoSpacing.thumbHeight,
             )
-            .onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
             .clip(shape)
             .background(background)
             .border(GohoSpacing.hairline, c.outline, shape),
         contentAlignment = Alignment.Center,
     ) {
-        val image = bitmap
         if (image != null) {
             Image(
-                image.asImageBitmap(),
+                image,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),

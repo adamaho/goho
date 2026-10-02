@@ -21,6 +21,7 @@ import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Currency
@@ -33,8 +34,10 @@ fun ReceiptDetailScreen(
     loadReceipt: suspend (String) -> Receipt?,
     loadReceiptImage: suspend (String) -> ByteArray?,
     onBack: () -> Unit,
+    deleteReceipt: suspend (ReceiptListEntry) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
+    var optionsOpen by rememberSaveable(receiptId) { mutableStateOf(false) }
     var photoOpen by rememberSaveable(receiptId) { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var receipt by remember(receiptId) { mutableStateOf<Receipt?>(null) }
@@ -75,13 +78,15 @@ fun ReceiptDetailScreen(
     val locale = config.locales[0]
     val stacked = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     Column(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
-        Box(
+        Row(
             Modifier.fillMaxWidth()
                 .heightIn(min = GohoSpacing.detailTopBarHeight)
                 .padding(horizontal = GohoSpacing.screenMargin),
-            contentAlignment = Alignment.CenterStart,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             ReceiptBackButton(onBack)
+            if (!loading && receipt != null) ReceiptMoreButton { optionsOpen = true }
         }
         val saved = receipt
         if (loading || saved == null) {
@@ -219,6 +224,27 @@ fun ReceiptDetailScreen(
                 }
             }
         }
+    }
+    val saved = receipt
+    if (optionsOpen && !loading && saved != null) {
+        val zone = ZoneId.systemDefault()
+        val entry =
+            remember(saved, zone) { receiptListEntries(listOf(saved), emptyList(), zone).single() }
+        ReceiptOptions(
+            entry = entry,
+            locale = locale,
+            today = LocalDate.now(zone),
+            zone = zone,
+            thumbnail = {
+                ReceiptThumbnail(image, ReceiptListStatus.Processed, sheetHeader = true)
+            },
+            onDelete = { deleteReceipt(entry) },
+            onDismiss = { optionsOpen = false },
+            onDeleted = {
+                optionsOpen = false
+                onBack()
+            },
+        )
     }
     image?.let { photo ->
         if (photoOpen) ReceiptPhotoViewer(photo, receipt?.storeName.orEmpty()) { photoOpen = false }

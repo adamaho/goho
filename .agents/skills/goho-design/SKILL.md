@@ -25,7 +25,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list through a shared options and confirmation sheet.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list and details through a shared options and confirmation sheet.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -42,7 +42,7 @@ If a task seems to need one of these, stop and ask instead of inventing UI.
 
 ## V6 deletion designs
 
-The v6 handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has a title and buttons, with no large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The list implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Details overflow remains a reference for a future addition.
+The v6 handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has a title and buttons, with no large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The shared implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Loaded receipt details expose the same sheet through the overflow button. Cancel stays on details; successful deletion closes the sheet before returning to the updated list.
 
 ## How to work
 

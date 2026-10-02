@@ -239,7 +239,9 @@ fun ReceiptOverview(
                 locale,
                 today,
                 zone,
-                thumbnails,
+                thumbnail = {
+                    ReceiptThumbnail(entry.receiptId, entry.status, thumbnails, sheetHeader = true)
+                },
                 onDelete = { deleteReceipt(entry) },
                 onDismiss = { optionsEntry = null },
             )

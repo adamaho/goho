@@ -66,6 +66,7 @@
     <string name="receipt_photo_zoom_out">Zoom out</string>
     <string name="receipt_photo_zoom_level">Zoom %1$d percent</string>
     <string name="receipt_photo_toggle_controls">Show or hide controls</string>
+    <string name="receipt_more_options">More options</string>
     <string name="receipt_options">Receipt options</string>
     <string name="receipt_delete">Delete receipt</string>
     <string name="receipt_delete_title">Delete this receipt?</string>

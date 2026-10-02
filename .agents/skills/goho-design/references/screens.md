@@ -2,7 +2,7 @@
 
 Screen designs, the photo viewer, and receipt-deletion flows. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
-List receipt options and deletion are implemented using the supported server endpoints. The details overflow and its entry flow remain design references for a future addition. Verify server support before implementing new behavior.
+List and details receipt options and deletion use the same supported server endpoints. Verify server support before implementing new behavior.
 
 ## 1. Receipts (list)
 
@@ -143,7 +143,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 **Motion** (photos never move; everything animates inside the sheet)
 
-- Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Details entry remains a future reference.
+- Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Use the same opening behavior from the list and details.
 - Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the title and buttons together, without stagger or bounce. The v6 layout has no large confirmation icon or moving trash icon.
 - Delete succeeded: the sheet slides down (200ms, `FastOutLinearInEasing`) and the scrim fades. From the list, the row then folds out (250ms). From details, the details screen goes back with the normal back transition, then the row folds out on the list.
 - Cancel: the sheet slides down; nothing else changes.
