@@ -1,10 +1,21 @@
 package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
+import com.adamaho.goho.theme.GohoSpacing
+import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.ReceiptOptionsSheet
+import com.adamaho.goho.ui.components.ReceiptStatusPill
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -22,59 +33,77 @@ internal fun ReceiptOptions(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
 ) {
-    fun date(pattern: String) =
-        entry.date?.format(
-            DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, pattern), locale)
-        )
+    val c = GohoTheme.colors
     val merchant =
         entry.merchant?.takeIf { it.isNotBlank() } ?: stringResource(R.string.receipt_unknown)
-    val amount =
-        entry.total?.let {
-            val prefix =
-                entry.currency
-                    ?.let { code ->
-                        runCatching { Currency.getInstance(code).getSymbol(locale) }
-                            .getOrDefault(code)
-                    }
-                    .orEmpty()
-            "$prefix${if (prefix.lastOrNull()?.isLetter() == true) " " else ""}${receiptAmount(it, locale)}"
-        }
-    val shortDate = date(if (entry.date?.year == today.year) "MMMd" else "yMMMd")
+    val failed = entry.status == ReceiptListStatus.NotProcessed
     val uploadDate = entry.uploadedAt?.atZone(zone)
-    val uploaded =
-        if (uploadDate?.toLocalDate() == today)
+    val dateLabel =
+        if (failed && uploadDate?.toLocalDate() == today)
             stringResource(
-                R.string.receipt_uploaded_today,
+                R.string.date_today_time,
                 uploadDate.format(
                     DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
                 ),
             )
-        else shortDate?.let { stringResource(R.string.receipt_uploaded_on, it) }
-    val failed = entry.status == ReceiptListStatus.NotProcessed
-    val summary =
-        if (failed)
-            uploaded?.let { stringResource(R.string.receipt_not_processed_summary, it) }
-                ?: stringResource(R.string.receipt_not_processed)
-        else listOfNotNull(amount, date("yMMMd")).joinToString(", ")
-    val subject =
-        if (failed && entry.merchant.isNullOrBlank()) {
-            listOfNotNull(
-                    stringResource(R.string.receipt_unprocessed),
-                    (if (uploadDate?.toLocalDate() == today) uploaded else shortDate)?.let {
-                        stringResource(R.string.receipt_delete_from, it)
-                    },
+        else
+            entry.date?.format(
+                DateTimeFormatter.ofPattern(
+                    DateFormat.getBestDateTimePattern(locale, "yMMMEd"),
+                    locale,
                 )
-                .joinToString(" ")
-        } else {
-            val nameAmount = listOfNotNull(merchant, amount).joinToString(", ")
-            shortDate?.let { stringResource(R.string.receipt_delete_description, nameAmount, it) }
-                ?: nameAmount
-        }
+            ) ?: "—"
+    val currency = entry.currency?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
+    val homeCurrency = runCatching { Currency.getInstance(locale) }.getOrNull()
+    val prefix = currency?.getSymbol(locale) ?: entry.currency.orEmpty()
     ReceiptOptionsSheet(
-        merchant,
-        summary,
-        stringResource(R.string.receipt_delete_body, subject),
-        thumbnail = { ReceiptThumbnail(entry.receiptId, entry.status, thumbnails) },
+        merchant = merchant,
+        metadata = {
+            if (failed) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sectionLabelBottom),
+                    verticalArrangement = Arrangement.spacedBy(GohoSpacing.sheetSummaryLineGap),
+                ) {
+                    ReceiptStatusPill(processing = false)
+                    Text(
+                        dateLabel,
+                        style = GohoTheme.type.listRow,
+                        color = c.textTertiary,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                }
+            } else {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(GohoTheme.type.listValue.toSpanStyle()) {
+                            withStyle(
+                                SpanStyle(
+                                    color =
+                                        if (currency != null && currency == homeCurrency)
+                                            c.textPrimary
+                                        else c.textTertiary
+                                )
+                            ) {
+                                if (entry.total != null) {
+                                    append(prefix)
+                                    if (prefix.lastOrNull()?.isLetter() == true) append(" ")
+                                }
+                            }
+                            withStyle(SpanStyle(color = c.textPrimary)) {
+                                append(entry.total?.let { receiptAmount(it, locale) } ?: "—")
+                            }
+                        }
+                        append("  ")
+                        append(dateLabel)
+                    },
+                    style = GohoTheme.type.listRow,
+                    color = c.textTertiary,
+                )
+            }
+        },
+        thumbnail = {
+            ReceiptThumbnail(entry.receiptId, entry.status, thumbnails, sheetHeader = true)
+        },
         onDelete = onDelete,
         onDismiss = onDismiss,
     )

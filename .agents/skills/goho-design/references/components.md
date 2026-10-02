@@ -1,6 +1,6 @@
 # Goho components
 
-Deletion components and row interactions describe the v2 target design. Verify server support and implement them only as part of a requested deletion feature.
+Deletion components and row interactions describe the v6 target design. Verify server support and implement them only as part of a requested deletion feature.
 
 Reference implementations live in `assets/compose/GohoComponents.kt`. Every pressable uses the Goho press (`Modifier.gohoPressTransform`) with `indication = null`. Only the components below are needed; don't add others without a design.
 
@@ -34,14 +34,15 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
 - Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
 - Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
-- Keep one mounted trash icon across the menu and confirmation states. Animate its position and size between measured slots over 250ms with FastOutSlowIn easing, without bounce or overshoot; snap with reduced motion.
-- Content changes inside the same sheet animate their height (`animateContentSize` or `AnimatedContent` with a size transform, 250ms) instead of opening a second sheet.
+- Keep the receipt header mounted across states. Confirmation has no large icon or description; title and buttons appear together without stagger or bounce.
+- Content changes inside the same sheet animate their height (`animateContentSize`, about 280ms) instead of opening a second sheet. The receipt options sheet's header and states are specified in `screens.md` section 5.
 - Implementation hint: M3 `ModalBottomSheet` with `containerColor = Color.Transparent`, `dragHandle = null`, `tonalElevation = 0.dp`, `scrimColor = scrim`, and the content wrapped in a padded, clipped, `sheet`-colored Box.
 
-## GohoSheetAction
+## GohoSheetMenuItem
 
-- Row 60 tall, 20dp horizontal padding, 14dp gap. Leading 36dp circle with an 18dp icon, label in 16sp weight 600. Pressed: background `surfacePressed` (light) or `surfaceMutedPressed` (dark).
-- Destructive tone (the only one used today): circle `dangerContainer`, icon and label `onDangerContainer`.
+- A traditional list item inside a sheet: 56dp tall, 20dp side padding, 16dp gap, 22dp leading icon, label 16sp SemiBold. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple.
+- Destructive tone (the only one used today): icon and label in `onDangerContainer`.
+- Items sit in a list under a `divider` inset 20dp, with 6dp top and 8dp bottom padding.
 
 ## GohoIconButton (round)
 

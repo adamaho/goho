@@ -34,7 +34,7 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `danger` / `dangerTop`                       | `#C52B2D` / `#D33B39` | `#BE2323` / `#CC3430` | Destructive button fill (bottom / top of gradient)          |
 | `dangerPressed`                              | `#B01E22`             | `#A21A1B`             | Destructive button fill (bottom) while pressed              |
 | `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`             | Label and icon on the destructive button                    |
-| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C` | Delete row icon circle and label, confirmation icon circle  |
+| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C` | Destructive menu icon and label; error text                 |
 | `sheet`                                      | `#201E1B`             | `#FFFFFF`             | Bottom sheet surface                                        |
 | `grabber`                                    | `#3F3D39`             | `#D9D6D1`             | Sheet drag handle                                           |
 | `scrim`                                      | black 55%             | `#1D1A16` 38%         | Behind sheets                                               |
@@ -60,7 +60,7 @@ Font: **Manrope** (Google Fonts, OFL), weights 500, 600, 700. Bundle the TTFs in
 | `label`       | 12 / 16            | 600    | 0        | Pills, badges                                                             |
 | ---           | ---                | ---    | ---      | ---                                                                       |
 | `wordmark`    | 32 / 36            | 700    | −0.045em | "goho" in the list header (lowercase)                                     |
-| `body`        | 15 / 22            | 500    | 0        | Confirmation explanations                                                 |
+| `body`        | 15 / 22            | 500    | 0        | Delete failure explanation                                                |
 
 The currency prefix for foreign amounts ("US$") is drawn in `textTertiary` at the same size as the number in rows, and at 28sp beside a 44sp display amount.
 

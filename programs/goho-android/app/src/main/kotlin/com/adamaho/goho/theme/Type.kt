@@ -26,6 +26,7 @@ data class GohoTypography(
     val itemTotalLabel: TextStyle,
     val itemTotalValue: TextStyle,
     val title: TextStyle,
+    val sheetMerchant: TextStyle,
     val screenTitle: TextStyle,
     val wordmark: TextStyle,
     val rowTitle: TextStyle,
@@ -76,6 +77,15 @@ val GohoType =
                 fontSize = 28.sp,
                 lineHeight = 36.sp,
                 letterSpacing = (-0.03).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        sheetMerchant =
+            TextStyle(
+                fontFamily = Manrope,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                lineHeight = 24.sp,
+                letterSpacing = (-0.02).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         title =

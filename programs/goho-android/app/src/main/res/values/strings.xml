@@ -71,12 +71,6 @@
     <string name="receipt_delete_title">Delete this receipt?</string>
     <string name="receipt_deleting">Deleting…</string>
     <string name="receipt_delete_failed">Couldn’t delete this receipt. Try again.</string>
-    <string name="receipt_delete_body">%1$s will be removed from Goho. This can’t be undone.</string>
-    <string name="receipt_delete_description">%1$s from %2$s,</string>
-    <string name="receipt_delete_from">from %1$s</string>
-    <string name="receipt_unprocessed">The unprocessed receipt</string>
-    <string name="receipt_not_processed_summary">Not processed, %1$s</string>
-    <string name="receipt_uploaded_today">today at %1$s</string>
-    <string name="receipt_uploaded_on">on %1$s</string>
+    <string name="date_today_time">Today, %1$s</string>
     <string name="receipt_cancel">Cancel</string>
 </resources>

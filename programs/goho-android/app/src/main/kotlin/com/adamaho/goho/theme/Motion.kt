@@ -5,14 +5,12 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
-    val sheetConfirmation: AnimationSpec<Float> = tween(160, delayMillis = 150)
-    val sheetIconBounds: AnimationSpec<Rect> =
-        tween(SHEET_CONTENT_MILLIS, easing = FastOutSlowInEasing)
-    const val SHEET_CONTENT_MILLIS = 250
+    const val SHEET_CONTENT_MILLIS = 280
+    const val SHEET_CONTENT_FADE_OUT_MILLIS = 90
+    const val SHEET_CONTENT_FADE_IN_MILLIS = 180
     const val HOLD_DELAY_MILLIS = 150L
     const val HOLD_SCALE = 0.98f
     const val PRESS_SCALE = 0.03f // scale = 1 - PRESS_SCALE * progress

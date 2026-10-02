@@ -2,7 +2,7 @@
 
 Screen designs, the photo viewer, and receipt-deletion flows. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
-The deletion flows, row options and overflow action below are v2 design references, not implemented app capabilities. Verify server support before implementing them.
+List receipt options and deletion are implemented using the supported server endpoints. The details overflow and its entry flow remain design references for a future addition. Verify server support before implementing new behavior.
 
 ## 1. Receipts (list)
 
@@ -22,18 +22,8 @@ The deletion flows, row options and overflow action below are v2 design referenc
 
 **Scan FAB** bottom right, with no bottom gradient over the list. Opens the existing scan flow.
 
-**Deleting from the list** (mockups `list-hold-1-press*.png`, `list-hold-2-sheet*.png`, and `list-delete-1-tap*.png` to `list-delete-4-after*.png`)
-Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. The sheet's summary row matches the receipt:
-
-- Processed: thumbnail, merchant, and "{amount}, {date}" (for example "$46.78, Sep 27, 2026"); the confirmation uses the details-screen sentence ("Foodland, $46.78 from Sep 27, will be removed from Goho. This can’t be undone.").
-- Not processed: as below.
-
-1. For a Not processed row, the sheet shows:
-   - Summary row: the row's thumbnail, "Unknown receipt" (or the merchant if one was read), and "Not processed, today at 8:14 AM" (`meta`, `textTertiary`; use "on Sep 26" style for other days).
-   - The destructive GohoSheetAction "Delete receipt".
-2. "Delete receipt" turns the sheet into the confirmation, exactly as on the details screen, with this body: "The unprocessed receipt from today at 8:14 AM will be removed from Goho. This can’t be undone." (Use the merchant-based sentence from the details screen when a merchant is known.)
-3. On success the sheet closes and you stay on the list. The row collapses out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
-4. Cancel, failure and in-progress behavior match the details screen.
+**Deleting from the list** (mockups `list-hold-press*.png`, `list-tap-not-processed*.png`, `list-after-delete*.png`, plus the sheet mockups in section 5)
+Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. Both open the Receipt options sheet described in section 5. On success the sheet drops away and you stay on the list: the row folds out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
 
 **Empty states** (provisional; keep them plain):
 
@@ -65,21 +55,8 @@ The screen scrolls; with items it is usually taller than one screen (about 980dp
 
 No footer on this screen.
 
-**Deleting a receipt** (mockups `delete-1-menu*.png`, `delete-2-sheet*.png`, `delete-3-confirm*.png`)
-
-1. The overflow button opens a GohoSheet with:
-   - A summary row (16dp vertical, 20dp horizontal padding, 12dp gap): the receipt's 40×48 thumbnail, merchant (`rowTitle`) and, 4dp below, "{amount}, {date}" (`meta`, `textTertiary`), for example "US$23.21, Sep 24, 2026". Missing merchant: "Unknown receipt"; missing amount: just the date.
-   - A `divider` inset 20dp.
-   - One GohoSheetAction, destructive: trash icon, "Delete receipt".
-   - 8dp bottom padding.
-2. Tapping "Delete receipt" changes the same sheet into the confirmation (animate the height; don't stack a second sheet). Padding 20, content left-aligned:
-   - 52dp `dangerContainer` circle with a 24dp `onDangerContainer` trash icon.
-   - 16dp below: "Delete this receipt?" (`title`).
-   - 8dp below (`body`: 15/22 Medium, `textSecondary`): "{merchant}, {amount} from {short date}, will be removed from Goho. This can’t be undone." Example: "Cedar Hardware, US$23.21 from Sep 24, will be removed from Goho. This can’t be undone." Drop the parts that are missing.
-   - 24dp below, stacked with a 10dp gap: GohoDangerButton "Delete receipt" (trash icon), then GohoSecondaryButton "Cancel".
-   - Use `alertdialog` semantics with the title as the label; focus moves to the title when it appears.
-3. Cancel, the scrim, drag-down or back closes the sheet without deleting.
-4. Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On success, close the sheet and the details screen together and return to the Receipts list, where the receipt is gone (no toast, no undo). On failure, keep the sheet open and replace the body text with "Couldn’t delete this receipt. Try again." in `onDangerContainer`, with the buttons re-enabled.
+**Deleting a receipt** (the overflow button is in `receipt-details*.png`)
+The overflow button opens the Receipt options sheet (section 5). On success the sheet drops away, then the details screen leaves with the normal back transition, and on the list the receipt's row folds out as described in section 1.
 
 ## 3. Photo viewer
 
@@ -136,3 +113,38 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 - GohoSecondaryButton "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
 
 While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
+
+## 5. Receipt options sheet and delete confirmation
+
+One GohoSheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed row. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
+
+**Receipt header** (identical in both states; it never moves or changes)
+
+- A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
+- Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
+- Store name: 18/24 Bold, −2%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
+- 3dp below: the price in 15/20 SemiBold, proportional figures, two decimals (foreign prefix like "US$" in `textTertiary`), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Medium `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
+
+**Menu state** (traditional list items)
+
+- 18dp below the header: a `divider`, inset 20dp on both sides.
+- Then a list with 6dp top and 8dp bottom padding. Each item: 56dp tall, 20dp side padding, 16dp gap, a 22dp leading icon, label 16sp SemiBold. Today there's one item: "Delete receipt" with the trash icon, both in `onDangerContainer`. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple. Use `menu` / `menuitem` semantics.
+
+**Confirmation state** (same sheet; never a second sheet)
+
+- 18dp below the header, padding 20: the title "Delete this receipt?" in `title` (22/28 Bold, −3%, `textPrimary`). No description line.
+- 18dp below (8dp margin plus the 10dp stack gap): GohoDangerButton "Delete receipt" (no icon), then GohoSecondaryButton "Cancel", 10dp apart, 20dp bottom padding.
+- `alertdialog` semantics labelled by the title; focus moves to the title.
+
+**Behavior**
+
+- Cancel, the scrim, drag-down or back closes the sheet without deleting.
+- Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On failure, keep the sheet open, add "Couldn’t delete this receipt. Try again." under the title (4dp gap, `body`, `onDangerContainer`), and re-enable the buttons.
+
+**Motion** (photos never move; everything animates inside the sheet)
+
+- Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Details entry remains a future reference.
+- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the title and buttons together, without stagger or bounce. The v6 layout has no large confirmation icon or moving trash icon.
+- Delete succeeded: the sheet slides down (200ms, `FastOutLinearInEasing`) and the scrim fades. From the list, the row then folds out (250ms). From details, the details screen goes back with the normal back transition, then the row folds out on the list.
+- Cancel: the sheet slides down; nothing else changes.
+- With "Remove animations" on: no stagger or springs; the sheet and its contents crossfade, and the row disappears without folding.

@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -843,26 +844,99 @@ fun GohoSheet(
     }
 }
 
-/** Destructive sheet row, for example "Delete receipt". */
+/** Traditional list item in a sheet; destructive tone, for example "Delete receipt". */
 @Composable
-fun GohoSheetAction(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun GohoSheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     Row(
         modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(56.dp)
             .background(if (pressed) (if (c.isDark) c.surfaceMutedPressed else c.surfacePressed) else Color.Transparent)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onDangerContainer)
+        Text(text, style = GohoTheme.type.rowTitle, color = c.onDangerContainer)
+    }
+}
+
+// ---------- Receipt options sheet header ----------
+
+/**
+ * The row header shared by the options sheet and the delete confirmation (screens.md section 5).
+ * Identical in both states; only the content below it changes.
+ */
+@Composable
+fun GohoReceiptSheetHeader(
+    store: String?,              // null -> "Unknown receipt"
+    price: String?,              // from formatMoney; null when not processed or missing
+    pricePrefix: String,         // "$" or "US$"
+    foreign: Boolean,
+    dateLabel: String,           // "Sun, Sep 27, 2026" or "Today, 8:14 AM"
+    notProcessed: Boolean,
+    modifier: Modifier = Modifier,
+    photo: @Composable BoxScope.() -> Unit, // the receipt image, ContentScale.Crop
+) {
+    val c = GohoTheme.colors
+    val t = GohoTheme.type
+    Row(
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(
-            Modifier.size(36.dp).clip(CircleShape).background(c.dangerContainer),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onDangerContainer) }
-        Text(text, style = GohoTheme.type.rowTitle, color = c.onDangerContainer)
+            Modifier
+                .size(56.dp, 68.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.surfaceMuted)
+                .border(1.dp, c.outline, RoundedCornerShape(10.dp)),
+            content = photo,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                store ?: "Unknown receipt",
+                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em),
+                color = c.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (notProcessed) {
+                    GohoStatusPill("Not processed", PillTone.Attention)
+                } else if (price != null) {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = if (foreign) c.textTertiary else c.textPrimary)) { append(pricePrefix) }
+                            withStyle(SpanStyle(color = c.textPrimary)) { append(price) }
+                        },
+                        style = t.listValue,
+                    )
+                }
+                Text(dateLabel, style = t.listRow, color = c.textTertiary, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Confirmation title; an error line appears under it only if deleting failed. */
+@Composable
+fun GohoDeleteQuestion(error: Boolean = false, modifier: Modifier = Modifier) {
+    val c = GohoTheme.colors
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Delete this receipt?",
+            style = GohoTheme.type.title,
+            color = c.textPrimary,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (error) {
+            Text("Couldn’t delete this receipt. Try again.", style = GohoTheme.type.body, color = c.onDangerContainer)
+        }
     }
 }
