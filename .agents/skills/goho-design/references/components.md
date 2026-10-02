@@ -1,5 +1,7 @@
 # Goho components
 
+Deletion components and row interactions describe the v6 target design. Verify server support and implement them only as part of a requested deletion feature.
+
 Reference implementations live in `assets/compose/GohoComponents.kt`. Every pressable uses the Goho press (`Modifier.gohoPressTransform`) with `indication = null`. Only the components below are needed; don't add others without a design.
 
 ## GohoScanFab
@@ -22,9 +24,29 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Same geometry. Fill `buttonSecondary`, pressed `buttonSecondaryPressed`. Label `button` style at weight 600 in `textPrimary`, optional 18dp icon.
 - Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
 
+## GohoDangerButton
+
+- Same geometry as GohoPrimaryButton (52 tall, shape `button` 16, full width). Fill: vertical gradient `dangerTop` → `danger`; pressed `danger` → `dangerPressed`. Label `button` style in `onDanger`, optional 18dp trash icon.
+- Only for the final confirming action of something destructive. Red is never used for anything else.
+
+## GohoSheet (floating bottom sheet)
+
+- Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
+- Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
+- Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
+- Keep the receipt header mounted across states. Confirmation has no large icon or description; title and buttons appear together without stagger or bounce.
+- Content changes inside the same sheet animate their height (`animateContentSize`, about 280ms) instead of opening a second sheet. The receipt options sheet's header and states are specified in `screens.md` section 5.
+- Implementation hint: M3 `ModalBottomSheet` with `containerColor = Color.Transparent`, `dragHandle = null`, `tonalElevation = 0.dp`, `scrimColor = scrim`, and the content wrapped in a padded, clipped, `sheet`-colored Box.
+
+## GohoSheetMenuItem
+
+- A traditional list item inside a sheet: 56dp tall, 20dp side padding, 16dp gap, 22dp leading icon, label 16sp SemiBold. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple.
+- Destructive tone (the only one used today): icon and label in `onDangerContainer`.
+- Items sit in a list under a `divider` inset 20dp, with 6dp top and 8dp bottom padding.
+
 ## GohoIconButton (round)
 
-- 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back on the details screen. The photo viewer's close button is a GohoPhotoControlButton.
+- 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back and the overflow (three-dot, `MoreHoriz`) button on the details screen. (The photo viewer's close button is a GohoPhotoControlButton.)
 
 ## ReceiptFilter
 
@@ -56,8 +78,9 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 - States:
   - **Processed:** amount in `textPrimary`. Foreign currency: prefix like "US$" in `textTertiary`, number in `textPrimary`. Tappable; opens details.
   - **Processing:** merchant "New receipt", date "Just now", trailing amount replaced by a 52×12 fully round shimmering skeleton, pill "Reading receipt…". Not tappable.
-  - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, pill "Not processed". Not tappable.
-- Pressed (processed rows only): background `surfacePressed`, no scale.
+  - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, pill "Not processed". Tappable; opens the receipt options sheet (it has no details screen).
+- Pressed receipt rows retain their normal surface fill with no highlight. Holds use the scale feedback below; cards clip their rows to the card's corners.
+- Press and hold (Processed and Not processed rows; Processing rows ignore it): once it's clear the press is a hold (after about 150ms), ease to scale 0.98. Keep the normal surface fill throughout; no pressed highlight. When the long-press fires (the system long-press timeout, about 400–500ms): `HapticFeedbackType.LongPress`, the row springs back to scale 1, and the receipt options sheet opens. Releasing before the timeout is a normal tap. Implement with `Modifier.combinedClickable(onClick, onLongClick, onLongClickLabel = "Receipt options")` so TalkBack offers the action.
 - Each row has a merged content description, for example "Cedar Hardware, US$23.21, Thursday September 24" or "Unknown receipt, not processed, today 8:14 AM".
 
 ## ReceiptCard (section)
@@ -102,4 +125,4 @@ One formatter for every amount in the app (list rows, hero, items, total):
 
 ## Icons
 
-Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Manrope: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).
+Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Manrope: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, overflow `MoreHoriz`, delete `Delete` (outlined trash), scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).

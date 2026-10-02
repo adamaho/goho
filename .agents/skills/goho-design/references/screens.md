@@ -1,6 +1,8 @@
 # Goho screens
 
-Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Screen designs, the photo viewer, and receipt-deletion flows. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+
+List receipt options and deletion are implemented using the supported server endpoints. The details overflow and its entry flow remain design references for a future addition. Verify server support before implementing new behavior.
 
 ## 1. Receipts (list)
 
@@ -14,10 +16,14 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 - Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ReceiptCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed.
-- Only Processed rows are tappable; they open Receipt details.
+- Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
+- Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
 - Leave bottom padding in the list so the last row can scroll clear of the Scan button.
 
 **Scan FAB** bottom right, with no bottom gradient over the list. Opens the existing scan flow.
+
+**Deleting from the list** (mockups `list-hold-press*.png`, `list-tap-not-processed*.png`, `list-after-delete*.png`, plus the sheet mockups in section 5)
+Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. Both open the Receipt options sheet described in section 5. On success the sheet drops away and you stay on the list: the row folds out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
 
 **Empty states** (provisional; keep them plain):
 
@@ -26,7 +32,7 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 ## 2. Receipt details (processed receipts only)
 
-**Top bar** (status bar inset, 56 tall, `screenMargin` sides): round back button on the left. No title, no other actions.
+**Top bar** (status bar inset, 56 tall, `screenMargin` sides): round back button on the left, round overflow button (`MoreHoriz`, content description "More options") on the right. No title.
 
 **Hero** (12 below the bar, `textInset` sides)
 
@@ -47,7 +53,10 @@ Three screens plus a minimal photo viewer. Widths assume a 412dp-wide phone; eve
 
 The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
-No footer and no actions on this screen.
+No footer on this screen.
+
+**Deleting a receipt** (the overflow button is in `receipt-details*.png`)
+The overflow button opens the Receipt options sheet (section 5). On success the sheet drops away, then the details screen leaves with the normal back transition, and on the list the receipt's row folds out as described in section 1.
 
 ## 3. Photo viewer
 
@@ -104,3 +113,38 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 - GohoSecondaryButton "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
 
 While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
+
+## 5. Receipt options sheet and delete confirmation
+
+One GohoSheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed row. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
+
+**Receipt header** (identical in both states; it never moves or changes)
+
+- A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
+- Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
+- Store name: 18/24 Bold, −2%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
+- 3dp below: the price in 15/20 SemiBold, proportional figures, two decimals (foreign prefix like "US$" in `textTertiary`), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Medium `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
+
+**Menu state** (traditional list items)
+
+- 18dp below the header: a `divider`, inset 20dp on both sides.
+- Then a list with 6dp top and 8dp bottom padding. Each item: 56dp tall, 20dp side padding, 16dp gap, a 22dp leading icon, label 16sp SemiBold. Today there's one item: "Delete receipt" with the trash icon, both in `onDangerContainer`. Pressed: `surfacePressed` (light) / `surfaceMutedPressed` (dark), no ripple. Use `menu` / `menuitem` semantics.
+
+**Confirmation state** (same sheet; never a second sheet)
+
+- 18dp below the header, padding 20: the title "Delete this receipt?" in `title` (22/28 Bold, −3%, `textPrimary`). No description line.
+- 18dp below (8dp margin plus the 10dp stack gap): GohoDangerButton "Delete receipt" (no icon), then GohoSecondaryButton "Cancel", 10dp apart, 20dp bottom padding.
+- `alertdialog` semantics labelled by the title; focus moves to the title.
+
+**Behavior**
+
+- Cancel, the scrim, drag-down or back closes the sheet without deleting.
+- Confirming: the Delete button shows "Deleting…" and is disabled, and the sheet can't be dismissed. On failure, keep the sheet open, add "Couldn’t delete this receipt. Try again." under the title (4dp gap, `body`, `onDangerContainer`), and re-enable the buttons.
+
+**Motion** (photos never move; everything animates inside the sheet)
+
+- Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Details entry remains a future reference.
+- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the title and buttons together, without stagger or bounce. The v6 layout has no large confirmation icon or moving trash icon.
+- Delete succeeded: the sheet slides down (200ms, `FastOutLinearInEasing`) and the scrim fades. From the list, the row then folds out (250ms). From details, the details screen goes back with the normal back transition, then the row folds out on the list.
+- Cancel: the sheet slides down; nothing else changes.
+- With "Remove animations" on: no stagger or springs; the sheet and its contents crossfade, and the row disappears without folding.

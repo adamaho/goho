@@ -17,7 +17,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import kotlinx.coroutines.delay
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +49,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -65,6 +82,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -263,6 +281,34 @@ fun GohoSecondaryButton(
 }
 
 @Composable
+fun GohoDangerButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
+    val c = GohoTheme.colors
+    GohoButtonBase(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        enabled = enabled,
+        minHeight = 52.dp,
+        shape = GohoShapes.button,
+        restElevation = 2.dp,
+        shadowColor = c.dangerShadow,
+        fill = { p ->
+            Brush.verticalGradient(listOf(lerpColor(c.dangerTop, c.danger, p), lerpColor(c.danger, c.dangerPressed, p)))
+        },
+        highlightAlpha = { p -> 0.18f * (1f - 0.45f * p) },
+        contentPadding = PaddingValues(horizontal = 20.dp),
+    ) {
+        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onDanger)
+        Text(text, style = GohoTheme.type.button, color = c.onDanger)
+    }
+}
+
+@Composable
 fun GohoIconButton(
     icon: ImageVector,
     contentDescription: String,
@@ -449,12 +495,14 @@ fun ReceiptThumbnail(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ReceiptRow(
     merchant: String,
     dateLabel: String,
     state: ReceiptRowState,
-    onClick: (() -> Unit)?, // non-null only for Processed rows
+    onClick: (() -> Unit)?, // Processed: open details. NotProcessed: open the options sheet. Processing: null.
+    onLongClick: (() -> Unit)? = null, // open the options sheet; ignored for Processing rows
     modifier: Modifier = Modifier,
     thumbnail: @Composable () -> Unit,
 ) {
@@ -462,13 +510,37 @@ fun ReceiptRow(
     val t = GohoTheme.type
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
+    val haptics = LocalHapticFeedback.current
+    val interactive = state !is ReceiptRowState.Processing && (onClick != null || onLongClick != null)
+    // "Lifted" look once a press lasts long enough to look like a hold.
+    var holding by remember { mutableStateOf(false) }
+    LaunchedEffect(pressed) {
+        holding = false
+        if (pressed) { delay(150); holding = true }
+    }
+    val liftScale by animateFloatAsState(if (holding) 0.98f else 1f, spring(dampingRatio = 0.7f, stiffness = 600f), label = "rowLift")
     Row(
         modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = liftScale; scaleY = liftScale }
+            .clip(RoundedCornerShape(if (holding) 14.dp else 0.dp))
             .background(if (pressed) c.surfacePressed else Color.Transparent)
             .then(
-                if (onClick != null && state is ReceiptRowState.Processed)
-                    Modifier.clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+                if (interactive)
+                    Modifier.combinedClickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = { onClick?.invoke() },
+                        onLongClickLabel = "Receipt options",
+                        onLongClick = onLongClick?.let { open ->
+                            {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                holding = false
+                                open()
+                            }
+                        },
+                    )
                 else Modifier
             )
             .heightIn(min = GohoSpacing.rowMinHeight)
@@ -719,3 +791,152 @@ fun GohoPhotoControlButton(
 //   scale (min 0.86 at 300dp) and background alpha (down to 0.55).
 // - Controls: wrap GohoPhotoControlButton in AnimatedVisibility(fadeIn/fadeOut 200ms) driven by the
 //   same flag that shows and hides system bars via WindowInsetsControllerCompat.
+
+// ---------- Sheet ----------
+
+/**
+ * Floating bottom sheet: inset 8dp, 28dp corners, grabber. Swap its content in place
+ * (options -> confirmation) and let animateContentSize handle the height change.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GohoSheet(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissible: Boolean = true, // false while a delete is in progress
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = GohoTheme.colors
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { dismissible || it != SheetValue.Hidden },
+    )
+    ModalBottomSheet(
+        onDismissRequest = { if (dismissible) onDismissRequest() },
+        sheetState = sheetState,
+        shape = RectangleShape,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+        scrimColor = c.scrim,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier
+                .navigationBarsPadding()
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                .fillMaxWidth()
+                .shadow(12.dp, GohoShapes.sheet, clip = false, ambientColor = c.shadow.copy(alpha = 0.3f), spotColor = c.shadow.copy(alpha = 0.3f))
+                .clip(GohoShapes.sheet)
+                .background(c.sheet)
+                .border(1.dp, if (c.isDark) Color.White.copy(alpha = 0.05f) else c.shadow.copy(alpha = 0.04f), GohoShapes.sheet)
+                .animateContentSize(tween(250)),
+        ) {
+            Box(
+                Modifier
+                    .padding(top = 8.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .size(36.dp, 4.dp)
+                    .clip(GohoShapes.pill)
+                    .background(c.grabber),
+            )
+            content()
+        }
+    }
+}
+
+/** Traditional list item in a sheet; destructive tone, for example "Delete receipt". */
+@Composable
+fun GohoSheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Row(
+        modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(if (pressed) (if (c.isDark) c.surfaceMutedPressed else c.surfacePressed) else Color.Transparent)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onDangerContainer)
+        Text(text, style = GohoTheme.type.rowTitle, color = c.onDangerContainer)
+    }
+}
+
+// ---------- Receipt options sheet header ----------
+
+/**
+ * The row header shared by the options sheet and the delete confirmation (screens.md section 5).
+ * Identical in both states; only the content below it changes.
+ */
+@Composable
+fun GohoReceiptSheetHeader(
+    store: String?,              // null -> "Unknown receipt"
+    price: String?,              // from formatMoney; null when not processed or missing
+    pricePrefix: String,         // "$" or "US$"
+    foreign: Boolean,
+    dateLabel: String,           // "Sun, Sep 27, 2026" or "Today, 8:14 AM"
+    notProcessed: Boolean,
+    modifier: Modifier = Modifier,
+    photo: @Composable BoxScope.() -> Unit, // the receipt image, ContentScale.Crop
+) {
+    val c = GohoTheme.colors
+    val t = GohoTheme.type
+    Row(
+        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            Modifier
+                .size(56.dp, 68.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(c.surfaceMuted)
+                .border(1.dp, c.outline, RoundedCornerShape(10.dp)),
+            content = photo,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                store ?: "Unknown receipt",
+                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.02).em),
+                color = c.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (notProcessed) {
+                    GohoStatusPill("Not processed", PillTone.Attention)
+                } else if (price != null) {
+                    Text(
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = if (foreign) c.textTertiary else c.textPrimary)) { append(pricePrefix) }
+                            withStyle(SpanStyle(color = c.textPrimary)) { append(price) }
+                        },
+                        style = t.listValue,
+                    )
+                }
+                Text(dateLabel, style = t.listRow, color = c.textTertiary, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Confirmation title; an error line appears under it only if deleting failed. */
+@Composable
+fun GohoDeleteQuestion(error: Boolean = false, modifier: Modifier = Modifier) {
+    val c = GohoTheme.colors
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Delete this receipt?",
+            style = GohoTheme.type.title,
+            color = c.textPrimary,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (error) {
+            Text("Couldn’t delete this receipt. Try again.", style = GohoTheme.type.body, color = c.onDangerContainer)
+        }
+    }
+}

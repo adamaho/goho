@@ -2,8 +2,16 @@ package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -15,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
@@ -52,6 +61,7 @@ fun ReceiptOverview(
     loadReceiptImage: suspend (String) -> ByteArray?,
     modifier: Modifier = Modifier,
     previewTime: Instant? = null,
+    deleteReceipt: suspend (ReceiptListEntry) -> Boolean = { false },
 ) {
     val clock by
         produceState(initialValue = previewTime ?: Instant.now(), previewTime) {
@@ -71,8 +81,25 @@ fun ReceiptOverview(
         }
     var attentionOnly by rememberSaveable { mutableStateOf(false) }
     val filtered = remember(entries, attentionOnly) { filterReceiptEntries(entries, attentionOnly) }
-    val sections =
-        remember(filtered, today, locale) { receiptListSections(filtered, today, locale) }
+    val reduced = rememberReducedMotion()
+    val removalDuration = if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS
+    val removal =
+        fadeOut(tween(removalDuration)) +
+            shrinkVertically(tween(removalDuration), shrinkTowards = Alignment.Top)
+    // Keep removed rows mounted for their exit; filters still change immediately.
+    var retained by remember(attentionOnly) { mutableStateOf(filtered) }
+    val visibleKeys = filtered.map { it.key }.toSet()
+    val displayed =
+        (filtered + retained.filter { it.key !in visibleKeys }).sortedWith(
+            compareByDescending<ReceiptListEntry> { it.date }.thenByDescending { it.uploadedAt }
+        )
+    LaunchedEffect(filtered) {
+        if (retained.any { it.key !in visibleKeys } && !reduced)
+            delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
+        retained = filtered
+    }
+    val sections = receiptListSections(displayed, today, locale)
+    var optionsEntry by remember { mutableStateOf<ReceiptListEntry?>(null) }
     val currentLoadImage by rememberUpdatedState(loadReceiptImage)
     val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }
     val listState = rememberLazyListState()
@@ -108,7 +135,7 @@ fun ReceiptOverview(
                 scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
                 if (isOpeningScanner)
                     item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
-                if (filtered.isEmpty())
+                if (filtered.isEmpty() && displayed.isEmpty())
                     item("empty") {
                         when {
                             !state.hasLoaded && (state.loading || !state.error) ->
@@ -142,34 +169,54 @@ fun ReceiptOverview(
                     }
                 sections.forEach { section ->
                     item("section:${section.group}") {
-                        Column {
-                            Text(
-                                sectionTitle(section.group, locale, today.year),
-                                style = GohoTheme.type.section,
-                                color = c.textTertiary,
-                                modifier =
-                                    Modifier.padding(
-                                            start = GohoSpacing.textInsetFromMargin,
-                                            top = GohoSpacing.sectionTop,
-                                            bottom = GohoSpacing.sectionLabelBottom,
-                                        )
-                                        .semantics { heading() },
-                            )
-                            ReceiptCard {
-                                section.entries.forEachIndexed { index, entry ->
-                                    key(entry.key) {
-                                        ReceiptRow(
-                                            entry,
-                                            clock,
-                                            locale,
-                                            zone,
-                                            config.fontScale >= 1.3f ||
-                                                config.screenWidthDp <
-                                                    GohoSpacing.compactWidth.value,
-                                            onReceiptClick,
-                                            thumbnails,
-                                        )
-                                        if (index < section.entries.lastIndex) ReceiptDivider()
+                        AnimatedVisibility(
+                            section.entries.any { it.key in visibleKeys },
+                            enter = EnterTransition.None,
+                            exit = removal,
+                        ) {
+                            Column {
+                                Text(
+                                    sectionTitle(section.group, locale, today.year),
+                                    style = GohoTheme.type.section,
+                                    color = c.textTertiary,
+                                    modifier =
+                                        Modifier.padding(
+                                                start = GohoSpacing.textInsetFromMargin,
+                                                top = GohoSpacing.sectionTop,
+                                                bottom = GohoSpacing.sectionLabelBottom,
+                                            )
+                                            .semantics { heading() },
+                                )
+                                ReceiptCard {
+                                    section.entries.forEachIndexed { index, entry ->
+                                        key(entry.key) {
+                                            AnimatedVisibility(
+                                                entry.key in visibleKeys,
+                                                enter = EnterTransition.None,
+                                                exit = removal,
+                                            ) {
+                                                Column {
+                                                    ReceiptRow(
+                                                        entry,
+                                                        clock,
+                                                        locale,
+                                                        zone,
+                                                        config.fontScale >= 1.3f ||
+                                                            config.screenWidthDp <
+                                                                GohoSpacing.compactWidth.value,
+                                                        onReceiptClick,
+                                                        { optionsEntry = it },
+                                                        thumbnails,
+                                                    )
+                                                    if (
+                                                        section.entries.drop(index + 1).any {
+                                                            it.key in visibleKeys
+                                                        }
+                                                    )
+                                                        ReceiptDivider()
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -184,6 +231,19 @@ fun ReceiptOverview(
             Modifier.align(Alignment.BottomEnd)
                 .padding(end = GohoSpacing.screenMargin, bottom = GohoSpacing.fabBottom),
         )
+    }
+    optionsEntry?.let { entry ->
+        key(entry.key) {
+            ReceiptOptions(
+                entry,
+                locale,
+                today,
+                zone,
+                thumbnails,
+                onDelete = { deleteReceipt(entry) },
+                onDismiss = { optionsEntry = null },
+            )
+        }
     }
 }
 
@@ -253,6 +313,7 @@ private fun ReceiptRow(
     zone: ZoneId,
     expanded: Boolean,
     onReceiptClick: (String) -> Unit,
+    onReceiptOptions: (ReceiptListEntry) -> Unit,
     thumbnails: ReceiptThumbnails,
 ) {
     val c = GohoTheme.colors
@@ -309,19 +370,45 @@ private fun ReceiptRow(
             }
         } else append(date)
     }
+    val reduced = rememberReducedMotion()
+    var held by remember { mutableStateOf(false) }
+    LaunchedEffect(pressed) {
+        held = false
+        if (pressed) {
+            delay(GohoMotion.HOLD_DELAY_MILLIS)
+            held = true
+        }
+    }
+    val scale by
+        animateFloatAsState(
+            if (held) GohoMotion.HOLD_SCALE else 1f,
+            if (reduced) snap() else if (held) GohoMotion.pressIn else GohoMotion.pressOut,
+            label = "Receipt hold",
+        )
+    val optionsLabel = stringResource(R.string.receipt_options)
     val clickable =
-        entry.receiptId?.let { id ->
-            Modifier.clickable(
-                interaction,
+        if (entry.status != ReceiptListStatus.Processing)
+            Modifier.combinedClickable(
+                interactionSource = interaction,
                 indication = null,
                 role = Role.Button,
-                onClick = { onReceiptClick(id) },
+                onClick = { entry.receiptId?.let(onReceiptClick) ?: onReceiptOptions(entry) },
+                onLongClickLabel = optionsLabel,
+                // combinedClickable supplies exactly one platform long-press haptic.
+                onLongClick = {
+                    held = false
+                    onReceiptOptions(entry)
+                },
             )
-        } ?: Modifier
+        else Modifier
     Row(
         Modifier.fillMaxWidth()
             .then(clickable)
-            .background(if (pressed) c.surfacePressed else c.surface)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .background(c.surface)
             .heightIn(min = GohoSpacing.rowMinHeight)
             .semantics(mergeDescendants = true) {}
             .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),

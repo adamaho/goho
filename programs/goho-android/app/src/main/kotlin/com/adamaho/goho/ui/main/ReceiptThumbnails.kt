@@ -87,6 +87,7 @@ internal fun ReceiptThumbnail(
     receiptId: String?,
     status: ReceiptListStatus,
     thumbnails: ReceiptThumbnails,
+    sheetHeader: Boolean = false,
 ) {
     val c = GohoTheme.colors
     var visible by remember { mutableStateOf(false) }
@@ -94,6 +95,7 @@ internal fun ReceiptThumbnail(
         produceState<Bitmap?>(null, receiptId, visible, thumbnails) {
             value = if (visible && receiptId != null) thumbnails.get(receiptId) else null
         }
+    val shape = if (sheetHeader) GohoShapes.sheetThumb else GohoShapes.thumb
     val background =
         when (status) {
             ReceiptListStatus.Processed -> c.surfaceMuted
@@ -101,11 +103,14 @@ internal fun ReceiptThumbnail(
             ReceiptListStatus.NotProcessed -> c.attentionContainer
         }
     Box(
-        Modifier.size(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)
+        Modifier.size(
+                if (sheetHeader) GohoSpacing.sheetThumbWidth else GohoSpacing.thumbWidth,
+                if (sheetHeader) GohoSpacing.sheetThumbHeight else GohoSpacing.thumbHeight,
+            )
             .onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
-            .clip(GohoShapes.thumb)
+            .clip(shape)
             .background(background)
-            .border(GohoSpacing.hairline, c.outline, GohoShapes.thumb),
+            .border(GohoSpacing.hairline, c.outline, shape),
         contentAlignment = Alignment.Center,
     ) {
         val image = bitmap

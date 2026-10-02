@@ -66,4 +66,11 @@
     <string name="receipt_photo_zoom_out">Zoom out</string>
     <string name="receipt_photo_zoom_level">Zoom %1$d percent</string>
     <string name="receipt_photo_toggle_controls">Show or hide controls</string>
+    <string name="receipt_options">Receipt options</string>
+    <string name="receipt_delete">Delete receipt</string>
+    <string name="receipt_delete_title">Delete this receipt?</string>
+    <string name="receipt_deleting">Deleting…</string>
+    <string name="receipt_delete_failed">Couldn’t delete this receipt. Try again.</string>
+    <string name="date_today_time">Today, %1$s</string>
+    <string name="receipt_cancel">Cancel</string>
 </resources>

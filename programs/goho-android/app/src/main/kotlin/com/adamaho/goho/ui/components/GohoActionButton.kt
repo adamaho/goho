@@ -25,6 +25,7 @@ fun GohoActionButton(
     primary: Boolean = true,
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
+    destructive: Boolean = false,
 ) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -34,12 +35,12 @@ fun GohoActionButton(
         if (primary) lerp(GohoSpacing.buttonElevation, GohoSpacing.pressedElevation, p)
         else if (c.isDark) lerp(GohoSpacing.hairline, GohoSpacing.flatElevation, p)
         else GohoSpacing.flatElevation
-    val shadow = if (primary) c.accentShadow else c.shadow
+    val shadow = if (destructive) c.dangerShadow else if (primary) c.accentShadow else c.shadow
+    val main = if (destructive) c.danger else c.accent
+    val top = if (destructive) c.dangerTop else c.accentTop
+    val down = if (destructive) c.dangerPressed else c.accentPressed
     val fill =
-        if (primary)
-            Brush.verticalGradient(
-                listOf(lerp(c.accentTop, c.accent, p), lerp(c.accent, c.accentPressed, p))
-            )
+        if (primary) Brush.verticalGradient(listOf(lerp(top, main, p), lerp(main, down, p)))
         else SolidColor(lerp(c.buttonSecondary, c.buttonSecondaryPressed, p))
     val highlight =
         if (primary) c.highlightAlpha * (1 - 0.45f * p) else if (c.isDark) 0.06f * (1 - p) else 0f
@@ -69,7 +70,7 @@ fun GohoActionButton(
         Text(
             text,
             style = if (primary) GohoTheme.type.button else GohoTheme.type.buttonSecondary,
-            color = if (primary) c.onAccent else c.textPrimary,
+            color = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary,
             textAlign = TextAlign.Center,
         )
     }
