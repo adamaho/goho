@@ -34,5 +34,10 @@ catalogMode: strict
 saveExact: true
 engineStrict: true
 
-# Disable the release-age gate so stable Effect releases can be installed immediately.
-minimumReleaseAge: 0
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+
+minimumReleaseAgeExclude:
+  - "@adamaho/nopeus-oxlint-config"
+  - "@adamaho/nopeus-oxlint-plugin"
+  - "@adamaho/nopeus-tsconfig"
