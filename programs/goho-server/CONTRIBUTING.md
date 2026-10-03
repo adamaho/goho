@@ -15,6 +15,7 @@ to install Node.js, pnpm, and workspace dependencies before running server comma
 
 Configure the environment file before starting:
 
+- `GOHO_SERVER_HOST`: bind address; defaults to `127.0.0.1`. The container image sets `0.0.0.0`.
 - `GOHO_SERVER_PORT`: defaults to `3000`.
 - `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
 - `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
