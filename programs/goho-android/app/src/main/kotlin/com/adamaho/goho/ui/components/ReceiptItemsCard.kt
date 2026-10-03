@@ -7,9 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.ReceiptItem
 import com.adamaho.goho.theme.*
@@ -20,8 +18,7 @@ import java.util.Locale
 internal fun ReceiptItemsCard(
     items: List<ReceiptItem>,
     total: String,
-    prefix: String,
-    foreign: Boolean,
+    currencyCode: String,
     locale: Locale,
     largeText: Boolean,
 ) {
@@ -48,7 +45,7 @@ internal fun ReceiptItemsCard(
                 )
                 val amount = receiptAmount(item.amount, locale)
                 Text(
-                    amount,
+                    receiptMoneyText(amount, currencyCode, locale),
                     style = GohoTheme.type.listValue,
                     color = if (amount == "—") c.textTertiary else c.textPrimary,
                     maxLines = 1,
@@ -79,16 +76,7 @@ internal fun ReceiptItemsCard(
                 color = c.textPrimary,
             )
             Text(
-                buildAnnotatedString {
-                    withStyle(
-                        GohoTheme.type.itemTotalValue
-                            .copy(color = if (foreign) c.textTertiary else c.textPrimary)
-                            .toSpanStyle()
-                    ) {
-                        append(prefix)
-                    }
-                    append(total)
-                },
+                receiptMoneyText(total, currencyCode, locale),
                 style = GohoTheme.type.itemTotalValue,
                 color = c.textPrimary,
             )

@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -81,7 +82,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -174,7 +177,9 @@ private fun GohoButtonBase(
     restElevation: Dp,
     shadowColor: Color,
     fill: (Float) -> Brush,
-    highlightAlpha: (Float) -> Float,
+    ring: Color,
+    innerRing: Color,
+    cornerRadius: Dp,
     contentPadding: PaddingValues,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -185,10 +190,23 @@ private fun GohoButtonBase(
         modifier = modifier
             .gohoPressTransform { progress }
             .alpha(if (enabled) 1f else 0.4f)
-            .shadow(lerpDp(restElevation, 0.5.dp, p), shape, clip = false, ambientColor = shadowColor, spotColor = shadowColor)
+            .shadow(lerpDp(restElevation, 1.dp, p), shape, clip = false, ambientColor = shadowColor.copy(alpha = 0.2f), spotColor = shadowColor.copy(alpha = 0.45f))
             .clip(shape)
             .background(fill(p))
-            .topHighlight(Color.White.copy(alpha = highlightAlpha(p)))
+            .border(1.dp, ring, shape)
+            .drawWithContent {
+                drawContent()
+                if (innerRing.alpha > 0f) {
+                    val inset = 1.5.dp.toPx()
+                    drawRoundRect(
+                        color = innerRing,
+                        topLeft = Offset(inset, inset),
+                        size = Size(size.width - inset * 2, size.height - inset * 2),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius((cornerRadius - 1.5.dp).toPx()),
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                    )
+                }
+            }
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -213,12 +231,12 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
         enabled = true,
         minHeight = 56.dp,
         shape = GohoShapes.fab,
-        restElevation = 3.dp,
+        restElevation = 12.dp,
         shadowColor = c.accentShadow,
-        fill = { p ->
-            Brush.verticalGradient(listOf(lerpColor(c.accentTop, c.accent, p), lerpColor(c.accent, c.accentPressed, p)))
-        },
-        highlightAlpha = { p -> c.highlightAlpha * (1f - 0.45f * p) },
+        fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
+        ring = c.accentRing,
+        innerRing = Color.White.copy(alpha = c.buttonInnerRingAlpha),
+        cornerRadius = 20.dp,
         contentPadding = PaddingValues(start = 18.dp, end = 22.dp),
     ) {
         Icon(scanIcon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onAccent)
@@ -241,12 +259,12 @@ fun GohoPrimaryButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = 2.dp,
+        restElevation = 10.dp,
         shadowColor = c.accentShadow,
-        fill = { p ->
-            Brush.verticalGradient(listOf(lerpColor(c.accentTop, c.accent, p), lerpColor(c.accent, c.accentPressed, p)))
-        },
-        highlightAlpha = { p -> c.highlightAlpha * (1f - 0.45f * p) },
+        fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
+        ring = c.accentRing,
+        innerRing = Color.White.copy(alpha = c.buttonInnerRingAlpha),
+        cornerRadius = 16.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onAccent)
@@ -269,10 +287,12 @@ fun GohoSecondaryButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = if (c.isDark) 1.dp else 0.dp, // flat in light
+        restElevation = 8.dp,
         shadowColor = c.shadow,
         fill = { p -> SolidColor(lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)) },
-        highlightAlpha = { p -> if (c.isDark) 0.06f * (1f - p) else 0f },
+        ring = if (c.isDark) Color.White.copy(alpha = 0.08f) else c.shadow.copy(alpha = 0.06f),
+        innerRing = Color.Transparent,
+        cornerRadius = 16.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.textPrimary)
@@ -295,12 +315,12 @@ fun GohoDangerButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = 2.dp,
+        restElevation = 10.dp,
         shadowColor = c.dangerShadow,
-        fill = { p ->
-            Brush.verticalGradient(listOf(lerpColor(c.dangerTop, c.danger, p), lerpColor(c.danger, c.dangerPressed, p)))
-        },
-        highlightAlpha = { p -> 0.18f * (1f - 0.45f * p) },
+        fill = { p -> SolidColor(lerpColor(c.danger, c.dangerPressed, p)) },
+        ring = c.dangerRing,
+        innerRing = Color.White.copy(alpha = if (c.isDark) 0.16f else 0.14f),
+        cornerRadius = 16.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onDanger)
@@ -933,4 +953,42 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
         color = GohoTheme.colors.onDangerContainer,
         modifier = modifier,
     )
+}
+
+// ---------- Status card (empty and error states) ----------
+
+/**
+ * Centered card for empty and error states (screens.md section 6).
+ * [illustration] is a 220x190dp image from assets/illustrations (status-*.png / status-*-dark.png).
+ */
+@Composable
+fun GohoStatusCard(
+    illustration: androidx.compose.ui.graphics.painter.Painter,
+    title: String,
+    text: String,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null, // e.g. GohoPrimaryButton("Try again", ...)
+) {
+    val c = GohoTheme.colors
+    val t = GohoTheme.type
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(c.statusCard)
+            .border(1.dp, c.statusCardRing, RoundedCornerShape(28.dp))
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = if (action != null) 24.dp else 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        androidx.compose.foundation.Image(illustration, contentDescription = null, modifier = Modifier.size(220.dp, 190.dp))
+        Spacer(Modifier.height(14.dp))
+        Text(title, style = t.title.copy(fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.02).em), color = c.textPrimary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Spacer(Modifier.height(6.dp))
+        Text(text, style = t.body, color = c.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.widthIn(max = 290.dp))
+        if (action != null) {
+            Spacer(Modifier.height(22.dp))
+            action()
+        }
+    }
 }

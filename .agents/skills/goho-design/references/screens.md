@@ -1,6 +1,6 @@
 # Goho screens
 
-Screen designs, the photo viewer, and receipt-deletion flows. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Three screens, a photo viewer, the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
 List and details receipt options and deletion use the same supported server endpoints. Verify server support before implementing new behavior.
 
@@ -25,10 +25,7 @@ List and details receipt options and deletion use the same supported server endp
 **Deleting from the list** (mockups `list-hold-press*.png`, `list-tap-not-processed*.png`, `list-after-delete*.png`, plus the sheet mockups in section 5)
 Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. Both open the Receipt options sheet described in section 5. On success the sheet drops away and you stay on the list: the row folds out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
 
-**Empty states** (provisional; keep them plain):
-
-- No receipts: centered in the list area, "No receipts yet" (`rowTitle`) and "Tap Scan to add your first one." (`meta`, `textTertiary`). Filter hidden.
-- Needs attention with none: "Nothing needs attention" (`meta`, `textTertiary`), centered in the list area.
+**Empty and error states**: see section 6.
 
 ## 2. Receipt details (processed receipts only)
 
@@ -37,10 +34,10 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 **Hero** (12 below the bar, `textInset` sides)
 
 - Merchant (`rowTitle` in `textSecondary`).
-- 8dp below: amount in `display`, always two decimals. Foreign currency: prefix "US$" at 28sp in `textTertiary`, 2dp gap, then the number. Missing amount: "—" in `textTertiary`.
+- 8dp below: amount in `display`, always two decimals. Show the symbol and number in `display`, followed by the currency code at 20sp in `textTertiary` on the same baseline. Missing amount: "—" in `textTertiary`.
 - 8dp below: full date (`meta`, `textTertiary`), for example "Thursday, September 24, 2026".
 
-**Photo** (20 below, `screenMargin` sides): PhotoFrame, 200 tall. Tap the loaded photo area to open the viewer; no separate expand button. Expose “View receipt photo” to accessibility. Loading and missing photos are not tappable.
+**Photo** (uploaded receipts only; 20 below, `screenMargin` sides): PhotoFrame, 200 tall. Omit the whole section for receipts without an upload. Tap the loaded photo area to open the viewer; no separate expand button. Expose “View receipt photo” to accessibility. Loading and missing photos are not tappable.
 
 **Items** (24 below the photo; only when the receipt has line items):
 
@@ -49,7 +46,7 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 
 **Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
 
-- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal, Tax, and Currency only when it differs from the home currency (for example "US dollar"). Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
+- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal and Tax. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
 
 The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
@@ -123,7 +120,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 - A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
 - Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
 - Store name: 18/24 SemiBold, −1.5%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
-- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (foreign prefix like "US$" in `textTertiary`), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
+- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (currency symbol with no trailing code), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
 
 **Menu state** (traditional list items)
 
@@ -143,7 +140,30 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 **Motion** (photos never move; everything animates inside the sheet)
 
 - Opening: the sheet slides up while the scrim fades in. Keep the header and menu content together; do not stagger individual elements. Use the same opening behavior from the list and details.
-- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the buttons together, without stagger or bounce. The v7 layout has no large confirmation icon or moving trash icon.
+- Menu → confirmation (about 280ms): keep the same mounted receipt header in the same position within the sheet. The divider and menu item fade out while the sheet height changes smoothly. Reveal the buttons together, without stagger or bounce. The current layout has no large confirmation icon or moving trash icon.
 - Delete succeeded: the sheet slides down (200ms, `FastOutLinearInEasing`) and the scrim fades. From the list, the row then folds out (250ms). From details, the details screen goes back with the normal back transition, then the row folds out on the list.
 - Cancel: the sheet slides down; nothing else changes.
 - With "Remove animations" on: no stagger or springs; the sheet and its contents crossfade, and the row disappears without folding.
+
+## 6. Empty and error states
+
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Each has its own illustration in the same paper-and-pastel style, so the states are recognizable at a glance.
+
+**Needs attention, nothing in it**
+
+- Header and filter as normal ("Needs attention" selected, no badge). The Scan button stays.
+- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: two receipts, the front one stamped with a jade check mark, with mint and peach sparkle chips ("all sorted").
+- Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
+
+**No receipts yet** (the account has no receipts at all)
+
+- Header shows only the “Receipts” title (no filter). The Scan button stays.
+- StatusCard centered in the screen. Illustration `status-no-receipts`: a blank receipt framed by jade scanner corners with a scan line, with a peach plus chip and a sky sparkle chip ("scan one in").
+- Title "No receipts yet"; text "Tap Scan to add your first one." No button.
+
+**Couldn’t load receipts** (the list request failed)
+
+- Header shows only the “Receipts” title. No filter and no Scan button.
+- StatusCard centered in the screen. Illustration `status-load-error`: a soft cloud with a receipt slipping out beneath it, with a peach wifi-off chip and a sand refresh chip ("couldn't reach the server").
+- Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
+- Announce the card as a polite live region when it appears.

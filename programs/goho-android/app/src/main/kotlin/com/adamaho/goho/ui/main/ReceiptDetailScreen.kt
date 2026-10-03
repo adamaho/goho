@@ -14,8 +14,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.AnnotatedString
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.theme.*
@@ -24,7 +23,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Currency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -36,6 +34,7 @@ fun ReceiptDetailScreen(
     onBack: () -> Unit,
     deleteReceipt: suspend (ReceiptListEntry) -> Boolean,
     modifier: Modifier = Modifier,
+    hasUpload: Boolean? = null,
 ) {
     var optionsOpen by rememberSaveable(receiptId) { mutableStateOf(false) }
     var photoOpen by rememberSaveable(receiptId) { mutableStateOf(false) }
@@ -50,7 +49,12 @@ fun ReceiptDetailScreen(
         receipt = loadReceipt(receiptId)
         loading = false
     }
-    LaunchedEffect(receiptId, reloadKey) {
+    LaunchedEffect(receiptId, reloadKey, hasUpload) {
+        if (hasUpload == false) {
+            image = null
+            imageLoading = false
+            return@LaunchedEffect
+        }
         imageLoading = true
         image =
             loadReceiptImage(receiptId)?.let { bytes ->
@@ -124,34 +128,21 @@ fun ReceiptDetailScreen(
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
                 ) ?: saved.receiptDate.ifBlank { "—" }
             val code = saved.currency
-            val currency = runCatching { Currency.getInstance(code) }.getOrNull()
-            // There is no home-currency setting in the API; use the phone locale for presentation.
-            val homeCurrency = runCatching { Currency.getInstance(locale).currencyCode }.getOrNull()
-            val foreign = code != homeCurrency
-            val prefix = currency?.getSymbol(locale) ?: code
             val amount = receiptAmount(saved.total, locale)
-            fun withCurrency(value: String) = "$prefix $value"
-            val total = withCurrency(amount)
+            val total = receiptMoneyText(amount, code, locale)
+            val subtotal = receiptMoneyText(receiptAmount(saved.subtotal, locale), code, locale)
+            val tax = receiptMoneyText(receiptAmount(saved.tax, locale), code, locale)
             val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
             val rows = buildList {
-                add(stringResource(R.string.receipt_merchant) to merchant)
-                add(stringResource(R.string.receipt_date) to shortDate)
+                add(stringResource(R.string.receipt_merchant) to AnnotatedString(merchant))
+                add(stringResource(R.string.receipt_date) to AnnotatedString(shortDate))
                 if (saved.category.isNotBlank())
-                    add(stringResource(R.string.receipt_category) to saved.category)
-                add(
-                    stringResource(R.string.receipt_subtotal) to
-                        withCurrency(receiptAmount(saved.subtotal, locale))
-                )
-                add(
-                    stringResource(R.string.receipt_tax) to
-                        withCurrency(receiptAmount(saved.tax, locale))
-                )
-                if (saved.items.isEmpty()) add(stringResource(R.string.receipt_total) to total)
-                if (foreign)
                     add(
-                        stringResource(R.string.receipt_currency) to
-                            (currency?.getDisplayName(locale) ?: code)
+                        stringResource(R.string.receipt_category) to AnnotatedString(saved.category)
                     )
+                add(stringResource(R.string.receipt_subtotal) to subtotal)
+                add(stringResource(R.string.receipt_tax) to tax)
+                if (saved.items.isEmpty()) add(stringResource(R.string.receipt_total) to total)
             }
             LazyColumn(
                 Modifier.fillMaxSize().headerFade(c.background),
@@ -176,28 +167,24 @@ fun ReceiptDetailScreen(
                             modifier = Modifier.semantics { heading() },
                         )
                         Text(
-                            buildAnnotatedString {
-                                withStyle(
-                                    (if (foreign) GohoTheme.type.currencyPrefix
-                                        else GohoTheme.type.display)
-                                        .copy(
-                                            color = if (foreign) c.textTertiary else c.textPrimary
-                                        )
-                                        .toSpanStyle()
-                                ) {
-                                    append(prefix)
-                                }
-                                append(amount)
-                            },
+                            receiptMoneyText(
+                                amount,
+                                code,
+                                locale,
+                                GohoTheme.type.heroCurrencyCode,
+                                showCurrencyCode = true,
+                            ),
                             style = GohoTheme.type.display,
                             color = c.textPrimary,
                         )
                         Text(fullDate, style = GohoTheme.type.meta, color = c.textTertiary)
                     }
                 }
-                item("photo") {
-                    Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
-                        ReceiptDetailPhoto(image, imageLoading) { photoOpen = true }
+                if (hasUpload == true || image != null || (hasUpload == null && imageLoading)) {
+                    item("photo") {
+                        Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
+                            ReceiptDetailPhoto(image, imageLoading) { photoOpen = true }
+                        }
                     }
                 }
                 if (saved.items.isNotEmpty()) {
@@ -206,8 +193,7 @@ fun ReceiptDetailScreen(
                         ReceiptItemsCard(
                             saved.items.sortedBy { it.position },
                             amount,
-                            prefix,
-                            foreign,
+                            code,
                             locale,
                             stacked,
                         )

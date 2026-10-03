@@ -5,20 +5,24 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff and mockups: October 1, 2026 v7 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff and mockups: October 2, 2026 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
 
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
 
+## October 2 v2 updates
+
+Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Pastel illustration accents are part of the supplied artwork; interactive accents remain jade.
+
 ## Geist typography
 
-Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 700 or Geist Mono. Apply the v7 sizes, weights and tracking in `references/tokens.md`, keeping the approved proportional digits and fixed Receipts header.
+Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 700 or Geist Mono. Apply the current sizes, weights and tracking in `references/tokens.md`, keeping the approved proportional digits and fixed Receipts header.
 
 ## Non-negotiables
 
 1. **Use the tokens.** Every color, text style, shape, spacing value and motion spec comes from `GohoTheme` (see `assets/compose/GohoTheme.kt`). No hard-coded hex values, dp values or `MaterialTheme.typography` styles in screens.
-2. **One accent, used on purpose.** Jade (`accent`) marks primary actions, the Scan button and the processing state. Nothing decorative is jade. Attention states ("Not processed") use `attention` orange. Red (`danger`) is reserved for destructive actions only (deleting). There is no blue or yellow.
+2. **One accent, used on purpose.** Jade (`accent`) marks primary actions, the Scan button and the processing state. Nothing decorative is jade. Attention states ("Not processed") use `attention` orange. Red (`danger`) is reserved for destructive actions only (deleting). Blue and yellow are limited to the supplied decorative illustrations.
 3. **Use proportional numbers.** Disable tabular figures throughout the app, including amounts, dates, counts and times. Use natural digit widths and zero tracking for metadata and labels; never use a monospaced font. Format all money with the shared formatter: exactly two decimals, half-even rounding and locale grouping separators; missing amounts show “—”.
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
@@ -29,7 +33,7 @@ Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list and details through a shared options and confirmation sheet.
+The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list and details through a shared options and confirmation sheet. Empty and error state designs for the list are in `references/screens.md` section 6.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -44,9 +48,9 @@ The app currently supports: the receipts list with All and Needs attention filte
 
 If a task seems to need one of these, stop and ask instead of inventing UI.
 
-## V7 deletion designs
+## Receipt deletion designs
 
-The v7 handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has only the shared receipt header and action buttons, with no title, large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The shared implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Loaded receipt details expose the same sheet through the overflow button. Cancel stays on details; successful deletion closes the sheet before returning to the updated list.
+The current handoff keeps the same receipt photo, merchant, amount and date header in the menu and confirmation. The menu uses a plain trash icon; confirmation has only the shared receipt header and action buttons, with no title, large icon or description. Keep content transitions together without stagger or bounce. It defines a shared receipt-options and delete-confirmation sheet, opened from the details overflow, a long press on a finished row, or a tap on a Not processed row. See `references/screens.md` for the flows and `references/components.md` / `references/tokens.md` for sheets, danger colors and hold feedback. The shared implementation uses DELETE /receipts/{receiptId} for processed receipts and DELETE /receipt-uploads/{uploadId} for failed uploads. Queued and processing uploads cannot be deleted. Processed rows open the sheet on a long press; failed rows open it on tap or long press. Loaded receipt details expose the same sheet through the overflow button. Cancel stays on details; successful deletion closes the sheet before returning to the updated list.
 
 ## How to work
 
@@ -70,10 +74,11 @@ Preserve these refinements when adapting the reference code or older mockups:
 ## Approved receipt-details refinements
 
 - Follow the updated layout: hero, photo, Items card when nonempty, then Details. Show only the “Items” heading; omit the item count.
+- Omit the separate Currency row from Details; the code is already shown beside the hero total.
 - Put Total at the bottom of Items and omit a second Total in Details. With no items, put Total in Details. Keep the server-provided category, Subtotal and Tax in Details as requested.
-- Item names wrap up to two lines at normal text sizes; allow more space for larger text. Amounts use exactly two decimals with no per-item currency symbols.
-- Use the receipt currency; fall back to its code if it is not registered, and never assume a currency when the server returns null. Use the phone locale to choose local versus foreign presentation.
-- Missing photos show “No receipt photo available” with no expand control. Make the loaded photo area tappable to open the viewer, with an accessible “View receipt photo” action. Do not show a separate expand button, even where older mockups include one. See `references/screens.md` section 3 for zoom, hidden controls, swipe dismissal, transitions and rotation, and `assets/mockups/README.md` for all five viewer mockups.
+- Item names wrap up to two lines at normal text sizes; allow more space for larger text. Amounts use exactly two decimals and the receipt currency symbol.
+- Show amounts with a prominent symbol and number followed by a smaller, subdued currency code (for example, “$46.78 CAD”), baseline aligned. Show codes only beside the 44sp details hero (20sp code) and receipt-list totals (12sp code). Use `textTertiary` for the code. All other amounts—items, item-card total, subtotal, tax, fallback details total and sheet metadata—keep their currency symbol and omit the code. The trailing code identifies dollar currencies, so use “$”, not “CA$” or “US$”. Unknown codes have no invented symbol; missing amounts remain “—” with no code.
+- Omit the entire details photo section, including its spacing, for receipts without an upload. Uploaded receipts retain the photo loading and missing states; missing uploaded photos show “No receipt photo available” with no expand control. Make the loaded photo area tappable to open the viewer, with an accessible “View receipt photo” action. Do not show a separate expand button, even where older mockups include one. See `references/screens.md` section 3 for zoom, hidden controls, swipe dismissal, transitions and rotation, and `assets/mockups/README.md` for all five viewer mockups.
 - Keep receipt loading and retry states accessible, with back navigation available.
 
 ## Orientation

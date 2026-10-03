@@ -20,7 +20,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.lerp
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 
@@ -102,29 +101,13 @@ fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
-    val p = progress.coerceIn(0f, 1f)
+    val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     val description = stringResource(R.string.scan_receipt)
     Row(
         modifier
-            .gohoPress { progress }
+            .gohoPress { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .shadow(
-                lerp(GohoSpacing.fabElevation, GohoSpacing.pressedElevation, p),
-                GohoShapes.fab,
-                clip = false,
-                ambientColor = c.accentShadow,
-                spotColor = c.accentShadow,
-            )
-            .clip(GohoShapes.fab)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        lerpColor(c.accentTop, c.accent, p),
-                        lerpColor(c.accent, c.accentPressed, p),
-                    )
-                )
-            )
-            .topHighlight(Color.White.copy(alpha = c.highlightAlpha * (1 - 0.45f * p)))
+            .gohoButtonSurface(c, GohoShapes.fab, p)
             .clickable(
                 interactionSource = interaction,
                 indication = null,

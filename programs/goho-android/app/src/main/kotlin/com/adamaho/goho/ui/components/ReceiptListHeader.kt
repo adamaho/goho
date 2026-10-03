@@ -18,6 +18,7 @@ fun ReceiptListHeader(
     attentionOnly: Boolean,
     onSelect: (Boolean) -> Unit,
     locale: Locale,
+    showFilters: Boolean = true,
 ) {
     Column(
         Modifier.fillMaxWidth()
@@ -33,6 +34,7 @@ fun ReceiptListHeader(
                     .heightIn(min = GohoSpacing.headerHeight)
                     .semantics { heading() },
         )
-        if (total > 0) ReceiptFilter(total, attention, attentionOnly, onSelect, locale)
+        if (showFilters && total > 0)
+            ReceiptFilter(total, attention, attentionOnly, onSelect, locale)
     }
 }
