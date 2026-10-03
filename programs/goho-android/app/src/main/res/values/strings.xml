@@ -11,7 +11,7 @@
     <string name="upload_failed">Upload failed. Please try again.</string>
     <string name="upload_retry">Retry upload</string>
     <string name="receipts_loading">Loading receipts…</string>
-    <string name="receipts_load_failed">Could not load receipts. Check your connection.</string>
+    <string name="receipts_load_failed">Couldn’t load receipts</string>
     <string name="receipt_queue_title">In progress</string>
     <string name="receipt_queue_empty">No receipts in the queue.</string>
     <string name="upload_queued">Queued</string>
@@ -73,4 +73,8 @@
     <string name="receipt_delete_failed">Couldn’t delete this receipt. Try again.</string>
     <string name="date_today_time">Today, %1$s</string>
     <string name="receipt_cancel">Cancel</string>
+    <string name="receipts_load_failed_body">Check your connection and try again.</string>
+    <string name="receipts_retry">Try again</string>
+    <string name="receipts_retrying">Trying again…</string>
+    <string name="receipts_attention_empty_body">Receipts that couldn’t be processed will show up here.</string>
 </resources>

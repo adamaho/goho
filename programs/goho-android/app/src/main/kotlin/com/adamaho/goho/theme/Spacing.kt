@@ -3,6 +3,16 @@ package com.adamaho.goho.theme
 import androidx.compose.ui.unit.dp
 
 object GohoSpacing {
+    val statusCardTop = 28.dp
+    val statusCardSide = 24.dp
+    val statusCardBottom = 32.dp
+    val statusCardActionBottom = 24.dp
+    val statusIllustrationWidth = 220.dp
+    val statusIllustrationHeight = 190.dp
+    val statusTitleTop = 14.dp
+    val statusBodyTop = 6.dp
+    val statusBodyMaxWidth = 290.dp
+    val statusActionTop = 22.dp
     val sheetInset = 8.dp
     val sheetPadding = 20.dp
     val sheetElevation = 16.dp
@@ -25,7 +35,13 @@ object GohoSpacing {
     val buttonGap = 10.dp
     val buttonIcon = 18.dp
     val buttonIconGap = 8.dp
-    val buttonElevation = 2.dp
+    val buttonRingInset = 1.5.dp
+    val buttonShadowRadius = 2.dp
+    val buttonShadowY = 1.dp
+    val buttonWideShadowRadius = 24.dp
+    val buttonWideShadowY = 10.dp
+    val buttonWideShadowSpread = (-8).dp
+    val secondaryWideShadowSpread = (-10).dp
     val flatElevation = 0.dp
     val previewMinHeight = 480.dp
     val photoPadding = 24.dp
@@ -77,8 +93,6 @@ object GohoSpacing {
     val fabEnd = 22.dp
     val fabIcon = 22.dp
     val fabIconGap = 9.dp
-    val fabElevation = 3.dp
-    val pressedElevation = 0.5.dp
     val iconStroke = 2.dp
     val compactWidth = 360.dp
     val filterTop = 16.dp

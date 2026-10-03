@@ -1,7 +1,6 @@
 package com.adamaho.goho.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -14,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.lerp
 import com.adamaho.goho.theme.*
 
 @Composable
@@ -31,28 +29,12 @@ fun GohoActionButton(
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
-    val elevation =
-        if (primary) lerp(GohoSpacing.buttonElevation, GohoSpacing.pressedElevation, p)
-        else if (c.isDark) lerp(GohoSpacing.hairline, GohoSpacing.flatElevation, p)
-        else GohoSpacing.flatElevation
-    val shadow = if (destructive) c.dangerShadow else if (primary) c.accentShadow else c.shadow
-    val main = if (destructive) c.danger else c.accent
-    val top = if (destructive) c.dangerTop else c.accentTop
-    val down = if (destructive) c.dangerPressed else c.accentPressed
-    val fill =
-        if (primary) Brush.verticalGradient(listOf(lerp(top, main, p), lerp(main, down, p)))
-        else SolidColor(lerp(c.buttonSecondary, c.buttonSecondaryPressed, p))
-    val highlight =
-        if (primary) c.highlightAlpha * (1 - 0.45f * p) else if (c.isDark) 0.06f * (1 - p) else 0f
     Row(
         modifier
             .fillMaxWidth()
             .gohoPress { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .shadow(elevation, GohoShapes.button, ambientColor = shadow, spotColor = shadow)
-            .clip(GohoShapes.button)
-            .background(fill)
-            .topHighlight(Color.White.copy(alpha = highlight))
+            .gohoButtonSurface(c, GohoShapes.button, p, primary, destructive)
             .clickable(
                 interactionSource = interaction,
                 indication = null,

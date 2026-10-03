@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import com.adamaho.goho.R
@@ -147,7 +148,7 @@ internal fun ReceiptDetailPhoto(image: ImageBitmap?, loading: Boolean, onOpen: (
 }
 
 @Composable
-internal fun ReceiptDetailRow(label: String, value: String, stacked: Boolean) {
+internal fun ReceiptDetailRow(label: String, value: AnnotatedString, stacked: Boolean) {
     val c = GohoTheme.colors
     val contentModifier =
         Modifier.fillMaxWidth()

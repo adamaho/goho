@@ -49,7 +49,7 @@ data class GohoColors(
     val outline: Color,              // thumbnail border, light-mode card ring
     val shadow: Color,               // ambient/spot color for neutral shadows
     val accent: Color,
-    val accentTop: Color,
+    val accentRing: Color,
     val accentPressed: Color,
     val onAccent: Color,
     val buttonSecondary: Color,
@@ -61,7 +61,7 @@ data class GohoColors(
     val attention: Color,
     val attentionContainer: Color,
     val danger: Color,
-    val dangerTop: Color,
+    val dangerRing: Color,
     val dangerPressed: Color,
     val onDanger: Color,
     val dangerShadow: Color,
@@ -70,7 +70,10 @@ data class GohoColors(
     val sheet: Color,
     val grabber: Color,
     val scrim: Color,
-    val highlightAlpha: Float,       // 1dp top highlight on the Scan button at rest (pressed = 55% of this)
+    val highlightAlpha: Float,
+    val buttonInnerRingAlpha: Float, // faint light ring 1dp inside the outer ring
+    val statusCard: Color,
+    val statusCardRing: Color,       // 1dp outline around empty/error status cards
 )
 
 private val PhotoWellCenter = Color(0xFF2A2724)
@@ -97,7 +100,7 @@ val GohoDarkColors = GohoColors(
     outline = Color.White.copy(alpha = 0.06f),
     shadow = Color.Black,
     accent = Color(0xFF74D3B6),
-    accentTop = Color(0xFF89E2C7),
+    accentRing = Color(0xFF4FAE92),
     accentPressed = Color(0xFF60BFA4),
     onAccent = Color(0xFF081D17),
     buttonSecondary = Color(0xFF2B2925),
@@ -109,7 +112,7 @@ val GohoDarkColors = GohoColors(
     attention = Color(0xFFED9658),
     attentionContainer = Color(0xFF3F2717),
     danger = Color(0xFFC52B2D),
-    dangerTop = Color(0xFFD33B39),
+    dangerRing = Color(0xFFA21F22),
     dangerPressed = Color(0xFFB01E22),
     onDanger = Color(0xFFFFFFFF),
     dangerShadow = Color.Black,
@@ -119,6 +122,9 @@ val GohoDarkColors = GohoColors(
     grabber = Color(0xFF3F3D39),
     scrim = Color.Black.copy(alpha = 0.55f),
     highlightAlpha = 0.45f,
+    buttonInnerRingAlpha = 0.22f,
+    statusCard = Color.White.copy(alpha = 0.025f),
+    statusCardRing = Color.White.copy(alpha = 0.07f),
 )
 
 val GohoLightColors = GohoColors(
@@ -141,11 +147,11 @@ val GohoLightColors = GohoColors(
     outline = Color(0xFF1D1A16).copy(alpha = 0.08f),
     shadow = Color(0xFF1D1A16),
     accent = Color(0xFF207963),
-    accentTop = Color(0xFF2D846D),
+    accentRing = Color(0xFF155C4B),
     accentPressed = Color(0xFF136A55),
     onAccent = Color(0xFFFFFFFF),
-    buttonSecondary = Color(0xFFEEECE9),
-    buttonSecondaryPressed = Color(0xFFE3E1DD),
+    buttonSecondary = Color(0xFFFFFFFF),
+    buttonSecondaryPressed = Color(0xFFF5F3F0),
     accentShadow = Color(0xFF104638),
     accentContainer = Color(0xFFDAF4EA),
     onAccentContainer = Color(0xFF045B48),
@@ -153,7 +159,7 @@ val GohoLightColors = GohoColors(
     attention = Color(0xFFA34D16),
     attentionContainer = Color(0xFFFFEADC),
     danger = Color(0xFFBE2323),
-    dangerTop = Color(0xFFCC3430),
+    dangerRing = Color(0xFF9A1A1B),
     dangerPressed = Color(0xFFA21A1B),
     onDanger = Color(0xFFFFFFFF),
     dangerShadow = Color(0xFF6E0F0F),
@@ -163,6 +169,9 @@ val GohoLightColors = GohoColors(
     grabber = Color(0xFFD9D6D1),
     scrim = Color(0xFF1D1A16).copy(alpha = 0.38f),
     highlightAlpha = 0.22f,
+    buttonInnerRingAlpha = 0.14f,
+    statusCard = Color.White.copy(alpha = 0.55f),
+    statusCardRing = Color(0xFF1D1A16).copy(alpha = 0.07f),
 )
 
 // ---------- Type ----------

@@ -155,6 +155,15 @@ class MainActivity : ComponentActivity() {
                                     is ReceiptDetailRoute ->
                                         NavEntry(route) {
                                             ReceiptDetailScreen(
+                                                hasUpload =
+                                                    if (
+                                                        overviewState.hasLoaded &&
+                                                            !overviewState.error
+                                                    )
+                                                        overviewState.uploads.any {
+                                                            it.receiptId == route.receiptId
+                                                        }
+                                                    else null,
                                                 receiptId = route.receiptId,
                                                 loadReceipt = ::loadReceipt,
                                                 loadReceiptImage = ::loadReceiptImage,
@@ -276,7 +285,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val revision = historyRevision
-        overviewState = overviewState.copy(loading = true, error = false)
+        overviewState = overviewState.copy(loading = true)
         lifecycleScope.launch {
             try {
                 val uploadsResponse = receiptUploadsApi.receiptUploadsList()

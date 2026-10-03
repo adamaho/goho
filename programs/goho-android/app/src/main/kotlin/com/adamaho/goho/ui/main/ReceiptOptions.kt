@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
@@ -16,11 +15,11 @@ import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.ReceiptOptionsSheet
 import com.adamaho.goho.ui.components.ReceiptStatusPill
+import com.adamaho.goho.ui.components.receiptMoneyText
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.util.Currency
 import java.util.Locale
 
 @Composable
@@ -54,9 +53,6 @@ internal fun ReceiptOptions(
                     locale,
                 )
             ) ?: "—"
-    val currency = entry.currency?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
-    val homeCurrency = runCatching { Currency.getInstance(locale) }.getOrNull()
-    val prefix = currency?.getSymbol(locale) ?: entry.currency.orEmpty()
     ReceiptOptionsSheet(
         merchant = merchant,
         metadata = {
@@ -76,23 +72,16 @@ internal fun ReceiptOptions(
             } else {
                 Text(
                     buildAnnotatedString {
-                        withStyle(GohoTheme.type.listValue.toSpanStyle()) {
-                            withStyle(
-                                SpanStyle(
-                                    color =
-                                        if (currency != null && currency == homeCurrency)
-                                            c.textPrimary
-                                        else c.textTertiary
+                        withStyle(
+                            GohoTheme.type.listValue.copy(color = c.textPrimary).toSpanStyle()
+                        ) {
+                            append(
+                                receiptMoneyText(
+                                    receiptAmount(entry.total, locale),
+                                    entry.currency,
+                                    locale,
                                 )
-                            ) {
-                                if (entry.total != null) {
-                                    append(prefix)
-                                    if (prefix.lastOrNull()?.isLetter() == true) append(" ")
-                                }
-                            }
-                            withStyle(SpanStyle(color = c.textPrimary)) {
-                                append(entry.total?.let { receiptAmount(it, locale) } ?: "—")
-                            }
+                            )
                         }
                         append("  ")
                         append(dateLabel)

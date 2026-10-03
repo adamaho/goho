@@ -1,33 +1,39 @@
 # Goho components
 
-Deletion components and row interactions describe the v7 target design. Verify server support and implement them only as part of a requested deletion feature.
+Deletion components and row interactions describe the October 2 v2 target design. Verify server support and implement them only as part of a requested deletion feature.
 
 Reference implementations live in `assets/compose/GohoComponents.kt`. Every pressable uses the Goho press (`Modifier.gohoPressTransform`) with `indication = null`. Only the components below are needed; don't add others without a design.
 
 ## GohoScanFab
 
 - 56 tall, shape `fab` 20, padding 18 left / 22 right.
-- Fill: vertical gradient `accentTop` → `accent`. Pressed: `accent` → `accentPressed`.
+- Fill: flat `accent`; pressed `accentPressed`. Edge and shadow: the button treatment in `tokens.md` (thin darker ring, faint inner light ring, soft wide shadow).
 - Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onAccent`. Content description "Scan receipt".
-- Shadow 3dp at rest, 0.5dp pressed; 1dp top highlight white 45% → 25%.
 - Placed bottom right over the list without a bottom gradient. Keep enough list padding for the final row to scroll clear of the button.
 
 ## GohoPrimaryButton
 
 - Full width inside the screen margin, 52 tall, shape `button` 16 (not a pill), horizontal padding 20.
-- Fill: vertical gradient `accentTop` → `accent`; pressed `accent` → `accentPressed`. Shadow and highlight per tokens.
+- Fill: flat `accent`; pressed `accentPressed`. Edge and shadow per the button treatment in `tokens.md`.
 - Content: optional 18dp icon, 8dp gap, label in `button` style, color `onAccent`.
 - Disabled: whole button at 40% alpha, no press, not clickable.
 
 ## GohoSecondaryButton
 
-- Same geometry. Fill `buttonSecondary`, pressed `buttonSecondaryPressed`. Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
+- Same geometry. Fill `buttonSecondary` (white in light, raised charcoal in dark), pressed `buttonSecondaryPressed`, with a faint ring and the same soft shadow (see `tokens.md`). Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
 - Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
 
 ## GohoDangerButton
 
-- Same geometry as GohoPrimaryButton (52 tall, shape `button` 16, full width). Fill: vertical gradient `dangerTop` → `danger`; pressed `danger` → `dangerPressed`. Label `button` style in `onDanger`, optional 18dp trash icon.
+- Same geometry as GohoPrimaryButton (52 tall, shape `button` 16, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
 - Only for the final confirming action of something destructive. Red is never used for anything else.
+
+## StatusCard (empty and error states)
+
+- Full width inside the screen margin, 28dp corners, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
+- Illustration (220×190dp, an image asset), then 14dp below the title in 20/26 SemiBold −0.02em `textPrimary`, 6dp below the text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
+- Illustration assets live in `assets/illustrations/`: one PNG per state per theme at 3× (`status-*.png`, `status-*-dark.png`), plus the SVG source. Use the PNGs; the SVG uses drop-shadow filters that Android vector drawables can't express.
+- The illustration is decorative (`contentDescription = null`); the title and text carry the meaning.
 
 ## GohoSheet (floating bottom sheet)
 
@@ -76,7 +82,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 - Line 1: merchant (`rowTitle`, `textPrimary`, single line, ellipsis) … trailing amount (`rowTitle`, proportional figures).
 - Line 2 (5dp below): date (`meta`, `textTertiary`) … optional trailing status pill.
 - States:
-  - **Processed:** amount in `textPrimary`. Foreign currency: prefix like "US$" in `textTertiary`, number in `textPrimary`. Tappable; opens details.
+  - **Processed:** amount in `textPrimary`. The symbol and number use `textPrimary`; the trailing currency code is smaller (12sp) in `textTertiary`. Tappable; opens details.
   - **Processing:** merchant "New receipt", date "Just now", trailing amount replaced by a 52×12 fully round shimmering skeleton, pill "Reading receipt…". Not tappable.
   - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, pill "Not processed". Tappable; opens the receipt options sheet (it has no details screen).
 - Pressed receipt rows retain their normal surface fill with no highlight. Holds use the scale feedback below; cards clip their rows to the card's corners.
@@ -98,9 +104,9 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 The receipt's line items, given the same card treatment as Details so they read as primary content.
 
 - Card like ReceiptCard: `surface`, shape `card` 20, theme edge treatment, 16dp horizontal padding, 2dp top padding.
-- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 400, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, no currency symbol, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
-- Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 600; amount in 17/22 weight 600, tracking −0.01em, proportional figures, with the currency symbol (foreign prefix like "US$" in `textTertiary`).
-- Item amounts without symbols keep the column clean; the currency is shown once, on the Total.
+- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 400, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, currency symbol without a trailing code, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
+- Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 600; amount in 17/22 weight 600, tracking −0.01em, proportional figures, with the currency symbol (no trailing code).
+- Each item amount and the card Total use the receipt currency symbol without repeating the code; the code appears once in the details hero.
 - If an item has no amount, show "—" in `textTertiary`.
 
 ## Money formatting
@@ -108,8 +114,8 @@ The receipt's line items, given the same card treatment as Details so they read 
 One formatter for every amount in the app (list rows, hero, items, total):
 
 - Exactly two fraction digits: `minimumFractionDigits = 2`, `maximumFractionDigits = 2`, half-even rounding, grouping separators on ("1,204.50").
-- Home currency: local symbol ("$46.78"). Foreign: the short prefix ("US$23.21"), drawn in `textTertiary` where the spec says so.
-- Item lines: the number only ("3.50").
+- Symbol and amount followed by the smaller subdued currency code: “$46.78 CAD” or “$23.21 USD”. Show this trailing code only in the details hero and receipt-list totals. Other amounts retain the symbol without the code. Unknown codes omit the symbol, and missing amounts show only “—”.
+- Item lines: symbol and number ("$3.50"), without a trailing currency code.
 - Missing: "—", never "0.00".
 
 ## PhotoFrame
