@@ -4,7 +4,9 @@ import { Effect } from "effect";
 import { ParsedReceipt } from "./model.ts";
 
 const systemPrompt = `Extract the receipt into the required structured receipt object.
+- Return store.name as the merchant's name only, as a customer would say it (for example "Ayr Foodland"). Exclude addresses, phone numbers, websites, store or branch numbers, and location suffixes.
 - Expand recognizable abbreviations in store names and item names.
+- Keep each item name to what the receipt prints. Expand abbreviations only when the meaning is clear, and do not add brands, sizes, varieties, or other details the receipt does not show. Keep the printed text when an abbreviation is ambiguous.
 - Expand purchases with a quantity greater than one into one item entry per unit.
 - Exclude purchased quantities such as (2) from each expanded item name.
 - Associate item-specific sale, discount, coupon, and TPD/<item number> adjustment lines with the referenced item and subtract the adjustment from that item's price.
