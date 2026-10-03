@@ -1,6 +1,6 @@
 # @goho/goho-cli
 
-Calls the Goho server to upload, inspect, and list receipts. OpenAI credentials
+Calls the Goho server to upload, inspect, list, and delete receipts. OpenAI credentials
 belong only to the [server](../goho-server/README.md).
 
 ## Setup
@@ -50,5 +50,15 @@ pnpm --filter @goho/goho-cli start receipts view <positive-integer-receipt-id>
 
 The command prints the complete receipt as JSON. A malformed ID or a valid ID
 that does not exist exits nonzero; a missing receipt prints a specific message.
+
+## Delete a receipt
+
+```bash
+pnpm --filter @goho/goho-cli start receipts delete <positive-integer-receipt-id>
+```
+
+The command permanently removes the receipt, its items, and any scanned image,
+then prints `Deleted receipt <id>.` There is no confirmation prompt. A missing
+receipt exits nonzero with a specific message.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.

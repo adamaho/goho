@@ -1,6 +1,8 @@
+import { Effect } from "effect";
+import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse } from "./cli.ts";
+import { runCommand, withJsonResponse, withResponse } from "./cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 
@@ -73,6 +75,53 @@ describe("receipts view", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toMatch(/view\s+View one persisted receipt\./);
     expect(result.stdout).not.toMatch(/show\s+/);
+  });
+});
+
+describe("receipts delete", () => {
+  const runDelete = (status: number, body: unknown) =>
+    withResponse(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.method).toBe("DELETE");
+        expect(request.url).toBe(`/receipts/${receipt.id}`);
+        return body === undefined
+          ? HttpServerResponse.empty({ status })
+          : HttpServerResponse.jsonUnsafe(body, { status });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["receipts", "delete", receipt.id]),
+    );
+
+  it("deletes one receipt and confirms it", async () => {
+    const result = await runDelete(204, undefined);
+    expect(result).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: `Deleted receipt ${receipt.id}.\n`,
+    });
+  });
+
+  it("reports a missing receipt and exits nonzero", async () => {
+    const result = await runDelete(404, { _tag: "NotFound" });
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(`Receipt ${receipt.id} was not found.\n`);
+  });
+
+  it("reports server failures and exits nonzero", async () => {
+    const result = await runDelete(500, { _tag: "InternalServerError" });
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(
+      "Receipt could not be deleted. Check the server logs and try again.\n",
+    );
+  });
+
+  it("rejects a malformed receipt ID and exits nonzero", async () => {
+    const result = await withJsonResponse(500, {}, (baseUrl) =>
+      runCommand(baseUrl, ["receipts", "delete", "0"]),
+    );
+    expect(result.code).toBe(1);
   });
 });
 
