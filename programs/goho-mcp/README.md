@@ -1,8 +1,8 @@
 # @goho/goho-mcp
 
 Goho receipts are small, structured records that give an MCP client a useful
-read and write workflow. This local stdio server exposes receipt lookup and
-creation through the existing Goho HTTP API, so it can be tested without hosting
+read and write workflow. This local stdio server exposes receipt lookup,
+creation, and deletion through the existing Goho HTTP API, so it can be tested without hosting
 or an OpenAI key.
 
 ## Agent-first setup
@@ -102,3 +102,7 @@ while the client is connected and reserves stdout for protocol messages.
   for Example Store on 2026-09-13 in the Groceries category, with USD
   subtotal $10.25, tax $0.75, total $11.00, and one Apple item for $10.25.
   Then call `get_receipt` with the returned ID.
+- `delete_receipt` takes a positive integer `receipt_id` and permanently
+  removes that receipt, its items, and any scanned image. It returns the deleted
+  ID. Try it on the receipt you just created, then confirm `get_receipt` reports
+  it as not found.

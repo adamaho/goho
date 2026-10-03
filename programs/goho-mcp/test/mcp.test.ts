@@ -9,7 +9,10 @@ const ToolList = Schema.Struct({
   tools: Schema.Array(
     Schema.Struct({
       name: Schema.String,
-      annotations: Schema.Struct({ readOnlyHint: Schema.Boolean }),
+      annotations: Schema.Struct({
+        readOnlyHint: Schema.Boolean,
+        destructiveHint: Schema.Boolean,
+      }),
     }),
   ),
 });
@@ -25,9 +28,14 @@ it.effect("registers the receipt tools through MCP", () =>
       "list_receipts",
       "get_receipt",
       "create_receipt",
+      "delete_receipt",
     ]);
     expect(discovered.tools[0]?.annotations.readOnlyHint).toBe(true);
     expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
     expect(discovered.tools[2]?.annotations.readOnlyHint).toBe(false);
+    expect(discovered.tools[3]?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+    });
   }).pipe(Effect.provide(NodeServices.layer)),
 );
