@@ -1,5 +1,8 @@
 # Local machine deployment
 
+The [Docker deployment](./docker/README.md) replaces this setup: CI builds an image
+and deploys it over Tailscale. This systemd setup remains until the switch-over is complete.
+
 This setup runs the server under systemd and PostgreSQL 18 under Docker Compose.
 It uses the service account and checkout path configured in the systemd unit,
 with server configuration in `/etc/goho/server.env`.

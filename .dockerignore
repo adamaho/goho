@@ -1,0 +1,17 @@
+# Allowlist: the image context contains only what goho-server needs to run.
+# Anything not listed here, including env files and local data, never reaches the image.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!packages/core/
+!packages/goho-api/
+!programs/goho-server/
+
+**/node_modules
+**/.turbo
+**/.data
+**/.env
+**/.env.*
+**/test
+**/coverage
