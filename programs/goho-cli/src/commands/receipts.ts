@@ -53,13 +53,40 @@ const viewCommand = Command.make("view", {
   ),
 );
 
+const deleteCommand = Command.make("delete", {
+  receiptId: Argument.String("receipt-id").pipe(
+    Argument.withSchema(ReceiptId),
+    Argument.withDescription("Positive integer ID of the persisted receipt to delete."),
+  ),
+}).pipe(
+  Command.withDescription("Permanently delete one persisted receipt and its scanned image."),
+  Command.withHandler(({ receiptId }) =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      yield* client.receipts.delete({ params: { receiptId } });
+      yield* Console.log(`Deleted receipt ${receiptId}.`);
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "NotFound"
+                ? `Receipt ${receiptId} was not found.`
+                : "Receipt could not be deleted. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
+
 /**
- * Command group for receipt uploads and retrieval.
+ * Command group for receipt uploads, retrieval, and deletion.
  *
  * @category commands
  * @since 0.1.0
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([listCommand, viewCommand, uploadCommand, statusCommand]),
+  Command.withSubcommands([listCommand, viewCommand, deleteCommand, uploadCommand, statusCommand]),
 );
