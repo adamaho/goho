@@ -1,0 +1,105 @@
+name: deploy
+
+# Builds the goho-server image and deploys it to the Goho server over Tailscale.
+# This repository is public: the server's address and Tailscale credentials come
+# only from the production environment's secrets, and nothing here prints them.
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .dockerignore
+      - .github/workflows/deploy.yaml
+      - infra/deployment/docker/**
+      - package.json
+      - packages/core/**
+      - packages/goho-api/**
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - programs/goho-server/**
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/goho-server
+
+jobs:
+  image:
+    name: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: programs/goho-server/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: deploy
+    needs: image
+    runs-on: ubuntu-latest
+    # Restrict this environment to the dev branch in the repository settings.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:goho-ci
+          log-mode: quiet
+
+      - name: Deploy
+        env:
+          DEPLOY_TARGET: goho@${{ secrets.GOHO_DEPLOY_HOST }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          IMAGE_REF: ${{ env.IMAGE }}:${{ github.sha }}
+        run: |
+          ssh_options=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR)
+          # The job token expires when this run ends, so the server keeps no long-lived registry credential.
+          printf '%s' "$REGISTRY_TOKEN" |
+            ssh "${ssh_options[@]}" "$DEPLOY_TARGET" "docker login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
+          ssh "${ssh_options[@]}" "$DEPLOY_TARGET" 'cat > /opt/goho/compose.yml' < infra/deployment/docker/compose.yml
+          ssh "${ssh_options[@]}" "$DEPLOY_TARGET" bash -s -- "$IMAGE_REF" < infra/deployment/docker/deploy.sh
+
+      - name: Log out of the registry on the server
+        if: always()
+        env:
+          DEPLOY_TARGET: goho@${{ secrets.GOHO_DEPLOY_HOST }}
+        run: ssh -o BatchMode=yes -o LogLevel=ERROR "$DEPLOY_TARGET" 'docker logout ghcr.io' >/dev/null || true
