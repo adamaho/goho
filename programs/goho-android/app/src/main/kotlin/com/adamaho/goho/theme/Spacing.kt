@@ -38,8 +38,8 @@ object GohoSpacing {
     val buttonRingInset = 1.5.dp
     val buttonShadowRadius = 2.dp
     val buttonShadowY = 1.dp
-    val buttonWideShadowRadius = 24.dp
-    val buttonWideShadowY = 10.dp
+    val buttonWideShadowRadius = 28.dp
+    val buttonWideShadowY = 12.dp
     val buttonWideShadowSpread = (-8).dp
     val secondaryWideShadowSpread = (-10).dp
     val flatElevation = 0.dp
@@ -79,6 +79,8 @@ object GohoSpacing {
     val fabBottom = 28.dp
     val hairline = 1.dp
     val headerHeight = 44.dp
+    val brandMarkWidth = 40.dp
+    val brandMarkGap = 10.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp
     val lineGap = 5.dp
