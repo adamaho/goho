@@ -5,15 +5,19 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff and mockups: October 2, 2026 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff and mockups: October 5, 2026 v3 (Bram) package, built on the October 2 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
 
-Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm neutrals (charcoal in dark mode, warm off-white in light), one jade accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
+Goho is a family OS; receipts are its first feature. Its face is **Bram**, a soft periwinkle clay mascot with two ivory horns. The look is **soft, cushioned and friendly, with financial-app precision**: warm paper off-white in light mode, deep indigo-charcoal in dark, one periwinkle accent taken from Bram, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
-Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
+Think "Family wallet's warmth and motion, Linear's calm surfaces, a clay toy's softness", never "Material starter template".
+
+## October 5 v3 update: Bram
+
+Bram represents the brand: the logo mark (Bram alone, no letters), the app icon and the empty and error illustrations. See `assets/brand/README.md`. Use only the supplied Bram artwork; never redraw, recolour, add blush or change his proportions. The palette moved from jade to Bram's periwinkle, neutrals picked up a faint lavender tint, radii grew (`references/tokens.md`), and shadows are softer and tinted indigo. The list header shows a 40dp Bram mark before the "Receipts" title. The v3 mockups in `assets/mockups/README.md` show the new look; older mockups still define layout and motion, but not colour or radius.
 
 ## October 2 v2 updates
 
-Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Pastel illustration accents are part of the supplied artwork; interactive accents remain jade.
+Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Pastel illustration accents are part of the supplied artwork; interactive accents use the periwinkle `accent`.
 
 ## Geist typography
 
@@ -22,12 +26,12 @@ Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 
 ## Non-negotiables
 
 1. **Use the tokens.** Every color, text style, shape, spacing value and motion spec comes from `GohoTheme` (see `assets/compose/GohoTheme.kt`). No hard-coded hex values, dp values or `MaterialTheme.typography` styles in screens.
-2. **One accent, used on purpose.** Jade (`accent`) marks primary actions, the Scan button and the processing state. Nothing decorative is jade. Attention states ("Not processed") use `attention` orange. Red (`danger`) is reserved for destructive actions only (deleting). Blue and yellow are limited to the supplied decorative illustrations.
+2. **One accent, used on purpose.** Periwinkle (`accent`) marks primary actions, the Scan button and the processing state. Nothing decorative uses the accent except Bram himself. Attention states ("Not processed") use `attention` orange. Red (`danger`) is reserved for destructive actions only (deleting). Other pastels are limited to the supplied illustrations.
 3. **Use proportional numbers.** Disable tabular figures throughout the app, including amounts, dates, counts and times. Use natural digit widths and zero tracking for metadata and labels; never use a monospaced font. Format all money with the shared formatter: exactly two decimals, half-even rounding and locale grouping separators; missing amounts show “—”.
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
 6. **No ripples.** Press feedback is the Goho press: scale to 97%, move down 1dp, shadow drops, fill darkens, spring back on release. Use `indication = null` plus the press modifier. Never a sunken or inset-shadow pressed state.
-7. **Rounded, by role.** Thumbnail 8dp; primary and secondary buttons 16dp (not pills); cards, photo frame and FAB 20dp; pills, badges, filter and icon buttons fully round.
+7. **Rounded, by role.** Thumbnail 10dp; primary and secondary buttons 20dp (not pills); cards, photo frame and FAB 24dp; StatusCard and sheet 32dp; pills, badges, filter and icon buttons fully round.
 8. **No bottom navigation.** The list screen has a floating Scan button at the bottom right.
 9. **Light and dark, following the system.** Both palettes share token names (`GohoLightColors`, `GohoDarkColors`). Never branch on theme in screens; the only exceptions are baked into the components (card edges, top highlights). The photo frame and photo viewer are dark in both themes.
 
@@ -67,7 +71,7 @@ Preserve these refinements when adapting the reference code or older mockups:
 - Title the list “Receipts”. Keep smaller, separate filter tabs below the title in a fixed header (selected pill, no enclosing track), with no scroll-driven resizing or movement. Keep 44dp filter tap targets, both counts, a 12dp gap below the header, and the 12dp top fade.
 - Sort each receipt day newest upload first, including successfully processed uploads. Rows without upload timestamps follow in stable server order; do not invent a timestamp for manual receipts.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
-- Use a neutral receipt icon for missing photos, a jade scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
+- Use a neutral receipt icon for missing photos, a periwinkle scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.
 - Receipt holds use only a subtle scale reduction (0.98); do not show a pressed fill or highlight. Keep the receipt header mounted across the options and confirmation states. Omit the “Delete this receipt?” heading; show Delete receipt and Cancel directly below the shared header. Animate the sheet content smoothly without stagger, bounce or a moving trash icon; snap when animations are disabled.
 - Center the visible text bounds inside status pills and filter count badges, rather than the font line box. Keep a minimum height that can grow for larger text.
 

@@ -25,19 +25,19 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 ## GohoDangerButton
 
-- Same geometry as GohoPrimaryButton (52 tall, shape `button` 16, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
+- Same geometry as GohoPrimaryButton (52 tall, shape `button` 20, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
 - Only for the final confirming action of something destructive. Red is never used for anything else.
 
 ## StatusCard (empty and error states)
 
-- Full width inside the screen margin, 28dp corners, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
+- Full width inside the screen margin, 32dp corners (`statusCard`), padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
 - Illustration (220×190dp, an image asset), then 14dp below the title in 20/26 SemiBold −0.02em `textPrimary`, 6dp below the text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
 - Illustration assets live in `assets/illustrations/`: one PNG per state per theme at 3× (`status-*.png`, `status-*-dark.png`), plus the SVG source. Use the PNGs; the SVG uses drop-shadow filters that Android vector drawables can't express.
 - The illustration is decorative (`contentDescription = null`); the title and text carry the meaning.
 
 ## GohoSheet (floating bottom sheet)
 
-- Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 28 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
+- Floats inset from the screen: 8dp from the left, right and bottom edges (plus the navigation bar inset), shape `sheet` 32 on all corners, fill `sheet`, shadow per tokens. Scrim `scrim` behind it.
 - Grabber: 36×4, fully round, `grabber`, 8dp from the top, centered.
 - Drag down or tap the scrim to dismiss (except while a delete is in progress). Back gesture dismisses.
 - Keep the receipt header mounted across states. Confirmation has no title, large icon or description; buttons appear together directly below the shared header without stagger or bounce.
@@ -92,7 +92,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 ## ReceiptCard (section)
 
 - Section label above: `section` style, `textTertiary`, inset 4dp inside the screen margin (20dp from the edge), 8dp below.
-- Card: `surface`, shape `card` 20, 4dp vertical padding. Edge treatment per theme (see Elevation in `tokens.md`). Rows separated by `divider` lines starting at 68dp.
+- Card: `surface`, shape `card` 24, 4dp vertical padding. Edge treatment per theme (see Elevation in `tokens.md`). Rows separated by `divider` lines starting at 68dp.
 
 ## DetailList
 
@@ -103,7 +103,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 The receipt's line items, given the same card treatment as Details so they read as primary content.
 
-- Card like ReceiptCard: `surface`, shape `card` 20, theme edge treatment, 16dp horizontal padding, 2dp top padding.
+- Card like ReceiptCard: `surface`, shape `card` 24, theme edge treatment, 16dp horizontal padding, 2dp top padding.
 - Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 400, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, currency symbol without a trailing code, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
 - Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 600; amount in 17/22 weight 600, tracking −0.01em, proportional figures, with the currency symbol (no trailing code).
 - Each item amount and the card Total use the receipt currency symbol without repeating the code; the code appears once in the details hero.
@@ -126,7 +126,7 @@ One formatter for every amount in the app (list rows, hero, items, total):
 ## GohoPhotoControlButton
 
 - The close button in the photo viewer.
-- 44dp circle, fill `photoControl` (`#1D1B19` at 78%), 1dp inner border white at 8%, 17–20dp icon in `#F0EEEB`. Same look in both themes, because it always sits on a dark well or a photo.
+- 44dp circle, fill `photoControl` (`#1F1E2A` at 78%), 1dp inner border white at 8%, 17–20dp icon in `#F1EFF8`. Same look in both themes, because it always sits on a dark well or a photo.
 - Uses the Goho press.
 
 ## Icons

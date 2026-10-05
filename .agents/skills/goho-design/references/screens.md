@@ -8,7 +8,7 @@ List and details receipt options and deletion use the same supported server endp
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a 44dp row.
+- Bram mark (`assets/brand/bram-mark-128.png`, 40dp wide, decorative, no content description), then a 10dp gap and the title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a 44dp row.
 - Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
 
 **List**
@@ -152,18 +152,18 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 **Needs attention, nothing in it**
 
 - Header and filter as normal ("Needs attention" selected, no badge). The Scan button stays.
-- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: two receipts, the front one stamped with a jade check mark, with mint and peach sparkle chips ("all sorted").
+- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: Bram in front of two tidy receipts, with a periwinkle check chip and a lavender sparkle chip ("all sorted").
 - Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
 
 **No receipts yet** (the account has no receipts at all)
 
 - Header shows only the “Receipts” title (no filter). The Scan button stays.
-- StatusCard centered in the screen. Illustration `status-no-receipts`: a blank receipt framed by jade scanner corners with a scan line, with a peach plus chip and a sky sparkle chip ("scan one in").
+- StatusCard centered in the screen. Illustration `status-no-receipts`: Bram beside a blank receipt, with a peach plus chip ("scan one in").
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)
 
 - Header shows only the “Receipts” title. No filter and no Scan button.
-- StatusCard centered in the screen. Illustration `status-load-error`: a soft cloud with a receipt slipping out beneath it, with a peach wifi-off chip and a sand refresh chip ("couldn't reach the server").
+- StatusCard centered in the screen. Illustration `status-load-error`: Bram under a soft cloud, with a peach wifi-off chip ("couldn't reach the server").
 - Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
 - Announce the card as a polite live region when it appears.

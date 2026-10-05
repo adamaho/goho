@@ -6,42 +6,42 @@ All values are dp or sp. Colors were chosen in OKLCH; hex is what Compose uses.
 
 Goho follows the system light/dark setting. Both palettes use the same token names; screens never branch on theme except where noted. The photo frame and photo viewer stay dark in both themes so receipts always sit on a dark well.
 
-| Token                                        | Dark                  | Light                    | Use                                                         |
-| -------------------------------------------- | --------------------- | ------------------------ | ----------------------------------------------------------- |
-| `background`                                 | `#13110F`             | `#F8F6F4`                | Screen background, bottom scrim                             |
-| `surface`                                    | `#1D1B19`             | `#FFFFFF`                | Cards                                                       |
-| `surfaceMuted`                               | `#1D1B19`             | `#EEECE9`                | Filter track, round icon buttons, thumbnail placeholder     |
-| `surfaceMutedPressed`                        | `#2B2925`             | `#E3E1DD`                | Pressed round icon button                                   |
-| `segmentSelected`                            | `#2B2925`             | `#FFFFFF`                | Selected filter segment                                     |
-| `surfacePressed`                             | `#24221F`             | `#F5F3F0`                | Pressed row                                                 |
-| `skeletonBase` / `skeletonShimmer`           | `#2B2925` / `#3A3733` | `#EBE9E6` / `#F8F6F4`    | Amount skeleton while processing                            |
-| `photoWellCenter` / `photoWellEdge`          | `#2A2724` / `#0C0B0A` | same                     | Photo frame gradient, viewer background (edge)              |
-| `photoControl`                               | `#1D1B19` at 78%      | same                     | Expand and close buttons on the photo well (icon `#F0EEEB`) |
-| `textPrimary`                                | `#F0EEEB`             | `#1D1A16`                | Wordmark, merchants, amounts, values                        |
-| `textSecondary`                              | `#B7B4AF`             | `#58554F`                | Detail labels, merchant on details, filter text and counts  |
-| `textTertiary`                               | `#928F88`             | `#726E67`                | Dates, section labels, "—", currency prefixes               |
-| `divider`                                    | white 5%              | `#1D1A16` 6%             | Row separators inside cards                                 |
-| `outline`                                    | white 6%              | `#1D1A16` 8%             | Thumbnail border                                            |
-| `accent`                                     | `#74D3B6`             | `#207963`                | Scan and primary button fill, processing scan line          |
-| `accentRing`                                 | `#4FAE92`             | `#155C4B`                | Thin edge ring on Scan and primary buttons                  |
-| `accentPressed`                              | `#60BFA4`             | `#136A55`                | Scan and primary button fill while pressed                  |
-| `onAccent`                                   | `#081D17`             | `#FFFFFF`                | Label and icon on Scan and primary buttons                  |
-| `buttonSecondary` / `buttonSecondaryPressed` | `#2B2925` / `#24221F` | `#FFFFFF` / `#F5F3F0`    | Secondary button fill                                       |
-| `statusCard` / `statusCardRing`              | white 2.5% / white 7% | white 55% / `#1D1A16` 7% | StatusCard fill and 1dp ring                                |
-| `accentContainer` / `onAccentContainer`      | `#1A342C` / `#74D3B6` | `#DAF4EA` / `#045B48`    | "Reading receipt…" pill                                     |
-| `accentShimmer`                              | `#D6F4EA`             | `#53B397`                | Shimmer highlight on "Reading receipt…"                     |
-| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC`    | "Not processed" pill, attention count badge                 |
-| `danger` / `dangerRing`                      | `#C52B2D` / `#A21F22` | `#BE2323` / `#9A1A1B`    | Destructive button fill and its edge ring                   |
-| `dangerPressed`                              | `#B01E22`             | `#A21A1B`                | Destructive button fill while pressed                       |
-| `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`                | Label and icon on the destructive button                    |
-| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C`    | Delete row icon circle and label, confirmation icon circle  |
-| `sheet`                                      | `#201E1B`             | `#FFFFFF`                | Bottom sheet surface                                        |
-| `grabber`                                    | `#3F3D39`             | `#D9D6D1`                | Sheet drag handle                                           |
-| `scrim`                                      | black 55%             | `#1D1A16` 38%            | Behind sheets                                               |
+| Token                                        | Dark                  | Light                    | Use                                                                  |
+| -------------------------------------------- | --------------------- | ------------------------ | -------------------------------------------------------------------- |
+| `background`                                 | `#15141D`             | `#FBF8F4`                | Screen background, bottom scrim                                      |
+| `surface`                                    | `#1F1E2A`             | `#FFFFFF`                | Cards                                                                |
+| `surfaceMuted`                               | `#1F1E2A`             | `#F1EEF4`                | Round icon buttons, thumbnail placeholder                            |
+| `surfaceMutedPressed`                        | `#2B2A38`             | `#E6E2EC`                | Pressed round icon button                                            |
+| `segmentSelected`                            | `#2B2A38`             | `#FFFFFF`                | Selected filter tab                                                  |
+| `surfacePressed`                             | `#252432`             | `#F7F4F9`                | Pressed row                                                          |
+| `skeletonBase` / `skeletonShimmer`           | `#2B2A38` / `#3A3948` | `#ECE9F1` / `#FBF8F4`    | Amount skeleton while processing                                     |
+| `photoWellCenter` / `photoWellEdge`          | `#2A2833` / `#0C0B10` | same                     | Photo frame gradient, viewer background (edge)                       |
+| `photoControl`                               | `#1F1E2A` at 78%      | same                     | Photo controls on the photo well (icon `#F1EFF8`)                    |
+| `textPrimary`                                | `#F1EFF8`             | `#26233A`                | Title, merchants, amounts, values                                    |
+| `textSecondary`                              | `#BBB8CC`             | `#5B5870`                | Detail labels, merchant on details, filter text and counts           |
+| `textTertiary`                               | `#9794AB`             | `#6E6A83`                | Dates, section labels, "—", currency codes                           |
+| `divider`                                    | white 5%              | `#26233A` 6%             | Row separators inside cards                                          |
+| `outline`                                    | white 6%              | `#26233A` 8%             | Thumbnail border, light card ring                                    |
+| `accent`                                     | `#A6ABF0`             | `#8B91D6`                | Scan and primary button fill, processing scan line (Bram periwinkle) |
+| `accentRing`                                 | `#8288D2`             | `#767CC2`                | Thin edge ring on Scan and primary buttons                           |
+| `accentPressed`                              | `#959AE3`             | `#7D83CB`                | Scan and primary button fill while pressed                           |
+| `onAccent`                                   | `#17183D`             | `#1B1C45`                | Label and icon on Scan and primary buttons (deep indigo, not white)  |
+| `buttonSecondary` / `buttonSecondaryPressed` | `#2B2A38` / `#252432` | `#FFFFFF` / `#F7F4F9`    | Secondary button fill                                                |
+| `statusCard` / `statusCardRing`              | white 2.5% / white 7% | white 60% / `#26233A` 6% | StatusCard fill and 1dp ring                                         |
+| `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6` | `#E9E9FB` / `#444AA0`    | "Reading receipt…" pill                                              |
+| `accentShimmer`                              | `#E4E5FD`             | `#9CA1E6`                | Shimmer highlight on "Reading receipt…"                              |
+| `attention` / `attentionContainer`           | `#F2A07C` / `#43271C` | `#A6472A` / `#FFE8DD`    | "Not processed" pill, attention count badge                          |
+| `danger` / `dangerRing`                      | `#CF4440` / `#A9302D` | `#D2443F` / `#B33532`    | Destructive button fill and its edge ring                            |
+| `dangerPressed`                              | `#BA3A36`             | `#BE3A36`                | Destructive button fill while pressed                                |
+| `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`                | Label and icon on the destructive button                             |
+| `dangerContainer` / `onDangerContainer`      | `#4B1E20` / `#F7908A` | `#FFE9E7` / `#B42A26`    | Delete row icon and label                                            |
+| `sheet`                                      | `#22212E`             | `#FFFFFF`                | Bottom sheet surface                                                 |
+| `grabber`                                    | `#42404F`             | `#DAD6E0`                | Sheet drag handle                                                    |
+| `scrim`                                      | black 55%             | `#26233A` 34%            | Behind sheets                                                        |
 
-OKLCH sources (L C H): dark neutrals sit at hue 80 with chroma ≤ 0.01 (background 0.18, surface 0.225, raised 0.28); light neutrals at hue 80 (background 0.975, muted 0.945, text 0.22 / 0.45 / 0.54). Accent hue 172: dark 0.80 0.10, light 0.52 0.09. Attention hue about 50: dark 0.75 0.13, light 0.52 0.13. Danger hue about 26 (true red, used only for destructive actions): button dark 0.54 0.19, light 0.52 0.19.
+Palette source: Bram, the Goho mascot (`assets/brand/`). His periwinkle body (`#8E94D0`, light `#B0B1EB`, shade `#7C81BB`) gives the accent; his ivory horns (`#F4DEC7`) and the approved sheet's warm paper (`#FCF9F3`) give the light neutrals; dark neutrals are a deep indigo-charcoal at very low chroma rather than warm brown. Attention stays a warm terracotta and danger a true red, used only for destructive actions.
 
-Contrast (all at least 4.5:1): tertiary text is 5.8 (dark) / 4.7 (light) on background and 5.3 / 5.1 on cards. Don't put tertiary text on `surfaceMuted` in light (4.3:1), which is why filter counts use `textSecondary`. `onAccent` on `accent` is 9.8 / 5.3; `onDanger` on `danger` is 5.6 / 6.1; `onDangerContainer` on `dangerContainer` is 5.5 / 5.7. Pill text on its container is 7.5 / 7.0 (accent) and 6.0 / 5.0 (attention).
+Contrast (all at least 4.5:1): `textTertiary` is 6.2 (dark) / 4.9 (light) on background and 5.6 / 5.2 on cards; `textSecondary` on `surfaceMuted` is 8.5 / 5.9. `onAccent` on `accent` is 7.9 / 5.5 (6.5 / 4.6 pressed). `onDanger` on `danger` is 4.6 / 4.5; `onDangerContainer` on `dangerContainer` is 6.2 / 5.5. Pill text on its container is 7.3 / 6.4 (accent) and 6.5 / 5.0 (attention). The light accent is a mid-tone, so its label is deep indigo (`onAccent`), never white.
 
 ## Typography
 
@@ -68,15 +68,19 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 
 ## Shape
 
-| Token    | Radius | Use                                                                      |
-| -------- | ------ | ------------------------------------------------------------------------ |
-| `thumb`  | 8      | Receipt thumbnails in rows                                               |
-| `button` | 16     | Primary and secondary buttons (not fully round)                          |
-| `card`   | 20     | Grouped list cards, detail card, photo frame                             |
-| `fab`    | 20     | Scan button                                                              |
-| `pill`   | 50%    | Status pills, count badge, filter track and segments, round icon buttons |
-| ---      | ---    | ---                                                                      |
-| `sheet`  | 28     | Floating bottom sheet (all four corners)                                 |
+| Token        | Radius | Use                                                        |
+| ------------ | ------ | ---------------------------------------------------------- |
+| `thumb`      | 10     | Receipt thumbnails in rows                                 |
+| `sheetThumb` | 12     | Receipt photo in the sheet header                          |
+| `heldRow`    | 18     | Row highlight while held                                   |
+| `button`     | 20     | Primary and secondary buttons (not fully round)            |
+| `card`       | 24     | Grouped list cards, detail card, photo frame               |
+| `fab`        | 24     | Scan button                                                |
+| `statusCard` | 32     | Empty and error StatusCard                                 |
+| `sheet`      | 32     | Floating bottom sheet (all four corners)                   |
+| `pill`       | 50%    | Status pills, count badge, filter tabs, round icon buttons |
+
+Bram's softer look: every radius grew by 2 to 4dp from the October 2 package, so surfaces read as cushioned rather than crisp.
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
@@ -100,21 +104,21 @@ Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highl
 
 | Button                                                                                                                                       | Ring (outer / inner)  | Shadow                                                    |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------------- |
-| Primary and Scan, light                                                                                                                      | `#155C4B` / white 14% | 0 1 2 at 20% + 0 10 24 (−8 spread) at 40%, both `#104638` |
-| Primary and Scan, dark                                                                                                                       | `#4FAE92` / white 22% | 0 1 2 at 40% + 0 10 24 (−8) at 70%, black                 |
-| Danger, light                                                                                                                                | `#9A1A1B` / white 14% | 0 1 2 at 20% + 0 10 24 (−8) at 40%, `#6E0F0F`             |
-| Danger, dark                                                                                                                                 | `#A21F22` / white 16% | as primary dark                                           |
-| Secondary, light                                                                                                                             | `#1D1A16` 6% / none   | 0 1 2 at 6% + 0 10 24 (−10) at 22%, `#1D1A16`             |
-| Secondary, dark                                                                                                                              | white 8% / none       | 0 1 2 at 40% + 0 10 24 (−10) at 70%, black                |
+| Primary and Scan, light                                                                                                                      | `#767CC2` / white 22% | 0 1 2 at 16% + 0 12 28 (−8 spread) at 32%, both `#3A3D86` |
+| Primary and Scan, dark                                                                                                                       | `#8288D2` / white 22% | 0 1 2 at 40% + 0 12 28 (−8) at 60%, black                 |
+| Danger, light                                                                                                                                | `#B33532` / white 14% | 0 1 2 at 16% + 0 12 28 (−8) at 32%, `#7A1F1C`             |
+| Danger, dark                                                                                                                                 | `#A9302D` / white 16% | as primary dark                                           |
+| Secondary, light                                                                                                                             | `#26233A` 6% / none   | 0 1 2 at 5% + 0 12 28 (−10) at 18%, `#26233A`             |
+| Secondary, dark                                                                                                                              | white 8% / none       | 0 1 2 at 40% + 0 12 28 (−10) at 60%, black                |
 | Pressed: the fill steps to its pressed color, the wide shadow drops away (keep the 0 1 2 shadow), plus the Goho press (97% scale, 1dp down). |
 
 | Element                 | Dark                                                        | Light                                                         |
 | ----------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
-| Cards                   | no shadow, 1dp top highlight white 3%                       | 1dp ring `#1D1A16` 5% + 1dp shadow at low alpha, no highlight |
-| StatusCard              | 1dp ring white 7% on white 2.5%                             | 1dp ring `#1D1A16` 7% on white 55%                            |
-| Selected filter segment | 1dp black shadow, top highlight white 6%                    | 1dp shadow `#1D1A16`, no highlight                            |
+| Cards                   | no shadow, 1dp top highlight white 3%                       | 1dp ring `#26233A` 5% + 1dp shadow at low alpha, no highlight |
+| StatusCard              | 1dp ring white 7% on white 2.5%                             | 1dp ring `#26233A` 7% on white 55%                            |
+| Selected filter segment | 1dp black shadow, top highlight white 6%                    | 1dp shadow `#26233A`, no highlight                            |
 | Round icon button       | none; fill steps to `surfaceMutedPressed` when pressed      | same                                                          |
-| Bottom sheet            | 1dp ring white 5%, top highlight 5%, 16dp soft black shadow | 1dp ring `#1D1A16` 4%, 12dp soft shadow `#1D1A16` 30%         |
+| Bottom sheet            | 1dp ring white 5%, top highlight 5%, 16dp soft black shadow | 1dp ring `#26233A` 4%, 12dp soft shadow `#26233A` 30%         |
 
 ## Motion
 

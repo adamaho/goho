@@ -1,5 +1,14 @@
 # Mockups
 
+## October 5 v3 (Bram)
+
+Re-rendered in the Bram palette and softer radii, with the approved refinements applied (Receipts title with the Bram mark, trackless filter tabs, trailing currency codes, no confirmation heading, no photo expand button, no bottom gradient):
+`receipts`, `receipt-details`, `scan-preview`, `sheet-menu-from-list`, `sheet-confirm-from-details`, `empty-needs-attention`, `empty-no-receipts` and `load-error` (dark, plus `-light`), at 824px wide.
+
+The other files below are from the October 2 package and still show jade and the older radii. Use them for layout, flows and motion only; take colour, radius and shadow from `references/tokens.md`.
+
+## October 2 v2
+
 Rendered from the Goho design canvas at 2x (824×1784 for phone screens).
 
 - `receipts.png` and `receipts-light.png`: Receipts list, dark and light
