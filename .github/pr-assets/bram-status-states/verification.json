@@ -1,0 +1,47 @@
+{
+  "baseline": "47e17f9bc2bea3b442d1e3a6c1b9f83f645830b3",
+  "renderer": "Robolectric 4.17 native Android graphics + Roborazzi 1.76.0, API 35, real ReceiptOverview composable",
+  "default_screen": "360 x 800 dp, xhdpi (720 x 1600 pixels), light and night resource qualifiers",
+  "additional_screens": [
+    "360 x 640 dp",
+    "412 x 960 dp",
+    "360 x 640 dp with system fontScale=2.0"
+  ],
+  "validation": {
+    "before_build_log": "before-build5.log",
+    "after_format_log": "after-format.log",
+    "after_build_log": "after-build.log",
+    "before_runtime_log": "before-screenshots3.log",
+    "after_runtime_log": "after-screenshots.log",
+    "after_cases": 16,
+    "before_cases_passed": 12,
+    "before_cases_skipped_after_only": 4
+  },
+  "source_sha256": {
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/theme/Color.kt": "67931c50b409f53e7a02e2fb23710c1984ead62de1accbf37f8878b4ff28fefa",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/theme/Motion.kt": "abb9c881cabbb9b17870b72bc6e994dbf2b439b8d876ee1c907fc2b398554e97",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/theme/Shape.kt": "4d6600bdaed5b83b8c952321776fb1c82fa499a858e202ccf316ae524ce8fa87",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/theme/Spacing.kt": "fe805a3520bbaedcb17e6120bd382f480dbf3d7f3a410deb0331996d331cc6be",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/GohoActionButton.kt": "f5bff08a792e54df88bb01d405be82c1d5ff2a04529dbb676e391cc3ef4f9771",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/GohoMotion.kt": "392af8970dfc3b9e774b6da8dcc328a48d1d472fb321e9617add8900573e3cab",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/NoNeedsAttentionState.kt": "c1e2e40df3f80fe8ee181e75af41c969d2036252bc93d3f8f8786b35624428bf",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/NoReceiptsState.kt": "c42ba9b98edffe944cb531e46723da0c435b3c22ee77d3c153618bbeef8b8474",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/ReceiptFilter.kt": "be86d6649782a1b61cee7edd446caf76e087242cbbbe1a5d1831df81ff2266d9",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/ReceiptListHeader.kt": "de8112b84cc39df9cc646a0d2e4fed47ad07c4eb2764ccae005701f169185a3f",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/ReceiptStatusCard.kt": "16d72b4138008c93752500a5c9c518f4632b2faa7706cd2ff1821768f504d84f",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/components/ReceiptsConnectionErrorState.kt": "6ce9f270b97a2dab88033b7e427529a7277ae6310559b673f6e0dc71123c3043",
+    "programs/goho-android/app/src/main/kotlin/com/adamaho/goho/ui/main/ReceiptOverview.kt": "3db8489b6b99616a76e072e3d187160fa183b42ab4594afda06489926770b163",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_load_error.png": "7b6e3f9d1b5350eab5262bb674ccd373536c631c0d5787ff4de92bf5ff3fa0be",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_load_error_dark.png": "c33bb553260be7048eaf97527d175c16183569b3e396ec46e979f11fdff91d72",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_needs_attention.png": "577be3331b32a8684dd30d3833b05ce7bf6e15ac9800ba834ca672265f7ea6f0",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_needs_attention_dark.png": "6ba6c64d97451fba3e7629f87a0a8d1c591448d6690b1de64fa201ce2b9ea39f",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_no_receipts.png": "88707e38ea5da3f49dc10ffc198019bd5d64d074c493f02517c99ac40f2531c6",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/status_no_receipts_dark.png": "7f73dae8a50410684297f30a9e1924cc92e3a95080e2a2979373dc1fd312ea68",
+    "programs/goho-android/app/src/main/res/drawable-nodpi/bram_mark.png": "a6abc636374291204292125818d3d01965477d68f1fb18d4d46cbcfcd9831b7f"
+  },
+  "limitations": [
+    "Native JVM rendering, not emulator or physical-device screenshots.",
+    "System bars excluded; full app ReceiptOverview rendered.",
+    "Android API35 used for rendering; build compiles SDK37.0, target36."
+  ]
+}

@@ -1,0 +1,28 @@
+Picked up JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=/workspace/scratch/2453a96800f2/.android-tools/tmp -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=44931 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=44931
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:ktfmtFormatAndroidTest NO-SOURCE
+> Task :app:ktfmtFormatAndroidTestDebug NO-SOURCE
+> Task :app:ktfmtFormatAndroidTestRelease NO-SOURCE
+> Task :app:ktfmtFormatDebug
+> Task :app:ktfmtFormatMain
+> Task :app:ktfmtFormatRelease NO-SOURCE
+> Task :app:ktfmtFormatScripts
+> Task :app:ktfmtFormatTest NO-SOURCE
+> Task :app:ktfmtFormatTestDebug NO-SOURCE
+> Task :app:ktfmtFormatTestFixtures NO-SOURCE
+> Task :app:ktfmtFormatTestFixturesDebug NO-SOURCE
+> Task :app:ktfmtFormatTestFixturesRelease NO-SOURCE
+> Task :app:ktfmtFormatTestRelease NO-SOURCE
+> Task :app:ktfmtFormat
+
+[Incubating] Problems report is available at: file:///workspace/scratch/2453a96800f2/goho/programs/goho-android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 15s
+3 actionable tasks: 3 executed

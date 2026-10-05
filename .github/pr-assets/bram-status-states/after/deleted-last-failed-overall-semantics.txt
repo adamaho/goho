@@ -1,0 +1,65 @@
+Printing with useUnmergedTree = 'true'
+Node #457 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+ |-Node #458 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+   Shape = 'RectangleShape'
+    |-Node #459 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+       |-Node #464 at (l=40.0, t=12.0, r=120.0, b=92.0)px
+       | Shape = 'RectangleShape'
+       |-Node #465 at (l=140.0, t=21.0, r=688.0, b=83.0)px
+       | Text = '[Receipts]'
+       | [Heading]
+       | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #466 at (l=32.0, t=96.0, r=377.0, b=184.0)px
+       | [SelectableGroup]
+       |  |-Node #467 at (l=32.0, t=96.0, r=132.0, b=184.0)px
+       |  | Focused = 'false'
+       |  | Role = 'Tab'
+       |  | Selected = 'false'
+       |  | Actions = [OnClick, RequestFocus]
+       |  | MergeDescendants = 'true'
+       |  |  |-Node #469 at (l=39.0, t=107.600006, r=139.0, b=179.6)px
+       |  |  | Shape = 'RoundedCornerShape(topStart = CornerSize(size = 50.0%), topEnd = CornerSize(size = 50.0%), bottomEnd = CornerSize(size = 50.0%), bottomStart = CornerSize(size = 50.0%))'
+       |  |  |-Node #471 at (l=52.0, t=123.0, r=84.0, b=157.0)px
+       |  |  | Text = '[All]'
+       |  |  | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |  |  |-Node #472 at (l=94.0, t=123.0, r=112.0, b=157.0)px
+       |  |    Text = '[0]'
+       |  |    Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |  |-Node #473 at (l=144.0, t=96.0, r=377.0, b=184.0)px
+       |    Focused = 'false'
+       |    Role = 'Tab'
+       |    Selected = 'true'
+       |    Actions = [OnClick, RequestFocus]
+       |    MergeDescendants = 'true'
+       |     |-Node #475 at (l=144.0, t=104.0, r=377.0, b=176.0)px
+       |     | Shape = 'RoundedCornerShape(topStart = CornerSize(size = 50.0%), topEnd = CornerSize(size = 50.0%), bottomEnd = CornerSize(size = 50.0%), bottomStart = CornerSize(size = 50.0%))'
+       |     |-Node #477 at (l=164.0, t=123.0, r=357.0, b=157.0)px
+       |       Text = '[Needs attention]'
+       |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #549 at (l=0.0, t=208.0, r=720.0, b=1400.0)px
+       | IsTraversalGroup = 'true'
+       | Shape = 'androidx.compose.foundation.VerticalScrollableClipShape@5dd51136'
+       | VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
+       | Actions = [ScrollBy, ScrollByOffset]
+       |  |-Node #550 at (l=32.0, t=467.0, r=688.0, b=1142.0)px
+       |    Shape = 'RoundedCornerShape(topStart = CornerSize(size = 32.0.dp), topEnd = CornerSize(size = 32.0.dp), bottomEnd = CornerSize(size = 32.0.dp), bottomStart = CornerSize(size = 32.0.dp))'
+       |    MergeDescendants = 'true'
+       |     |-Node #551 at (l=140.0, t=523.0, r=580.0, b=903.0)px
+       |     | Shape = 'RectangleShape'
+       |     |-Node #553 at (l=138.0, t=931.0, r=583.0, b=983.0)px
+       |     | Text = '[Nothing needs attention]'
+       |     | [Heading]
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #555 at (l=80.0, t=995.0, r=640.0, b=1078.0)px
+       |       Text = '[Receipts that couldn’t be processed will show up here.]'
+       |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #545 at (l=467.0, t=1432.0, r=688.0, b=1544.0)px
+         ContentDescription = '[Scan receipt]'
+         Focused = 'false'
+         Role = 'Button'
+         Shape = 'RoundedCornerShape(topStart = CornerSize(size = 24.0.dp), topEnd = CornerSize(size = 24.0.dp), bottomEnd = CornerSize(size = 24.0.dp), bottomStart = CornerSize(size = 24.0.dp))'
+         Actions = [OnClick, RequestFocus]
+         MergeDescendants = 'true'
+          |-Node #547 at (l=565.0, t=1468.0, r=644.0, b=1509.0)px
+            Text = '[Scan]'
+            Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]

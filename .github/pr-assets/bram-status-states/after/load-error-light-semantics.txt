@@ -1,0 +1,40 @@
+Printing with useUnmergedTree = 'true'
+Node #180 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+ |-Node #181 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+   Shape = 'RectangleShape'
+    |-Node #182 at (l=0.0, t=0.0, r=720.0, b=1600.0)px
+       |-Node #187 at (l=40.0, t=21.0, r=688.0, b=83.0)px
+       | Text = '[Receipts]'
+       | [Heading]
+       | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #190 at (l=0.0, t=120.0, r=720.0, b=1600.0)px
+         IsTraversalGroup = 'true'
+         Shape = 'androidx.compose.foundation.VerticalScrollableClipShape@5dd51136'
+         VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
+         Actions = [ScrollBy, ScrollByOffset]
+          |-Node #191 at (l=32.0, t=479.0, r=688.0, b=1242.0)px
+            LiveRegion = 'Polite'
+            Shape = 'RoundedCornerShape(topStart = CornerSize(size = 32.0.dp), topEnd = CornerSize(size = 32.0.dp), bottomEnd = CornerSize(size = 32.0.dp), bottomStart = CornerSize(size = 32.0.dp))'
+            MergeDescendants = 'true'
+             |-Node #192 at (l=140.0, t=535.0, r=580.0, b=915.0)px
+             | Shape = 'RectangleShape'
+             |-Node #194 at (l=157.0, t=943.0, r=564.0, b=995.0)px
+             | Text = '[Couldn’t load receipts]'
+             | [Heading]
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |-Node #196 at (l=106.0, t=1007.0, r=615.0, b=1046.0)px
+             | Text = '[Check your connection and try again.]'
+             | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+             |-Node #198 at (l=80.0, t=1090.0, r=640.0, b=1194.0)px
+               Focused = 'false'
+               Role = 'Button'
+               Shape = 'RoundedCornerShape(topStart = CornerSize(size = 20.0.dp), topEnd = CornerSize(size = 20.0.dp), bottomEnd = CornerSize(size = 20.0.dp), bottomStart = CornerSize(size = 20.0.dp))'
+               Actions = [OnClick, RequestFocus]
+               MergeDescendants = 'true'
+                |-Node #200 at (l=289.0, t=1122.0, r=431.0, b=1163.0)px
+                | ClearAndSetSemantics = 'true'
+                |-Node #201 at (l=255.0, t=1122.0, r=465.0, b=1163.0)px
+                | ClearAndSetSemantics = 'true'
+                |-Node #202 at (l=289.0, t=1122.0, r=431.0, b=1163.0)px
+                  Text = '[Try again]'
+                  Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
