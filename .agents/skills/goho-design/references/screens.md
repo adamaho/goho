@@ -8,7 +8,7 @@ List and details receipt options and deletion use the same supported server endp
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a 44dp row.
+- Decorative Bram mark (`bram-mark.png`), 40×40dp, then a 10dp gap and title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a row at least 44dp tall. Hide the mark for a load error.
 - Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
 
 **List**
@@ -147,23 +147,30 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Each has its own illustration in the same paper-and-pastel style, so the states are recognizable at a glance.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Each uses the supplied lavender Bram character artwork unchanged. The six PNGs are the current assets; older SVG illustrations are historical.
+
+**Layout and transitions**
+
+- Center the card in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole card to scroll rather than clipping copy or overlapping Scan.
+- Animate a newly shown card once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
+- During retry, keep the error header and card mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second card entrance and no outgoing accessibility actions.
+- With Remove animations enabled, entrance, recovery, and press are static. Keep existing copy unchanged.
 
 **Needs attention, nothing in it**
 
-- Header and filter as normal ("Needs attention" selected, no badge). The Scan button stays.
-- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: two receipts, the front one stamped with a jade check mark, with mint and peach sparkle chips ("all sorted").
+- Header includes Bram and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
+- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: Bram beneath two receipts, a lavender check badge, and a sparkle chip (“all sorted”).
 - Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
 
 **No receipts yet** (the account has no receipts at all)
 
-- Header shows only the “Receipts” title (no filter). The Scan button stays.
-- StatusCard centered in the screen. Illustration `status-no-receipts`: a blank receipt framed by jade scanner corners with a scan line, with a peach plus chip and a sky sparkle chip ("scan one in").
+- Header shows Bram and the “Receipts” title (no filter). The Scan button stays.
+- StatusCard centered between the header and Scan footer. Illustration `status-no-receipts`: Bram beside a receipt with a peach plus chip (“scan one in”).
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)
 
-- Header shows only the “Receipts” title. No filter and no Scan button.
-- StatusCard centered in the screen. Illustration `status-load-error`: a soft cloud with a receipt slipping out beneath it, with a peach wifi-off chip and a sand refresh chip ("couldn't reach the server").
+- Header shows only the “Receipts” title. No Bram header mark, filter, or Scan button.
+- StatusCard centered in the available area below the header. Illustration `status-load-error`: Bram beneath a cloud and a peach wifi-off chip (“couldn’t reach the server”).
 - Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
 - Announce the card as a polite live region when it appears.

@@ -1,21 +1,31 @@
 # Mockups
 
-Rendered from the Goho design canvas at 2x (824×1784 for phone screens).
+## Current Bram status states (October 5, 2026)
 
-- `receipts.png` and `receipts-light.png`: Receipts list, dark and light
-- `receipt-details.png` and `receipt-details-light.png`: Receipt details (with items and the overflow button), dark and light
-- `photo-viewer.png`: Photo viewer at fit (dark in both themes)
-- `viewer-zoomed.png`: Zoomed 2.5× after a double-tap on the total
-- `viewer-controls-hidden.png`: After a single tap hides the controls
-- `viewer-swipe-to-close.png`: Mid swipe-down, over the light details screen
-- `viewer-landscape.png`: Landscape
-- `scan-preview.png` and `scan-preview-light.png`: Scan preview, dark and light
-- `sheet-menu-from-list.png`, `sheet-confirm-from-list.png`, `sheet-menu-from-details.png`, `sheet-confirm-from-details.png`, `sheet-menu-not-processed.png`, `sheet-confirm-not-processed.png` (and `-light` versions): Receipt options sheet and delete confirmation
-- `motion-1-open-from-list.png` to `motion-5-delete-from-details.png`: Delete motion storyboards with timings (light)
-- `list-hold-press.png`, `list-tap-not-processed.png`, `list-after-delete.png` (and `-light` versions): Pressing and holding a row, tapping a Not processed row, and the list after a delete
-- `empty-needs-attention.png`, `empty-no-receipts.png`, `load-error.png` (and `-light` versions): Empty and error states
-- `tokens.png` and `tokens-light.png`: Color, type, shape and component references
+These captures render the production ReceiptOverview and its components from PR #101, using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The production source and artwork match PR head `f202fc183a627d0025a8aecdbcba54cca5be4194`.
 
-The "Reading receipt…" shimmer and the amount skeleton are captured mid-animation as static frames. The mockups are visual references only; when a mockup and `references/*.md` disagree, the written spec wins.
+- `empty-needs-attention.png` and `empty-needs-attention-light.png`: Nothing needs attention, with Bram, the selected filter, and Scan.
+- `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and Scan, without filters.
+- `load-error.png` and `load-error-light.png`: Load error, title only in the header, retry action, no Scan.
+- `retry-running.png`, `retry-failed.png`, `retry-succeeded.png`: Disabled retry with stable bounds, failure in place, and the loaded list after success (light).
+- `deleted-last-failed-overall.png`: Needs attention stays selected with All 0 after deleting the last failed receipt (light).
+- `large-font-load-error-scrolled.png`, `large-font-no-attention-scrolled.png`, `large-font-no-receipts-scrolled.png`: 2× font, scrolled to expose the body/action; Scan has its own footer where present.
+- `small-360-no-receipts.png` and `tall-no-receipts.png`: Short and tall layout references.
 
-Approved app refinements: use proportional figures; title the list Receipts with compact fixed filters below it and no bottom gradient; scale-only row holds with no highlight; tap the details photo without an expand button; omit the item count; keep the app portrait-only. The landscape mockup is reference only. Omit the confirmation heading shown in the supplied mockups; show the receipt header and Delete receipt / Cancel buttons. For the current sheets, keep the receipt header mounted and reveal confirmation content together without stagger or bounce. Motion storyboards show source concepts; these preferences override them. Details overflow opens the same receipt menu and confirmation used by the list.
+Standard captures are 360×800dp at 2× (720×1600px). Edge captures use 360×640dp or 412×960dp. Source filenames and SHA-256 values are recorded in `bram-captures.json`. See the [original evidence and reproduction instructions](https://github.com/adamaho/goho/blob/c8f96f46a34118d3d45e44f3f7b2aa710afb86a8/.github/pr-assets/bram-status-states/README.md) for the rendering harness. The captures are reused evidence, not a new test run.
+
+## Historical layout references (October 2 v2)
+
+The remaining files were rendered from the older design canvas, usually at 824×1784px. They retain the previous jade palette, button geometry, and some superseded content. Use them only for the named layout/interaction concepts. Current colors, shapes, Bram header, status behavior, and approved refinements come from `references/*.md` and the current captures above.
+
+- `receipts.png` / `receipts-light.png`: Populated list layout.
+- `receipt-details.png` / `receipt-details-light.png`: Details with items and overflow.
+- `photo-viewer.png`, `viewer-zoomed.png`, `viewer-controls-hidden.png`, `viewer-swipe-to-close.png`: Viewer states.
+- `viewer-landscape.png`: Historical reference only; the app stays portrait-only.
+- `scan-preview.png` / `scan-preview-light.png`: Scan preview layout.
+- `sheet-menu-from-list.png`, `sheet-confirm-from-list.png`, `sheet-menu-from-details.png`, `sheet-confirm-from-details.png`, `sheet-menu-not-processed.png`, `sheet-confirm-not-processed.png` (and `-light` variants): Receipt options and deletion.
+- `motion-1-open-from-list.png` through `motion-5-delete-from-details.png`: Original motion storyboards.
+- `list-hold-press.png`, `list-tap-not-processed.png`, `list-after-delete.png` (and `-light` variants): List interactions.
+- `tokens.png` / `tokens-light.png`: Historical token boards; use the Bram values in `references/tokens.md` and `assets/compose/GohoTheme.kt` instead.
+
+Written specs win over any older image. Preserve proportional figures, compact fixed filters, scale-only row holds, no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.

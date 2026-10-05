@@ -6,34 +6,36 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 ## GohoScanFab
 
-- 56 tall, shape `fab` 20, padding 18 left / 22 right.
+- 56 tall, shape `fab` 24, padding 18 left / 22 right.
 - Fill: flat `accent`; pressed `accentPressed`. Edge and shadow: the button treatment in `tokens.md` (thin darker ring, faint inner light ring, soft wide shadow).
 - Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onAccent`. Content description "Scan receipt".
 - Placed bottom right over the list without a bottom gradient. Keep enough list padding for the final row to scroll clear of the button.
 
 ## GohoPrimaryButton
 
-- Full width inside the screen margin, 52 tall, shape `button` 16 (not a pill), horizontal padding 20.
+- Full width inside the screen margin, 52 tall, shape `button` 20 (not a pill), horizontal padding 20.
 - Fill: flat `accent`; pressed `accentPressed`. Edge and shadow per the button treatment in `tokens.md`.
 - Content: optional 18dp icon, 8dp gap, label in `button` style, color `onAccent`.
 - Disabled: whole button at 40% alpha, no press, not clickable.
 
 ## GohoSecondaryButton
 
-- Same geometry. Fill `buttonSecondary` (white in light, raised charcoal in dark), pressed `buttonSecondaryPressed`, with a faint ring and the same soft shadow (see `tokens.md`). Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
+- Same geometry. Fill `buttonSecondary` (white in light, raised violet-charcoal in dark), pressed `buttonSecondaryPressed`, with a faint ring and the same soft shadow (see `tokens.md`). Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
 - Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
 
 ## GohoDangerButton
 
-- Same geometry as GohoPrimaryButton (52 tall, shape `button` 16, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
+- Same geometry as GohoPrimaryButton (52 tall, shape `button` 20, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
 - Only for the final confirming action of something destructive. Red is never used for anything else.
 
 ## StatusCard (empty and error states)
 
-- Full width inside the screen margin, 28dp corners, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
+- Full width inside the screen margin, 32dp corners, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
 - Illustration (220×190dp, an image asset), then 14dp below the title in 20/26 SemiBold −0.02em `textPrimary`, 6dp below the text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
-- Illustration assets live in `assets/illustrations/`: one PNG per state per theme at 3× (`status-*.png`, `status-*-dark.png`), plus the SVG source. Use the PNGs; the SVG uses drop-shadow filters that Android vector drawables can't express.
-- The illustration is decorative (`contentDescription = null`); the title and text carry the meaning.
+- Illustration assets live in `assets/illustrations/`: one supplied Bram PNG per state per theme at 3× (`status-*.png`, `status-*-dark.png`). Preserve the PNGs unchanged and render with `ContentScale.Fit` in a slot up to 220dp wide with a 220:190 aspect ratio. The older SVGs in `legacy/` are not sources for these Bram images.
+- The illustration is decorative (`contentDescription = null`); the title is a heading and the title/body group carries the meaning. Only the load-error card is a polite live region.
+- Entrance: one 200ms fade with a 6dp upward settle; no looping character animation. Successful retry crossfades the whole error screen to the loaded state in 200ms without replaying the incoming card entrance. With reduced motion, render the final state immediately.
+- The retry button reserves space for both “Try again” and “Trying again…” at the current font scale. Hidden measurement labels have no semantics. Disable the button while retrying and preserve its bounds after failure.
 
 ## GohoSheet (floating bottom sheet)
 
@@ -57,6 +59,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 ## ReceiptFilter
 
 - Separate tabs below the title, with a 6dp gap and no enclosing track. The selected tab has a subtle pill surface; unselected tabs blend into the header background.
+- Show filters when entries exist or Needs attention is selected, even after deleting the last failed receipt. Hide them for a load error and for the unfiltered empty list. Let “Needs attention” wrap at larger font sizes instead of truncating it.
 - Tab: 36dp visible pill within a minimum 44dp tap target, 10dp horizontal padding, fully round, text 13sp weight 500.
 - Selected: fill `segmentSelected`, 1dp shadow (plus a 6% top highlight in dark only), text `textPrimary`. Unselected: visually blends into `background`, text `textSecondary`. Animate an opaque surface between `background` and `segmentSelected`; never fade a shadowed surface through transparency. Use a gentle spring for the fill reveal while keeping label geometry and touch targets fixed. Synchronize elevation, highlight and label color with the same selection progress, clamped to 0–1; only the fill scale may overshoot.
 - "All" shows its count in `textSecondary` after a 5dp gap. "Needs attention" shows a count badge: min 20×20, fully round, `attentionContainer` fill, `attention` text, `label` style. Hide the badge when the count is 0.
