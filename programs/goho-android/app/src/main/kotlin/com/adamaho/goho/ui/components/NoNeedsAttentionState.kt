@@ -7,7 +7,7 @@ import com.adamaho.goho.R
 import com.adamaho.goho.theme.GohoTheme
 
 @Composable
-fun NoNeedsAttentionState(modifier: Modifier = Modifier) {
+fun NoNeedsAttentionState(modifier: Modifier = Modifier, animateEntrance: Boolean = true) {
     ReceiptStatusCard(
         illustration =
             if (GohoTheme.colors.isDark) R.drawable.status_needs_attention_dark
@@ -15,5 +15,6 @@ fun NoNeedsAttentionState(modifier: Modifier = Modifier) {
         title = stringResource(R.string.receipts_attention_empty),
         description = stringResource(R.string.receipts_attention_empty_body),
         modifier = modifier,
+        animateEntrance = animateEntrance,
     )
 }

@@ -20,7 +20,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import java.text.NumberFormat
@@ -58,8 +57,6 @@ fun ReceiptFilter(
                 stringResource(R.string.receipts_failed_title),
                 modifier = Modifier.weight(1f, fill = false),
                 style = GohoTheme.type.segment,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
             if (attention > 0)
                 Box(

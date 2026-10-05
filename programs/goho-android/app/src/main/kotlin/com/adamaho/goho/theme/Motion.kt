@@ -8,6 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
+    const val STATUS_ENTER_MILLIS = 200
+    const val STATUS_CROSSFADE_MILLIS = 200
+    val statusEnterTranslation = 6.dp
     const val SHEET_CONTENT_MILLIS = 280
     const val SHEET_CONTENT_FADE_OUT_MILLIS = 90
     const val SHEET_CONTENT_FADE_IN_MILLIS = 180

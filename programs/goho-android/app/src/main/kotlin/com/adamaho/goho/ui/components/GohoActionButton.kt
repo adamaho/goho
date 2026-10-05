@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
@@ -24,6 +25,7 @@ fun GohoActionButton(
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
     destructive: Boolean = false,
+    reserveSpaceFor: List<String> = emptyList(),
 ) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -49,12 +51,24 @@ fun GohoActionButton(
             Arrangement.spacedBy(GohoSpacing.buttonIconGap, Alignment.CenterHorizontally),
     ) {
         icon?.invoke()
-        Text(
-            text,
-            style = if (primary) GohoTheme.type.button else GohoTheme.type.buttonSecondary,
-            color = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary,
-            textAlign = TextAlign.Center,
-        )
+        Box(contentAlignment = Alignment.Center) {
+            val style = if (primary) GohoTheme.type.button else GohoTheme.type.buttonSecondary
+            // Measure every label in the same constraints so asynchronous actions never resize.
+            reserveSpaceFor.forEach { label ->
+                Text(
+                    label,
+                    style = style,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.clearAndSetSemantics {}.alpha(0f),
+                )
+            }
+            Text(
+                text,
+                style = style,
+                color = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
