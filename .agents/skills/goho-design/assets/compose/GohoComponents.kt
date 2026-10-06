@@ -1,7 +1,17 @@
 // Goho UI primitives. Reference implementation from the design handoff; not compiled
 // against the project, so fix any API drift for the project's Compose version.
+// Bram status cards, retry measurement, button treatment, and reduced-motion press match PR #101.
 package com.goho.ui.components // TODO: match the app's package
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.snap
+import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.aspectRatio
 import android.provider.Settings
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -101,7 +111,6 @@ import com.goho.ui.theme.GohoShapes
 import com.goho.ui.theme.GohoSpacing
 import com.goho.ui.theme.GohoTheme
 import androidx.compose.ui.graphics.lerp as lerpColor
-import androidx.compose.ui.unit.lerp as lerpDp
 
 // ---------- Motion helpers ----------
 
@@ -120,10 +129,10 @@ fun pressProgress(interactionSource: MutableInteractionSource): State<Float> {
     val pressed by interactionSource.collectIsPressedAsState()
     val reduced = rememberReducedMotion()
     return animateFloatAsState(
-        targetValue = if (pressed) 1f else 0f,
+        targetValue = if (pressed && !reduced) 1f else 0f,
         animationSpec = when {
+            reduced -> snap()
             pressed -> GohoMotion.pressIn
-            reduced -> GohoMotion.pressOutReduced
             else -> GohoMotion.pressOut
         },
         label = "gohoPress",
@@ -174,8 +183,10 @@ private fun GohoButtonBase(
     enabled: Boolean,
     minHeight: Dp,
     shape: Shape,
-    restElevation: Dp,
     shadowColor: Color,
+    nearShadowAlpha: Float,
+    wideShadowAlpha: Float,
+    wideShadowSpread: Dp,
     fill: (Float) -> Brush,
     ring: Color,
     innerRing: Color,
@@ -185,12 +196,15 @@ private fun GohoButtonBase(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
-    val p = progress.coerceIn(0f, 1f)
+    val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     Row(
         modifier = modifier
-            .gohoPressTransform { progress }
+            .gohoPressTransform { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .shadow(lerpDp(restElevation, 1.dp, p), shape, clip = false, ambientColor = shadowColor.copy(alpha = 0.2f), spotColor = shadowColor.copy(alpha = 0.45f))
+            .dropShadow(shape, Shadow(radius = 24.dp, spread = wideShadowSpread,
+                offset = DpOffset(0.dp, 10.dp), color = shadowColor, alpha = wideShadowAlpha * (1f - p)))
+            .dropShadow(shape, Shadow(radius = 2.dp,
+                offset = DpOffset(0.dp, 1.dp), color = shadowColor, alpha = nearShadowAlpha))
             .clip(shape)
             .background(fill(p))
             .border(1.dp, ring, shape)
@@ -231,12 +245,14 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
         enabled = true,
         minHeight = 56.dp,
         shape = GohoShapes.fab,
-        restElevation = 12.dp,
         shadowColor = c.accentShadow,
+        nearShadowAlpha = c.buttonShadowAlpha,
+        wideShadowAlpha = c.buttonWideShadowAlpha,
+        wideShadowSpread = (-8).dp,
         fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
         ring = c.accentRing,
-        innerRing = Color.White.copy(alpha = c.buttonInnerRingAlpha),
-        cornerRadius = 20.dp,
+        innerRing = c.buttonInnerRing,
+        cornerRadius = 24.dp,
         contentPadding = PaddingValues(start = 18.dp, end = 22.dp),
     ) {
         Icon(scanIcon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onAccent)
@@ -251,6 +267,7 @@ fun GohoPrimaryButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    reserveSpaceFor: List<String> = emptyList(),
 ) {
     val c = GohoTheme.colors
     GohoButtonBase(
@@ -259,16 +276,24 @@ fun GohoPrimaryButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = 10.dp,
         shadowColor = c.accentShadow,
+        nearShadowAlpha = c.buttonShadowAlpha,
+        wideShadowAlpha = c.buttonWideShadowAlpha,
+        wideShadowSpread = (-8).dp,
         fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
         ring = c.accentRing,
-        innerRing = Color.White.copy(alpha = c.buttonInnerRingAlpha),
-        cornerRadius = 16.dp,
+        innerRing = c.buttonInnerRing,
+        cornerRadius = 20.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onAccent)
-        Text(text, style = GohoTheme.type.button, color = c.onAccent)
+        Box(contentAlignment = Alignment.Center) {
+            reserveSpaceFor.forEach { label ->
+                Text(label, style = GohoTheme.type.button, textAlign = TextAlign.Center,
+                    modifier = Modifier.clearAndSetSemantics {}.alpha(0f))
+            }
+            Text(text, style = GohoTheme.type.button, color = c.onAccent, textAlign = TextAlign.Center)
+        }
     }
 }
 
@@ -287,12 +312,14 @@ fun GohoSecondaryButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = 8.dp,
         shadowColor = c.shadow,
+        nearShadowAlpha = c.secondaryShadowAlpha,
+        wideShadowAlpha = c.secondaryWideShadowAlpha,
+        wideShadowSpread = (-10).dp,
         fill = { p -> SolidColor(lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)) },
         ring = if (c.isDark) Color.White.copy(alpha = 0.08f) else c.shadow.copy(alpha = 0.06f),
         innerRing = Color.Transparent,
-        cornerRadius = 16.dp,
+        cornerRadius = 20.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.textPrimary)
@@ -315,12 +342,14 @@ fun GohoDangerButton(
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
-        restElevation = 10.dp,
         shadowColor = c.dangerShadow,
+        nearShadowAlpha = c.buttonShadowAlpha,
+        wideShadowAlpha = c.buttonWideShadowAlpha,
+        wideShadowSpread = (-8).dp,
         fill = { p -> SolidColor(lerpColor(c.danger, c.dangerPressed, p)) },
         ring = c.dangerRing,
         innerRing = Color.White.copy(alpha = if (c.isDark) 0.16f else 0.14f),
-        cornerRadius = 16.dp,
+        cornerRadius = 20.dp,
         contentPadding = PaddingValues(horizontal = 20.dp),
     ) {
         if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onDanger)
@@ -957,9 +986,8 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
 
 // ---------- Status card (empty and error states) ----------
 
-/**
- * Centered card for empty and error states (screens.md section 6).
- * [illustration] is a 220x190dp image from assets/illustrations (status-*.png / status-*-dark.png).
+/** Current Bram status card. For retry, pass announcePolitely = true and reserve both button labels.
+ * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming card.
  */
 @Composable
 fun GohoStatusCard(
@@ -967,27 +995,70 @@ fun GohoStatusCard(
     title: String,
     text: String,
     modifier: Modifier = Modifier,
-    action: (@Composable () -> Unit)? = null, // e.g. GohoPrimaryButton("Try again", ...)
+    animateEntrance: Boolean = true,
+    announcePolitely: Boolean = false,
+    action: (@Composable () -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
-    val t = GohoTheme.type
+    val reducedMotion = rememberReducedMotion()
+    val entrance = remember { Animatable(if (reducedMotion || !animateEntrance) 1f else 0f) }
+    LaunchedEffect(reducedMotion, animateEntrance) {
+        if (reducedMotion || !animateEntrance) entrance.snapTo(1f)
+        else entrance.animateTo(1f, tween(GohoMotion.STATUS_ENTER_MILLIS))
+    }
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .graphicsLayer {
+                val progress = if (reducedMotion || !animateEntrance) 1f else entrance.value
+                alpha = progress
+                translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
+            }
+            .clip(GohoShapes.statusCard)
             .background(c.statusCard)
-            .border(1.dp, c.statusCardRing, RoundedCornerShape(28.dp))
-            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
-            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = if (action != null) 24.dp else 32.dp),
+            .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
+            .semantics(mergeDescendants = true) {
+                if (announcePolitely) liveRegion = LiveRegionMode.Polite
+            }
+            .padding(
+                start = GohoSpacing.statusCardSide,
+                end = GohoSpacing.statusCardSide,
+                top = GohoSpacing.statusCardTop,
+                bottom =
+                    if (action == null) GohoSpacing.statusCardBottom
+                    else GohoSpacing.statusCardActionBottom,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        androidx.compose.foundation.Image(illustration, contentDescription = null, modifier = Modifier.size(220.dp, 190.dp))
-        Spacer(Modifier.height(14.dp))
-        Text(title, style = t.title.copy(fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.02).em), color = c.textPrimary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(6.dp))
-        Text(text, style = t.body, color = c.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.widthIn(max = 290.dp))
+        androidx.compose.foundation.Image(
+            illustration,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier =
+                Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
+                    .fillMaxWidth()
+                    .aspectRatio(
+                        GohoSpacing.statusIllustrationWidth / GohoSpacing.statusIllustrationHeight
+                    ),
+        )
+        Spacer(Modifier.height(GohoSpacing.statusTitleTop))
+        Text(
+            title,
+            style = GohoTheme.type.title.copy(fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.02).em),
+            color = c.textPrimary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.semantics { heading() },
+        )
+        Spacer(Modifier.height(GohoSpacing.statusBodyTop))
+        Text(
+            text,
+            style = GohoTheme.type.body,
+            color = c.textSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = GohoSpacing.statusBodyMaxWidth),
+        )
         if (action != null) {
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(GohoSpacing.statusActionTop))
             action()
         }
     }

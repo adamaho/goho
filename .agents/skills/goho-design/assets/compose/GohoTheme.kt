@@ -1,10 +1,11 @@
 // Goho design tokens for Jetpack Compose.
+// Bram palette, shape and motion values synchronized with PR #101.
 // Reference implementation from the design handoff. Adjust the package name and
 // font resource names to match the project, then wrap the app in GohoTheme { }.
 package com.goho.ui.theme // TODO: match the app's package
 
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,34 +33,32 @@ import com.goho.R // TODO: the app's R class
 data class GohoColors(
     val isDark: Boolean,
     val background: Color,
-    val surface: Color,              // cards
-    val surfaceMuted: Color,         // filter track, round icon buttons, thumbnail placeholder
-    val surfaceMutedPressed: Color,  // pressed round icon button
-    val segmentSelected: Color,      // selected filter segment
-    val surfacePressed: Color,       // pressed row
+    val surface: Color, // cards
+    val surfaceMuted: Color, // filter track, round icon buttons, thumbnail placeholder
+    val surfaceMutedPressed: Color, // pressed round icon button
+    val segmentSelected: Color, // selected filter segment
+    val surfacePressed: Color, // pressed row
     val skeletonBase: Color,
     val skeletonShimmer: Color,
-    val photoWellCenter: Color,      // photo frame and viewer stay dark in both themes
+    val photoWellCenter: Color, // photo frame and viewer stay dark in both themes
     val photoWellEdge: Color,
-    val photoControl: Color,         // expand/close buttons that sit on the photo well
+    val photoControl: Color, // expand/close buttons that sit on the photo well
     val textPrimary: Color,
     val textSecondary: Color,
     val textTertiary: Color,
     val divider: Color,
-    val outline: Color,              // thumbnail border, light-mode card ring
-    val shadow: Color,               // ambient/spot color for neutral shadows
+    val outline: Color, // thumbnail border, light-mode card ring
+    val shadow: Color, // ambient/spot color for neutral shadows
     val accent: Color,
     val accentRing: Color,
     val accentPressed: Color,
     val onAccent: Color,
     val buttonSecondary: Color,
     val buttonSecondaryPressed: Color,
-    val accentShadow: Color,         // spot color under the Scan button
+    val accentShadow: Color, // spot color under the Scan button
     val accentContainer: Color,
     val onAccentContainer: Color,
     val accentShimmer: Color,
-    val attention: Color,
-    val attentionContainer: Color,
     val danger: Color,
     val dangerRing: Color,
     val dangerPressed: Color,
@@ -70,109 +69,128 @@ data class GohoColors(
     val sheet: Color,
     val grabber: Color,
     val scrim: Color,
-    val highlightAlpha: Float,
-    val buttonInnerRingAlpha: Float, // faint light ring 1dp inside the outer ring
+    val attention: Color,
+    val attentionContainer: Color,
+    val buttonInnerRing: Color,
+    val dangerInnerRing: Color,
+    val secondaryRing: Color,
+    val buttonShadowAlpha: Float,
+    val buttonWideShadowAlpha: Float,
+    val secondaryShadowAlpha: Float,
+    val secondaryWideShadowAlpha: Float,
     val statusCard: Color,
-    val statusCardRing: Color,       // 1dp outline around empty/error status cards
+    val statusCardRing: Color,
 )
 
 private val PhotoWellCenter = Color(0xFF2A2724)
 private val PhotoWellEdge = Color(0xFF0C0B0A)
 private val PhotoControl = Color(0xFF1D1B19).copy(alpha = 0.78f)
 
-val GohoDarkColors = GohoColors(
-    isDark = true,
-    background = Color(0xFF13110F),
-    surface = Color(0xFF1D1B19),
-    surfaceMuted = Color(0xFF1D1B19),
-    surfaceMutedPressed = Color(0xFF2B2925),
-    segmentSelected = Color(0xFF2B2925),
-    surfacePressed = Color(0xFF24221F),
-    skeletonBase = Color(0xFF2B2925),
-    skeletonShimmer = Color(0xFF3A3733),
-    photoWellCenter = PhotoWellCenter,
-    photoWellEdge = PhotoWellEdge,
-    photoControl = PhotoControl,
-    textPrimary = Color(0xFFF0EEEB),
-    textSecondary = Color(0xFFB7B4AF),
-    textTertiary = Color(0xFF928F88),
-    divider = Color.White.copy(alpha = 0.05f),
-    outline = Color.White.copy(alpha = 0.06f),
-    shadow = Color.Black,
-    accent = Color(0xFF74D3B6),
-    accentRing = Color(0xFF4FAE92),
-    accentPressed = Color(0xFF60BFA4),
-    onAccent = Color(0xFF081D17),
-    buttonSecondary = Color(0xFF2B2925),
-    buttonSecondaryPressed = Color(0xFF24221F),
-    accentShadow = Color.Black,
-    accentContainer = Color(0xFF1A342C),
-    onAccentContainer = Color(0xFF74D3B6),
-    accentShimmer = Color(0xFFD6F4EA),
-    attention = Color(0xFFED9658),
-    attentionContainer = Color(0xFF3F2717),
-    danger = Color(0xFFC52B2D),
-    dangerRing = Color(0xFFA21F22),
-    dangerPressed = Color(0xFFB01E22),
-    onDanger = Color(0xFFFFFFFF),
-    dangerShadow = Color.Black,
-    dangerContainer = Color(0xFF4D1C1B),
-    onDangerContainer = Color(0xFFF87E79),
-    sheet = Color(0xFF201E1B),
-    grabber = Color(0xFF3F3D39),
-    scrim = Color.Black.copy(alpha = 0.55f),
-    highlightAlpha = 0.45f,
-    buttonInnerRingAlpha = 0.22f,
-    statusCard = Color.White.copy(alpha = 0.025f),
-    statusCardRing = Color.White.copy(alpha = 0.07f),
-)
+val GohoDarkColors =
+    GohoColors(
+        isDark = true,
+        danger = Color(0xFFC52B2D),
+        dangerRing = Color(0xFFA21F22),
+        dangerPressed = Color(0xFFB01E22),
+        onDanger = Color(0xFFFFFFFF),
+        dangerShadow = Color(0xFF000000),
+        dangerContainer = Color(0xFF4D1C1B),
+        onDangerContainer = Color(0xFFF87E79),
+        sheet = Color(0xFF201E1B),
+        grabber = Color(0xFF3F3D39),
+        scrim = Color.Black.copy(alpha = 0.55f),
+        background = Color(0xFF15141D),
+        surface = Color(0xFF1F1E2A),
+        surfaceMuted = Color(0xFF1F1E2A),
+        surfaceMutedPressed = Color(0xFF2B2A38),
+        segmentSelected = Color(0xFF2B2A38),
+        surfacePressed = Color(0xFF252432),
+        skeletonBase = Color(0xFF2B2A38),
+        skeletonShimmer = Color(0xFF3A3948),
+        photoWellCenter = PhotoWellCenter,
+        photoWellEdge = PhotoWellEdge,
+        photoControl = PhotoControl,
+        textPrimary = Color(0xFFF1EFF8),
+        textSecondary = Color(0xFFBBB8CC),
+        textTertiary = Color(0xFF9794AB),
+        divider = Color.White.copy(alpha = 0.05f),
+        outline = Color.White.copy(alpha = 0.06f),
+        shadow = Color.Black,
+        accent = Color(0xFFA6ABF0),
+        accentRing = Color(0xFF8288D2),
+        accentPressed = Color(0xFF959AE3),
+        onAccent = Color(0xFF17183D),
+        buttonSecondary = Color(0xFF2B2A38),
+        buttonSecondaryPressed = Color(0xFF252432),
+        accentShadow = Color.Black,
+        accentContainer = Color(0xFF2A2C50),
+        onAccentContainer = Color(0xFFB7BBF6),
+        accentShimmer = Color(0xFFE4E5FD),
+        attention = Color(0xFFED9658),
+        attentionContainer = Color(0xFF3F2717),
+        buttonInnerRing = Color.White.copy(alpha = 0.22f),
+        dangerInnerRing = Color.White.copy(alpha = 0.16f),
+        secondaryRing = Color.White.copy(alpha = 0.08f),
+        buttonShadowAlpha = 0.4f,
+        buttonWideShadowAlpha = 0.6f,
+        secondaryShadowAlpha = 0.4f,
+        secondaryWideShadowAlpha = 0.6f,
+        statusCard = Color.White.copy(alpha = 0.025f),
+        statusCardRing = Color.White.copy(alpha = 0.07f),
+    )
 
-val GohoLightColors = GohoColors(
-    isDark = false,
-    background = Color(0xFFF8F6F4),
-    surface = Color(0xFFFFFFFF),
-    surfaceMuted = Color(0xFFEEECE9),
-    surfaceMutedPressed = Color(0xFFE3E1DD),
-    segmentSelected = Color(0xFFFFFFFF),
-    surfacePressed = Color(0xFFF5F3F0),
-    skeletonBase = Color(0xFFEBE9E6),
-    skeletonShimmer = Color(0xFFF8F6F4),
-    photoWellCenter = PhotoWellCenter,
-    photoWellEdge = PhotoWellEdge,
-    photoControl = PhotoControl,
-    textPrimary = Color(0xFF1D1A16),
-    textSecondary = Color(0xFF58554F),
-    textTertiary = Color(0xFF726E67),
-    divider = Color(0xFF1D1A16).copy(alpha = 0.06f),
-    outline = Color(0xFF1D1A16).copy(alpha = 0.08f),
-    shadow = Color(0xFF1D1A16),
-    accent = Color(0xFF207963),
-    accentRing = Color(0xFF155C4B),
-    accentPressed = Color(0xFF136A55),
-    onAccent = Color(0xFFFFFFFF),
-    buttonSecondary = Color(0xFFFFFFFF),
-    buttonSecondaryPressed = Color(0xFFF5F3F0),
-    accentShadow = Color(0xFF104638),
-    accentContainer = Color(0xFFDAF4EA),
-    onAccentContainer = Color(0xFF045B48),
-    accentShimmer = Color(0xFF53B397),
-    attention = Color(0xFFA34D16),
-    attentionContainer = Color(0xFFFFEADC),
-    danger = Color(0xFFBE2323),
-    dangerRing = Color(0xFF9A1A1B),
-    dangerPressed = Color(0xFFA21A1B),
-    onDanger = Color(0xFFFFFFFF),
-    dangerShadow = Color(0xFF6E0F0F),
-    dangerContainer = Color(0xFFFFE8E7),
-    onDangerContainer = Color(0xFFB7191C),
-    sheet = Color(0xFFFFFFFF),
-    grabber = Color(0xFFD9D6D1),
-    scrim = Color(0xFF1D1A16).copy(alpha = 0.38f),
-    highlightAlpha = 0.22f,
-    buttonInnerRingAlpha = 0.14f,
-    statusCard = Color.White.copy(alpha = 0.55f),
-    statusCardRing = Color(0xFF1D1A16).copy(alpha = 0.07f),
-)
+val GohoLightColors =
+    GohoColors(
+        isDark = false,
+        danger = Color(0xFFBE2323),
+        dangerRing = Color(0xFF9A1A1B),
+        dangerPressed = Color(0xFFA21A1B),
+        onDanger = Color(0xFFFFFFFF),
+        dangerShadow = Color(0xFF6E0F0F),
+        dangerContainer = Color(0xFFFFE8E7),
+        onDangerContainer = Color(0xFFB7191C),
+        sheet = Color(0xFFFFFFFF),
+        grabber = Color(0xFFD9D6D1),
+        scrim = Color(0xFF1D1A16).copy(alpha = 0.38f),
+        background = Color(0xFFFBF8F4),
+        surface = Color(0xFFFFFFFF),
+        surfaceMuted = Color(0xFFF1EEF4),
+        surfaceMutedPressed = Color(0xFFE6E2EC),
+        segmentSelected = Color(0xFFFFFFFF),
+        surfacePressed = Color(0xFFF7F4F9),
+        skeletonBase = Color(0xFFECE9F1),
+        skeletonShimmer = Color(0xFFFBF8F4),
+        photoWellCenter = PhotoWellCenter,
+        photoWellEdge = PhotoWellEdge,
+        photoControl = PhotoControl,
+        textPrimary = Color(0xFF26233A),
+        textSecondary = Color(0xFF5B5870),
+        textTertiary = Color(0xFF6E6A83),
+        divider = Color(0xFF26233A).copy(alpha = 0.06f),
+        outline = Color(0xFF26233A).copy(alpha = 0.08f),
+        shadow = Color(0xFF26233A),
+        accent = Color(0xFF8B91D6),
+        accentRing = Color(0xFF767CC2),
+        accentPressed = Color(0xFF7D83CB),
+        onAccent = Color(0xFF1B1C45),
+        buttonSecondary = Color(0xFFFFFFFF),
+        buttonSecondaryPressed = Color(0xFFF7F4F9),
+        accentShadow = Color(0xFF3A3D86),
+        accentContainer = Color(0xFFE9E9FB),
+        onAccentContainer = Color(0xFF444AA0),
+        accentShimmer = Color(0xFF9CA1E6),
+        attention = Color(0xFFA34D16),
+        attentionContainer = Color(0xFFFFEADC),
+        buttonInnerRing = Color.White.copy(alpha = 0.22f),
+        dangerInnerRing = Color.White.copy(alpha = 0.14f),
+        secondaryRing = Color(0xFF26233A).copy(alpha = 0.06f),
+        buttonShadowAlpha = 0.16f,
+        buttonWideShadowAlpha = 0.32f,
+        secondaryShadowAlpha = 0.05f,
+        secondaryWideShadowAlpha = 0.18f,
+        statusCard = Color.White.copy(alpha = 0.6f),
+        statusCardRing = Color(0xFF26233A).copy(alpha = 0.06f),
+    )
 
 // ---------- Type ----------
 
@@ -219,10 +237,11 @@ val GohoType = GohoTypography(
 // ---------- Shape ----------
 
 object GohoShapes {
+    val statusCard = RoundedCornerShape(32.dp)
     val thumb = RoundedCornerShape(8.dp)
-    val button = RoundedCornerShape(16.dp)
+    val button = RoundedCornerShape(20.dp)
     val card = RoundedCornerShape(20.dp)
-    val fab = RoundedCornerShape(20.dp)
+    val fab = RoundedCornerShape(24.dp)
     val sheet = RoundedCornerShape(28.dp)
     val pill = RoundedCornerShape(percent = 50)
 }
@@ -230,6 +249,54 @@ object GohoShapes {
 // ---------- Spacing ----------
 
 object GohoSpacing {
+    val statusCardTop = 28.dp
+    val statusCardSide = 24.dp
+    val statusCardBottom = 32.dp
+    val statusCardActionBottom = 24.dp
+    val statusIllustrationWidth = 220.dp
+    val statusIllustrationHeight = 190.dp
+    val statusTitleTop = 14.dp
+    val statusBodyTop = 6.dp
+    val statusBodyMaxWidth = 290.dp
+    val statusActionTop = 22.dp
+    val sheetInset = 8.dp
+    val sheetPadding = 20.dp
+    val sheetElevation = 16.dp
+    val sheetGrabberWidth = 36.dp
+    val sheetGrabberHeight = 4.dp
+    val sheetHeaderTop = 18.dp
+    val sheetHeaderGap = 14.dp
+    val sheetSummaryLineGap = 3.dp
+    val sheetThumbWidth = 56.dp
+    val sheetThumbHeight = 68.dp
+    val sheetContentTop = 18.dp
+    val sheetMenuTop = 6.dp
+    val sheetActionHeight = 56.dp
+    val sheetActionGap = 16.dp
+    val sheetActionIcon = 22.dp
+    val sheetErrorTop = 4.dp
+    val sheetButtonsTop = 18.dp
+    val buttonHeight = 52.dp
+    val buttonHorizontal = 20.dp
+    val buttonGap = 10.dp
+    val buttonIcon = 18.dp
+    val buttonIconGap = 8.dp
+    val buttonRingInset = 1.5.dp
+    val buttonShadowRadius = 2.dp
+    val buttonShadowY = 1.dp
+    val buttonWideShadowRadius = 24.dp
+    val buttonWideShadowY = 10.dp
+    val buttonWideShadowSpread = (-8).dp
+    val secondaryWideShadowSpread = (-10).dp
+    val flatElevation = 0.dp
+    val previewMinHeight = 480.dp
+    val photoPadding = 24.dp
+    val photoElevation = 8.dp
+    val photoCloseIcon = 20.dp
+    val photoCloseTop = 4.dp
+    val photoDismissDistance = 120.dp
+    val photoDragRange = 300.dp
+    val previewFooterTop = 16.dp
     val screenMargin = 16.dp
     val textInset = 20.dp
     val textInsetFromMargin = 4.dp // textInset - screenMargin
@@ -241,21 +308,66 @@ object GohoSpacing {
     val thumbHeight = 48.dp
     val thumbToText = 12.dp
     val dividerStart = 68.dp // cardPadding + thumbWidth + thumbToText
+    val detailTopBarHeight = 56.dp
+    val detailBackIcon = 20.dp
+    val detailMenuDotRadius = 1.5.dp
+    val detailHeroGap = 8.dp
+    val detailPhotoTop = 20.dp
+    val detailPhotoHeight = 200.dp
+    val detailRowVertical = 12.dp
+    val detailBottom = 24.dp
+    val itemVertical = 14.dp
+    val itemGap = 16.dp
+    val itemCardTop = 2.dp
     val detailRowHeight = 47.dp
     val sectionTop = 24.dp
     val sectionLabelBottom = 8.dp
     val fabBottom = 28.dp
-    val buttonGap = 10.dp
+    val hairline = 1.dp
+    val headerMark = 40.dp
+    val headerMarkGap = 10.dp
+    val headerHeight = 44.dp
+    val headerTop = 4.dp
+    val headerFadeHeight = 12.dp
+    val lineGap = 5.dp
+    val contentGap = 12.dp
+    val pillHeight = 22.dp
+    val pillHorizontal = 9.dp
+    val skeletonWidth = 52.dp
+    val skeletonHeight = 12.dp
+    val listBottom = 112.dp
+    val fabHeight = 56.dp
+    val fabStart = 18.dp
+    val fabEnd = 22.dp
+    val fabIcon = 22.dp
+    val fabIconGap = 9.dp
+    val iconStroke = 2.dp
+    val compactWidth = 360.dp
+    val filterTop = 16.dp
+    val filterPadding = 3.dp
+    val filterGap = 6.dp
+    val filterTouchInset = 4.dp
+    val filterVisualHeight = 36.dp
+    val placeholderWidth = 20.dp
+    val placeholderHeight = 28.dp
+    val placeholderStroke = 1.5.dp
+    val segmentHorizontal = 10.dp
+    val segmentCountGap = 5.dp
+    val badgeSize = 20.dp
+    val amountMaxWidth = 148.dp
 }
 
 // ---------- Motion ----------
 
 object GohoMotion {
+    const val STATUS_ENTER_MILLIS = 200
+    const val STATUS_CROSSFADE_MILLIS = 200
+    val statusEnterTranslation = 6.dp
     const val PRESS_SCALE = 0.03f      // scale = 1 - PRESS_SCALE * progress
     val pressTranslation = 1.dp
     val pressIn: AnimationSpec<Float> = tween(durationMillis = 90)
     val pressOut: AnimationSpec<Float> = spring(dampingRatio = 0.55f, stiffness = 700f)
-    val pressOutReduced: AnimationSpec<Float> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f)
+    val pressOutReduced: AnimationSpec<Float> = snap()
     const val SEGMENT_MILLIS = 160
     const val SHIMMER_MILLIS = 1800
 }

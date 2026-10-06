@@ -52,7 +52,7 @@ fun pressProgress(interaction: MutableInteractionSource): State<Float> {
     val pressed by interaction.collectIsPressedAsState()
     val reduced = rememberReducedMotion()
     return animateFloatAsState(
-        if (pressed) 1f else 0f,
+        if (pressed && !reduced) 1f else 0f,
         if (reduced) snap() else if (pressed) GohoMotion.pressIn else GohoMotion.pressOut,
         label = "Goho press",
     )

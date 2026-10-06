@@ -7,7 +7,7 @@ import com.adamaho.goho.R
 import com.adamaho.goho.theme.GohoTheme
 
 @Composable
-fun NoReceiptsState(modifier: Modifier = Modifier) {
+fun NoReceiptsState(modifier: Modifier = Modifier, animateEntrance: Boolean = true) {
     ReceiptStatusCard(
         illustration =
             if (GohoTheme.colors.isDark) R.drawable.status_no_receipts_dark
@@ -15,5 +15,6 @@ fun NoReceiptsState(modifier: Modifier = Modifier) {
         title = stringResource(R.string.receipts_empty_title),
         description = stringResource(R.string.receipts_empty_body),
         modifier = modifier,
+        animateEntrance = animateEntrance,
     )
 }

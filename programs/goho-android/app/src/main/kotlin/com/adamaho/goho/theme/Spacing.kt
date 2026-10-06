@@ -78,6 +78,8 @@ object GohoSpacing {
     val sectionLabelBottom = 8.dp
     val fabBottom = 28.dp
     val hairline = 1.dp
+    val headerMark = 40.dp
+    val headerMarkGap = 10.dp
     val headerHeight = 44.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp

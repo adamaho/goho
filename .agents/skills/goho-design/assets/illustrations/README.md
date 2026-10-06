@@ -1,17 +1,12 @@
-# Illustrations
+# Bram illustrations
 
-Illustrations for the StatusCard (screens.md section 6). One scene per state, all in the same paper-and-pastel style.
+Current artwork from PR #101, approved on device October 5, 2026. These PNGs are byte-for-byte copies of the Android drawable assets; keep both copies synchronized when artwork changes.
 
-- `status-needs-attention(-dark).png`: Needs attention filter with nothing in it (stamped, sorted receipts)
-- `status-no-receipts(-dark).png`: no receipts yet (blank receipt in a scanner frame)
-- `status-load-error(-dark).png`: receipts couldn't load (receipt under a cloud)
+- `bram-mark.png`: decorative header mark, displayed at 40×40dp in both themes. Omit it on the load-error screen.
+- `status-needs-attention(-dark).png`: Bram under two receipts with a lavender check badge and sparkle.
+- `status-no-receipts(-dark).png`: Bram beside a receipt and peach plus chip.
+- `status-load-error(-dark).png`: Bram under a cloud and peach wifi-off chip.
 
-PNGs are 660×570 (3× of the 220×190dp slot) with transparent backgrounds; put them in `res/drawable-nodpi` or convert to WebP. Pick the `-dark` file when the dark theme is active.
+Status PNGs are 660×570 with transparency. Render unchanged with ContentScale.Fit in a 220×190dp slot that can shrink proportionally on narrow screens. Select the `-dark` variant inside the component. Artwork is decorative; text supplies the accessible meaning. Android names use underscores instead of hyphens.
 
-The `.svg` files are the editable source. They use SVG drop-shadow filters, which Android vector drawables don't support, so ship the PNGs. To restyle, edit the SVG and re-export at 3×.
-
-The app exports correct the sparkle paths to centre their visible bounds at (12, 12). Bubble rims use opaque theme colours so the receipt cannot show through the rim and create a cut-out edge. Keep the bubbles above the paper when editing. Export all six SVGs at 660×570 with SVG filter support (for example, resvg) and copy the PNGs to the Android drawable-nodpi directory.
-
-The check stamp uses fully opaque jade ink with an 88% paper-coloured backing so receipt lines do not compete with the check.
-
-The refresh icon is positioned by its drawn arc bounds (centre approximately 12, 11.086), rather than assuming a centred 24×24 path.
+The SVGs in `legacy/` are the October 2 paper-and-pastel illustrations. They are retained for provenance, not as editable sources for the Bram PNGs. Do not re-export them over the current artwork. No editable Bram source is included in this PR.

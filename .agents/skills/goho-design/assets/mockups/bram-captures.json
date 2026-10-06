@@ -1,0 +1,66 @@
+{
+  "evidenceCommit": "c8f96f46a34118d3d45e44f3f7b2aa710afb86a8",
+  "sourceDirectory": ".github/pr-assets/bram-status-states/after/",
+  "captures": {
+    "empty-no-receipts-light.png": {
+      "source": "no-receipts-light.png",
+      "sha256": "0fa5ffcd1b58e999cea21451e580a8a9f78c3af8f1d1fc9fa3da017c197efc9e"
+    },
+    "empty-no-receipts.png": {
+      "source": "no-receipts-dark.png",
+      "sha256": "4fc4b4cceb17773eaaca3c905be5cb3cfdd60c1459cdfe0905a2b034bc88cf42"
+    },
+    "empty-needs-attention-light.png": {
+      "source": "no-attention-light.png",
+      "sha256": "95fe84b0e3674aff378fe0a3e5134c1400a2f95918c970deeea4e80113718caa"
+    },
+    "empty-needs-attention.png": {
+      "source": "no-attention-dark.png",
+      "sha256": "59c51ec748bf7187497b7eb534743f666accb98e96d73de866838a1ab4aa2439"
+    },
+    "load-error-light.png": {
+      "source": "load-error-light.png",
+      "sha256": "4420ce2294e5ac146ed687254f82f1d2d3301a10aac6a04e0b33d52a4057b67d"
+    },
+    "load-error.png": {
+      "source": "load-error-dark.png",
+      "sha256": "c45500113fa2a6638e0ef13c0e5d14c53f8ee3d4745041b07bc83072e01c9b4e"
+    },
+    "retry-running.png": {
+      "source": "retry-running.png",
+      "sha256": "4634464c800afa794ffae29b04ef341f65eb2e6f80db3f42e2c7fb61c37ee4a8"
+    },
+    "retry-failed.png": {
+      "source": "retry-failed.png",
+      "sha256": "4420ce2294e5ac146ed687254f82f1d2d3301a10aac6a04e0b33d52a4057b67d"
+    },
+    "retry-succeeded.png": {
+      "source": "retry-succeeded.png",
+      "sha256": "8c652fc830cf9d158ecd4b72d58d38d77a68142d6e488ffd87163abcba100041"
+    },
+    "deleted-last-failed-overall.png": {
+      "source": "deleted-last-failed-overall.png",
+      "sha256": "8d0339891cf76ec48c2e33f34ed2393969dbcae8917b3bb9a2e9d21491c8e00f"
+    },
+    "large-font-load-error-scrolled.png": {
+      "source": "large-font-load-error-scrolled.png",
+      "sha256": "f7fb700e8dce1addc9b5a7d3cad22f93952791f835276b2434692fc5d0b151d5"
+    },
+    "large-font-no-attention-scrolled.png": {
+      "source": "large-font-no-attention-scrolled.png",
+      "sha256": "62aa1ba4c00ba40a765a8ea4f98790662eeee425cd787c945d369176225e24e7"
+    },
+    "large-font-no-receipts-scrolled.png": {
+      "source": "large-font-no-receipts-scrolled.png",
+      "sha256": "09d47ee24367a736ff1cc337b380be7a51b173916eb0b479942c74c397a9c3e4"
+    },
+    "small-360-no-receipts.png": {
+      "source": "small-360-no-receipts.png",
+      "sha256": "40bc4212cfe72649696401d001c7f5aad11ab7876e9831be1735f8aae03f1354"
+    },
+    "tall-no-receipts.png": {
+      "source": "tall-no-receipts.png",
+      "sha256": "a6fafd4cae395a620425176872061b5fb72e3b07ae481decb29f9fb1d897a082"
+    }
+  }
+}

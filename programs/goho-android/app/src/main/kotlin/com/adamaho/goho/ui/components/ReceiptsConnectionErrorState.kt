@@ -11,7 +11,10 @@ fun ReceiptsConnectionErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     isRetrying: Boolean = false,
+    animateEntrance: Boolean = true,
 ) {
+    val retry = stringResource(R.string.receipts_retry)
+    val retrying = stringResource(R.string.receipts_retrying)
     ReceiptStatusCard(
         illustration =
             if (GohoTheme.colors.isDark) R.drawable.status_load_error_dark
@@ -19,14 +22,14 @@ fun ReceiptsConnectionErrorState(
         title = stringResource(R.string.receipts_load_failed),
         description = stringResource(R.string.receipts_load_failed_body),
         modifier = modifier,
+        animateEntrance = animateEntrance,
+        announcePolitely = true,
     ) {
         GohoActionButton(
-            text =
-                stringResource(
-                    if (isRetrying) R.string.receipts_retrying else R.string.receipts_retry
-                ),
+            text = if (isRetrying) retrying else retry,
             onClick = onRetry,
             enabled = !isRetrying,
+            reserveSpaceFor = listOf(retry, retrying),
         )
     }
 }

@@ -1,15 +1,19 @@
 package com.adamaho.goho.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
@@ -21,16 +25,31 @@ internal fun ReceiptStatusCard(
     title: String,
     description: String,
     modifier: Modifier = Modifier,
+    animateEntrance: Boolean = true,
+    announcePolitely: Boolean = false,
     action: (@Composable () -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
+    val reducedMotion = rememberReducedMotion()
+    val entrance = remember { Animatable(if (reducedMotion || !animateEntrance) 1f else 0f) }
+    LaunchedEffect(reducedMotion, animateEntrance) {
+        if (reducedMotion || !animateEntrance) entrance.snapTo(1f)
+        else entrance.animateTo(1f, tween(GohoMotion.STATUS_ENTER_MILLIS))
+    }
     Column(
         modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                val progress = if (reducedMotion || !animateEntrance) 1f else entrance.value
+                alpha = progress
+                translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
+            }
             .clip(GohoShapes.statusCard)
             .background(c.statusCard)
             .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
-            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+            .semantics(mergeDescendants = true) {
+                if (announcePolitely) liveRegion = LiveRegionMode.Polite
+            }
             .padding(
                 start = GohoSpacing.statusCardSide,
                 end = GohoSpacing.statusCardSide,
@@ -44,6 +63,7 @@ internal fun ReceiptStatusCard(
         Image(
             painterResource(illustration),
             contentDescription = null,
+            contentScale = ContentScale.Fit,
             modifier =
                 Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
                     .fillMaxWidth()
