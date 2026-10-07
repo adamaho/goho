@@ -37,12 +37,12 @@ fun ReceiptsRetryingPreview() = StatePreview {
     ReceiptsConnectionErrorState(onRetry = {}, isRetrying = true)
 }
 
-@Preview(name = "Nothing needs attention – light", widthDp = 412)
+@Preview(name = "All good – light", widthDp = 412)
 @Preview(
-    name = "Nothing needs attention – dark",
+    name = "All good – dark",
     widthDp = 412,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
 )
-@Preview(name = "Nothing needs attention – large text", widthDp = 320, fontScale = 1.5f)
+@Preview(name = "All good – large text", widthDp = 320, fontScale = 1.5f)
 @Composable
 fun NoNeedsAttentionPreview() = StatePreview { NoNeedsAttentionState() }

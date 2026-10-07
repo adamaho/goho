@@ -147,7 +147,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. Needs attention and load error show text and their existing actions; omit illustrations and reserved illustration space. No receipts shares one transparent Bram asset across both themes. Render it and the neutral Bram header mark unchanged. Dedicated character artwork for other states is deferred to a later PR. Older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts and empty Needs attention each share one transparent Bram asset across both themes. Render them and the neutral Bram header mark unchanged. Load error shows text and the retry action, without an illustration or reserved illustration space. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
@@ -159,8 +159,8 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 **Needs attention, nothing in it**
 
 - Header includes Bram and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
-- Text-only status content centered vertically between the filter and the Scan button, directly on the screen background. Omit the illustration and the gap that would precede the title.
-- Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
+- Bram and the copy are centered vertically between the filter and the Scan button, directly on the screen background. Illustration `status-needs-attention`: Bram gives a calm thumbs-up with a soft smile, using his familiar lilac and cream palette and rounded arms. Keep the approved pose without confetti, streamers or extra decorative colors. The single transparent PNG serves both themes, in the shared 220×190dp illustration slot.
+- Title "All good"; text "Nothing needs your attention right now." No button.
 
 **No receipts yet** (the account has no receipts at all)
 

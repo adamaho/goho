@@ -20,7 +20,7 @@
     },
     "empty-needs-attention-light.png": {
       "source": "no-attention-light.png",
-      "sha256": "3d0487e0a8a382287f4307441a77199fba078ccf29002d9c4d4f67ff834b94c0",
+      "sha256": "2f8dbcf24845b61b491153a0006b166f32cd6bf47e32167124dc2240f628d5c8",
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-07",
       "evidenceCommit": null,
@@ -28,7 +28,7 @@
     },
     "empty-needs-attention.png": {
       "source": "no-attention-dark.png",
-      "sha256": "5a3c58b6c52f09f4de4897ab32b41a199a5ba0726418a23cbaa9def1aea4e143",
+      "sha256": "1b360cac3a4bfcfc2788dd1a326605ba24c387bd6b392cbd0ed3ddb6a43349e4",
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-07",
       "evidenceCommit": null,
@@ -76,7 +76,7 @@
     },
     "deleted-last-failed-overall.png": {
       "source": "deleted-last-failed-overall.png",
-      "sha256": "b11808b448305b058826640ca69efa5d0412b58f7c6af1a8898512c80f65ac4f",
+      "sha256": "ec7c6a8eddad0b002b000e70fc078c2bc59c47246fc98cf63ed6989e2fc7f491",
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-07",
       "evidenceCommit": null,
@@ -92,7 +92,7 @@
     },
     "large-font-no-attention-scrolled.png": {
       "source": "large-font-no-attention-scrolled.png",
-      "sha256": "24cb67e00928cb526b4dd55096428d8913b568920bdf433976906f20bcd66f29",
+      "sha256": "d66288cddb983148a4dc787a51df99d039b8c2fcd1863b69ae1d4b651e1aaa62",
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-07",
       "evidenceCommit": null,
