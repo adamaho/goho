@@ -102,7 +102,6 @@ class ReceiptEvidenceTest {
         capture("large-font-no-attention-scrolled")
     }
     private fun deleteLast(withSaved: Boolean, name: String) {
-        assumeTrue(output.name == "after")
         val failed = ReceiptUploadsList200ResponseDataInner(
             UUID.fromString("00000000-0000-4000-8000-000000000001"),
             "receipt.jpg", ReceiptUploadsList200ResponseDataInner.ContentType.imageSlashJpeg,

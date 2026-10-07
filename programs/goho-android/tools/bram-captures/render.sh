@@ -19,6 +19,14 @@ cd "$android_root"
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.smallEmpty' \
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.tallEmpty' \
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.largeTextEmpty' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.noAttentionLight' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.noAttentionDark' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.loadErrorLight' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.loadErrorDark' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.largeTextError' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.largeTextAttention' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.retryFailureAndSuccess' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.deleteLastFailedOverall' \
   -I "$tool_root/harness/init.gradle" \
   -Dgoho.evidence.root="$tool_root" \
   -Dgoho.evidence.output="$output_root" \

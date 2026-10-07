@@ -7,12 +7,11 @@ import com.adamaho.goho.R
 
 @Composable
 fun NoReceiptsState(modifier: Modifier = Modifier, animateEntrance: Boolean = true) {
-    ReceiptStatusCard(
+    ReceiptStatusContent(
         illustration = R.drawable.status_no_receipts,
         title = stringResource(R.string.receipts_empty_title),
         description = stringResource(R.string.receipts_empty_body),
         modifier = modifier,
         animateEntrance = animateEntrance,
-        showCard = false,
     )
 }
