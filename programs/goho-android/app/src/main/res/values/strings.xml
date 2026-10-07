@@ -45,7 +45,7 @@
     <string name="date_unknown">Date unavailable</string>
     <string name="date_just_now">Just now</string>
     <string name="receipts_filter_all">All</string>
-    <string name="receipts_attention_empty">Nothing needs attention</string>
+    <string name="receipts_attention_empty">All good</string>
     <string name="scan_cancel">Cancel</string>
     <string name="upload_busy">Uploading…</string>
     <string name="scan_preview_unavailable">Preview unavailable</string>
@@ -76,5 +76,5 @@
     <string name="receipts_load_failed_body">Check your connection and try again.</string>
     <string name="receipts_retry">Try again</string>
     <string name="receipts_retrying">Trying again…</string>
-    <string name="receipts_attention_empty_body">Receipts that couldn’t be processed will show up here.</string>
+    <string name="receipts_attention_empty_body">Nothing needs your attention right now.</string>
 </resources>

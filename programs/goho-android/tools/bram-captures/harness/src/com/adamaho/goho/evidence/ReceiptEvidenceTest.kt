@@ -68,7 +68,7 @@ class ReceiptEvidenceTest {
     private fun attention(name: String) {
         render(ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true))
         compose.onNodeWithText("Needs attention").performClick()
-        compose.onNodeWithText("Nothing needs attention").assertExists()
+        compose.onNodeWithText("All good").assertExists()
         capture(name)
     }
     private fun error(name: String) { render(ReceiptOverviewState(error = true)); capture(name) }
@@ -98,7 +98,7 @@ class ReceiptEvidenceTest {
         RuntimeEnvironment.setFontScale(2f)
         attention("large-font-no-attention")
         compose.onNodeWithText("Scan", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("Receipts that couldn’t be processed will show up here.", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Nothing needs your attention right now.", useUnmergedTree = true).performScrollTo().assertIsDisplayed()
         capture("large-font-no-attention-scrolled")
     }
     private fun deleteLast(withSaved: Boolean, name: String) {
@@ -116,7 +116,7 @@ class ReceiptEvidenceTest {
         compose.waitForIdle()
         compose.onNodeWithText("Delete receipt").performClick()
         compose.waitForIdle()
-        compose.onNodeWithText("Nothing needs attention").assertIsDisplayed()
+        compose.onNodeWithText("All good").assertIsDisplayed()
         compose.onNodeWithText("Needs attention").assertIsSelected()
         compose.onNodeWithText("Needs attention").assertTextEquals("Needs attention")
         compose.onNodeWithText("Scan", useUnmergedTree = true).assertIsDisplayed()

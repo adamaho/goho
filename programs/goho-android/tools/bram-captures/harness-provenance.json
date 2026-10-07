@@ -19,14 +19,14 @@
     "retryFailureAndSuccess",
     "deleteLastFailedOverall"
   ],
-  "scope": "The recovered Kotlin harness drops only the obsolete output-directory phase guard in deleteLast so the existing deletion check runs in the current build output directory. The Gradle init script retains the documented portability changes. Thirteen existing test methods capture the implemented no-receipts, attention, and load-error screens and retry/deletion behavior; only no-receipts uses special Bram artwork.",
+  "scope": "The recovered Kotlin harness removes the obsolete output-directory phase guard in deleteLast and updates attention-state copy assertions to the approved All good title and body. The Gradle init script retains the documented portability changes. Thirteen existing test methods capture the implemented no-receipts, attention, and load-error screens and retry/deletion behavior. No-receipts and empty Needs attention use their approved Bram artwork.",
   "originalHarness": {
     "harness/init.gradle": "3fefa58416f01e0c5d6dd6bf3091afab305f0726d5410f5268fa59d2eb61206a",
     "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "f2c79851a3164d4afe231358994e24f3f6fc532d393533f31963a5ef4d376aa2"
   },
   "currentHarness": {
     "harness/init.gradle": "d8a07725786164a395e0542a4a058ada5821f736da19dd7a29730cad376dc25d",
-    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "3f51b40304a87148543d00e0ba9fd44b07b49fbbc2b44ff67348fdae82068181"
+    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "de1e5198685e832487d0446bca27ca2512e48d132e6d48a58f24daa7471e06d1"
   },
   "portabilityChanges": [
     "The Gradle init script requires the tool directory supplied by render.sh instead of a machine-specific fallback.",
@@ -40,6 +40,7 @@
     "cardlessReceiptArtwork": "69c44fb:art/bram/no-receipts-review/after"
   },
   "harnessChanges": [
-    "Removed the output.name == \"after\" assumption from the existing deleteLast helper so the deletion capture runs with the default build/bram-captures output directory. No assertions or other test behavior changed."
+    "Removed the output.name == \"after\" assumption from the existing deleteLast helper so the deletion capture runs with the default build/bram-captures output directory.",
+    "Updated existing attention and deletion title assertions to \"All good\" and the large-text attention body assertion to \"Nothing needs your attention right now.\"; test interactions and behavior coverage remain unchanged."
   ]
 }

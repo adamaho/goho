@@ -1,14 +1,14 @@
 # Mockups
 
-## Current status states (October 7, 2026 Bram asset scope)
+## Current status states (October 7, 2026 calm All good Bram)
 
-These captures render the production ReceiptOverview and its components using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The current captures show Bram cradling a blank receipt directly on the no-receipts screen background, the neutral Bram header mark where applicable, and text-only needs-attention and load-error content directly on the screen background. None of the three status states has an enclosing card. Their capture tooling is in `programs/goho-android/tools/bram-captures/` at the repository root. Dedicated Bram artwork for other states is deferred to a later PR.
+These captures render the production ReceiptOverview and its components using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The current captures show Bram cradling a blank receipt in the no-receipts state, a calm thumbs-up with “All good” in the empty Needs attention state, and text with a retry action in the load-error state. Content sits directly on the screen background, with a 4dp gap between each empty-state illustration slot and title. The Receipts header is text-only in every state. None of the three status states has an enclosing card. Their capture tooling is in `programs/goho-android/tools/bram-captures/` at the repository root. Dedicated Bram artwork for other states is deferred until their feature is implemented.
 
-- `empty-needs-attention.png` and `empty-needs-attention-light.png`: Nothing needs attention text directly on the screen background, neutral Bram header mark, selected filter, and Scan.
+- `empty-needs-attention.png` and `empty-needs-attention-light.png`: Calm thumbs-up Bram with “All good” and “Nothing needs your attention right now.” directly on the screen background, text-only Receipts header, selected filter, and Scan.
 - `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and copy directly on the screen background, no surrounding card, and Scan in its footer; no filters.
 - `load-error.png` and `load-error-light.png`: Load-error text and retry action directly on the screen background, title only in the header, no Bram illustration or Scan.
 - `retry-running.png`, `retry-failed.png`, `retry-succeeded.png`: Disabled retry with stable bounds, failure in place, and the loaded list after success (light).
-- `deleted-last-failed-overall.png`: Needs-attention text on the screen background and neutral Bram header; Needs attention stays selected with All 0 after deleting the last failed receipt (light).
+- `deleted-last-failed-overall.png`: Calm thumbs-up Bram and All good copy on the screen background, with a text-only Receipts header; Needs attention stays selected with All 0 after deleting the last failed receipt (light).
 - `large-font-load-error-scrolled.png`, `large-font-no-attention-scrolled.png`, `large-font-no-receipts-scrolled.png`: 2× font, scrolled to expose the body/action; Scan has its own footer where present.
 - `small-360-no-receipts.png` and `tall-no-receipts.png`: Short and tall layout references.
 
@@ -16,7 +16,7 @@ Standard captures are 360×800dp at 2× (720×1600px). Edge captures use 360×64
 
 ## Historical layout references (October 2 v2)
 
-The remaining files were rendered from the older design canvas, usually at 824×1784px. They retain the previous jade palette, button geometry, and some superseded content. Use them only for the named layout/interaction concepts. Current colors, shapes, Bram header, status behavior, and approved refinements come from `references/*.md` and the current captures above.
+The remaining files were rendered from the older design canvas, usually at 824×1784px. They retain the previous jade palette, button geometry, and some superseded content. Use them only for the named layout/interaction concepts. Current colors, shapes, text-only header, status behavior, and approved refinements come from `references/*.md` and the current captures above.
 
 - `receipts.png` / `receipts-light.png`: Populated list layout.
 - `receipt-details.png` / `receipt-details-light.png`: Details with items and overflow.

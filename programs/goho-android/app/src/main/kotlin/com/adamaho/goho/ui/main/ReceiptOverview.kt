@@ -138,7 +138,6 @@ fun ReceiptOverview(
                     { attentionOnly = it },
                     locale,
                     showFilters = !error,
-                    showMark = !error,
                 )
                 if (showStatus) {
                     BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {

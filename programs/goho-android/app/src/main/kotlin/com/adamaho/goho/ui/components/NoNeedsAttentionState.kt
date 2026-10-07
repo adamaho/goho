@@ -11,6 +11,7 @@ fun NoNeedsAttentionState(modifier: Modifier = Modifier, animateEntrance: Boolea
         title = stringResource(R.string.receipts_attention_empty),
         description = stringResource(R.string.receipts_attention_empty_body),
         modifier = modifier,
+        illustration = R.drawable.status_needs_attention,
         animateEntrance = animateEntrance,
     )
 }

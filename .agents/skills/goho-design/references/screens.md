@@ -8,7 +8,7 @@ List and details receipt options and deletion use the same supported server endp
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Decorative Bram mark (`bram-mark.png`), 40×40dp, then a 10dp gap and title “Receipts” (`screenTitle`, `textPrimary`), inset 4dp, in a row at least 44dp tall. Hide the mark for a load error.
+- Title “Receipts” (`screenTitle`, `textPrimary`) at the 20dp text inset (4dp inside the screen margin), in a row at least 44dp tall. The header is text-only in every state, with no Bram mark.
 - Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
 
 **List**
@@ -147,7 +147,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. Needs attention and load error show text and their existing actions; omit illustrations and reserved illustration space. No receipts shares one transparent Bram asset across both themes. Render it and the neutral Bram header mark unchanged. Dedicated character artwork for other states is deferred to a later PR. Older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts and empty Needs attention each share one transparent Bram asset across both themes. Render both unchanged, with a 4dp gap between the illustration slot and title. The Receipts header is text-only in every state. Load error shows text and the retry action, without an illustration or reserved illustration space. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
@@ -158,19 +158,19 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Needs attention, nothing in it**
 
-- Header includes Bram and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
-- Text-only status content centered vertically between the filter and the Scan button, directly on the screen background. Omit the illustration and the gap that would precede the title.
-- Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
+- Header includes the “Receipts” title and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
+- Bram and the copy are centered vertically between the filter and the Scan button, directly on the screen background. Illustration `status-needs-attention`: Bram gives a calm thumbs-up with a soft smile, using his familiar lilac and cream palette and rounded arms. Keep the approved pose without confetti, streamers or extra decorative colors. The single transparent PNG serves both themes, in the shared 220×190dp illustration slot.
+- Title "All good"; text "Nothing needs your attention right now." No button.
 
 **No receipts yet** (the account has no receipts at all)
 
-- Header shows Bram and the “Receipts” title (no filter). The Scan button stays.
-- Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding, illustration size and text spacing. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
+- Header shows the “Receipts” title (no filter). The Scan button stays.
+- Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding and illustration size, with a 4dp gap before the title. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)
 
-- Header shows only the “Receipts” title. No Bram header mark, filter, or Scan button.
+- Header shows only the “Receipts” title. No filter or Scan button.
 - Text and retry action centered in the available area below the header, directly on the screen background. Omit the illustration and the gap that would precede the title.
 - Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
 - Announce the status content as a polite live region when it appears.
