@@ -147,7 +147,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Each uses the supplied lavender Bram character artwork unchanged. The six PNGs are the current assets; older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Render the current lavender Bram PNGs unchanged; the no-receipts state shares one transparent asset across both themes, while the other states retain light/dark variants. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
@@ -165,7 +165,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 **No receipts yet** (the account has no receipts at all)
 
 - Header shows Bram and the “Receipts” title (no filter). The Scan button stays.
-- StatusCard centered between the header and Scan footer. Illustration `status-no-receipts`: Bram beside a receipt with a peach plus chip (“scan one in”).
+- StatusCard centered between the header and Scan footer. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)

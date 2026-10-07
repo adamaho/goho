@@ -1,8 +1,8 @@
 # Mockups
 
-## Current Bram status states (October 5, 2026)
+## Current Bram status states (October 7, 2026 no-receipts refinement)
 
-These captures render the production ReceiptOverview and its components from PR #101, using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The production source and artwork match PR head `f202fc183a627d0025a8aecdbcba54cca5be4194`.
+These captures render the production ReceiptOverview and its components using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The no-receipts captures were rerun on October 7 with Bram cradling a blank receipt; their evidence is in `art/bram/no-receipts-review/` at the repository root. All other captures retain the approved PR #101 source and artwork at `f202fc183a627d0025a8aecdbcba54cca5be4194`.
 
 - `empty-needs-attention.png` and `empty-needs-attention-light.png`: Nothing needs attention, with Bram, the selected filter, and Scan.
 - `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and Scan, without filters.
@@ -12,7 +12,7 @@ These captures render the production ReceiptOverview and its components from PR 
 - `large-font-load-error-scrolled.png`, `large-font-no-attention-scrolled.png`, `large-font-no-receipts-scrolled.png`: 2× font, scrolled to expose the body/action; Scan has its own footer where present.
 - `small-360-no-receipts.png` and `tall-no-receipts.png`: Short and tall layout references.
 
-Standard captures are 360×800dp at 2× (720×1600px). Edge captures use 360×640dp or 412×960dp. Source filenames and SHA-256 values are recorded in `bram-captures.json`. See the [original evidence and reproduction instructions](https://github.com/adamaho/goho/blob/c8f96f46a34118d3d45e44f3f7b2aa710afb86a8/.github/pr-assets/bram-status-states/README.md) for the rendering harness. The captures are reused evidence, not a new test run.
+Standard captures are 360×800dp at 2× (720×1600px). Edge captures use 360×640dp or 412×960dp. Source filenames and SHA-256 values are recorded in `bram-captures.json`. Its top-level evidence commit and source directory apply unless a capture overrides them. The new no-receipts entries set `evidenceCommit` to null and link their current-change provenance directly. See the [original evidence and reproduction instructions](https://github.com/adamaho/goho/blob/c8f96f46a34118d3d45e44f3f7b2aa710afb86a8/.github/pr-assets/bram-status-states/README.md) for the rendering harness. The non-no-receipts captures are reused evidence. No-receipts images come from the new native render run documented in `art/bram/no-receipts-review/after/validation.json`; before captures are preserved in the sibling `before/` directory.
 
 ## Historical layout references (October 2 v2)
 

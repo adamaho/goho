@@ -1,0 +1,38 @@
+Printing with useUnmergedTree = 'true'
+Node #1 at (l=0.0, t=0.0, r=720.0, b=1280.0)px
+ |-Node #2 at (l=0.0, t=0.0, r=720.0, b=1280.0)px
+   Shape = 'RectangleShape'
+    |-Node #3 at (l=0.0, t=0.0, r=720.0, b=1280.0)px
+       |-Node #8 at (l=40.0, t=15.0, r=120.0, b=95.0)px
+       | Shape = 'RectangleShape'
+       |-Node #9 at (l=140.0, t=8.0, r=688.0, b=101.0)px
+       | Text = '[Receipts]'
+       | [Heading]
+       | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #16 at (l=0.0, t=125.0, r=720.0, b=1071.0)px
+       | IsTraversalGroup = 'true'
+       | Shape = 'androidx.compose.foundation.VerticalScrollableClipShape@4b410369'
+       | VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
+       | Actions = [ScrollBy, ScrollByOffset]
+       |  |-Node #17 at (l=32.0, t=209.0, r=688.0, b=987.0)px
+       |    Shape = 'RoundedCornerShape(topStart = CornerSize(size = 32.0.dp), topEnd = CornerSize(size = 32.0.dp), bottomEnd = CornerSize(size = 32.0.dp), bottomStart = CornerSize(size = 32.0.dp))'
+       |    MergeDescendants = 'true'
+       |     |-Node #18 at (l=140.0, t=265.0, r=580.0, b=645.0)px
+       |     | Shape = 'RectangleShape'
+       |     |-Node #20 at (l=122.0, t=673.0, r=599.0, b=761.0)px
+       |     | Text = '[No receipts yet]'
+       |     | [Heading]
+       |     | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |     |-Node #22 at (l=80.0, t=773.0, r=640.0, b=923.0)px
+       |       Text = '[Tap Scan to add your first one.]'
+       |       Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
+       |-Node #12 at (l=410.0, t=1103.0, r=688.0, b=1224.0)px
+         ContentDescription = '[Scan receipt]'
+         Focused = 'false'
+         Role = 'Button'
+         Shape = 'RoundedCornerShape(topStart = CornerSize(size = 24.0.dp), topEnd = CornerSize(size = 24.0.dp), bottomEnd = CornerSize(size = 24.0.dp), bottomStart = CornerSize(size = 24.0.dp))'
+         Actions = [OnClick, RequestFocus]
+         MergeDescendants = 'true'
+          |-Node #14 at (l=508.0, t=1127.0, r=644.0, b=1200.0)px
+            Text = '[Scan]'
+            Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]

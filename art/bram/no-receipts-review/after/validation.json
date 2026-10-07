@@ -1,0 +1,124 @@
+{
+  "renderer": "Robolectric 4.17 native Android graphics + Roborazzi 1.76.0",
+  "sdk": 35,
+  "jdk": "Temurin 17.0.20.1+1",
+  "tests": 5,
+  "failures": 0,
+  "errors": 0,
+  "source": "Production ReceiptOverview, GohoTheme and resources; not HTML or emulator capture.",
+  "artwork": {
+    "status_no_receipts.png": {
+      "size": [1350, 1165],
+      "mode": "RGBA",
+      "sha256": "e9e690150b1589f480064a871e82f10ee2ae67a003041dd867a950349ae7d42b",
+      "themes": ["light", "dark"]
+    }
+  },
+  "captures": {
+    "large-font-no-receipts-scrolled.png": {
+      "size": [720, 1280],
+      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
+      "changedPixelBounds": [158, 281, 564, 642],
+      "changedPixels": 118363
+    },
+    "large-font-no-receipts.png": {
+      "size": [720, 1280],
+      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
+      "changedPixelBounds": [158, 281, 564, 642],
+      "changedPixels": 118363
+    },
+    "no-receipts-dark.png": {
+      "size": [720, 1600],
+      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1",
+      "changedPixelBounds": [157, 535, 565, 875],
+      "changedPixels": 115629
+    },
+    "no-receipts-light.png": {
+      "size": [720, 1600],
+      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa",
+      "changedPixelBounds": [158, 517, 564, 878],
+      "changedPixels": 118371
+    },
+    "small-360-no-receipts.png": {
+      "size": [720, 1280],
+      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61",
+      "changedPixelBounds": [158, 357, 564, 718],
+      "changedPixels": 118371
+    },
+    "tall-no-receipts.png": {
+      "size": [824, 1920],
+      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f",
+      "changedPixelBounds": [210, 677, 616, 1038],
+      "changedPixels": 118363
+    }
+  },
+  "visualReview": {
+    "reviewed": [
+      "no-receipts-light.png",
+      "no-receipts-dark.png",
+      "large-font-no-receipts-scrolled.png"
+    ],
+    "findings": [
+      "No visible background rectangle or detached white flecks at the rendered 220×190dp illustration size.",
+      "Very fine pale contour on cream horn remains visible on close inspection, without a broad surrounding halo.",
+      "Body copy and separate Scan footer remain visible at 2× font; no clipping."
+    ]
+  },
+  "semanticsComparison": {
+    "large-font-no-receipts-scrolled-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    },
+    "large-font-no-receipts-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    },
+    "no-receipts-dark-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    },
+    "no-receipts-light-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    },
+    "small-360-no-receipts-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    },
+    "tall-no-receipts-semantics.txt": {
+      "identicalIgnoringNodeIdsAndObjectIdentity": true
+    }
+  },
+  "sharedResource": "NoReceiptsState uses status_no_receipts directly in both themes; duplicate dark PNG removed.",
+  "deduplicationImageComparison": {
+    "large-font-no-receipts-scrolled.png": {
+      "byteIdentical": true,
+      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f"
+    },
+    "large-font-no-receipts.png": {
+      "byteIdentical": true,
+      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f"
+    },
+    "no-receipts-dark.png": {
+      "byteIdentical": true,
+      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1"
+    },
+    "no-receipts-light.png": {
+      "byteIdentical": true,
+      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa"
+    },
+    "small-360-no-receipts.png": {
+      "byteIdentical": true,
+      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61"
+    },
+    "tall-no-receipts.png": {
+      "byteIdentical": true,
+      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f"
+    }
+  },
+  "portableHarnessRerun": {
+    "testTimestamp": "2026-10-07T12:34:07.125Z",
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "allSixCaptureHashesUnchanged": true,
+    "allSixSemanticsMatchBaselineIgnoringNodeIdsAndObjectIdentity": true,
+    "allFiveDesignMockupsMatch": true,
+    "provenance": "../harness-provenance.json"
+  }
+}

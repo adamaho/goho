@@ -4,11 +4,19 @@
   "captures": {
     "empty-no-receipts-light.png": {
       "source": "no-receipts-light.png",
-      "sha256": "0fa5ffcd1b58e999cea21451e580a8a9f78c3af8f1d1fc9fa3da017c197efc9e"
+      "sourceDirectory": "art/bram/no-receipts-review/after/",
+      "capturedAt": "2026-10-07",
+      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa",
+      "evidenceCommit": null,
+      "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
     "empty-no-receipts.png": {
       "source": "no-receipts-dark.png",
-      "sha256": "4fc4b4cceb17773eaaca3c905be5cb3cfdd60c1459cdfe0905a2b034bc88cf42"
+      "sourceDirectory": "art/bram/no-receipts-review/after/",
+      "capturedAt": "2026-10-07",
+      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1",
+      "evidenceCommit": null,
+      "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
     "empty-needs-attention-light.png": {
       "source": "no-attention-light.png",
@@ -52,15 +60,27 @@
     },
     "large-font-no-receipts-scrolled.png": {
       "source": "large-font-no-receipts-scrolled.png",
-      "sha256": "09d47ee24367a736ff1cc337b380be7a51b173916eb0b479942c74c397a9c3e4"
+      "sourceDirectory": "art/bram/no-receipts-review/after/",
+      "capturedAt": "2026-10-07",
+      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
+      "evidenceCommit": null,
+      "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
     "small-360-no-receipts.png": {
       "source": "small-360-no-receipts.png",
-      "sha256": "40bc4212cfe72649696401d001c7f5aad11ab7876e9831be1735f8aae03f1354"
+      "sourceDirectory": "art/bram/no-receipts-review/after/",
+      "capturedAt": "2026-10-07",
+      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61",
+      "evidenceCommit": null,
+      "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
     "tall-no-receipts.png": {
       "source": "tall-no-receipts.png",
-      "sha256": "a6fafd4cae395a620425176872061b5fb72e3b07ae481decb29f9fb1d897a082"
+      "sourceDirectory": "art/bram/no-receipts-review/after/",
+      "capturedAt": "2026-10-07",
+      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f",
+      "evidenceCommit": null,
+      "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     }
   }
 }

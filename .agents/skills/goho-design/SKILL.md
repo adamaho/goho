@@ -5,7 +5,7 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff: October 5, 2026 Bram refinements (PR #101), building on the October 2 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff: October 7, 2026 no-receipts illustration refinement, building on the October 5 Bram refinements (PR #101) and October 2 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
 
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm off-white in light mode, violet-charcoal in dark mode, one lavender accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
@@ -13,7 +13,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Bram refinements
 
-Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Use the supplied Bram artwork unchanged, including its decorative pastel accents. Interactive accents are lavender. The decorative 40dp Bram mark precedes the Receipts title with a 10dp gap, except in the load-error state. Buttons have 20dp corners, Scan 24dp, and status cards 32dp. Status entrance, retry, recovery, and large-text behavior are specified in `references/screens.md` section 6.
+Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Render the current Bram artwork unchanged. The no-receipts state uses one transparent image of Bram cradling a blank receipt in both themes. Other status illustrations retain their supplied decorative pastel accents. Interactive accents are lavender. The decorative 40dp Bram mark precedes the Receipts title with a 10dp gap, except in the load-error state. Buttons have 20dp corners, Scan 24dp, and status cards 32dp. Status entrance, retry, recovery, and large-text behavior are specified in `references/screens.md` section 6.
 
 ## Geist typography
 

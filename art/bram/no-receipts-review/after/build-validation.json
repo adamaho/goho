@@ -1,0 +1,21 @@
+{
+  "assembleDebug": "passed",
+  "lintDebug": "passed",
+  "ktfmtCheck": "passed",
+  "lintCounts": {
+    "Warning": 21
+  },
+  "lintIds": {
+    "OldTargetApi": 1,
+    "LockedOrientationActivity": 1,
+    "ConfigurationScreenWidthHeight": 2,
+    "ModifierParameter": 1,
+    "DiscouragedApi": 1,
+    "PluralsCandidate": 1,
+    "DataExtractionRules": 1,
+    "UnusedResources": 12,
+    "UseKtx": 1
+  },
+  "changedArtworkIssues": [],
+  "duplicateWarningRemoved": true
+}

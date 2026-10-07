@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.adamaho.goho.evidence.ReceiptEvidenceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T12:34:07.125Z" hostname="winston" time="12.344">
+  <properties/>
+  <testcase name="largeTextEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="10.789"/>
+  <testcase name="tallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.23"/>
+  <testcase name="noReceiptsLight" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.187"/>
+  <testcase name="noReceiptsDark" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.165"/>
+  <testcase name="smallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.163"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
