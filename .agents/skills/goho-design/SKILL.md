@@ -58,7 +58,7 @@ The current handoff keeps the same receipt photo, merchant, amount and date head
 2. Build the primitives in `references/components.md`. `assets/compose/GohoComponents.kt` is a reference implementation of them; it has not been compiled, so treat it as a strong starting point and fix any API drift against the project's Compose version.
 3. Build screens from `references/screens.md`, which has the layout top to bottom with measurements, copy, states and behavior.
 4. Compare against the mockups listed in `assets/mockups/README.md`. The written spec wins if they disagree.
-5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current mockups together. Preserve supplied artwork; label older reference assets as historical rather than presenting them as current.
+5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current mockups together. Preserve supplied artwork; label older reference assets as historical rather than presenting them as current. Keep Bram references, concepts and prompts in `assets/illustrations/bram/`, approved artwork in `assets/illustrations/`, and current screen references in `assets/mockups/`. The Android capture tooling lives in `programs/goho-android/tools/bram-captures/` at the repository root; generated captures and reports belong in the ignored Android `build/` directory.
 6. Verify the requested behavior against the current Goho server and Android flow before implementing it. Mockups do not establish backend support.
 
 ## Approved receipt-list refinements
