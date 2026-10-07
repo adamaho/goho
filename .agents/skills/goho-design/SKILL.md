@@ -5,7 +5,7 @@ description: Goho's visual design system and screen specs for the native Android
 
 # Goho design
 
-Design handoff: October 5, 2026 Bram refinements (PR #101), building on the October 2 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
+Design handoff: October 7, 2026 no-receipts illustration and layout refinement, building on the October 5 Bram refinements (PR #101) and October 2 v2 package. The approved app refinements below take precedence over older examples in the reference assets.
 
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm off-white in light mode, violet-charcoal in dark mode, one lavender accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
@@ -13,7 +13,7 @@ Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Materi
 
 ## Bram refinements
 
-Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. The list empty and error states use the supplied light/dark illustrations in `assets/illustrations/` and the specs in `references/screens.md` section 6. Use the supplied Bram artwork unchanged, including its decorative pastel accents. Interactive accents are lavender. The decorative 40dp Bram mark precedes the Receipts title with a 10dp gap, except in the load-error state. Buttons have 20dp corners, Scan 24dp, and status cards 32dp. Status entrance, retry, recovery, and large-text behavior are specified in `references/screens.md` section 6.
+Buttons use flat fills, darker edge rings, faint inner rings and soft wide shadows; see `references/tokens.md`. Current Bram artwork is limited to the no-receipts illustration and neutral stance/header mark in `assets/illustrations/`. Render the supplied artwork unchanged. All three list status states render directly on the screen background, without an enclosing card fill, border or rounded clipping. Preserve their content padding, spacing and placement. The no-receipts state uses one transparent image of Bram cradling a blank receipt in both themes. Needs-attention and load-error states contain text and their existing actions, without illustrations or reserved illustration space. Additional character poses and accessories are deferred to a later PR. Interactive accents are lavender. The decorative 40dp neutral Bram mark precedes the Receipts title with a 10dp gap, except in the load-error state. Buttons have 20dp corners and Scan 24dp. Status entrance, retry, recovery, and large-text behavior are specified in `references/screens.md` section 6.
 
 ## Geist typography
 
@@ -27,7 +27,7 @@ Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 
 4. **Missing amounts show "—", never $0.00.** Receipts that failed processing stay in the list, marked "Not processed", and are never hidden.
 5. **Processing is inline.** A new receipt appears at the top of the list immediately with a shimmering "Reading receipt…" pill. No blocking screens or hero scanner.
 6. **No ripples.** Press feedback is the Goho press: scale to 97%, move down 1dp, shadow drops, fill darkens, spring back on release. Use `indication = null` plus the press modifier. Never a sunken or inset-shadow pressed state.
-7. **Rounded, by role.** Thumbnail 8dp; primary and secondary buttons 20dp (not pills); cards and photo frame 20dp; FAB 24dp; status cards 32dp; pills, badges, filter and icon buttons fully round.
+7. **Rounded, by role.** Thumbnail 8dp; primary and secondary buttons 20dp (not pills); cards and photo frame 20dp; FAB 24dp; pills, badges, filter and icon buttons fully round.
 8. **No bottom navigation.** The list screen has a floating Scan button at the bottom right.
 9. **Light and dark, following the system.** Both palettes share token names (`GohoLightColors`, `GohoDarkColors`). Never branch on theme in screens; the only exceptions are baked into the components (card edges, top highlights). The photo frame and photo viewer are dark in both themes.
 
@@ -58,7 +58,7 @@ The current handoff keeps the same receipt photo, merchant, amount and date head
 2. Build the primitives in `references/components.md`. `assets/compose/GohoComponents.kt` is a reference implementation of them; it has not been compiled, so treat it as a strong starting point and fix any API drift against the project's Compose version.
 3. Build screens from `references/screens.md`, which has the layout top to bottom with measurements, copy, states and behavior.
 4. Compare against the mockups listed in `assets/mockups/README.md`. The written spec wins if they disagree.
-5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current mockups together. Preserve supplied artwork; label older reference assets as historical rather than presenting them as current.
+5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current mockups together. Preserve supplied artwork; label older reference assets as historical rather than presenting them as current. Keep the neutral Bram identity reference and no-receipts generation prompts in `assets/illustrations/bram/`, approved artwork in `assets/illustrations/`, and current screen references in `assets/mockups/`. Check in only Bram artwork used by the no-receipts state or neutral stance; defer other character states and concept sheets until their implementation. The Android capture tooling lives in `programs/goho-android/tools/bram-captures/` at the repository root; generated captures and reports belong in the ignored Android `build/` directory.
 6. Verify the requested behavior against the current Goho server and Android flow before implementing it. Mockups do not establish backend support.
 
 ## Approved receipt-list refinements

@@ -4,14 +4,11 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -20,11 +17,11 @@ import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
 @Composable
-internal fun ReceiptStatusCard(
-    @DrawableRes illustration: Int,
+internal fun ReceiptStatusContent(
     title: String,
     description: String,
     modifier: Modifier = Modifier,
+    @DrawableRes illustration: Int? = null,
     animateEntrance: Boolean = true,
     announcePolitely: Boolean = false,
     action: (@Composable () -> Unit)? = null,
@@ -44,9 +41,6 @@ internal fun ReceiptStatusCard(
                 alpha = progress
                 translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
             }
-            .clip(GohoShapes.statusCard)
-            .background(c.statusCard)
-            .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
             .semantics(mergeDescendants = true) {
                 if (announcePolitely) liveRegion = LiveRegionMode.Polite
             }
@@ -60,18 +54,21 @@ internal fun ReceiptStatusCard(
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Image(
-            painterResource(illustration),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier =
-                Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
-                    .fillMaxWidth()
-                    .aspectRatio(
-                        GohoSpacing.statusIllustrationWidth / GohoSpacing.statusIllustrationHeight
-                    ),
-        )
-        Spacer(Modifier.height(GohoSpacing.statusTitleTop))
+        if (illustration != null) {
+            Image(
+                painterResource(illustration),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier =
+                    Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
+                        .fillMaxWidth()
+                        .aspectRatio(
+                            GohoSpacing.statusIllustrationWidth /
+                                GohoSpacing.statusIllustrationHeight
+                        ),
+            )
+            Spacer(Modifier.height(GohoSpacing.statusTitleTop))
+        }
         Text(
             title,
             style = GohoTheme.type.statusTitle,

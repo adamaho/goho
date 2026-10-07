@@ -1,6 +1,6 @@
 // Goho UI primitives. Reference implementation from the design handoff; not compiled
 // against the project, so fix any API drift for the project's Compose version.
-// Bram status cards, retry measurement, button treatment, and reduced-motion press match PR #101.
+// Bram status content follows the current screen specs; retry, buttons, and reduced-motion press retain PR #101 behavior.
 package com.goho.ui.components // TODO: match the app's package
 
 import androidx.compose.animation.core.Animatable
@@ -984,17 +984,19 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
     )
 }
 
-// ---------- Status card (empty and error states) ----------
+// ---------- Status content (empty and error states) ----------
 
-/** Current Bram status card. For retry, pass announcePolitely = true and reserve both button labels.
- * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming card.
+/** Current status content sits directly on the screen background. No receipts supplies Bram.
+ * Needs-attention and load-error states omit illustration; additional character poses are deferred.
+ * For retry, pass announcePolitely = true and reserve both button labels.
+ * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming status content.
  */
 @Composable
-fun GohoStatusCard(
-    illustration: androidx.compose.ui.graphics.painter.Painter,
+fun GohoStatusContent(
     title: String,
     text: String,
     modifier: Modifier = Modifier,
+    illustration: androidx.compose.ui.graphics.painter.Painter? = null,
     animateEntrance: Boolean = true,
     announcePolitely: Boolean = false,
     action: (@Composable () -> Unit)? = null,
@@ -1014,9 +1016,6 @@ fun GohoStatusCard(
                 alpha = progress
                 translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
             }
-            .clip(GohoShapes.statusCard)
-            .background(c.statusCard)
-            .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
             .semantics(mergeDescendants = true) {
                 if (announcePolitely) liveRegion = LiveRegionMode.Polite
             }
@@ -1030,18 +1029,20 @@ fun GohoStatusCard(
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        androidx.compose.foundation.Image(
-            illustration,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier =
-                Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
-                    .fillMaxWidth()
-                    .aspectRatio(
-                        GohoSpacing.statusIllustrationWidth / GohoSpacing.statusIllustrationHeight
-                    ),
-        )
-        Spacer(Modifier.height(GohoSpacing.statusTitleTop))
+        if (illustration != null) {
+            androidx.compose.foundation.Image(
+                illustration,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier =
+                    Modifier.widthIn(max = GohoSpacing.statusIllustrationWidth)
+                        .fillMaxWidth()
+                        .aspectRatio(
+                            GohoSpacing.statusIllustrationWidth / GohoSpacing.statusIllustrationHeight
+                        ),
+            )
+            Spacer(Modifier.height(GohoSpacing.statusTitleTop))
+        }
         Text(
             title,
             style = GohoTheme.type.title.copy(fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.02).em),

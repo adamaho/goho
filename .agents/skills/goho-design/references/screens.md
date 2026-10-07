@@ -147,30 +147,30 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Each uses the supplied lavender Bram character artwork unchanged. The six PNGs are the current assets; older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. Needs attention and load error show text and their existing actions; omit illustrations and reserved illustration space. No receipts shares one transparent Bram asset across both themes. Render it and the neutral Bram header mark unchanged. Dedicated character artwork for other states is deferred to a later PR. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
-- Center the card in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole card to scroll rather than clipping copy or overlapping Scan.
-- Animate a newly shown card once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
-- During retry, keep the error header and card mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second card entrance and no outgoing accessibility actions.
+- Center the status content in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
+- Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
+- During retry, keep the error header and status content mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
 - With Remove animations enabled, entrance, recovery, and press are static. Keep existing copy unchanged.
 
 **Needs attention, nothing in it**
 
 - Header includes Bram and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
-- StatusCard centered vertically in the space between the filter and the Scan button. Illustration `status-needs-attention`: Bram beneath two receipts, a lavender check badge, and a sparkle chip (“all sorted”).
+- Text-only status content centered vertically between the filter and the Scan button, directly on the screen background. Omit the illustration and the gap that would precede the title.
 - Title "Nothing needs attention"; text "Receipts that couldn’t be processed will show up here." No button.
 
 **No receipts yet** (the account has no receipts at all)
 
 - Header shows Bram and the “Receipts” title (no filter). The Scan button stays.
-- StatusCard centered between the header and Scan footer. Illustration `status-no-receipts`: Bram beside a receipt with a peach plus chip (“scan one in”).
+- Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding, illustration size and text spacing. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)
 
 - Header shows only the “Receipts” title. No Bram header mark, filter, or Scan button.
-- StatusCard centered in the available area below the header. Illustration `status-load-error`: Bram beneath a cloud and a peach wifi-off chip (“couldn’t reach the server”).
+- Text and retry action centered in the available area below the header, directly on the screen background. Omit the illustration and the gap that would precede the title.
 - Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
-- Announce the card as a polite live region when it appears.
+- Announce the status content as a polite live region when it appears.

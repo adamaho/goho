@@ -27,7 +27,7 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `accentPressed`                              | `#959AE3`             | `#7D83CB`                | Scan and primary button fill while pressed                 |
 | `onAccent`                                   | `#17183D`             | `#1B1C45`                | Label and icon on Scan and primary buttons                 |
 | `buttonSecondary` / `buttonSecondaryPressed` | `#2B2A38` / `#252432` | `#FFFFFF` / `#F7F4F9`    | Secondary button fill                                      |
-| `statusCard` / `statusCardRing`              | white 2.5% / white 7% | white 60% / `#26233A` 6% | StatusCard fill and 1dp ring                               |
+| `statusCard` / `statusCardRing`              | white 2.5% / white 7% | white 60% / `#26233A` 6% | Legacy status-card fill and ring; unused by current states |
 | `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6` | `#E9E9FB` / `#444AA0`    | "Reading receipt…" pill                                    |
 | `accentShimmer`                              | `#E4E5FD`             | `#9CA1E6`                | Shimmer highlight on "Reading receipt…"                    |
 | `attention` / `attentionContainer`           | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC`    | "Not processed" pill, attention count badge                |
@@ -84,7 +84,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 | `card`       | 20     | Grouped list cards, detail card, photo frame                   |
 | `fab`        | 24     | Scan button                                                    |
 | `pill`       | 50%    | Status pills, count badge, filter segments, round icon buttons |
-| `statusCard` | 32     | Empty and error cards                                          |
+| `statusCard` | 32     | Legacy status-card shape; unused by current states             |
 | `sheet`      | 28     | Floating bottom sheet (all four corners)                       |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
@@ -121,10 +121,12 @@ Pressed: the fill steps to its pressed color, the wide shadow drops away (keep t
 | Element                 | Dark                                           | Light                                    |
 | ----------------------- | ---------------------------------------------- | ---------------------------------------- |
 | Cards                   | No shadow, 1dp top highlight white 3%          | 1dp ring `#26233A` 5% + soft shadow      |
-| StatusCard              | 1dp ring white 7% on white 2.5%                | 1dp ring `#26233A` 6% on white 60%       |
+| Legacy status card      | 1dp ring white 7% on white 2.5%                | 1dp ring `#26233A` 6% on white 60%       |
 | Selected filter segment | 1dp black shadow, white 6% top highlight       | 1dp shadow `#26233A`                     |
 | Round icon button       | No shadow; `surfaceMutedPressed` when pressed  | Same                                     |
 | Bottom sheet            | White 5% ring and highlight; soft black shadow | `#26233A` 4% ring; soft `#26233A` shadow |
+
+The `statusCard` color and shape tokens and legacy elevation treatment are retained for reference only. Current no-receipts, needs-attention and load-error content renders directly on the screen background without a card surface, ring or rounded clipping. Existing status padding tokens still define their shared content spacing.
 
 ## Motion
 
@@ -133,7 +135,7 @@ Pressed: the fill steps to its pressed color, the wide shadow drops away (keep t
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Status entrance:** 200ms fade and 6dp upward settle, once on appearance.
-- **Retry recovery:** 200ms crossfade of the error screen into the loaded state. Suppress the incoming card entrance so recovery animates only once.
+- **Retry recovery:** 200ms crossfade of the error screen into the loaded state. Suppress the incoming status-content entrance so recovery animates only once.
 - **Reduced motion:** when the animator duration scale is 0, shimmer is static and entrance, recovery, and press transformations are disabled.
 
 ## Receipt header and timestamps

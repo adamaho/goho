@@ -1,0 +1,35 @@
+def evidenceRootPath = System.getProperty('goho.evidence.root')
+if (!evidenceRootPath) {
+    throw new GradleException('Set -Dgoho.evidence.root to the programs/goho-android/tools/bram-captures directory.')
+}
+def evidenceRoot = new File(evidenceRootPath)
+
+allprojects { project ->
+    project.plugins.withId('com.android.application') {
+        project.android {
+            sourceSets {
+                test.kotlin.srcDir(new File(evidenceRoot, 'harness/src'))
+            }
+            testOptions {
+                unitTests.includeAndroidResources = true
+            }
+        }
+        project.dependencies {
+            testImplementation 'junit:junit:4.13.2'
+            testImplementation 'org.robolectric:robolectric:4.17'
+            testImplementation 'androidx.compose.ui:ui-test-junit4'
+            debugImplementation 'androidx.compose.ui:ui-test-manifest'
+            testImplementation 'io.github.takahirom.roborazzi:roborazzi:1.76.0'
+            testImplementation 'io.github.takahirom.roborazzi:roborazzi-compose:1.76.0'
+        }
+        project.tasks.withType(Test).configureEach {
+            outputs.upToDateWhen { false }
+            systemProperty 'roborazzi.test.record', 'true'
+            systemProperty 'java.io.tmpdir', System.getProperty('java.io.tmpdir')
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+            systemProperty 'goho.evidence.output', System.getProperty('goho.evidence.output', new File(project.rootProject.projectDir, 'build/bram-captures').absolutePath)
+            maxHeapSize = '2g'
+            testLogging { events 'passed', 'skipped', 'failed'; exceptionFormat = 'full'; showStandardStreams = true }
+        }
+    }
+}

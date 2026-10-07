@@ -1,0 +1,45 @@
+{
+  "sourceCommit": "c8f96f46a34118d3d45e44f3f7b2aa710afb86a8",
+  "originalAssets": {
+    "status_no_receipts.png": "88707e38ea5da3f49dc10ffc198019bd5d64d074c493f02517c99ac40f2531c6",
+    "status_no_receipts_dark.png": "7f73dae8a50410684297f30a9e1924cc92e3a95080e2a2979373dc1fd312ea68"
+  },
+  "executedMethods": [
+    "noReceiptsLight",
+    "noReceiptsDark",
+    "smallEmpty",
+    "tallEmpty",
+    "largeTextEmpty",
+    "noAttentionLight",
+    "noAttentionDark",
+    "loadErrorLight",
+    "loadErrorDark",
+    "largeTextError",
+    "largeTextAttention",
+    "retryFailureAndSuccess",
+    "deleteLastFailedOverall"
+  ],
+  "scope": "The recovered Kotlin harness drops only the obsolete output-directory phase guard in deleteLast so the existing deletion check runs in the current build output directory. The Gradle init script retains the documented portability changes. Thirteen existing test methods capture the implemented no-receipts, attention, and load-error screens and retry/deletion behavior; only no-receipts uses special Bram artwork.",
+  "originalHarness": {
+    "harness/init.gradle": "3fefa58416f01e0c5d6dd6bf3091afab305f0726d5410f5268fa59d2eb61206a",
+    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "f2c79851a3164d4afe231358994e24f3f6fc532d393533f31963a5ef4d376aa2"
+  },
+  "currentHarness": {
+    "harness/init.gradle": "d8a07725786164a395e0542a4a058ada5821f736da19dd7a29730cad376dc25d",
+    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "3f51b40304a87148543d00e0ba9fd44b07b49fbbc2b44ff67348fdae82068181"
+  },
+  "portabilityChanges": [
+    "The Gradle init script requires the tool directory supplied by render.sh instead of a machine-specific fallback.",
+    "render.sh derives the Android project from its own location and preserves the caller’s configured Java and Android SDK.",
+    "Captures, semantics, and the resulting JUnit XML default to the ignored Android build/bram-captures directory; render.sh accepts an optional output-directory argument.",
+    "The capture invocation reruns filtered tests so deleting generated output never leaves capture files missing behind an up-to-date test result."
+  ],
+  "historicalCaptures": {
+    "originalArtworkBaseline": "4a866b9:art/bram/no-receipts-review/before",
+    "cardBackedReceiptArtwork": "4a866b9:art/bram/no-receipts-review/after",
+    "cardlessReceiptArtwork": "69c44fb:art/bram/no-receipts-review/after"
+  },
+  "harnessChanges": [
+    "Removed the output.name == \"after\" assumption from the existing deleteLast helper so the deletion capture runs with the default build/bram-captures output directory. No assertions or other test behavior changed."
+  ]
+}
