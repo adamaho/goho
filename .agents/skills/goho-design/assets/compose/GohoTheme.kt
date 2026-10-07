@@ -255,7 +255,7 @@ object GohoSpacing {
     val statusCardActionBottom = 24.dp
     val statusIllustrationWidth = 220.dp
     val statusIllustrationHeight = 190.dp
-    val statusTitleTop = 14.dp
+    val statusTitleTop = 4.dp
     val statusBodyTop = 6.dp
     val statusBodyMaxWidth = 290.dp
     val statusActionTop = 22.dp
@@ -324,8 +324,6 @@ object GohoSpacing {
     val sectionLabelBottom = 8.dp
     val fabBottom = 28.dp
     val hairline = 1.dp
-    val headerMark = 40.dp
-    val headerMarkGap = 10.dp
     val headerHeight = 44.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp

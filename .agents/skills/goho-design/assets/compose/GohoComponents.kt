@@ -988,7 +988,8 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
 
 /** Current status content sits directly on the screen background. No receipts supplies receipt-holding Bram.
  * Empty Needs attention supplies calm thumbs-up Bram with "All good" and "Nothing needs your attention right now."
- * Each state uses its transparent illustration unchanged in light and dark themes. Load error omits illustration.
+ * Each state uses its transparent illustration unchanged in both themes, with a 4dp gap before its title.
+ * The Receipts header is text-only in every state. Load error omits illustration.
  * For retry, pass announcePolitely = true and reserve both button labels.
  * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming status content.
  */
