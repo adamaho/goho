@@ -28,13 +28,14 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Same geometry as GohoPrimaryButton (52 tall, shape `button` 20, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
 - Only for the final confirming action of something destructive. Red is never used for anything else.
 
-## StatusCard (empty and error states)
+## Status content (empty and error states)
 
-- Full width inside the screen margin, 32dp corners, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Fill `statusCard`, 1dp ring `statusCardRing`. Content centered.
+- Full width inside the screen margin, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Content centered. Needs-attention and load-error states use a StatusCard with 32dp corners, fill `statusCard` and a 1dp ring `statusCardRing`.
+- No receipts places the same illustration and copy directly on the screen background, without card fill, border or rounded clipping. Preserve the shared padding, spacing, entrance and centered placement; the Scan footer stays separate.
 - Illustration (220×190dp, an image asset), then 14dp below the title in 20/26 SemiBold −0.02em `textPrimary`, 6dp below the text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
 - Illustration assets live in `assets/illustrations/`. No receipts uses one shared transparent `status-no-receipts.png` (1350×1165) in both themes; other states retain their 660×570 light/dark pairs (`status-*.png`, `status-*-dark.png`). Preserve the PNGs unchanged and render with `ContentScale.Fit` in the existing slot up to 220dp wide with a 220:190 aspect ratio. The older SVGs in `legacy/` are not sources for these Bram images.
 - The illustration is decorative (`contentDescription = null`); the title is a heading and the title/body group carries the meaning. Only the load-error card is a polite live region.
-- Entrance: one 200ms fade with a 6dp upward settle; no looping character animation. Successful retry crossfades the whole error screen to the loaded state in 200ms without replaying the incoming card entrance. With reduced motion, render the final state immediately.
+- Entrance: one 200ms fade with a 6dp upward settle; no looping character animation. Successful retry crossfades the whole error screen to the loaded state in 200ms without replaying the incoming status entrance. With reduced motion, render the final state immediately.
 - The retry button reserves space for both “Try again” and “Trying again…” at the current font scale. Hidden measurement labels have no semantics. Disable the button while retrying and preserve its bounds after failure.
 
 ## GohoSheet (floating bottom sheet)

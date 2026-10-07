@@ -27,6 +27,7 @@ internal fun ReceiptStatusCard(
     modifier: Modifier = Modifier,
     animateEntrance: Boolean = true,
     announcePolitely: Boolean = false,
+    showCard: Boolean = true,
     action: (@Composable () -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
@@ -44,9 +45,13 @@ internal fun ReceiptStatusCard(
                 alpha = progress
                 translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
             }
-            .clip(GohoShapes.statusCard)
-            .background(c.statusCard)
-            .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
+            .then(
+                if (showCard)
+                    Modifier.clip(GohoShapes.statusCard)
+                        .background(c.statusCard)
+                        .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
+                else Modifier
+            )
             .semantics(mergeDescendants = true) {
                 if (announcePolitely) liveRegion = LiveRegionMode.Polite
             }

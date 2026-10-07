@@ -3,11 +3,12 @@
   "lintDebug": "passed",
   "ktfmtCheck": "passed",
   "lintCounts": {
-    "Warning": 21
+    "Warning": 22
   },
   "lintIds": {
     "OldTargetApi": 1,
     "LockedOrientationActivity": 1,
+    "NewerVersionAvailable": 1,
     "ConfigurationScreenWidthHeight": 2,
     "ModifierParameter": 1,
     "DiscouragedApi": 1,
@@ -17,5 +18,7 @@
     "UseKtx": 1
   },
   "changedArtworkIssues": [],
-  "duplicateWarningRemoved": true
+  "duplicateWarningRemoved": true,
+  "scope": "Rerun after removing the no-receipts card surface; production build, lint and Kotlin formatting passed.",
+  "additionalWarning": "NewerVersionAvailable for the unchanged OpenAPI generator dependency; unrelated to card removal."
 }

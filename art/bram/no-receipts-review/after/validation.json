@@ -17,39 +17,39 @@
   "captures": {
     "large-font-no-receipts-scrolled.png": {
       "size": [720, 1280],
-      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
-      "changedPixelBounds": [158, 281, 564, 642],
-      "changedPixels": 118363
+      "sha256": "3e526bed5fb2e514f390656251ceaad51856048a9b9fd24044f0802195913b19",
+      "changedPixelBounds": [32, 209, 688, 987],
+      "changedPixels": 492851
     },
     "large-font-no-receipts.png": {
       "size": [720, 1280],
-      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
-      "changedPixelBounds": [158, 281, 564, 642],
-      "changedPixels": 118363
+      "sha256": "3e526bed5fb2e514f390656251ceaad51856048a9b9fd24044f0802195913b19",
+      "changedPixelBounds": [32, 209, 688, 987],
+      "changedPixels": 492851
     },
     "no-receipts-dark.png": {
       "size": [720, 1600],
-      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1",
-      "changedPixelBounds": [157, 535, 565, 875],
-      "changedPixels": 115629
+      "sha256": "032cefcce3f1a002a6946c65cdb77ed56f585196ad2d7c9f2794512149d4d886",
+      "changedPixelBounds": [32, 445, 688, 1076],
+      "changedPixels": 406410
     },
     "no-receipts-light.png": {
       "size": [720, 1600],
-      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa",
-      "changedPixelBounds": [158, 517, 564, 878],
-      "changedPixels": 118371
+      "sha256": "35778bc96e3eb1846215adc474069c43d524edf9c3c34bae74f67e05655b5683",
+      "changedPixelBounds": [32, 445, 688, 1076],
+      "changedPixels": 406534
     },
     "small-360-no-receipts.png": {
       "size": [720, 1280],
-      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61",
-      "changedPixelBounds": [158, 357, 564, 718],
-      "changedPixels": 118371
+      "sha256": "d35a359cede27601e12358026f63e3e1ee0741837839169d0e5b54e51b3c7f6d",
+      "changedPixelBounds": [32, 285, 688, 916],
+      "changedPixels": 406534
     },
     "tall-no-receipts.png": {
       "size": [824, 1920],
-      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f",
-      "changedPixelBounds": [210, 677, 616, 1038],
-      "changedPixels": 118363
+      "sha256": "b4ba01608a91cded397c8064cd489e42ba1716b293f0c8ee9213579ba5d133f0",
+      "changedPixelBounds": [32, 605, 792, 1236],
+      "changedPixels": 472158
     }
   },
   "visualReview": {
@@ -59,65 +59,67 @@
       "large-font-no-receipts-scrolled.png"
     ],
     "findings": [
-      "No visible background rectangle or detached white flecks at the rendered 220×190dp illustration size.",
-      "Very fine pale contour on cream horn remains visible on close inspection, without a broad surrounding halo.",
-      "Body copy and separate Scan footer remain visible at 2× font; no clipping."
+      "Bram and copy sit directly on the screen background with no card fill or border in light and dark themes.",
+      "Illustration, text and Scan placement are unchanged from the prior card layout.",
+      "Body copy and separate Scan footer remain visible at 2\u00d7 font; no clipping or overlap."
     ]
   },
   "semanticsComparison": {
     "large-font-no-receipts-scrolled-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     },
     "large-font-no-receipts-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     },
     "no-receipts-dark-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     },
     "no-receipts-light-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     },
     "small-360-no-receipts-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     },
     "tall-no-receipts-semantics.txt": {
-      "identicalIgnoringNodeIdsAndObjectIdentity": true
+      "identicalIgnoringNodeIdsObjectIdentityAndRemovedCardShape": true
     }
   },
   "sharedResource": "NoReceiptsState uses status_no_receipts directly in both themes; duplicate dark PNG removed.",
-  "deduplicationImageComparison": {
-    "large-font-no-receipts-scrolled.png": {
-      "byteIdentical": true,
-      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f"
+  "cardRemovalComparison": {
+    "baselineCommit": "4a866b9",
+    "captures": {
+      "large-font-no-receipts-scrolled.png": {
+        "changedPixelBounds": [32, 209, 688, 987],
+        "changesConfinedToFormerCardBounds": true
+      },
+      "large-font-no-receipts.png": {
+        "changedPixelBounds": [32, 209, 688, 987],
+        "changesConfinedToFormerCardBounds": true
+      },
+      "no-receipts-dark.png": {
+        "changedPixelBounds": [32, 445, 688, 1076],
+        "changesConfinedToFormerCardBounds": true
+      },
+      "no-receipts-light.png": {
+        "changedPixelBounds": [32, 445, 688, 1076],
+        "changesConfinedToFormerCardBounds": true
+      },
+      "small-360-no-receipts.png": {
+        "changedPixelBounds": [32, 285, 688, 916],
+        "changesConfinedToFormerCardBounds": true
+      },
+      "tall-no-receipts.png": {
+        "changedPixelBounds": [32, 605, 792, 1236],
+        "changesConfinedToFormerCardBounds": true
+      }
     },
-    "large-font-no-receipts.png": {
-      "byteIdentical": true,
-      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f"
-    },
-    "no-receipts-dark.png": {
-      "byteIdentical": true,
-      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1"
-    },
-    "no-receipts-light.png": {
-      "byteIdentical": true,
-      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa"
-    },
-    "small-360-no-receipts.png": {
-      "byteIdentical": true,
-      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61"
-    },
-    "tall-no-receipts.png": {
-      "byteIdentical": true,
-      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f"
-    }
+    "semanticChange": "Removed only the 32dp card clipping shape; text, content bounds, heading, Scan button role/name/action and traversal remain unchanged."
   },
-  "portableHarnessRerun": {
-    "testTimestamp": "2026-10-07T12:34:07.125Z",
+  "nativeCaptureRun": {
+    "testTimestamp": "2026-10-07T12:46:30.527Z",
     "tests": 5,
     "failures": 0,
     "errors": 0,
-    "allSixCaptureHashesUnchanged": true,
-    "allSixSemanticsMatchBaselineIgnoringNodeIdsAndObjectIdentity": true,
     "allFiveDesignMockupsMatch": true,
     "provenance": "../harness-provenance.json"
   }

@@ -6,7 +6,7 @@
       "source": "no-receipts-light.png",
       "sourceDirectory": "art/bram/no-receipts-review/after/",
       "capturedAt": "2026-10-07",
-      "sha256": "b6c666430819477441dec26d61a9d30dd78c51558dcd328b50ca03430b25f8aa",
+      "sha256": "35778bc96e3eb1846215adc474069c43d524edf9c3c34bae74f67e05655b5683",
       "evidenceCommit": null,
       "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
@@ -14,7 +14,7 @@
       "source": "no-receipts-dark.png",
       "sourceDirectory": "art/bram/no-receipts-review/after/",
       "capturedAt": "2026-10-07",
-      "sha256": "469623cde4ee01d32458e55f2bdc0307a3e7802317f7841b6f5e701dc97835d1",
+      "sha256": "032cefcce3f1a002a6946c65cdb77ed56f585196ad2d7c9f2794512149d4d886",
       "evidenceCommit": null,
       "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
@@ -62,7 +62,7 @@
       "source": "large-font-no-receipts-scrolled.png",
       "sourceDirectory": "art/bram/no-receipts-review/after/",
       "capturedAt": "2026-10-07",
-      "sha256": "ebd654d3f4056b9edf55ac2d2455d168134775e8bcf28147d9096d0f13f2549f",
+      "sha256": "3e526bed5fb2e514f390656251ceaad51856048a9b9fd24044f0802195913b19",
       "evidenceCommit": null,
       "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
@@ -70,7 +70,7 @@
       "source": "small-360-no-receipts.png",
       "sourceDirectory": "art/bram/no-receipts-review/after/",
       "capturedAt": "2026-10-07",
-      "sha256": "2cdced7210e86a79185418c22fa3bcd5f7ba340a74a5be0dc5d06cb4f5ef6c61",
+      "sha256": "d35a359cede27601e12358026f63e3e1ee0741837839169d0e5b54e51b3c7f6d",
       "evidenceCommit": null,
       "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     },
@@ -78,7 +78,7 @@
       "source": "tall-no-receipts.png",
       "sourceDirectory": "art/bram/no-receipts-review/after/",
       "capturedAt": "2026-10-07",
-      "sha256": "a202aa0c21dcb2c63cb8a97fb77fa63eebb2d11c247f9b75fa615e75a6982d0f",
+      "sha256": "b4ba01608a91cded397c8064cd489e42ba1716b293f0c8ee9213579ba5d133f0",
       "evidenceCommit": null,
       "provenance": "art/bram/no-receipts-review/harness-provenance.json"
     }

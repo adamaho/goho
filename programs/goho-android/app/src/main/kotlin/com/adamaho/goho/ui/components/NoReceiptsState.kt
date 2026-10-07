@@ -13,5 +13,6 @@ fun NoReceiptsState(modifier: Modifier = Modifier, animateEntrance: Boolean = tr
         description = stringResource(R.string.receipts_empty_body),
         modifier = modifier,
         animateEntrance = animateEntrance,
+        showCard = false,
     )
 }

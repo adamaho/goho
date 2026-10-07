@@ -4,7 +4,7 @@ Current no-receipts artwork was refined on October 7, 2026 using the Bram receip
 
 - `bram-mark.png`: decorative header mark, displayed at 40×40dp in both themes. Omit it on the load-error screen.
 - `status-needs-attention(-dark).png`: Bram under two receipts with a lavender check badge and sparkle.
-- `status-no-receipts.png`: Bram gently cradling a small blank cream receipt. The same transparent asset is used in light and dark mode. No separate plus badge or typing indicator.
+- `status-no-receipts.png`: Bram gently cradling a small blank cream receipt. The same transparent asset is used in light and dark mode, directly on the screen background alongside the empty-state copy, without a surrounding card. No separate plus badge or typing indicator.
 - `status-load-error(-dark).png`: Bram under a cloud and peach wifi-off chip.
 
 The no-receipts PNG is 1350×1165 RGBA; the other status PNGs remain 660×570 RGBA. Render unchanged with ContentScale.Fit in the same 220×190dp slot that can shrink proportionally on narrow screens. Select a `-dark` variant inside the component only for states that have one. Artwork is decorative; text supplies the accessible meaning. Android names use underscores instead of hyphens.

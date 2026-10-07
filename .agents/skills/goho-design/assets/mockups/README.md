@@ -1,11 +1,11 @@
 # Mockups
 
-## Current Bram status states (October 7, 2026 no-receipts refinement)
+## Current Bram status states (October 7, 2026 no-receipts illustration and layout refinement)
 
-These captures render the production ReceiptOverview and its components using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The no-receipts captures were rerun on October 7 with Bram cradling a blank receipt; their evidence is in `art/bram/no-receipts-review/` at the repository root. All other captures retain the approved PR #101 source and artwork at `f202fc183a627d0025a8aecdbcba54cca5be4194`.
+These captures render the production ReceiptOverview and its components using Robolectric native Android graphics (API 35) and Roborazzi. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The no-receipts captures were rerun on October 7 with Bram cradling a blank receipt and the illustration and copy directly on the screen background; their evidence is in `art/bram/no-receipts-review/` at the repository root. All other captures retain the approved PR #101 source and artwork at `f202fc183a627d0025a8aecdbcba54cca5be4194`.
 
 - `empty-needs-attention.png` and `empty-needs-attention-light.png`: Nothing needs attention, with Bram, the selected filter, and Scan.
-- `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and Scan, without filters.
+- `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and copy directly on the screen background, no surrounding card, and Scan in its footer; no filters.
 - `load-error.png` and `load-error-light.png`: Load error, title only in the header, retry action, no Scan.
 - `retry-running.png`, `retry-failed.png`, `retry-succeeded.png`: Disabled retry with stable bounds, failure in place, and the loaded list after success (light).
 - `deleted-last-failed-overall.png`: Needs attention stays selected with All 0 after deleting the last failed receipt (light).

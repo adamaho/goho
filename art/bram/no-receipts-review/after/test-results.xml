@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.adamaho.goho.evidence.ReceiptEvidenceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T12:34:07.125Z" hostname="winston" time="12.344">
+<testsuite name="com.adamaho.goho.evidence.ReceiptEvidenceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T12:46:30.527Z" hostname="winston" time="7.566">
   <properties/>
-  <testcase name="largeTextEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="10.789"/>
-  <testcase name="tallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.23"/>
-  <testcase name="noReceiptsLight" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.187"/>
-  <testcase name="noReceiptsDark" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.165"/>
-  <testcase name="smallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.163"/>
+  <testcase name="largeTextEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="6.275"/>
+  <testcase name="tallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.198"/>
+  <testcase name="noReceiptsLight" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.19"/>
+  <testcase name="noReceiptsDark" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.169"/>
+  <testcase name="smallEmpty" classname="com.adamaho.goho.evidence.ReceiptEvidenceTest" time="0.162"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

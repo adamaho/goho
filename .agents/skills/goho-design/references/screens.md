@@ -147,13 +147,13 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the StatusCard (components.md). Render the current lavender Bram PNGs unchanged; the no-receipts state shares one transparent asset across both themes, while the other states retain light/dark variants. Older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md). Needs attention and load error retain the StatusCard surface; no receipts renders directly on the screen background. Render the current lavender Bram PNGs unchanged; the no-receipts state shares one transparent asset across both themes, while the other states retain light/dark variants. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
-- Center the card in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole card to scroll rather than clipping copy or overlapping Scan.
-- Animate a newly shown card once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
-- During retry, keep the error header and card mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second card entrance and no outgoing accessibility actions.
+- Center the status content in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
+- Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
+- During retry, keep the error header and card mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
 - With Remove animations enabled, entrance, recovery, and press are static. Keep existing copy unchanged.
 
 **Needs attention, nothing in it**
@@ -165,7 +165,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 **No receipts yet** (the account has no receipts at all)
 
 - Header shows Bram and the “Receipts” title (no filter). The Scan button stays.
-- StatusCard centered between the header and Scan footer. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
+- Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding, illustration size and text spacing. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **Couldn’t load receipts** (the list request failed)

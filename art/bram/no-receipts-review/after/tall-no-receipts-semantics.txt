@@ -11,11 +11,10 @@ Node #23 at (l=0.0, t=0.0, r=824.0, b=1920.0)px
        | Actions = [ClearTextSubstitution, GetTextLayoutResult, SetTextSubstitution, ShowTextSubstitution]
        |-Node #38 at (l=0.0, t=120.0, r=824.0, b=1720.0)px
        | IsTraversalGroup = 'true'
-       | Shape = 'androidx.compose.foundation.VerticalScrollableClipShape@4b410369'
+       | Shape = 'androidx.compose.foundation.VerticalScrollableClipShape@2a5d5521'
        | VerticalScrollAxisRange = 'ScrollAxisRange(value=0.0, maxValue=0.0, reverseScrolling=false)'
        | Actions = [ScrollBy, ScrollByOffset]
        |  |-Node #39 at (l=32.0, t=605.0, r=792.0, b=1236.0)px
-       |    Shape = 'RoundedCornerShape(topStart = CornerSize(size = 32.0.dp), topEnd = CornerSize(size = 32.0.dp), bottomEnd = CornerSize(size = 32.0.dp), bottomStart = CornerSize(size = 32.0.dp))'
        |    MergeDescendants = 'true'
        |     |-Node #40 at (l=192.0, t=661.0, r=632.0, b=1041.0)px
        |     | Shape = 'RectangleShape'

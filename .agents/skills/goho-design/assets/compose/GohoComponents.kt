@@ -984,10 +984,11 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
     )
 }
 
-// ---------- Status card (empty and error states) ----------
+// ---------- Status content (empty and error states) ----------
 
-/** Current Bram status card. For retry, pass announcePolitely = true and reserve both button labels.
- * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming card.
+/** Current Bram status content. No receipts passes showCard = false.
+ * For retry, pass announcePolitely = true and reserve both button labels.
+ * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming status content.
  */
 @Composable
 fun GohoStatusCard(
@@ -997,6 +998,7 @@ fun GohoStatusCard(
     modifier: Modifier = Modifier,
     animateEntrance: Boolean = true,
     announcePolitely: Boolean = false,
+    showCard: Boolean = true,
     action: (@Composable () -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
@@ -1014,9 +1016,14 @@ fun GohoStatusCard(
                 alpha = progress
                 translationY = GohoMotion.statusEnterTranslation.toPx() * (1f - progress)
             }
-            .clip(GohoShapes.statusCard)
-            .background(c.statusCard)
-            .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
+            .then(
+                if (showCard) {
+                    Modifier
+                        .clip(GohoShapes.statusCard)
+                        .background(c.statusCard)
+                        .border(GohoSpacing.hairline, c.statusCardRing, GohoShapes.statusCard)
+                } else Modifier
+            )
             .semantics(mergeDescendants = true) {
                 if (announcePolitely) liveRegion = LiveRegionMode.Polite
             }
