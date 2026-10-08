@@ -8,19 +8,29 @@ The [`deploy`](../../.github/workflows/deploy.yaml) workflow runs on every push 
 task, so a change to a program, a workspace package it uses, or this folder
 redeploys it, and nothing else does. A manual run deploys every program.
 
-For each affected program, [`scripts/deploy.sh`](./scripts/deploy.sh):
+Each program owns its build and deploy scripts, next to its code, the same way
+[opencode](https://github.com/sst/opencode) packages do. For goho-server:
 
-1. Builds `programs/<program>/Dockerfile` and pushes
-   `ghcr.io/adamaho/<program>:<commit>`.
-2. Connects to the server as `goho` with Tailscale SSH. The workflow has already
-   joined the tailnet as a temporary `tag:goho-ci` node, using GitHub's OIDC
-   token rather than a stored Tailscale key.
-3. Copies `infra/deployment/<program>/compose.yml` to `/opt/goho/<program>/` and
-   runs [`scripts/remote-deploy.sh`](./scripts/remote-deploy.sh) there, which pulls
-   the image, starts the stack, and fails the run if it does not become healthy.
+- `build` ([`scripts/build.ts`](../../programs/goho-server/scripts/build.ts))
+  builds the container image from
+  [`programs/goho-server/Dockerfile`](../../programs/goho-server/Dockerfile). The
+  image is the server's deployable artifact, so `pnpm build` builds it.
+- `deploy` ([`scripts/deploy.ts`](../../programs/goho-server/scripts/deploy.ts))
+  builds and pushes `ghcr.io/adamaho/goho-server:<commit>`, then connects to the
+  server as `goho` with Tailscale SSH. The workflow has already joined the
+  tailnet as a temporary `tag:goho-ci` node, using GitHub's OIDC token rather
+  than a stored Tailscale key. It copies the program's Compose file from this
+  package to `/opt/goho/goho-server/` and runs
+  [`remote-deploy.sh`](./remote-deploy.sh) there, which pulls the image, starts
+  the stack, and fails the run if it does not become healthy.
 
-Pull requests run the `docker:build` task for affected programs, so a broken
-Dockerfile fails before merge.
+This package holds what runs on the server: one Compose stack per program, such
+as [`goho-server/compose.yml`](./goho-server/compose.yml), and
+`remote-deploy.sh`. Programs depend on `@goho/infra-deployment` and read those
+files through its package exports.
+
+The pull request `build` job runs `pnpm build`, so a broken Dockerfile fails
+before merge.
 
 ## Adding a program
 
@@ -29,13 +39,11 @@ Dockerfile fails before merge.
 2. Add `infra/deployment/<program>/compose.yml`. The deploy sets `GOHO_IMAGE`,
    `GOHO_UID` and `GOHO_GID`. Put interpolated secrets in
    `/opt/goho/<program>/.env` on the server.
-3. In the program's `package.json`, add `@goho/infra-deployment` as a dev
-   dependency and these scripts:
-
-   ```json
-   "docker:build": "bash ../../infra/deployment/scripts/docker-build.sh <program>",
-   "deploy": "bash ../../infra/deployment/scripts/deploy.sh <program>"
-   ```
+3. Add `@goho/infra-deployment` as a dev dependency of the program, and
+   `build` and `deploy` scripts modeled on goho-server's. Give the program a
+   `turbo.json` that turns off caching for `build`, like
+   [goho-server's](../../programs/goho-server/turbo.json), since the image lives
+   in Docker rather than in Turborepo's cache.
 
 The workflow picks it up from there.
 

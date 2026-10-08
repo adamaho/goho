@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs on the Goho server as the deploy user: bash -s -- <program> <image> < remote-deploy.sh
+# Runs on the Goho server as the deploy user: ssh ... bash -s -- <program> <image> < remote-deploy.sh
+# Program deploy scripts send it over Tailscale SSH after copying the program's compose.yml.
 # Expects /opt/goho/<program>/compose.yml. Compose reads interpolation values,
 # such as passwords, from /opt/goho/<program>/.env.
 

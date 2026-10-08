@@ -2,5 +2,9 @@
   "name": "@goho/infra-deployment",
   "version": "0.0.0",
   "private": true,
-  "description": "Shared deployment scripts and per-program Compose stacks for Goho."
+  "description": "Per-program Compose stacks and the remote deploy step for the Goho server.",
+  "exports": {
+    "./remote-deploy.sh": "./remote-deploy.sh",
+    "./*/compose.yml": "./*/compose.yml"
+  }
 }

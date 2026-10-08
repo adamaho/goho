@@ -74,11 +74,6 @@
       "persistent": true,
       "dependsOn": ["transit", "db:migrate"]
     },
-    "docker:build": {
-      "cache": false,
-      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
-      "outputs": []
-    },
     "deploy": {
       "cache": false,
       "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY", "GOHO_DEPLOY_HOST"],

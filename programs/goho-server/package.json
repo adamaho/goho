@@ -20,8 +20,8 @@
     "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
     "db:seed": "node scripts/seed.ts",
     "test:integration": "vitest run --project integration",
-    "docker:build": "bash ../../infra/deployment/scripts/docker-build.sh goho-server",
-    "deploy": "bash ../../infra/deployment/scripts/deploy.sh goho-server"
+    "build": "node scripts/build.ts",
+    "deploy": "node scripts/deploy.ts"
   },
   "dependencies": {
     "@effect/ai-openai": "catalog:",
