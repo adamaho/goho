@@ -1,6 +1,6 @@
 // Goho UI primitives. Reference implementation from the design handoff; not compiled
 // against the project, so fix any API drift for the project's Compose version.
-// Bram status content follows the current screen specs; retry, buttons, and reduced-motion press retain PR #101 behavior.
+// Bram status content and delayed receipt-loading icons follow the current screen specs.
 package com.goho.ui.components // TODO: match the app's package
 
 import androidx.compose.animation.core.Animatable
@@ -76,6 +76,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
@@ -83,6 +84,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.LinearGradientShader
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
@@ -92,6 +95,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -170,6 +175,66 @@ fun rememberShimmerBrush(base: Color, highlight: Color): Brush {
             from = Offset(size.width * (x - 0.5f), 0f),
             to = Offset(size.width * (x + 0.5f), 0f),
             colors = listOf(base, highlight, base),
+        )
+    }
+}
+
+// ---------- Receipt loading ----------
+
+// Drive this helper from actual pending work; each attempt restarts the delay.
+// Initial loading uses description = "Loading receipts…" after 200ms, only before a list has loaded.
+// Its host centers it horizontally in the list's notice position below the header.
+// Retry uses the 18dp icon inside its disabled button; the outgoing recovery flag is not loading.
+@Composable
+internal fun rememberLoadingVisible(loading: Boolean): Boolean {
+    var visible by remember(loading) { mutableStateOf(false) }
+    LaunchedEffect(loading) {
+        if (loading) {
+            delay(GohoMotion.LOADING_DELAY_MILLIS)
+            visible = true
+        }
+    }
+    return loading && visible
+}
+
+@Composable
+fun GohoLoadingIcon(
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    color: Color = GohoTheme.colors.textSecondary,
+) {
+    val rotation =
+        if (rememberReducedMotion()) 0f
+        else {
+            val transition = rememberInfiniteTransition(label = "Loading")
+            val angle by transition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(tween(GohoMotion.LOADING_SPIN_MILLIS, easing = LinearEasing)),
+                label = "Loading rotation",
+            )
+            angle
+        }
+    Canvas(
+        modifier.size(GohoSpacing.loadingIcon)
+            .then(
+                if (description != null) Modifier.semantics {
+                    contentDescription = description
+                    progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+                    liveRegion = LiveRegionMode.Polite
+                } else Modifier
+            )
+            .rotate(rotation)
+    ) {
+        val stroke = GohoSpacing.iconStroke.toPx()
+        drawArc(
+            color = color,
+            startAngle = -90f,
+            sweepAngle = 270f,
+            useCenter = false,
+            topLeft = Offset(stroke / 2f, stroke / 2f),
+            size = Size(size.width - stroke, size.height - stroke),
+            style = Stroke(stroke, cap = StrokeCap.Round),
         )
     }
 }
@@ -268,11 +333,17 @@ fun GohoPrimaryButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     reserveSpaceFor: List<String> = emptyList(),
+    loading: Boolean = false, // Already delayed by rememberLoadingVisible; disable immediately at the caller.
 ) {
     val c = GohoTheme.colors
     GohoButtonBase(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().then(
+            if (loading) Modifier.semantics {
+                contentDescription = text
+                progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+            } else Modifier
+        ),
         enabled = enabled,
         minHeight = 52.dp,
         shape = GohoShapes.button,
@@ -292,7 +363,12 @@ fun GohoPrimaryButton(
                 Text(label, style = GohoTheme.type.button, textAlign = TextAlign.Center,
                     modifier = Modifier.clearAndSetSemantics {}.alpha(0f))
             }
-            Text(text, style = GohoTheme.type.button, color = c.onAccent, textAlign = TextAlign.Center)
+            Text(text, style = GohoTheme.type.button, color = c.onAccent, textAlign = TextAlign.Center,
+                modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier)
+            if (loading) GohoLoadingIcon(
+                modifier = Modifier.size(GohoSpacing.buttonIcon),
+                color = c.onAccent,
+            )
         }
     }
 }
@@ -989,8 +1065,10 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
 /** Current status content sits directly on the screen background. No receipts supplies receipt-holding Bram.
  * Empty Needs attention supplies calm thumbs-up Bram with "All good" and "Nothing needs your attention right now."
  * Each state uses its transparent illustration unchanged in both themes, with a 4dp gap before its title.
- * The Receipts header is text-only in every state. Load error omits illustration.
- * For retry, pass announcePolitely = true and reserve both button labels.
+ * Load error supplies gentle shrugging Bram with "A little hiccup" and "We couldn’t load your receipts. Let’s try again."
+ * The Receipts header is text-only in every state.
+ * For retry, pass announcePolitely = true and reserve both button labels. Disable immediately, keep "Try again"
+ * during the 200ms grace period, then use loading = true with accessible text "Trying again…" while pending.
  * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming status content.
  */
 @Composable

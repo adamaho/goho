@@ -99,7 +99,8 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - Detail list row: height 47, label left, value right.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
-- Status illustrations: no receipts and empty Needs attention use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes; load error has no illustration or reserved gap.
+- Status illustrations: no receipts, empty Needs attention and load error use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
+- Loading: `loadingIcon` = 24dp for initial receipt loading; retry reuses `buttonIcon` = 18dp. Both use `iconStroke` = 2dp.
 - Bottom: FAB sits 28dp above the navigation bar inset, 16dp from the right.
 
 ## Elevation and shadow
@@ -136,8 +137,9 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Status entrance:** 200ms fade and 6dp upward settle, once on appearance.
+- **Loading:** `LOADING_DELAY_MILLIS` = 200ms before showing an icon for actual initial receipt loading or retry. Cancel on completion/failure/disposal and restart for each attempt. `LOADING_SPIN_MILLIS` = 1000ms for one linear rotation. Do not show loading for already loaded background refreshes.
 - **Retry recovery:** 200ms crossfade of the error screen into the loaded state. Suppress the incoming status-content entrance so recovery animates only once.
-- **Reduced motion:** when the animator duration scale is 0, shimmer is static and entrance, recovery, and press transformations are disabled.
+- **Reduced motion:** when the animator duration scale is 0, shimmer and the loading arc are static and entrance, recovery, and press transformations are disabled. The loading visibility delay remains 200ms.
 
 ## Receipt header and timestamps
 

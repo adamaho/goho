@@ -17,6 +17,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Fill: flat `accent`; pressed `accentPressed`. Edge and shadow per the button treatment in `tokens.md`.
 - Content: optional 18dp icon, 8dp gap, label in `button` style, color `onAccent`.
 - Disabled: whole button at 40% alpha, no press, not clickable.
+- The receipts retry action can replace its label with an 18dp loading icon in `onAccent` after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative.
 
 ## GohoSecondaryButton
 
@@ -32,11 +33,17 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 - Full width inside the screen margin, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Content centered directly on the screen background. No enclosing card fill, border or rounded clipping in any list status state.
 - Use the shared status content for no receipts, needs attention and load error. Preserve the shared padding, spacing, entrance and centered placement; the Scan footer stays separate when present.
-- No receipts and empty Needs attention show an illustration (220×190dp), followed by a 4dp gap before the title. Load error omits both the illustration and this gap. Title is 20/26 SemiBold −0.02em `textPrimary`, followed by a 6dp gap before body text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
-- Illustration assets live in `assets/illustrations/`. No receipts uses `status-no-receipts.png`; empty Needs attention uses the calm thumbs-up `status-needs-attention.png`. Both PNGs are 1350×1165 RGBA, with each state using the same transparent asset in both themes. Preserve the artwork unchanged and render with `ContentScale.Fit` in the existing slot up to 220dp wide with a 220:190 aspect ratio. These two poses are the only production Bram artwork. The neutral stance and former header mark are design identity references only; dedicated artwork for other states is deferred until its feature is implemented. The older SVGs in `legacy/` are not sources for these Bram images.
+- No receipts, empty Needs attention and load error each show an illustration (220×190dp), followed by a 4dp gap before the title. Title is 20/26 SemiBold −0.02em `textPrimary`, followed by a 6dp gap before body text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
+- Illustration assets live in `assets/illustrations/`. No receipts uses `status-no-receipts.png`; empty Needs attention uses the calm thumbs-up `status-needs-attention.png`; load error uses the gentle shrug `status-load-error.png`. All three PNGs are 1350×1165 RGBA, with each state using the same transparent asset in both themes. Preserve the artwork unchanged and render with `ContentScale.Fit` in the existing slot up to 220dp wide with a 220:190 aspect ratio. These three poses are the only production Bram artwork. The neutral stance and former header mark are design identity references only; dedicated artwork for other states is deferred until its feature is implemented. The older SVGs in `legacy/` are not sources for these Bram images.
 - The illustration is decorative (`contentDescription = null`); the title is a heading and the title/body group carries the meaning. Only the load-error content is a polite live region.
 - Entrance: one 200ms fade with a 6dp upward settle; no looping character animation. Successful retry crossfades the whole error screen to the loaded state in 200ms without replaying the incoming status entrance. With reduced motion, render the final state immediately.
-- The retry button reserves space for both “Try again” and “Trying again…” at the current font scale. Hidden measurement labels have no semantics. Disable the button while retrying and preserve its bounds after failure.
+- The retry button reserves space for both “Try again” and “Trying again…” at the current font scale, including 2× text. Hidden measurement labels have no semantics. Disable immediately, retain “Try again” for 200ms, then replace it with a centered loading icon while the request is actually pending. Failure restores “Try again” in place. Keep actual loading separate from the disabled outgoing recovery screen.
+
+## GohoLoadingIcon (receipt loading and retry)
+
+- A 2dp stroked arc, 24dp in `textSecondary` for initial list loading and 18dp in `onAccent` inside the retry button. Rotate once every 1000ms; use a static arc with reduced motion.
+- Reveal only after 200ms of uninterrupted actual loading. Cancel on completion, failure or disposal and restart the delay for each attempt. Already loaded background refreshes stay quiet.
+- Initial loading exposes “Loading receipts…” as a polite live region with indeterminate progress. Retry exposes “Trying again…” and progress on the button; the nested icon is decorative.
 
 ## GohoSheet (floating bottom sheet)
 

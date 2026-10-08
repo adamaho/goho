@@ -112,7 +112,8 @@ fun ReceiptOverview(
     val listState = rememberLazyListState()
     LaunchedEffect(attentionOnly) { listState.scrollToItem(0) }
     val c = GohoTheme.colors
-    // Keep the outgoing error's header and card in place while a successful retry fades in.
+    val showLoading = rememberLoadingVisible(state.loading)
+    // Keep the outgoing error's header and content in place while a successful retry fades in.
     val recovery = updateTransition(state.error, label = "Receipt recovery")
     recovery.AnimatedContent(
         modifier = modifier.fillMaxSize().background(c.background).safeDrawingPadding(),
@@ -163,6 +164,7 @@ fun ReceiptOverview(
                                             if (state.error && !state.loading) onRetryClick()
                                         },
                                         isRetrying = state.loading || !state.error,
+                                        showProgress = state.error && showLoading,
                                     )
                                 attentionOnly ->
                                     NoNeedsAttentionState(animateEntrance = !recovery.currentState)
@@ -199,9 +201,17 @@ fun ReceiptOverview(
                         }
                         if (isOpeningScanner)
                             item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
-                        if (!state.hasLoaded)
+                        if (!state.hasLoaded && showLoading)
                             item("loading") {
-                                ListNotice(stringResource(R.string.receipts_loading))
+                                Box(
+                                    Modifier.fillMaxWidth()
+                                        .padding(vertical = GohoSpacing.contentGap),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    GohoLoadingIcon(
+                                        description = stringResource(R.string.receipts_loading)
+                                    )
+                                }
                             }
                         sections.forEach { section ->
                             item("section:${section.group}") {
