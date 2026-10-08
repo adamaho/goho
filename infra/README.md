@@ -20,9 +20,11 @@ programs should have its own infrastructure lifecycle.
 ## Adding a deployable program
 
 Keep its artifact definition, configuration and scripts under `programs/<name>`.
-Expose `build` and `deploy` in its `package.json`. Declare the task dependency in
-its `turbo.json` so deploy consumes the build output. Disable caching for side
-effects and declare any environment variables its tasks require. Programs using
+Expose `build` and `deploy` in its `package.json`. The root `turbo.json` runs
+`build` before every `deploy` and passes the deploy variables through. If the
+program's build has side effects outside its files, such as a Docker image, add
+an uncached `<package>#build` entry there, like goho-server's, with any
+environment variables it needs. Programs using
 the existing Docker/GHCR/Tailscale host can follow the server's implementation;
 a different platform also needs suitable CI credentials and setup.
 

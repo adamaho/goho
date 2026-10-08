@@ -13,7 +13,7 @@ currently provides Docker, GHCR and Tailscale access to one host.
   The remote script pulls the image and waits for the Compose services to be healthy.
 
 Use Turbo for deployment: calling the package's `deploy` script directly assumes
-its image is already built. Build and deploy caching is disabled in this program's
+its image is already built. Build and deploy caching is disabled in the root
 `turbo.json`, since Docker images and remote changes are outside Turbo's file cache.
 Buildx can reuse its local layer cache; this setup does not export a registry build cache.
 The PR build job builds the image without publishing or deploying it.

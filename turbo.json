@@ -74,8 +74,21 @@
       "persistent": true,
       "dependsOn": ["transit", "db:migrate"]
     },
-    "deploy": {
+    "@goho/goho-server#build": {
+      "dependsOn": ["^build"],
       "cache": false,
+      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
+      "outputs": []
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": [
+        "GITHUB_SHA",
+        "GOHO_IMAGE_REGISTRY",
+        "GOHO_DEPLOY_HOST",
+        "GOHO_DEPLOY_DOCKER_CONFIG"
+      ],
       "outputs": []
     },
     "test:unit": {
