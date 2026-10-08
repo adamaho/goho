@@ -27,6 +27,13 @@ cd "$android_root"
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.largeTextAttention' \
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.retryFailureAndSuccess' \
   --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.deleteLastFailedOverall' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.initialLoadingLight' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.initialLoadingDark' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.initialLoadingFastSuccessDoesNotFlash' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.backgroundRefreshStaysQuiet' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.retryFastSuccessDoesNotFlashDuringRecovery' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.largeTextRetryProgressKeepsBounds' \
+  --tests 'com.adamaho.goho.evidence.ReceiptEvidenceTest.reducedMotionProgressStaysStatic' \
   -I "$tool_root/harness/init.gradle" \
   -Dgoho.evidence.root="$tool_root" \
   -Dgoho.evidence.output="$output_root" \

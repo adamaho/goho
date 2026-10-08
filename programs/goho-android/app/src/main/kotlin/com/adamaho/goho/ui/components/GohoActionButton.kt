@@ -11,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
@@ -26,8 +25,10 @@ fun GohoActionButton(
     icon: (@Composable () -> Unit)? = null,
     destructive: Boolean = false,
     reserveSpaceFor: List<String> = emptyList(),
+    loading: Boolean = false,
 ) {
     val c = GohoTheme.colors
+    val contentColor = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
@@ -43,6 +44,14 @@ fun GohoActionButton(
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
+            )
+            .then(
+                if (loading)
+                    Modifier.semantics {
+                        contentDescription = text
+                        progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate
+                    }
+                else Modifier
             )
             .heightIn(min = GohoSpacing.buttonHeight)
             .padding(horizontal = GohoSpacing.buttonHorizontal, vertical = GohoSpacing.contentGap),
@@ -65,9 +74,15 @@ fun GohoActionButton(
             Text(
                 text,
                 style = style,
-                color = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary,
+                color = contentColor,
                 textAlign = TextAlign.Center,
+                modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier,
             )
+            if (loading)
+                GohoLoadingIcon(
+                    modifier = Modifier.size(GohoSpacing.buttonIcon),
+                    color = contentColor,
+                )
         }
     }
 }

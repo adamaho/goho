@@ -34,7 +34,7 @@ fun ReceiptsConnectionErrorPreview() = StatePreview { ReceiptsConnectionErrorSta
 @Preview(name = "Retrying", widthDp = 412)
 @Composable
 fun ReceiptsRetryingPreview() = StatePreview {
-    ReceiptsConnectionErrorState(onRetry = {}, isRetrying = true)
+    ReceiptsConnectionErrorState(onRetry = {}, isRetrying = true, showProgress = true)
 }
 
 @Preview(name = "All good – light", widthDp = 412)

@@ -17,16 +17,23 @@
     "largeTextError",
     "largeTextAttention",
     "retryFailureAndSuccess",
-    "deleteLastFailedOverall"
+    "deleteLastFailedOverall",
+    "initialLoadingLight",
+    "initialLoadingDark",
+    "initialLoadingFastSuccessDoesNotFlash",
+    "backgroundRefreshStaysQuiet",
+    "retryFastSuccessDoesNotFlashDuringRecovery",
+    "largeTextRetryProgressKeepsBounds",
+    "reducedMotionProgressStaysStatic"
   ],
-  "scope": "The recovered Kotlin harness removes the obsolete output-directory phase guard in deleteLast and updates attention/error-state copy assertions to the approved All good and A little hiccup titles. The Gradle init script retains the documented portability changes. Thirteen existing test methods capture the implemented no-receipts, attention, and load-error screens and retry/deletion behavior. All three status states use their approved Bram artwork.",
+  "scope": "The recovered Kotlin harness removes the obsolete output-directory phase guard in deleteLast, updates approved status copy, and adds focused manual-clock loading checks. Twenty test methods cover the implemented status screens, delayed initial/retry progress, fast-request cancellation through recovery, per-attempt reset, quiet background refresh, accessible/stable retry buttons at normal and 2× font sizes, reduced-motion static progress, and deletion. All three status states use their approved Bram artwork.",
   "originalHarness": {
     "harness/init.gradle": "3fefa58416f01e0c5d6dd6bf3091afab305f0726d5410f5268fa59d2eb61206a",
     "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "f2c79851a3164d4afe231358994e24f3f6fc532d393533f31963a5ef4d376aa2"
   },
   "currentHarness": {
     "harness/init.gradle": "d8a07725786164a395e0542a4a058ada5821f736da19dd7a29730cad376dc25d",
-    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "2ca3b04de07542e18b0e1ff2638825556b5b09f06cc46e0ed523e5de58c19237"
+    "harness/src/com/adamaho/goho/evidence/ReceiptEvidenceTest.kt": "b38dac975f14c1bfe0bada172b433d8ffbf3f6a5b01744b3a878c06ca6683512"
   },
   "portabilityChanges": [
     "The Gradle init script requires the tool directory supplied by render.sh instead of a machine-specific fallback.",
@@ -42,6 +49,7 @@
   "harnessChanges": [
     "Removed the output.name == \"after\" assumption from the existing deleteLast helper so the deletion capture runs with the default build/bram-captures output directory.",
     "Updated existing attention and deletion title assertions to \"All good\" and the large-text attention body assertion to \"Nothing needs your attention right now.\"; test interactions and behavior coverage remain unchanged.",
-    "Updated the existing error-title references in retry and reduced-motion checks to \"A little hiccup\"; retry interactions, loading/failure/recovery assertions, and the 13 selected methods remain unchanged."
+    "Updated the existing error-title references in retry and reduced-motion checks to \"A little hiccup\" without changing retry interactions or loading/failure/recovery assertions at that stage.",
+    "Added seven focused loading cases and extended the existing retry failure/success case. Timing uses the manual Compose clock: 199ms grace anchored to pending composition, 200ms deadline, one initial-content frame or up to three nested parent/child display frames, per-frame cancellation checks through recovery using an observable unmerged subtree, and static-pixel comparison for reduced motion. Existing status, deletion, and large-text coverage is preserved."
   ]
 }

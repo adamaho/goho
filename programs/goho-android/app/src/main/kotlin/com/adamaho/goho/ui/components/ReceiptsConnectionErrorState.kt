@@ -11,6 +11,7 @@ fun ReceiptsConnectionErrorState(
     modifier: Modifier = Modifier,
     isRetrying: Boolean = false,
     animateEntrance: Boolean = true,
+    showProgress: Boolean = false,
 ) {
     val retry = stringResource(R.string.receipts_retry)
     val retrying = stringResource(R.string.receipts_retrying)
@@ -23,9 +24,10 @@ fun ReceiptsConnectionErrorState(
         announcePolitely = true,
     ) {
         GohoActionButton(
-            text = if (isRetrying) retrying else retry,
+            text = if (showProgress) retrying else retry,
             onClick = onRetry,
             enabled = !isRetrying,
+            loading = showProgress,
             reserveSpaceFor = listOf(retry, retrying),
         )
     }

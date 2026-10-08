@@ -145,7 +145,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 - Cancel: the sheet slides down; nothing else changes.
 - With "Remove animations" on: no stagger or springs; the sheet and its contents crossfade, and the row disappears without folding.
 
-## 6. Empty and error states
+## 6. Loading, empty and error states
 
 Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts, empty Needs attention and load error each share one transparent Bram asset across both themes. Render each unchanged in the shared 220×190dp slot, with a 4dp gap before the title. The Receipts header is text-only in every state. Load error includes the retry action. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
 
@@ -153,8 +153,14 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 - Center the status content in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
 - Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
-- During retry, keep the error header and status content mounted. Reserve button space for both labels at the current font scale; show disabled “Trying again…” without changing bounds. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
-- With Remove animations enabled, entrance, recovery, and press are static. Keep existing copy unchanged.
+- During retry, keep the error header and status content mounted. Disable the button immediately and keep “Try again” visible for the first 200ms. If the request is still pending, replace the label with a centered 18dp loading icon in `onAccent`, retaining “Trying again…” and indeterminate progress for accessibility. Reserve button space for both labels at the current font scale, including 2× text. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
+- Loading visibility follows the actual pending request, independently of the outgoing recovery screen’s disabled button. Cancel the delay/icon on completion, failure or disposal; every attempt starts a fresh 200ms delay.
+- With Remove animations enabled, entrance, recovery, and press are static. Loading uses a static arc after the same 200ms delay. Keep existing copy unchanged.
+
+**Initial receipts loading**
+
+- While no list has loaded and a request is pending without an error, show no loading UI for 200ms. After that, show a horizontally centered 24dp stroked loading icon in `textSecondary` below the header, in the list’s notice position with `contentGap` vertical padding. Expose “Loading receipts…” as a polite live region with indeterminate progress.
+- Do not show the icon for requests that finish within 200ms or for background refreshes of an already loaded list.
 
 **Needs attention, nothing in it**
 
@@ -172,5 +178,5 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 - Header shows only the “Receipts” title. No filter or Scan button.
 - Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
-- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled, with stable bounds.
+- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
 - Announce the status content as a polite live region when it appears.

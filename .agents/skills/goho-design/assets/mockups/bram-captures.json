@@ -52,7 +52,7 @@
     },
     "retry-running.png": {
       "source": "retry-running.png",
-      "sha256": "64e924d717c2ccc4b87b6a5b0567c184c332825abfedde6819d015c48e256663",
+      "sha256": "107625c6f4ce798411a099ca0f9c5c486c66bbf0ad27bff02b003a602030803b",
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-08",
       "evidenceCommit": null,
@@ -119,6 +119,30 @@
       "sourceDirectory": "programs/goho-android/build/bram-captures/",
       "capturedAt": "2026-10-07",
       "sha256": "39fb5c47e4e37a3545ffdcb5f6794a2f0b5186a1a4a18769e779684a96fb3dfa",
+      "evidenceCommit": null,
+      "provenance": "programs/goho-android/tools/bram-captures/harness-provenance.json"
+    },
+    "initial-loading-light.png": {
+      "source": "initial-loading-light.png",
+      "sourceDirectory": "programs/goho-android/build/bram-captures/",
+      "capturedAt": "2026-10-08",
+      "sha256": "604827937ec6d931c48cf7354e08f7bd395af483b9aae1df4f675229705272f2",
+      "evidenceCommit": null,
+      "provenance": "programs/goho-android/tools/bram-captures/harness-provenance.json"
+    },
+    "initial-loading-dark.png": {
+      "source": "initial-loading-dark.png",
+      "sourceDirectory": "programs/goho-android/build/bram-captures/",
+      "capturedAt": "2026-10-08",
+      "sha256": "2c5aa879374d8fecb174aaab7b7830ed88674f5b7142a4f6c8112769f0c50e86",
+      "evidenceCommit": null,
+      "provenance": "programs/goho-android/tools/bram-captures/harness-provenance.json"
+    },
+    "large-font-retry-running.png": {
+      "source": "large-font-retry-running.png",
+      "sourceDirectory": "programs/goho-android/build/bram-captures/",
+      "capturedAt": "2026-10-08",
+      "sha256": "19bc4399a783ca12bc6c4862223dc74dcf342c9e5eadc1e7bf7be010498ad5a1",
       "evidenceCommit": null,
       "provenance": "programs/goho-android/tools/bram-captures/harness-provenance.json"
     }

@@ -279,6 +279,7 @@ object GohoSpacing {
     val buttonHeight = 52.dp
     val buttonHorizontal = 20.dp
     val buttonGap = 10.dp
+    val loadingIcon = 24.dp
     val buttonIcon = 18.dp
     val buttonIconGap = 8.dp
     val buttonRingInset = 1.5.dp
@@ -358,6 +359,8 @@ object GohoSpacing {
 // ---------- Motion ----------
 
 object GohoMotion {
+    const val LOADING_DELAY_MILLIS = 200L
+    const val LOADING_SPIN_MILLIS = 1000
     const val STATUS_ENTER_MILLIS = 200
     const val STATUS_CROSSFADE_MILLIS = 200
     val statusEnterTranslation = 6.dp

@@ -33,6 +33,7 @@ object GohoSpacing {
     val buttonHeight = 52.dp
     val buttonHorizontal = 20.dp
     val buttonGap = 10.dp
+    val loadingIcon = 24.dp
     val buttonIcon = 18.dp
     val buttonIconGap = 8.dp
     val buttonRingInset = 1.5.dp

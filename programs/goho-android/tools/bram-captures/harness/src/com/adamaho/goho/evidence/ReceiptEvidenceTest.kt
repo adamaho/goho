@@ -3,6 +3,7 @@ package com.adamaho.goho.evidence
 import android.provider.Settings
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -149,24 +150,152 @@ class ReceiptEvidenceTest {
         button.performTouchInput { up() }
         compose.mainClock.autoAdvance = true
     }
+    private val progressMatcher = hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)
+    private fun assertNoProgress() {
+        compose.onAllNodes(progressMatcher, useUnmergedTree = true).assertCountEquals(0)
+    }
+    private fun advanceExact(milliseconds: Long) {
+        compose.mainClock.advanceTimeBy(milliseconds, ignoreFrameDuration = true)
+        compose.waitForIdle()
+    }
+    private fun advanceFrame() {
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+    }
+    private fun changeState(next: ReceiptOverviewState) {
+        compose.runOnIdle { state.value = next }
+        // Parent and AnimatedContent children each need a rendering frame.
+        advanceFrame()
+        advanceFrame()
+    }
+    private fun beginRetry(): Long {
+        compose.onNodeWithText("Try again").performClick()
+        compose.runOnIdle { assertTrue("Retry dispatch must set loading immediately", state.value.loading) }
+        advanceFrame()
+        val pendingComposition = compose.mainClock.currentTime
+        advanceFrame()
+        compose.onNodeWithText("Try again").assertIsNotEnabled()
+        assertNoProgress()
+        return pendingComposition
+    }
+    private fun crossLoadingDeadline(startedAt: Long = compose.mainClock.currentTime, displayFrames: Int = 1) {
+        advanceExact(startedAt + 199 - compose.mainClock.currentTime)
+        assertNoProgress()
+        advanceExact(1)
+        // Initial content needs one frame; AnimatedContent may need parent/child frames too.
+        repeat(displayFrames) { advanceFrame() }
+        compose.onNode(progressMatcher).assertIsDisplayed()
+    }
+    private fun initialLoading(name: String) {
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(loading = true), reduced = false)
+        assertNoProgress()
+        crossLoadingDeadline()
+        compose.onNode(progressMatcher).assertContentDescriptionEquals("Loading receipts…")
+        capture(name)
+    }
+    @Test fun initialLoadingLight() = initialLoading("initial-loading-light")
+    @Test @Config(qualifiers = "+night") fun initialLoadingDark() = initialLoading("initial-loading-dark")
+    @Test fun initialLoadingFastSuccessDoesNotFlash() {
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(loading = true), reduced = false)
+        advanceExact(100)
+        assertNoProgress()
+        changeState(ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true))
+        repeat(20) { advanceFrame(); assertNoProgress() }
+        compose.onNodeWithText("Family groceries").assertIsDisplayed()
+    }
+    @Test fun backgroundRefreshStaysQuiet() {
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true), reduced = false)
+        changeState(state.value.copy(loading = true))
+        advanceExact(500)
+        advanceFrame()
+        assertNoProgress()
+        compose.onNodeWithText("Family groceries").assertIsDisplayed()
+        changeState(state.value.copy(loading = false))
+        assertNoProgress()
+    }
     @Test fun retryFailureAndSuccess() {
+        compose.mainClock.autoAdvance = false
         render(ReceiptOverviewState(error = true), reduced = false)
         val title = "A little hiccup"
-        compose.mainClock.advanceTimeBy(1000)
-        val before = compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithText("Try again").performClick()
-        compose.onNodeWithText("Trying again…").assertIsNotEnabled()
-        assertEquals(before, compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot)
+        advanceExact(1000)
+        val beforeTitle = compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot
+        val beforeButton = compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot
+        val startedAt = beginRetry()
+        crossLoadingDeadline(startedAt, displayFrames = 3)
+        val progress = compose.onNode(progressMatcher)
+        progress.assertContentDescriptionEquals("Trying again…").assertIsNotEnabled()
+        assertEquals(beforeTitle, compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot)
+        assertEquals(beforeButton, progress.fetchSemanticsNode().boundsInRoot)
         capture("retry-running")
-        compose.runOnIdle { state.value = state.value.copy(loading = false) }
-        compose.mainClock.advanceTimeBy(1000)
-        assertEquals(before, compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot)
+        changeState(state.value.copy(loading = false))
+        assertNoProgress()
+        compose.onNodeWithText("Try again").assertIsEnabled()
+        assertEquals(beforeTitle, compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot)
+        assertEquals(beforeButton, compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot)
         capture("retry-failed")
-        compose.onNodeWithText("Try again").performClick()
-        compose.runOnIdle { state.value = ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true) }
-        compose.mainClock.advanceTimeBy(1000)
+        val nextAttempt = beginRetry()
+        // A new attempt receives its own full grace period after the previous failure.
+        advanceExact(nextAttempt + 199 - compose.mainClock.currentTime)
+        assertNoProgress()
+        changeState(ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true))
+        repeat(20) { advanceFrame(); assertNoProgress() }
         compose.onNodeWithText("Family groceries").assertIsDisplayed()
         compose.onNodeWithText(title).assertDoesNotExist()
         capture("retry-succeeded")
+    }
+    @Test fun retryFastSuccessDoesNotFlashDuringRecovery() {
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(error = true), reduced = false)
+        advanceExact(1000)
+        beginRetry()
+        advanceExact(100)
+        assertNoProgress()
+        changeState(ReceiptOverviewState(receipts = listOf(saved), hasLoaded = true))
+        // Confirm the sensor can inspect the outgoing subtree during the crossfade.
+        compose.onNodeWithText("A little hiccup", useUnmergedTree = true).assertExists()
+        repeat(20) { advanceFrame(); assertNoProgress() }
+        compose.onNodeWithText("Family groceries").assertIsDisplayed()
+        compose.onNodeWithText("A little hiccup", useUnmergedTree = true).assertDoesNotExist()
+    }
+    @Test @Config(qualifiers = "w360dp-h640dp-xhdpi") fun largeTextRetryProgressKeepsBounds() {
+        RuntimeEnvironment.setFontScale(2f)
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(error = true), reduced = false)
+        advanceExact(1000)
+        compose.onNodeWithText("Try again").performScrollTo().assertIsDisplayed()
+        val buttonBounds = compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot
+        val titleBounds = compose.onNodeWithText("A little hiccup").fetchSemanticsNode().boundsInRoot
+        val startedAt = beginRetry()
+        assertEquals(buttonBounds, compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot)
+        crossLoadingDeadline(startedAt, displayFrames = 3)
+        val progress = compose.onNode(progressMatcher)
+        progress.assertContentDescriptionEquals("Trying again…").assertIsNotEnabled().assertIsDisplayed()
+        assertEquals(buttonBounds, progress.fetchSemanticsNode().boundsInRoot)
+        assertEquals(titleBounds, compose.onNodeWithText("A little hiccup").fetchSemanticsNode().boundsInRoot)
+        capture("large-font-retry-running")
+        changeState(state.value.copy(loading = false))
+        assertNoProgress()
+        compose.onNodeWithText("Try again").assertIsEnabled()
+        assertEquals(buttonBounds, compose.onNodeWithText("Try again").fetchSemanticsNode().boundsInRoot)
+    }
+    @Test fun reducedMotionProgressStaysStatic() {
+        compose.mainClock.autoAdvance = false
+        render(ReceiptOverviewState(error = true), reduced = true)
+        val startedAt = beginRetry()
+        crossLoadingDeadline(startedAt, displayFrames = 3)
+        val initial = File.createTempFile("reduced-progress-before-", ".png", output)
+        val later = File.createTempFile("reduced-progress-after-", ".png", output)
+        try {
+            compose.onRoot().captureRoboImage(initial.absolutePath)
+            advanceExact(512)
+            compose.onRoot().captureRoboImage(later.absolutePath)
+            assertTrue("Reduced-motion loading icon must remain static", initial.readBytes().contentEquals(later.readBytes()))
+        } finally {
+            initial.delete()
+            later.delete()
+        }
     }
 }

@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
+    const val LOADING_DELAY_MILLIS = 200L
+    const val LOADING_SPIN_MILLIS = 1000
     const val STATUS_ENTER_MILLIS = 200
     const val STATUS_CROSSFADE_MILLIS = 200
     val statusEnterTranslation = 6.dp
