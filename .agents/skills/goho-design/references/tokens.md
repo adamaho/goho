@@ -35,11 +35,11 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `dangerPressed`                              | `#B01E22`             | `#A21A1B`                | Destructive button fill while pressed                      |
 | `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`                | Label and icon on the destructive button                   |
 | `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C`    | Delete row icon and label, deletion error text             |
-| `sheet`                                      | `#201E1B`             | `#FFFFFF`                | Bottom sheet surface                                       |
-| `grabber`                                    | `#3F3D39`             | `#D9D6D1`                | Sheet drag handle                                          |
-| `scrim`                                      | black 55%             | `#1D1A16` 38%            | Behind sheets                                              |
+| `sheet`                                      | `#1F1E2A`             | `#FFFFFF`                | Bottom sheet surface                                       |
+| `grabber`                                    | `#3A3948`             | `#D9D6E2`                | Sheet drag handle                                          |
+| `scrim`                                      | black 55%             | `#26233A` 38%            | Behind sheets                                              |
 
-The accent is lavender in both themes; attention stays orange and destructive actions stay red. Photo wells, sheets, and scrims retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
+The accent is lavender in both themes; attention stays orange and destructive actions stay red. Bottom sheets use the same violet neutrals as other surfaces in every menu, confirmation, deleting and error state. Photo wells retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
 
 Contrast measured from the opaque sRGB token pairs (dark / light):
 
@@ -116,7 +116,7 @@ Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highl
 | Danger, light           | `#9A1A1B` / white 14% | 0 1 2 at 16% + 0 10 24 (−8) at 32%, `#6E0F0F`        |
 | Danger, dark            | `#A21F22` / white 16% | As primary dark                                      |
 | Secondary, light        | `#26233A` 6% / none   | 0 1 2 at 5% + 0 10 24 (−10) at 18%, `#26233A`        |
-| Secondary, dark         | white 8% / none       | 0 1 2 at 40% + 0 10 24 (−10) at 60%, black           |
+| Secondary, dark         | white 8% / none       | 0 1 2 at 12% + 0 10 24 (−10) at 20%, black           |
 
 Pressed: the fill steps to its pressed color, the wide shadow drops away (keep the near shadow), plus the Goho press (97% scale, 1dp down). With reduced motion, press progress stays zero.
 

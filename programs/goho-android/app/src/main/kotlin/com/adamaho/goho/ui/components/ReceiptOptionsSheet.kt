@@ -242,14 +242,14 @@ internal fun ReceiptOptionsSheet(
                                 }
                             },
                             enabled = !deleting,
-                            destructive = true,
+                            variant = GohoButtonVariant.Destructive,
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         )
                         Spacer(Modifier.height(GohoSpacing.buttonGap))
                         GohoActionButton(
                             stringResource(R.string.receipt_cancel),
                             ::dismiss,
-                            primary = false,
+                            variant = GohoButtonVariant.Secondary,
                             enabled = !deleting,
                             modifier = Modifier.focusRequester(focus),
                         )

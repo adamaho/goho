@@ -325,17 +325,27 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
     }
 }
 
+enum class GohoButtonVariant { Primary, Secondary, Destructive }
+
 @Composable
-fun GohoPrimaryButton(
+fun GohoActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    variant: GohoButtonVariant = GohoButtonVariant.Primary,
     enabled: Boolean = true,
+    icon: (@Composable () -> Unit)? = null,
     reserveSpaceFor: List<String> = emptyList(),
     loading: Boolean = false, // Already delayed by rememberLoadingVisible; disable immediately at the caller.
 ) {
     val c = GohoTheme.colors
+    val secondary = variant == GohoButtonVariant.Secondary
+    val contentColor = when (variant) {
+        GohoButtonVariant.Primary -> c.onAccent
+        GohoButtonVariant.Secondary -> c.textPrimary
+        GohoButtonVariant.Destructive -> c.onDanger
+    }
+    val style = if (secondary) GohoTheme.type.buttonSecondary else GohoTheme.type.button
     GohoButtonBase(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().then(
@@ -345,91 +355,47 @@ fun GohoPrimaryButton(
             } else Modifier
         ),
         enabled = enabled,
-        minHeight = 52.dp,
+        minHeight = GohoSpacing.buttonHeight,
         shape = GohoShapes.button,
-        shadowColor = c.accentShadow,
-        nearShadowAlpha = c.buttonShadowAlpha,
-        wideShadowAlpha = c.buttonWideShadowAlpha,
-        wideShadowSpread = (-8).dp,
-        fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
-        ring = c.accentRing,
-        innerRing = c.buttonInnerRing,
+        shadowColor = when (variant) {
+            GohoButtonVariant.Primary -> c.accentShadow
+            GohoButtonVariant.Secondary -> c.shadow
+            GohoButtonVariant.Destructive -> c.dangerShadow
+        },
+        nearShadowAlpha = if (secondary) c.secondaryShadowAlpha else c.buttonShadowAlpha,
+        wideShadowAlpha = if (secondary) c.secondaryWideShadowAlpha else c.buttonWideShadowAlpha,
+        wideShadowSpread = if (secondary) GohoSpacing.secondaryWideShadowSpread else GohoSpacing.buttonWideShadowSpread,
+        fill = { p -> SolidColor(when (variant) {
+            GohoButtonVariant.Primary -> lerpColor(c.accent, c.accentPressed, p)
+            GohoButtonVariant.Secondary -> lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)
+            GohoButtonVariant.Destructive -> lerpColor(c.danger, c.dangerPressed, p)
+        }) },
+        ring = when (variant) {
+            GohoButtonVariant.Primary -> c.accentRing
+            GohoButtonVariant.Secondary -> c.secondaryRing
+            GohoButtonVariant.Destructive -> c.dangerRing
+        },
+        innerRing = when (variant) {
+            GohoButtonVariant.Primary -> c.buttonInnerRing
+            GohoButtonVariant.Secondary -> Color.Transparent
+            GohoButtonVariant.Destructive -> c.dangerInnerRing
+        },
         cornerRadius = 20.dp,
-        contentPadding = PaddingValues(horizontal = 20.dp),
+        contentPadding = PaddingValues(horizontal = GohoSpacing.buttonHorizontal),
     ) {
-        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onAccent)
+        icon?.invoke()
         Box(contentAlignment = Alignment.Center) {
             reserveSpaceFor.forEach { label ->
-                Text(label, style = GohoTheme.type.button, textAlign = TextAlign.Center,
+                Text(label, style = style, textAlign = TextAlign.Center,
                     modifier = Modifier.clearAndSetSemantics {}.alpha(0f))
             }
-            Text(text, style = GohoTheme.type.button, color = c.onAccent, textAlign = TextAlign.Center,
+            Text(text, style = style, color = contentColor, textAlign = TextAlign.Center,
                 modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier)
             if (loading) GohoLoadingIcon(
                 modifier = Modifier.size(GohoSpacing.buttonIcon),
-                color = c.onAccent,
+                color = contentColor,
             )
         }
-    }
-}
-
-@Composable
-fun GohoSecondaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    enabled: Boolean = true,
-) {
-    val c = GohoTheme.colors
-    GohoButtonBase(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        minHeight = 52.dp,
-        shape = GohoShapes.button,
-        shadowColor = c.shadow,
-        nearShadowAlpha = c.secondaryShadowAlpha,
-        wideShadowAlpha = c.secondaryWideShadowAlpha,
-        wideShadowSpread = (-10).dp,
-        fill = { p -> SolidColor(lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)) },
-        ring = if (c.isDark) Color.White.copy(alpha = 0.08f) else c.shadow.copy(alpha = 0.06f),
-        innerRing = Color.Transparent,
-        cornerRadius = 20.dp,
-        contentPadding = PaddingValues(horizontal = 20.dp),
-    ) {
-        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.textPrimary)
-        Text(text, style = GohoTheme.type.buttonSecondary, color = c.textPrimary)
-    }
-}
-
-@Composable
-fun GohoDangerButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    enabled: Boolean = true,
-) {
-    val c = GohoTheme.colors
-    GohoButtonBase(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        minHeight = 52.dp,
-        shape = GohoShapes.button,
-        shadowColor = c.dangerShadow,
-        nearShadowAlpha = c.buttonShadowAlpha,
-        wideShadowAlpha = c.buttonWideShadowAlpha,
-        wideShadowSpread = (-8).dp,
-        fill = { p -> SolidColor(lerpColor(c.danger, c.dangerPressed, p)) },
-        ring = c.dangerRing,
-        innerRing = Color.White.copy(alpha = if (c.isDark) 0.16f else 0.14f),
-        cornerRadius = 20.dp,
-        contentPadding = PaddingValues(horizontal = 20.dp),
-    ) {
-        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = c.onDanger)
-        Text(text, style = GohoTheme.type.button, color = c.onDanger)
     }
 }
 

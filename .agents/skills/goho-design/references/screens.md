@@ -106,8 +106,8 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 
 **Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
 
-- GohoPrimaryButton "Upload receipt" with an upload icon. Keeps its current behavior.
-- GohoSecondaryButton "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
+- GohoActionButton (`Primary`) "Upload receipt" with an upload icon. Keeps its current behavior.
+- GohoActionButton (`Secondary`) "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
 
 While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
 
@@ -129,7 +129,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 **Confirmation state** (same sheet; never a second sheet)
 
-- 18dp below the header, with 20dp side padding: GohoDangerButton "Delete receipt" (no icon), then GohoSecondaryButton "Cancel", 10dp apart, 20dp bottom padding. Omit the confirmation heading and description, including where supplied mockups show them.
+- 18dp below the header, with 20dp side padding: GohoActionButton (`Destructive`) "Delete receipt" (no icon), then GohoActionButton (`Secondary`) "Cancel", 10dp apart, 20dp bottom padding. Omit the confirmation heading and description, including where supplied mockups show them.
 - Announce the pane as "Delete receipt"; keyboard focus moves to Cancel when confirmation opens.
 
 **Behavior**
@@ -178,5 +178,5 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 - Header shows only the “Receipts” title. No filter or Scan button.
 - Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
-- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
+- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoActionButton (`Primary`) "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
 - Announce the status content as a polite live region when it appears.

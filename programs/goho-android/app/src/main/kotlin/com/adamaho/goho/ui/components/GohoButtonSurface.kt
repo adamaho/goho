@@ -23,34 +23,34 @@ internal fun Modifier.gohoButtonSurface(
     colors: GohoColors,
     shape: RoundedCornerShape,
     progress: Float,
-    primary: Boolean = true,
-    destructive: Boolean = false,
+    variant: GohoButtonVariant = GohoButtonVariant.Primary,
 ): Modifier {
     val p = progress.coerceIn(0f, 1f)
-    val filled = primary || destructive
+    val filled = variant != GohoButtonVariant.Secondary
     val fill =
-        when {
-            destructive -> lerp(colors.danger, colors.dangerPressed, p)
-            primary -> lerp(colors.accent, colors.accentPressed, p)
-            else -> lerp(colors.buttonSecondary, colors.buttonSecondaryPressed, p)
+        when (variant) {
+            GohoButtonVariant.Destructive -> lerp(colors.danger, colors.dangerPressed, p)
+            GohoButtonVariant.Primary -> lerp(colors.accent, colors.accentPressed, p)
+            GohoButtonVariant.Secondary ->
+                lerp(colors.buttonSecondary, colors.buttonSecondaryPressed, p)
         }
     val ring =
-        when {
-            destructive -> colors.dangerRing
-            primary -> colors.accentRing
-            else -> colors.secondaryRing
+        when (variant) {
+            GohoButtonVariant.Destructive -> colors.dangerRing
+            GohoButtonVariant.Primary -> colors.accentRing
+            GohoButtonVariant.Secondary -> colors.secondaryRing
         }
     val innerRing =
-        when {
-            destructive -> colors.dangerInnerRing
-            primary -> colors.buttonInnerRing
-            else -> Color.Transparent
+        when (variant) {
+            GohoButtonVariant.Destructive -> colors.dangerInnerRing
+            GohoButtonVariant.Primary -> colors.buttonInnerRing
+            GohoButtonVariant.Secondary -> Color.Transparent
         }
     val shadowColor =
-        when {
-            destructive -> colors.dangerShadow
-            primary -> colors.accentShadow
-            else -> colors.shadow
+        when (variant) {
+            GohoButtonVariant.Destructive -> colors.dangerShadow
+            GohoButtonVariant.Primary -> colors.accentShadow
+            GohoButtonVariant.Secondary -> colors.shadow
         }
     val nearAlpha = if (filled) colors.buttonShadowAlpha else colors.secondaryShadowAlpha
     val wideAlpha = if (filled) colors.buttonWideShadowAlpha else colors.secondaryWideShadowAlpha

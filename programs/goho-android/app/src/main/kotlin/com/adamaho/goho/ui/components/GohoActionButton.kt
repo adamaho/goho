@@ -15,20 +15,30 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
+enum class GohoButtonVariant {
+    Primary,
+    Secondary,
+    Destructive,
+}
+
 @Composable
 fun GohoActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    primary: Boolean = true,
+    variant: GohoButtonVariant = GohoButtonVariant.Primary,
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
-    destructive: Boolean = false,
     reserveSpaceFor: List<String> = emptyList(),
     loading: Boolean = false,
 ) {
     val c = GohoTheme.colors
-    val contentColor = if (destructive) c.onDanger else if (primary) c.onAccent else c.textPrimary
+    val contentColor =
+        when (variant) {
+            GohoButtonVariant.Primary -> c.onAccent
+            GohoButtonVariant.Secondary -> c.textPrimary
+            GohoButtonVariant.Destructive -> c.onDanger
+        }
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
@@ -37,7 +47,7 @@ fun GohoActionButton(
             .fillMaxWidth()
             .gohoPress { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .gohoButtonSurface(c, GohoShapes.button, p, primary, destructive)
+            .gohoButtonSurface(c, GohoShapes.button, p, variant)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -61,7 +71,12 @@ fun GohoActionButton(
     ) {
         icon?.invoke()
         Box(contentAlignment = Alignment.Center) {
-            val style = if (primary) GohoTheme.type.button else GohoTheme.type.buttonSecondary
+            val style =
+                when (variant) {
+                    GohoButtonVariant.Primary,
+                    GohoButtonVariant.Destructive -> GohoTheme.type.button
+                    GohoButtonVariant.Secondary -> GohoTheme.type.buttonSecondary
+                }
             // Measure every label in the same constraints so asynchronous actions never resize.
             reserveSpaceFor.forEach { label ->
                 Text(

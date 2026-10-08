@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.GohoActionButton
+import com.adamaho.goho.ui.components.GohoButtonVariant
 import com.adamaho.goho.ui.components.UploadIcon
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -154,7 +155,7 @@ internal fun ScanPreviewContent(
                 GohoActionButton(
                     stringResource(R.string.scan_cancel),
                     onCancelClick,
-                    primary = false,
+                    variant = GohoButtonVariant.Secondary,
                     enabled = !busy,
                 )
             }
