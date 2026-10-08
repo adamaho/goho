@@ -99,7 +99,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - Detail list row: height 47, label left, value right.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
-- Status illustrations: no receipts and empty Needs attention use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes; load error has no illustration or reserved gap.
+- Status illustrations: no receipts, empty Needs attention and load error use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
 - Bottom: FAB sits 28dp above the navigation bar inset, 16dp from the right.
 
 ## Elevation and shadow

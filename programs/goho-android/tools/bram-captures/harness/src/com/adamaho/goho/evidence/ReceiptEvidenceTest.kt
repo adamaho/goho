@@ -129,7 +129,7 @@ class ReceiptEvidenceTest {
         assumeTrue(output.name == "after")
         compose.mainClock.autoAdvance = false
         render(ReceiptOverviewState(error = true), reduced = true)
-        compose.onNodeWithText("Couldn’t load receipts").assertIsDisplayed()
+        compose.onNodeWithText("A little hiccup").assertIsDisplayed()
         val initial = File(output, "reduced-motion-initial.png")
         val later = File(output, "reduced-motion-later.png")
         val pressed = File(output, "reduced-motion-pressed.png")
@@ -151,7 +151,7 @@ class ReceiptEvidenceTest {
     }
     @Test fun retryFailureAndSuccess() {
         render(ReceiptOverviewState(error = true), reduced = false)
-        val title = "Couldn’t load receipts"
+        val title = "A little hiccup"
         compose.mainClock.advanceTimeBy(1000)
         val before = compose.onNodeWithText(title).fetchSemanticsNode().boundsInRoot
         compose.onNodeWithText("Try again").performClick()

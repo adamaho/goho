@@ -18,6 +18,7 @@ fun ReceiptsConnectionErrorState(
         title = stringResource(R.string.receipts_load_failed),
         description = stringResource(R.string.receipts_load_failed_body),
         modifier = modifier,
+        illustration = R.drawable.status_load_error,
         animateEntrance = animateEntrance,
         announcePolitely = true,
     ) {

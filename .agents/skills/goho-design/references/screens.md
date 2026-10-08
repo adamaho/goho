@@ -147,7 +147,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 ## 6. Empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts and empty Needs attention each share one transparent Bram asset across both themes. Render both unchanged, with a 4dp gap between the illustration slot and title. The Receipts header is text-only in every state. Load error shows text and the retry action, without an illustration or reserved illustration space. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts, empty Needs attention and load error each share one transparent Bram asset across both themes. Render each unchanged in the shared 220×190dp slot, with a 4dp gap before the title. The Receipts header is text-only in every state. Load error includes the retry action. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
@@ -168,9 +168,9 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 - Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding and illustration size, with a 4dp gap before the title. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
-**Couldn’t load receipts** (the list request failed)
+**A little hiccup** (the list request failed)
 
 - Header shows only the “Receipts” title. No filter or Scan button.
-- Text and retry action centered in the available area below the header, directly on the screen background. Omit the illustration and the gap that would precede the title.
-- Title "Couldn’t load receipts"; text "Check your connection and try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled.
+- Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
+- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoPrimaryButton "Try again" 22dp below the text. While retrying, the button shows "Trying again…" and is disabled, with stable bounds.
 - Announce the status content as a polite live region when it appears.
