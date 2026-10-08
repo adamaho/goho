@@ -12,6 +12,8 @@ program may remain in that program's Compose stack. A database shared by several
 programs should have its own infrastructure lifecycle.
 
 - [`local/`](./local/README.md) provides development and integration-test Postgres.
+- [`postgres/`](./postgres/README.md) is the production Postgres server that
+  Goho programs share. It deploys through the same workflow as programs.
 - [`deployment/`](./deployment/README.md) retains the production server
   environment example at its established path.
 - Current server deployment lives in

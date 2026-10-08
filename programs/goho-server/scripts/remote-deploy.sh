@@ -22,6 +22,9 @@ export GOHO_UID GOHO_GID
 
 compose=(docker compose --project-directory "$directory" -f "$directory/compose.yml")
 
+# Programs share the `goho` network with infra/postgres; whichever deploys first creates it.
+docker network inspect goho >/dev/null 2>&1 || docker network create goho >/dev/null
+
 "${compose[@]}" config --quiet
 "${compose[@]}" pull --quiet
 "${compose[@]}" up --detach --wait --wait-timeout 180 --remove-orphans

@@ -1,0 +1,9 @@
+{
+  "name": "@goho/infra-postgres",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared production Postgres server for Goho programs.",
+  "scripts": {
+    "deploy": "bash scripts/deploy.sh"
+  }
+}

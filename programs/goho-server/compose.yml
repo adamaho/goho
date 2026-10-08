@@ -1,28 +1,11 @@
 # Production stack for the Goho server. programs/goho-server/scripts/deploy.ts copies
-# this file to /opt/goho/goho-server/compose.yml. POSTGRES_PASSWORD comes from
-# /opt/goho/goho-server/.env, a link to /etc/goho/postgres.env. Keep the project
-# and volume names stable so deployments reuse the database volume.
-name: goho-deployment
+# this file to /opt/goho/goho-server/compose.yml. The database is the shared
+# Postgres server from infra/postgres, reached as `postgres` on the `goho` network.
+# POSTGRES_PASSWORD comes from /opt/goho/goho-server/.env, a link to
+# /etc/goho/postgres.env.
+name: goho-server
 
 services:
-  postgres:
-    image: postgres:18-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: goho
-      POSTGRES_USER: goho
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /opt/goho/goho-server/.env}
-    ports:
-      - "127.0.0.1:5434:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 5s
-
   server:
     image: ${GOHO_IMAGE:?Set GOHO_IMAGE to the image to deploy}
     restart: unless-stopped
@@ -40,9 +23,6 @@ services:
       - "127.0.0.1:13000:13000"
     volumes:
       - ${GOHO_UPLOADS_HOST_DIRECTORY:-/var/lib/goho/receipt-uploads}:/var/lib/goho/receipt-uploads
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -54,5 +34,7 @@ services:
       retries: 6
       start_period: 30s
 
-volumes:
-  postgres_data:
+networks:
+  default:
+    name: goho
+    external: true

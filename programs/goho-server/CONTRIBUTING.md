@@ -193,9 +193,10 @@ and registry authentication on both runner and host. The workflow handles those 
 and passes `GOHO_DEPLOY_DOCKER_CONFIG` to select the job's temporary host credentials.
 Manual deployments use the host user's default Docker configuration when it is unset.
 
-The Compose stack includes this application's Postgres database. Its existing
-project and volume names are preserved so deployment reuses installed data.
-Host setup is described below.
+The server's database lives on the shared Postgres server in
+[`infra/postgres`](../../infra/postgres/README.md), which deploys on its own when
+its files change. Both stacks join the `goho` Docker network, and the server
+reaches the database as `postgres`. Host setup is described below.
 
 ### What stays out of the public repository
 
@@ -275,7 +276,7 @@ SSH rule above limits who can log in as `goho`.
 
 ```bash
 sudo useradd --system --create-home --shell /bin/bash --groups docker goho
-sudo install -d -o goho -g goho -m 0750 /opt/goho /opt/goho/goho-server
+sudo install -d -o goho -g goho -m 0750 /opt/goho /opt/goho/goho-server /opt/goho/postgres
 sudo install -d -o goho -g goho -m 0700 /var/lib/goho/receipt-uploads
 ```
 
@@ -298,10 +299,11 @@ Once both files exist, restrict access and link the database configuration for C
 ```bash
 sudo chown root:goho /etc/goho/server.env /etc/goho/postgres.env
 sudo chmod 0640 /etc/goho/server.env /etc/goho/postgres.env
+sudo ln -s /etc/goho/postgres.env /opt/goho/postgres/.env
 sudo ln -s /etc/goho/postgres.env /opt/goho/goho-server/.env
 ```
 
-The link lets Compose read the Postgres password without copying it.
+The links let both Compose stacks read the Postgres password without copying it.
 
 Publish the API to the tailnet over HTTPS:
 
@@ -336,7 +338,8 @@ In the repository's **Settings → Environments**, create `production`:
 ### First deployment
 
 After completing host and GitHub setup, open **Actions → deploy → Run workflow**
-on `dev`. Check `https://<server address>/health` from a device on the tailnet.
+on `dev`. It deploys Postgres and the server in parallel; the server restarts
+until the database is ready. Check `https://<server address>/health` from a device on the tailnet.
 
 ### Day to day
 
@@ -344,12 +347,12 @@ on `dev`. Check `https://<server address>/health` from a device on the tailnet.
   program, so run the workflow by hand to redeploy after them.
 - **Roll back:** re-run the `deploy` workflow run of an earlier commit. It
   rebuilds and deploys that commit.
-- **Logs:** `sudo docker logs --follow goho-deployment-server-1`
+- **Logs:** `sudo docker logs --follow goho-server-server-1`
 - **Backups:** Compose does not back anything up. Keep copies of the `pg_dump`
   output and `/var/lib/goho/receipt-uploads` off the machine. For example:
 
   ```bash
-  sudo docker exec goho-deployment-postgres-1 pg_dump -U goho -d goho > goho.sql
+  sudo docker exec goho-postgres-postgres-1 pg_dump -U goho -d goho > goho.sql
   ```
 
 ### Android app

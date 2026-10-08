@@ -1,0 +1,33 @@
+# Shared Postgres server for Goho programs. scripts/deploy.sh copies this file to
+# /opt/goho/postgres/compose.yml. POSTGRES_PASSWORD comes from /opt/goho/postgres/.env,
+# a link to /etc/goho/postgres.env. Programs reach it as `postgres` on the `goho`
+# network. Keep the volume name stable so deployments reuse the data.
+name: goho-postgres
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goho
+      POSTGRES_USER: goho
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /opt/goho/postgres/.env}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+networks:
+  default:
+    name: goho
+    external: true
+
+volumes:
+  postgres_data:
+    name: goho-postgres-data
