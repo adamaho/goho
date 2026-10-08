@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-readonly target="goho@${GOHO_DEPLOY_HOST:?Set GOHO_DEPLOY_HOST to the Tailscale name of the server}"
+readonly target="production@${GOHO_DEPLOY_HOST:?Set GOHO_DEPLOY_HOST to the Tailscale name of the server}"
 readonly directory=/opt/goho/postgres
 readonly compose_file="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/compose.yml"
 readonly ssh_options=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR)

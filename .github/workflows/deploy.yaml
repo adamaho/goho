@@ -91,7 +91,7 @@ jobs:
       - name: Create temporary host registry configuration
         id: registry
         run: |
-          config="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
+          config="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
             'mktemp -d /tmp/goho-registry.XXXXXXXXXX')"
           echo "config=$config" >> "$GITHUB_OUTPUT"
 
@@ -103,7 +103,7 @@ jobs:
         # Each matrix job has separate host credentials, removed even if deployment fails.
         run: |
           printf '%s' "$REGISTRY_TOKEN" |
-            ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
               "docker --config '$REMOTE_DOCKER_CONFIG' login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
 
       - name: Deploy
@@ -116,5 +116,5 @@ jobs:
         env:
           REMOTE_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
         run: |
-          ssh -o BatchMode=yes -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
+          ssh -o BatchMode=yes -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
             "rm -rf -- '$REMOTE_DOCKER_CONFIG'"

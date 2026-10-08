@@ -20,7 +20,7 @@ Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const host = yield* Config.String("GOHO_DEPLOY_HOST");
-  const target = `goho@${host}`;
+  const target = `production@${host}`;
   const dockerConfig = yield* Config.String("GOHO_DEPLOY_DOCKER_CONFIG").pipe(
     Config.withDefault(""),
   );

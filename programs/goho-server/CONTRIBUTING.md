@@ -247,7 +247,12 @@ your Tailscale logins:
   ],
   "ssh": [
     // "accept", not "check": CI cannot complete a browser re-authentication.
-    { "action": "accept", "src": ["tag:goho-ci"], "dst": ["tag:goho-server"], "users": ["goho"] },
+    {
+      "action": "accept",
+      "src": ["tag:goho-ci"],
+      "dst": ["tag:goho-server"],
+      "users": ["production"],
+    },
   ],
 }
 ```
@@ -270,14 +275,14 @@ curl -fsSL https://tailscale.com/install.sh | sh
 sudo tailscale up --ssh --advertise-tags=tag:goho-server
 ```
 
-Create the deploy user and give it the deployment directory and configuration.
+Create the `production` deploy user and give it the deployment directory and configuration.
 Membership of the `docker` group is equivalent to root on this machine, so the
-SSH rule above limits who can log in as `goho`.
+SSH rule above limits who can log in as `production`.
 
 ```bash
-sudo useradd --system --create-home --shell /bin/bash --groups docker goho
-sudo install -d -o goho -g goho -m 0750 /opt/goho /opt/goho/goho-server /opt/goho/postgres
-sudo install -d -o goho -g goho -m 0700 /var/lib/goho/receipt-uploads
+sudo useradd --system --create-home --shell /bin/bash --user-group --groups docker production
+sudo install -d -o production -g production -m 0750 /opt/goho /opt/goho/goho-server /opt/goho/postgres
+sudo install -d -o production -g production -m 0700 /var/lib/goho/receipt-uploads
 ```
 
 Create `/etc/goho/server.env` from the production
@@ -291,13 +296,13 @@ uploads directory itself.
 Create the configuration directory before placing the files there:
 
 ```bash
-sudo install -d -o root -g goho -m 0750 /etc/goho
+sudo install -d -o root -g production -m 0750 /etc/goho
 ```
 
 Once both files exist, restrict access and link the database configuration for Compose:
 
 ```bash
-sudo chown root:goho /etc/goho/server.env /etc/goho/postgres.env
+sudo chown root:production /etc/goho/server.env /etc/goho/postgres.env
 sudo chmod 0640 /etc/goho/server.env /etc/goho/postgres.env
 sudo ln -s /etc/goho/postgres.env /opt/goho/postgres/.env
 sudo ln -s /etc/goho/postgres.env /opt/goho/goho-server/.env
