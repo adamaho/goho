@@ -1,63 +1,225 @@
-# Local machine deployment
+# Deployment
 
-The [Docker deployment](./docker/README.md) replaces this setup: CI builds an image
-and deploys it over Tailscale. This systemd setup remains until the switch-over is complete.
+GitHub Actions deploys Goho programs to the Goho server over Tailscale. Each
+program runs as a Docker Compose stack, reachable only on your tailnet.
 
-This setup runs the server under systemd and PostgreSQL 18 under Docker Compose.
-It uses the service account and checkout path configured in the systemd unit,
-with server configuration in `/etc/goho/server.env`.
+The [`deploy`](../../.github/workflows/deploy.yaml) workflow runs on every push to
+`dev`. It asks Turborepo which programs the push affects and runs their `deploy`
+task, so a change to a program, a workspace package it uses, or this folder
+redeploys it, and nothing else does. A manual run deploys every program.
 
-## Layout
+For each affected program, [`scripts/deploy.sh`](./scripts/deploy.sh):
 
-`infra/deployment` and `infra/systemd` use matching service directories.
-Deployment contains runtime configuration; systemd contains the units and scripts
-that supervise those services. The installer here connects the two.
+1. Builds `programs/<program>/Dockerfile` and pushes
+   `ghcr.io/adamaho/<program>:<commit>`.
+2. Connects to the server as `goho` with Tailscale SSH. The workflow has already
+   joined the tailnet as a temporary `tag:goho-ci` node, using GitHub's OIDC
+   token rather than a stored Tailscale key.
+3. Copies `infra/deployment/<program>/compose.yml` to `/opt/goho/<program>/` and
+   runs [`scripts/remote-deploy.sh`](./scripts/remote-deploy.sh) there, which pulls
+   the image, starts the stack, and fails the run if it does not become healthy.
 
-| Service         | Deployment configuration | systemd files                               |
-| --------------- | ------------------------ | ------------------------------------------- |
-| `goho-postgres` | `docker-compose.yml`     | Postgres startup unit                       |
-| `goho-server`   | `.env.example`           | Server unit and Postgres dependency drop-in |
+Pull requests run the `docker:build` task for affected programs, so a broken
+Dockerfile fails before merge.
 
-`infra/local` remains the separate development and integration-test database setup.
+## Adding a program
 
-## Installation
+1. Add `programs/<program>/Dockerfile`, built from the repository root, with the
+   label `org.opencontainers.image.title="<program>"`.
+2. Add `infra/deployment/<program>/compose.yml`. The deploy sets `GOHO_IMAGE`,
+   `GOHO_UID` and `GOHO_GID`. Put interpolated secrets in
+   `/opt/goho/<program>/.env` on the server.
+3. In the program's `package.json`, add `@goho/infra-deployment` as a dev
+   dependency and these scripts:
 
-Install from the repository root:
+   ```json
+   "docker:build": "bash ../../infra/deployment/scripts/docker-build.sh <program>",
+   "deploy": "bash ../../infra/deployment/scripts/deploy.sh <program>"
+   ```
 
-```bash
-sudo bash infra/deployment/install.sh
+The workflow picks it up from there.
+
+## What stays out of the public repository
+
+This repository is public, so the setup keeps every private value on the server
+or in GitHub's encrypted secrets:
+
+- Application secrets, such as the OpenAI key and the Postgres password, live only in
+  `/etc/goho/*.env` on the server. [`.dockerignore`](../../.dockerignore) keeps
+  every `.env` file out of image builds.
+- The server's tailnet name lives in the `production` environment's secrets, and
+  GitHub masks it in logs. The workflow never prints it.
+- No Tailscale key or SSH key exists anywhere. CI proves its identity with a
+  short-lived GitHub OIDC token that Tailscale only accepts from the
+  `production` environment of this repository.
+- The registry login on the server uses the job's own `GITHUB_TOKEN`, which
+  expires when the run ends. The workflow logs out afterwards.
+- The workflow never runs for pull requests, so code from a fork cannot reach
+  the secrets or the tailnet.
+- The API port listens only on `127.0.0.1`. Tailscale Serve is the only way in.
+
+Images contain only open-source code from this repository, nothing private.
+
+## One-time setup
+
+### 1. Tailscale access policy
+
+In the [Tailscale admin console](https://login.tailscale.com/admin/acls), add
+the tags, access grants and SSH rule to the policy file. Replace the emails with
+your Tailscale logins:
+
+```jsonc
+{
+  "tagOwners": {
+    "tag:goho-server": ["autogroup:admin"],
+    "tag:goho-ci": ["autogroup:admin"],
+  },
+  "grants": [
+    // The phones and laptops of the two people who use Goho.
+    {
+      "src": ["you@example.com", "bryanne@example.com"],
+      "dst": ["tag:goho-server"],
+      "ip": ["443"],
+    },
+    // CI may only open SSH to the Goho server.
+    { "src": ["tag:goho-ci"], "dst": ["tag:goho-server"], "ip": ["22"] },
+  ],
+  "ssh": [
+    // "accept", not "check": CI cannot complete a browser re-authentication.
+    { "action": "accept", "src": ["tag:goho-ci"], "dst": ["tag:goho-server"], "users": ["goho"] },
+  ],
+}
 ```
 
-The installer verifies the service runtime and installs workspace dependencies,
-pauses any installed legacy receipt timer and refuses to interrupt an active batch.
-It installs Ubuntu's `docker.io` and `docker-compose-v2` packages, enables Docker,
-and creates `/etc/goho/postgres.env` with a generated password on first use.
-Reruns preserve that password and the existing application credentials, updating
-`DATABASE_URL` and adding the default `GOHO_UPLOADS_DIRECTORY` when it is absent.
-The installer creates that receipt storage directory for the configured
-service account with mode `0700`; include it in host backups.
+If the policy still has the default allow-all rule, these grants add nothing until
+you remove it. Invite Bryanne to the tailnet from **Users**; the free plan covers
+up to six users.
 
-The deployment API defaults to `127.0.0.1:13000` and Postgres listens on
-`127.0.0.1:5434`, leaving ports `3000` and `5432` for development. Existing
-installations keep their configured API port until `/etc/goho/server.env` is
-updated and `goho-server.service` is restarted. The `goho-deployment` Compose
-project has its own named data volume, separate from development and integration
-tests. The Compose definition is installed at `/etc/goho/compose.yml`; no reset
-command or backups are included.
+Under **DNS**, enable MagicDNS and HTTPS certificates.
 
-The installer updates the Goho service unit and adds a server dependency on
-`goho-postgres.service`. That unit waits for Postgres health before server
-migrations run. The service PATH includes this machine's mise Node shims and
-pnpm installation. After the health endpoint responds and migration history can be
-read, the installer disables and removes any installed legacy receipt timer and service.
+### 2. Server
 
-Check the deployment:
+On the Goho server, install Tailscale and join it with the server tag and
+Tailscale SSH:
 
 ```bash
-systemctl status goho-postgres.service goho-server.service
-journalctl -u goho-server.service -n 50 --no-pager
-sudo docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml ps
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --ssh --advertise-tags=tag:goho-server
 ```
 
-If installation fails after pausing a legacy timer, it remains paused. Fix the
-reported error and rerun the installer. Existing receipt and upload data are not removed.
+Create the deploy user and give it the deployment directory and configuration.
+Membership of the `docker` group is equivalent to root on this machine, so the
+SSH rule above limits who can log in as `goho`.
+
+```bash
+sudo useradd --system --create-home --shell /bin/bash --groups docker goho
+sudo install -d -o goho -g goho -m 0750 /opt/goho /opt/goho/goho-server
+sudo install -d -o goho -g goho -m 0700 /var/lib/goho/receipt-uploads
+```
+
+`/etc/goho/server.env` and `/etc/goho/postgres.env` already exist from the
+systemd installer. Let the deploy user read them:
+
+```bash
+sudo chgrp goho /etc/goho /etc/goho/server.env /etc/goho/postgres.env
+sudo chmod 0750 /etc/goho
+sudo chmod 0640 /etc/goho/server.env /etc/goho/postgres.env
+sudo ln -s /etc/goho/postgres.env /opt/goho/goho-server/.env
+```
+
+The link lets Compose read the Postgres password without copying it.
+
+On a fresh machine, create both files first.
+[`.env.example`](./goho-server/.env.example) lists the server settings, and
+`postgres.env` holds `POSTGRES_PASSWORD=` followed by a URL-safe value such as
+`openssl rand -hex 32`. Compose sets `DATABASE_URL`, the port, the bind address and
+the uploads directory itself, so those lines in `server.env` are ignored.
+
+Publish the API to the tailnet over HTTPS:
+
+```bash
+sudo tailscale serve --bg 13000
+tailscale serve status
+```
+
+The status shows the server's address, such as `https://goho.<tailnet>.ts.net`.
+
+### 3. Tailscale credential for CI
+
+On the [Trust credentials](https://login.tailscale.com/admin/settings/trust-credentials)
+page, create an **OpenID Connect** credential:
+
+- Issuer: **GitHub Actions**
+- Subject: `repo:adamaho/goho:environment:production`
+- Scope: `auth_keys` (write), with tag `tag:goho-ci`
+
+Copy the **Client ID** and **Audience** it shows.
+
+### 4. GitHub environment
+
+In the repository's **Settings → Environments**, create `production`:
+
+- **Deployment branches and tags**: selected branches, `dev` only.
+- **Environment secrets**:
+  - `TS_OAUTH_CLIENT_ID`: the credential's Client ID
+  - `TS_AUDIENCE`: the credential's Audience
+  - `GOHO_DEPLOY_HOST`: the server's MagicDNS name, such as `goho` or `goho.<tailnet>.ts.net`
+
+## Switching over from the systemd install
+
+Do this once, after the setup above. Receipts and photos stay where they are: the
+Compose project reuses the existing `goho-deployment` Postgres volume and the
+uploads directory.
+
+1. Back up the database:
+
+   ```bash
+   sudo docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml \
+     exec -T postgres pg_dump -U goho -d goho > goho-$(date +%F).sql
+   ```
+
+2. Stop and disable the systemd services:
+
+   ```bash
+   sudo systemctl disable --now goho-server.service goho-postgres.service
+   ```
+
+3. Give the deploy user the existing photos. If `GOHO_UPLOADS_DIRECTORY` in
+   `server.env` points somewhere else, move the photos to
+   `/var/lib/goho/receipt-uploads` first.
+
+   ```bash
+   sudo chown -R goho:goho /var/lib/goho/receipt-uploads
+   ```
+
+4. In GitHub, open **Actions → deploy → Run workflow** on `dev`, then check
+   `https://<server address>/health` from a device on the tailnet.
+
+5. Once it works, remove the old units and the checkout:
+
+   ```bash
+   sudo rm /etc/systemd/system/goho-server.service /etc/systemd/system/goho-postgres.service
+   sudo rm -r /etc/systemd/system/goho-server.service.d /etc/goho/compose.yml
+   sudo systemctl daemon-reload
+   ```
+
+## Day to day
+
+- **Deploy:** merge to `dev`. Edits to the workflow file alone change no
+  program, so run the workflow by hand to redeploy after them.
+- **Roll back:** re-run the `deploy` workflow run of an earlier commit. It
+  rebuilds and deploys that commit.
+- **Logs:** `sudo docker logs --follow goho-deployment-server-1`
+- **Backups:** Compose does not back anything up. Keep copies of the `pg_dump`
+  output and `/var/lib/goho/receipt-uploads` off the machine.
+
+## Android app
+
+Point the release build at the Tailscale Serve address without committing it.
+Add it to `~/.gradle/gradle.properties` on the machine that builds the app:
+
+```properties
+gohoServerUrl=https://goho.<tailnet>.ts.net
+```
+
+Both phones need the Tailscale app signed in to the tailnet.

@@ -1,7 +1,8 @@
-# Production stack for the Goho server. The deploy workflow copies this file to
-# /opt/goho/compose.yml and runs deploy.sh; secrets stay on the server in /etc/goho.
-# The project and Postgres service match infra/deployment/goho-postgres so the
-# existing data volume is reused.
+# Production stack for the Goho server. infra/deployment/scripts/deploy.sh copies
+# this file to /opt/goho/goho-server/compose.yml. POSTGRES_PASSWORD comes from
+# /opt/goho/goho-server/.env, a link to /etc/goho/postgres.env. The project and
+# Postgres service match infra/deployment/goho-postgres so the existing data
+# volume is reused.
 name: goho-deployment
 
 services:
@@ -11,7 +12,7 @@ services:
     environment:
       POSTGRES_DB: goho
       POSTGRES_USER: goho
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /etc/goho/postgres.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in /opt/goho/goho-server/.env}
     ports:
       - "127.0.0.1:5434:5432"
     volumes:
@@ -24,7 +25,7 @@ services:
       start_period: 5s
 
   server:
-    image: ${GOHO_SERVER_IMAGE:?Set GOHO_SERVER_IMAGE to the image to deploy}
+    image: ${GOHO_IMAGE:?Set GOHO_IMAGE to the image to deploy}
     restart: unless-stopped
     init: true
     user: "${GOHO_UID:?Set GOHO_UID}:${GOHO_GID:?Set GOHO_GID}"

@@ -19,7 +19,9 @@
     "openapi:check": "node scripts/openapi.ts --check",
     "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
     "db:seed": "node scripts/seed.ts",
-    "test:integration": "vitest run --project integration"
+    "test:integration": "vitest run --project integration",
+    "docker:build": "bash ../../infra/deployment/scripts/docker-build.sh goho-server",
+    "deploy": "bash ../../infra/deployment/scripts/deploy.sh goho-server"
   },
   "dependencies": {
     "@effect/ai-openai": "catalog:",
@@ -34,6 +36,7 @@
     "@adamaho/nopeus-oxlint-plugin": "catalog:",
     "@effect/vitest": "catalog:",
     "@goho/goho-server-client": "workspace:*",
+    "@goho/infra-deployment": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
