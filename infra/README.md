@@ -15,7 +15,7 @@ programs should have its own infrastructure lifecycle.
 - [`deployment/`](./deployment/README.md) retains the production server
   environment example at its established path.
 - Current server deployment lives in
-  [`programs/goho-server`](../programs/goho-server/DEPLOYMENT.md).
+  [`programs/goho-server`](../programs/goho-server/CONTRIBUTING.md#deployment).
 
 ## Adding a deployable program
 
