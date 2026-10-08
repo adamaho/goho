@@ -171,5 +171,5 @@ with `start` or `dev` require the separate migration command first.
 ## Host deployment
 
 For systemd and Docker Compose deployment, see the
-[deployment guide](../../infra/deployment/README.md). Local development uses the
+[deployment guide](./DEPLOYMENT.md). Local development uses the
 [setup above](#local-setup).

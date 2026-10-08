@@ -6,7 +6,7 @@ and API documentation. The server implements the shared
 through the derived [typed client](../../clients/goho-server/README.md).
 
 The server binds to `127.0.0.1` by default and requires no authentication. It is intended
-for local use or a private network; see the [deployment guide](../../infra/deployment/README.md).
+for local use or a private network; see the [deployment guide](./DEPLOYMENT.md).
 
 For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 

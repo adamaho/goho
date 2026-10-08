@@ -4,7 +4,4 @@ import { Effect } from "effect";
 import { buildImage } from "./image.ts";
 
 // The server's deployable artifact is its container image.
-buildImage({ push: process.argv.includes("--push") }).pipe(
-  Effect.provide(NodeServices.layer),
-  NodeRuntime.runMain,
-);
+buildImage.pipe(Effect.provide(NodeServices.layer), NodeRuntime.runMain);

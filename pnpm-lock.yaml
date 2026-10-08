@@ -292,8 +292,6 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  infra/deployment: {}
-
   infra/local: {}
 
   packages/core:
@@ -486,9 +484,6 @@ importers:
       '@goho/goho-server-client':
         specifier: workspace:*
         version: link:../../clients/goho-server
-      '@goho/infra-deployment':
-        specifier: workspace:*
-        version: link:../../infra/deployment
       '@goho/tool-tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig

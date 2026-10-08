@@ -1,7 +1,7 @@
 name: deploy
 
 # Runs the Turborepo `deploy` task of every program a push to dev affects.
-# A program opts in by defining a `deploy` script; see infra/deployment/README.md.
+# A program opts in by defining a `deploy` script; see infra/README.md.
 # This repository is public: the server's address and Tailscale credentials come
 # only from the production environment's secrets, and nothing here prints them.
 
@@ -46,7 +46,7 @@ jobs:
         id: plan
         run: |
           programs="$(pnpm turbo run deploy $TURBO_SELECTION --dry=json |
-            jq -r '[.tasks[] | select(.command != "<NONEXISTENT>") | .package] | join(" ")')"
+            jq -r '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package] | join(" ")')"
           echo "programs=$programs" >> "$GITHUB_OUTPUT"
           printf 'Programs to deploy: %s\n' "${programs:-none}"
 

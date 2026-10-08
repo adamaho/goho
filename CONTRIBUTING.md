@@ -62,7 +62,8 @@ Use the top-level workspace directories consistently:
 - `packages/*` contains shared features, reusable libraries, clients, and other
   importable code
 - `tools/*` contains internal tooling packages
-- `infra/*` contains infrastructure helpers
+- `infra/*` contains shared infrastructure and host provisioning; program-specific
+  build and deployment files stay with their program (see [ownership](infra/README.md))
 
 Programs should remain thin deployable entry points. Code used by only one
 program can remain local to it. Shared capabilities, or code that needs a public

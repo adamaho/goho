@@ -1,8 +1,8 @@
 # Legacy systemd deployment
 
-The [Docker deployment](./README.md) replaces this setup. It remains until the
-switch-over is complete, then this file, `install.sh`, `goho-postgres` and
-`infra/systemd` can be removed.
+The [Docker deployment](../../programs/goho-server/DEPLOYMENT.md) replaces this
+setup. It remains until the switch-over is complete, then this file, `install.sh`,
+`goho-postgres` and `infra/systemd` can be removed.
 
 This setup runs the server under systemd and PostgreSQL 18 under Docker Compose.
 It uses the service account and checkout path configured in the systemd unit,
@@ -10,14 +10,15 @@ with server configuration in `/etc/goho/server.env`.
 
 ## Layout
 
-`infra/deployment` and `infra/systemd` use matching service directories.
-Deployment contains runtime configuration; systemd contains the units and scripts
-that supervise those services. The installer here connects the two.
+`infra/deployment` retains the legacy Postgres Compose definition and installer.
+`infra/systemd` contains the units that supervise the installed services. The
+server configuration example lives with the program. The installer connects
+these files for existing hosts.
 
-| Service         | Deployment configuration | systemd files                               |
-| --------------- | ------------------------ | ------------------------------------------- |
-| `goho-postgres` | `docker-compose.yml`     | Postgres startup unit                       |
-| `goho-server`   | `.env.example`           | Server unit and Postgres dependency drop-in |
+| Service         | Deployment configuration                      | systemd files                               |
+| --------------- | --------------------------------------------- | ------------------------------------------- |
+| `goho-postgres` | `docker-compose.yml`                          | Postgres startup unit                       |
+| `goho-server`   | `programs/goho-server/deployment.env.example` | Server unit and Postgres dependency drop-in |
 
 `infra/local` remains the separate development and integration-test database setup.
 

@@ -1,4 +1,4 @@
-import { Config, Effect, Option, Schema, Stream } from "effect";
+import { Config, Effect, Option, Path, Schema, Stream } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 /**
@@ -50,37 +50,33 @@ const git = (...args: ReadonlyArray<string>) =>
   });
 
 /**
- * Builds the server image from the repository root, which the Dockerfile
- * needs for `turbo prune`. Tags it with the commit. With `push`, also tags it
- * `dev`, pushes both tags and uses the registry build cache.
+ * The build and deploy tasks use the same commit-tagged image.
  *
  * @category utilities
  * @since 0.1.0
  */
-export const buildImage = (options: { readonly push: boolean }) =>
-  Effect.gen(function* () {
-    const root = yield* git("rev-parse", "--show-toplevel");
-    const registry = yield* Config.String("GOHO_IMAGE_REGISTRY").pipe(
-      Config.withDefault("ghcr.io/adamaho"),
-    );
-    const sha = yield* Config.option(Config.String("GITHUB_SHA"));
-    const tag = Option.isSome(sha) ? sha.value : yield* git("rev-parse", "HEAD");
-    const repository = `${registry}/${name}`;
-    const image = `${repository}:${tag}`;
-    const dockerfile = new URL("../Dockerfile", import.meta.url).pathname;
+export const imageReference = Effect.gen(function* () {
+  const registry = yield* Config.String("GOHO_IMAGE_REGISTRY").pipe(
+    Config.withDefault("ghcr.io/adamaho"),
+  );
+  const sha = yield* Config.option(Config.String("GITHUB_SHA"));
+  const tag = Option.isSome(sha) ? sha.value : yield* git("rev-parse", "HEAD");
+  const repository = `${registry}/${name}`;
+  return { repository, image: `${repository}:${tag}` };
+});
 
-    const args = ["buildx", "build", "--file", dockerfile, "--tag", image];
-    if (options.push) {
-      args.push(
-        "--push",
-        "--tag",
-        `${repository}:dev`,
-        "--cache-from",
-        `type=registry,ref=${repository}:buildcache`,
-        "--cache-to",
-        `type=registry,ref=${repository}:buildcache,mode=max`,
-      );
-    }
-    yield* run("docker", [...args, root]);
-    return image;
-  });
+/**
+ * Loads the commit-tagged image into Docker so deployment can publish it
+ * without rebuilding. The repository root supplies the workspace build context.
+ *
+ * @category utilities
+ * @since 0.1.0
+ */
+export const buildImage = Effect.gen(function* () {
+  const root = yield* git("rev-parse", "--show-toplevel");
+  const { image } = yield* imageReference;
+  const path = yield* Path.Path;
+  const dockerfile = yield* path.fromFileUrl(new URL("../Dockerfile", import.meta.url));
+  yield* run("docker", ["buildx", "build", "--load", "--file", dockerfile, "--tag", image, root]);
+  return image;
+});

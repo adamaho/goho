@@ -76,7 +76,6 @@
     },
     "deploy": {
       "cache": false,
-      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY", "GOHO_DEPLOY_HOST"],
       "outputs": []
     },
     "test:unit": {
