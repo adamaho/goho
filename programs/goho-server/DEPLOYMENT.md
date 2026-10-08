@@ -1,8 +1,8 @@
 # Goho server deployment
 
 The server owns its Dockerfile, Compose stack and build/deploy scripts. GitHub
-Actions runs the affected programs' Turbo tasks on pushes to `dev`; a manual run
-deploys all programs. The workflow currently provides Docker, GHCR and Tailscale
+Actions deploys the affected programs on pushes to `dev`, one parallel job per
+program; a manual run deploys all programs. The workflow currently provides Docker, GHCR and Tailscale
 access to one host.
 
 - `pnpm --filter @goho/goho-server build` builds and loads the commit-tagged image

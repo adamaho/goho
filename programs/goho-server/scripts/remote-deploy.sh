@@ -10,6 +10,11 @@ readonly program="${1:?Usage: remote-deploy.sh <program> <image>}"
 readonly image="${2:?Usage: remote-deploy.sh <program> <image>}"
 readonly directory="/opt/goho/$program"
 
+# The deploy workflow logs this program in to the registry with its own Docker config.
+if [[ -d "$directory/.docker" ]]; then
+  export DOCKER_CONFIG="$directory/.docker"
+fi
+
 export GOHO_IMAGE="$image"
 GOHO_UID="$(id -u)"
 GOHO_GID="$(id -g)"

@@ -1,6 +1,7 @@
 name: deploy
 
-# Runs the Turborepo `deploy` task of every program a push to dev affects.
+# Deploys every program a push to dev affects, one parallel job per program,
+# by running its Turborepo `deploy` task.
 # A program opts in by defining a `deploy` script; see infra/README.md.
 # This repository is public: the server's address and Tailscale credentials come
 # only from the production environment's secrets, and nothing here prints them.
@@ -18,17 +19,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: deploy
+  plan:
+    name: plan
     runs-on: ubuntu-latest
-    # Restrict this environment to the dev branch in the repository settings.
-    environment: production
     permissions:
       contents: read
-      id-token: write
-      packages: write
+    outputs:
+      programs: ${{ steps.plan.outputs.programs }}
     env:
-      GOHO_IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
       TURBO_SCM_BASE: ${{ github.event.before }}
       TURBO_SCM_HEAD: ${{ github.sha }}
       # A manual run deploys every program; a push deploys only affected ones.
@@ -42,20 +40,44 @@ jobs:
       - name: Setup pnpm and install
         uses: ./.github/actions/setup-pnpm
 
-      - name: Find programs to deploy
+      - name: Identify programs to deploy
         id: plan
         run: |
           programs="$(pnpm turbo run deploy $TURBO_SELECTION --dry=json |
-            jq -r '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package] | join(" ")')"
+            jq -c '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package]')"
           echo "programs=$programs" >> "$GITHUB_OUTPUT"
-          printf 'Programs to deploy: %s\n' "${programs:-none}"
+          printf 'Programs to deploy: %s\n' "$programs"
+
+  deploy:
+    name: deploy ${{ matrix.program }}
+    needs: plan
+    if: needs.plan.outputs.programs != '[]'
+    runs-on: ubuntu-latest
+    # Restrict this environment to the dev branch in the repository settings.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        program: ${{ fromJSON(needs.plan.outputs.programs) }}
+    env:
+      GOHO_IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
+      PROGRAM: ${{ matrix.program }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm and install
+        uses: ./.github/actions/setup-pnpm
 
       - name: Setup Docker Buildx
-        if: steps.plan.outputs.programs != ''
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        if: steps.plan.outputs.programs != ''
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -63,7 +85,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Connect to Tailscale
-        if: steps.plan.outputs.programs != ''
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -71,26 +92,23 @@ jobs:
           tags: tag:goho-ci
           log-mode: quiet
 
+      # Each program logs in with its own Docker config, so parallel deploys
+      # never log each other out. The job token expires when this run ends,
+      # so the server keeps no long-lived registry credential.
       - name: Log the server in to the registry
-        if: steps.plan.outputs.programs != ''
         env:
-          GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
-        # The job token expires when this run ends, so the server keeps no long-lived registry credential.
         run: |
           printf '%s' "$REGISTRY_TOKEN" |
             ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
-              "docker login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
+              "DOCKER_CONFIG=/opt/goho/${PROGRAM#@goho/}/.docker docker login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
 
       - name: Deploy
-        if: steps.plan.outputs.programs != ''
-        env:
-          GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
-        run: pnpm turbo run deploy $TURBO_SELECTION
+        run: pnpm turbo run deploy --filter="$PROGRAM"
 
       - name: Log the server out of the registry
-        if: always() && steps.plan.outputs.programs != ''
-        env:
-          GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
-        run: ssh -o BatchMode=yes -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" 'docker logout ghcr.io' >/dev/null || true
+        if: always()
+        run: |
+          ssh -o BatchMode=yes -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
+            "DOCKER_CONFIG=/opt/goho/${PROGRAM#@goho/}/.docker docker logout ghcr.io" >/dev/null || true
