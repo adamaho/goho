@@ -35,11 +35,11 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `dangerPressed`                              | `#B01E22`             | `#A21A1B`                | Destructive button fill while pressed                      |
 | `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`                | Label and icon on the destructive button                   |
 | `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C`    | Delete row icon and label, deletion error text             |
-| `sheet`                                      | `#201E1B`             | `#FFFFFF`                | Bottom sheet surface                                       |
-| `grabber`                                    | `#3F3D39`             | `#D9D6D1`                | Sheet drag handle                                          |
-| `scrim`                                      | black 55%             | `#1D1A16` 38%            | Behind sheets                                              |
+| `sheet`                                      | `#1F1E2A`             | `#FFFFFF`                | Bottom sheet surface                                       |
+| `grabber`                                    | `#3A3948`             | `#D9D6E2`                | Sheet drag handle                                          |
+| `scrim`                                      | black 55%             | `#26233A` 38%            | Behind sheets                                              |
 
-The accent is lavender in both themes; attention stays orange and destructive actions stay red. Photo wells, sheets, and scrims retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
+The accent is lavender in both themes; attention stays orange and destructive actions stay red. Bottom sheets use the same violet neutrals as other surfaces in every menu, confirmation, deleting and error state. Photo wells retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
 
 Contrast measured from the opaque sRGB token pairs (dark / light):
 
