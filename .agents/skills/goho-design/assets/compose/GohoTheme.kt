@@ -133,8 +133,8 @@ val GohoDarkColors =
         secondaryRing = Color.White.copy(alpha = 0.08f),
         buttonShadowAlpha = 0.4f,
         buttonWideShadowAlpha = 0.6f,
-        secondaryShadowAlpha = 0.4f,
-        secondaryWideShadowAlpha = 0.6f,
+        secondaryShadowAlpha = 0.12f,
+        secondaryWideShadowAlpha = 0.2f,
         statusCard = Color.White.copy(alpha = 0.025f),
         statusCardRing = Color.White.copy(alpha = 0.07f),
     )
