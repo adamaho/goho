@@ -11,23 +11,18 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 - Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onAccent`. Content description "Scan receipt".
 - Placed bottom right over the list without a bottom gradient. Keep enough list padding for the final row to scroll clear of the button.
 
-## GohoPrimaryButton
+## GohoActionButton
 
-- Full width inside the screen margin, 52 tall, shape `button` 20 (not a pill), horizontal padding 20.
-- Fill: flat `accent`; pressed `accentPressed`. Edge and shadow per the button treatment in `tokens.md`.
-- Content: optional 18dp icon, 8dp gap, label in `button` style, color `onAccent`.
+Use one shared component for standard actions, with `variant: GohoButtonVariant` set to `Primary` (the default), `Secondary`, or `Destructive`. The variant owns the fill, pressed fill, rings, shadows, content color and typography; screens must not override these styles. Scan keeps its specialized layout while sharing the button surface treatment. Round navigation and photo-viewer controls remain separate components.
+
+- Full width inside the screen margin, at least 52dp tall, shape `button` 20 (not a pill), horizontal padding 20.
+- Optional decorative 18dp icon with an 8dp gap. Use the variant's content color for the icon.
+- `Primary`: flat `accent` fill, `accentPressed` when pressed, and `button` label in `onAccent`.
+- `Secondary`: `buttonSecondary` fill (white in light, raised violet-charcoal in dark), `buttonSecondaryPressed` when pressed, and `buttonSecondary` label at weight 500 in `textPrimary`. Keep its faint ring and soft shadow, including the quieter dark-mode shadow from `tokens.md`. Stack under a primary or destructive action with a 10dp gap; don't use text-only link buttons for actions.
+- `Destructive`: flat `danger` fill, `dangerPressed` when pressed, and `button` label in `onDanger`. Only for the final confirming action of something destructive; red is never used for anything else.
+- All variants use the shared button edge and shadow treatment in `tokens.md`.
 - Disabled: whole button at 40% alpha, no press, not clickable.
-- The receipts retry action can replace its label with an 18dp loading icon in `onAccent` after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative.
-
-## GohoSecondaryButton
-
-- Same geometry. Fill `buttonSecondary` (white in light, raised violet-charcoal in dark), pressed `buttonSecondaryPressed`, with a faint ring and the same soft shadow (see `tokens.md`). Label `button` style at weight 500 in `textPrimary`, optional 18dp icon.
-- Stack under a primary button with a 10dp gap. Don't use text-only link buttons for actions.
-
-## GohoDangerButton
-
-- Same geometry as GohoPrimaryButton (52 tall, shape `button` 20, full width). Fill: flat `danger`; pressed `dangerPressed`. Edge and shadow per the button treatment in `tokens.md`. Label `button` style in `onDanger`, optional 18dp trash icon.
-- Only for the final confirming action of something destructive. Red is never used for anything else.
+- Loading: replace the label with an 18dp loading icon in the variant's content color. The receipts retry action does this after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative. Callers disable immediately while work is pending.
 
 ## Status content (empty and error states)
 

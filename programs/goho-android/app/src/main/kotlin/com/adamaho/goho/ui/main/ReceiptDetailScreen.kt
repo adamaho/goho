@@ -112,7 +112,7 @@ fun ReceiptDetailScreen(
                     GohoActionButton(
                         stringResource(R.string.receipt_detail_retry),
                         { reloadKey++ },
-                        primary = false,
+                        variant = GohoButtonVariant.Secondary,
                     )
             }
         } else {
