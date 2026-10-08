@@ -12,13 +12,12 @@ with server configuration in `/etc/goho/server.env`.
 
 `infra/deployment` retains the legacy Postgres Compose definition and installer.
 `infra/systemd` contains the units that supervise the installed services. The
-server configuration example lives with the program. The installer connects
-these files for existing hosts.
+installer connects these files for existing hosts.
 
-| Service         | Deployment configuration                      | systemd files                               |
-| --------------- | --------------------------------------------- | ------------------------------------------- |
-| `goho-postgres` | `docker-compose.yml`                          | Postgres startup unit                       |
-| `goho-server`   | `programs/goho-server/deployment.env.example` | Server unit and Postgres dependency drop-in |
+| Service         | Deployment configuration   | systemd files                               |
+| --------------- | -------------------------- | ------------------------------------------- |
+| `goho-postgres` | `docker-compose.yml`       | Postgres startup unit                       |
+| `goho-server`   | `goho-server/.env.example` | Server unit and Postgres dependency drop-in |
 
 `infra/local` remains the separate development and integration-test database setup.
 

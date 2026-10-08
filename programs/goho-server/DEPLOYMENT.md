@@ -117,7 +117,8 @@ sudo ln -s /etc/goho/postgres.env /opt/goho/goho-server/.env
 The link lets Compose read the Postgres password without copying it.
 
 On a fresh machine, create both files first.
-[`deployment.env.example`](./deployment.env.example) lists the server settings, and
+[`infra/deployment/goho-server/.env.example`](../../infra/deployment/goho-server/.env.example)
+lists the server settings, and
 `postgres.env` holds `POSTGRES_PASSWORD=` followed by a URL-safe value such as
 `openssl rand -hex 32`. Compose sets `DATABASE_URL`, the port, the bind address and
 the uploads directory itself, so those lines in `server.env` are ignored.
