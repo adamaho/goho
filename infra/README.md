@@ -21,10 +21,8 @@ programs should have its own infrastructure lifecycle.
 
 Keep its artifact definition, configuration and scripts under `programs/<name>`.
 Expose `build` and `deploy` in its `package.json`. The root `turbo.json` runs
-`build` before every `deploy` and passes the deploy variables through. If the
-program's build has side effects outside its files, such as a Docker image, add
-an uncached `<package>#build` entry there, like goho-server's, with any
-environment variables it needs. Programs using
+`build` before every `deploy`, keeps both uncached because their results live
+outside the repository, and passes the image and deploy variables through. Programs using
 the existing Docker/GHCR/Tailscale host can follow the server's implementation;
 a different platform also needs suitable CI credentials and setup.
 

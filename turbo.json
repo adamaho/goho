@@ -3,6 +3,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
       "outputs": ["dist/**", "build/**"]
     },
     "transit": {
@@ -73,12 +75,6 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["transit", "db:migrate"]
-    },
-    "@goho/goho-server#build": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
-      "outputs": []
     },
     "deploy": {
       "dependsOn": ["build"],
