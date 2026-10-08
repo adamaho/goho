@@ -1,11 +1,7 @@
 name: deploy
 
-# Deploys every program a push to dev affects, one parallel job per program,
-# by running its Turborepo `deploy` task.
-# A program opts in by defining a `deploy` script; see infra/README.md.
-# This repository is public: the server's address and Tailscale credentials come
-# only from the production environment's secrets, and nothing here prints them.
-
+# Programs opt in with a deploy task; Turbo supplies the affected workspace graph.
+# See infra/README.md for ownership and programs/goho-server/DEPLOYMENT.md for host setup.
 on:
   push:
     branches:
@@ -19,8 +15,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  plan:
-    name: plan
+  identify:
+    name: Identify programs to deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -44,29 +40,29 @@ jobs:
         id: plan
         run: |
           programs="$(pnpm turbo run deploy $TURBO_SELECTION --dry=json |
-            jq -c '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package]')"
+            jq -c '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package] | unique')"
           echo "programs=$programs" >> "$GITHUB_OUTPUT"
           printf 'Programs to deploy: %s\n' "$programs"
 
   deploy:
-    name: deploy ${{ matrix.program }}
-    needs: plan
-    if: needs.plan.outputs.programs != '[]'
+    name: Deploy ${{ matrix.program }}
+    needs: identify
+    if: needs.identify.outputs.programs != '[]'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        program: ${{ fromJSON(needs.identify.outputs.programs) }}
     # Restrict this environment to the dev branch in the repository settings.
     environment: production
     permissions:
       contents: read
       id-token: write
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        program: ${{ fromJSON(needs.plan.outputs.programs) }}
     env:
       GOHO_IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
       GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
-      PROGRAM: ${{ matrix.program }}
+      DEPLOY_PROGRAM: ${{ matrix.program }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -92,23 +88,33 @@ jobs:
           tags: tag:goho-ci
           log-mode: quiet
 
-      # Each program logs in with its own Docker config, so parallel deploys
-      # never log each other out. The job token expires when this run ends,
-      # so the server keeps no long-lived registry credential.
+      - name: Create temporary host registry configuration
+        id: registry
+        run: |
+          config="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
+            'mktemp -d /tmp/goho-registry.XXXXXXXXXX')"
+          echo "config=$config" >> "$GITHUB_OUTPUT"
+
       - name: Log the server in to the registry
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REGISTRY_USER: ${{ github.actor }}
+          REMOTE_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
+        # Each matrix job has separate host credentials, removed even if deployment fails.
         run: |
           printf '%s' "$REGISTRY_TOKEN" |
             ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
-              "DOCKER_CONFIG=/opt/goho/${PROGRAM#@goho/}/.docker docker login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
+              "docker --config '$REMOTE_DOCKER_CONFIG' login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
 
       - name: Deploy
-        run: pnpm turbo run deploy --filter="$PROGRAM"
+        env:
+          GOHO_DEPLOY_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
+        run: pnpm turbo run deploy --filter="$DEPLOY_PROGRAM"
 
-      - name: Log the server out of the registry
-        if: always()
+      - name: Remove temporary host registry configuration
+        if: always() && steps.registry.outputs.config != ''
+        env:
+          REMOTE_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
         run: |
           ssh -o BatchMode=yes -o LogLevel=ERROR "goho@$GOHO_DEPLOY_HOST" \
-            "DOCKER_CONFIG=/opt/goho/${PROGRAM#@goho/}/.docker docker logout ghcr.io" >/dev/null || true
+            "rm -rf -- '$REMOTE_DOCKER_CONFIG'"

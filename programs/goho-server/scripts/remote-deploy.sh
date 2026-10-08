@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs on the Goho server as the deploy user: ssh ... bash -s -- <program> <image> < remote-deploy.sh
+# Runs on the Goho server as the deploy user: ssh ... bash -s -- <program> <image> [docker-config] < remote-deploy.sh
 # Program deploy scripts send it over Tailscale SSH after copying the program's compose.yml.
 # Expects /opt/goho/<program>/compose.yml. Compose reads interpolation values,
 # such as passwords, from /opt/goho/<program>/.env.
@@ -10,9 +10,9 @@ readonly program="${1:?Usage: remote-deploy.sh <program> <image>}"
 readonly image="${2:?Usage: remote-deploy.sh <program> <image>}"
 readonly directory="/opt/goho/$program"
 
-# The deploy workflow logs this program in to the registry with its own Docker config.
-if [[ -d "$directory/.docker" ]]; then
-  export DOCKER_CONFIG="$directory/.docker"
+# CI gives each parallel deployment its own registry credentials on this host.
+if [[ -n "${3:-}" ]]; then
+  export DOCKER_CONFIG="$3"
 fi
 
 export GOHO_IMAGE="$image"

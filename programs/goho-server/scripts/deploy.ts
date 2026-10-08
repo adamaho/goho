@@ -21,6 +21,9 @@ Effect.gen(function* () {
   const path = yield* Path.Path;
   const host = yield* Config.String("GOHO_DEPLOY_HOST");
   const target = `goho@${host}`;
+  const dockerConfig = yield* Config.String("GOHO_DEPLOY_DOCKER_CONFIG").pipe(
+    Config.withDefault(""),
+  );
   const read = (specifier: string) =>
     path
       .fromFileUrl(new URL(specifier, import.meta.url))
@@ -39,8 +42,21 @@ Effect.gen(function* () {
       stdin: compose,
     },
   );
-  yield* run("ssh", [...sshOptions, target, "bash", "-s", "--", program, image], {
-    stdin: remoteDeploy,
-  });
+  yield* run(
+    "ssh",
+    [
+      ...sshOptions,
+      target,
+      "bash",
+      "-s",
+      "--",
+      program,
+      image,
+      ...(dockerConfig ? [dockerConfig] : []),
+    ],
+    {
+      stdin: remoteDeploy,
+    },
+  );
   yield* Console.log(`Deployed ${image} to ${host}`);
 }).pipe(Effect.provide(NodeServices.layer), NodeRuntime.runMain);

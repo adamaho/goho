@@ -10,7 +10,12 @@
     "deploy": {
       "dependsOn": ["build"],
       "cache": false,
-      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY", "GOHO_DEPLOY_HOST"],
+      "passThroughEnv": [
+        "GITHUB_SHA",
+        "GOHO_IMAGE_REGISTRY",
+        "GOHO_DEPLOY_HOST",
+        "GOHO_DEPLOY_DOCKER_CONFIG"
+      ],
       "outputs": []
     }
   }

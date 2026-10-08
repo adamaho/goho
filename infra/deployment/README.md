@@ -1,11 +1,8 @@
-# Legacy host deployment
+# Deployment configuration
 
-This directory retains the [systemd installer and migration notes](./systemd.md)
-and its Postgres Compose definition for existing installations. Keep these until
-the systemd-to-container migration is complete.
+[`goho-server/.env.example`](./goho-server/.env.example) is the production
+server configuration template. Its path is retained for existing consumers.
 
-The current server image, Compose stack, deployment scripts and instructions
-live in [`programs/goho-server`](../../programs/goho-server/DEPLOYMENT.md).
-There is no deployment workspace package: programs own their deployment files.
-
-See [infrastructure ownership](../README.md) for the repository boundary.
+The server owns its Dockerfile, Compose stack and release scripts. Follow the
+[current deployment guide](../../programs/goho-server/DEPLOYMENT.md) for host
+setup and CI deployment.

@@ -12,9 +12,8 @@ program may remain in that program's Compose stack. A database shared by several
 programs should have its own infrastructure lifecycle.
 
 - [`local/`](./local/README.md) provides development and integration-test Postgres.
-- [`deployment/`](./deployment/README.md) and [`systemd/`](./systemd/README.md)
-  retain the legacy host installer and units until migration is complete. They
-  are compatibility files, not the pattern for adding new programs.
+- [`deployment/`](./deployment/README.md) retains the production server
+  environment example at its established path.
 - Current server deployment lives in
   [`programs/goho-server`](../programs/goho-server/DEPLOYMENT.md).
 

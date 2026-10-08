@@ -27,5 +27,5 @@ COPY --from=installer /app /app
 WORKDIR /app/programs/goho-server
 USER node
 EXPOSE 13000
-# Migrations finish before the server starts, as in the systemd unit.
+# Migrations must finish successfully before the server starts.
 CMD ["sh", "-c", "node src/database/migrate.ts && exec node src/main.ts"]

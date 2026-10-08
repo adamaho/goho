@@ -1,9 +1,9 @@
 # Goho server deployment
 
 The server owns its Dockerfile, Compose stack and build/deploy scripts. GitHub
-Actions deploys the affected programs on pushes to `dev`, one parallel job per
-program; a manual run deploys all programs. The workflow currently provides Docker, GHCR and Tailscale
-access to one host.
+Actions identifies affected programs with Turbo on pushes to `dev` and deploys
+them in parallel matrix jobs. A manual run deploys all programs. The workflow
+currently provides Docker, GHCR and Tailscale access to one host.
 
 - `pnpm --filter @goho/goho-server build` builds and loads the commit-tagged image
   into the local Docker daemon. It needs Docker Buildx, but no deployment credentials.
@@ -20,11 +20,13 @@ The PR build job builds the image without publishing or deploying it.
 
 The image defaults to `ghcr.io/adamaho/goho-server:<git-commit>`. CI supplies
 `GOHO_IMAGE_REGISTRY` and `GITHUB_SHA`; deployment also requires `GOHO_DEPLOY_HOST`
-and registry authentication on both runner and host. The workflow handles those logins.
+and registry authentication on both runner and host. The workflow handles those logins
+and passes `GOHO_DEPLOY_DOCKER_CONFIG` to select the job's temporary host credentials.
+Manual deployments use the host user's default Docker configuration when it is unset.
 
 The Compose stack includes this application's Postgres database. Its existing
 project and volume names are preserved so deployment reuses installed data.
-Host setup and the legacy systemd migration are described below.
+Host setup is described below.
 
 ## What stays out of the public repository
 
@@ -40,7 +42,9 @@ or in GitHub's encrypted secrets:
   short-lived GitHub OIDC token that Tailscale only accepts from the
   `production` environment of this repository.
 - The registry login on the server uses the job's own `GITHUB_TOKEN`, which
-  expires when the run ends. The workflow logs out afterwards.
+  expires when the job ends. Each matrix job uses a separate temporary Docker
+  configuration on the host and removes it afterwards, so concurrent jobs cannot
+  overwrite or remove one another's registry credentials.
 - The workflow never runs for pull requests, so code from a fork cannot reach
   the secrets or the tailnet.
 - The API port listens only on `127.0.0.1`. Tailscale Serve is the only way in.
@@ -86,7 +90,9 @@ Under **DNS**, enable MagicDNS and HTTPS certificates.
 
 ### 2. Server
 
-On the Goho server, install Tailscale and join it with the server tag and
+Install Docker Engine with the Compose plugin on the host first. Check that
+`docker compose version` succeeds and the Docker daemon is running. Then
+install Tailscale and join it with the server tag and
 Tailscale SSH:
 
 ```bash
@@ -104,24 +110,29 @@ sudo install -d -o goho -g goho -m 0750 /opt/goho /opt/goho/goho-server
 sudo install -d -o goho -g goho -m 0700 /var/lib/goho/receipt-uploads
 ```
 
-`/etc/goho/server.env` and `/etc/goho/postgres.env` already exist from the
-systemd installer. Let the deploy user read them:
+Create `/etc/goho/server.env` from the production
+[`.env.example`](../../infra/deployment/goho-server/.env.example), and create
+`/etc/goho/postgres.env` containing `POSTGRES_PASSWORD=` followed by a URL-safe
+password (for example, generate one with `openssl rand -hex 32`). Keep an existing
+database's password when updating its configuration. Set the OpenAI credentials
+in `server.env`. Compose sets `DATABASE_URL`, the port, the bind address and the
+uploads directory itself.
+
+Create the configuration directory before placing the files there:
 
 ```bash
-sudo chgrp goho /etc/goho /etc/goho/server.env /etc/goho/postgres.env
-sudo chmod 0750 /etc/goho
+sudo install -d -o root -g goho -m 0750 /etc/goho
+```
+
+Once both files exist, restrict access and link the database configuration for Compose:
+
+```bash
+sudo chown root:goho /etc/goho/server.env /etc/goho/postgres.env
 sudo chmod 0640 /etc/goho/server.env /etc/goho/postgres.env
 sudo ln -s /etc/goho/postgres.env /opt/goho/goho-server/.env
 ```
 
 The link lets Compose read the Postgres password without copying it.
-
-On a fresh machine, create both files first.
-[`infra/deployment/goho-server/.env.example`](../../infra/deployment/goho-server/.env.example)
-lists the server settings, and
-`postgres.env` holds `POSTGRES_PASSWORD=` followed by a URL-safe value such as
-`openssl rand -hex 32`. Compose sets `DATABASE_URL`, the port, the bind address and
-the uploads directory itself, so those lines in `server.env` are ignored.
 
 Publish the API to the tailnet over HTTPS:
 
@@ -153,43 +164,10 @@ In the repository's **Settings → Environments**, create `production`:
   - `TS_AUDIENCE`: the credential's Audience
   - `GOHO_DEPLOY_HOST`: the server's MagicDNS name, such as `goho` or `goho.<tailnet>.ts.net`
 
-## Switching over from the systemd install
+## First deployment
 
-Do this once, after the setup above. Receipts and photos stay where they are: the
-Compose project reuses the existing `goho-deployment` Postgres volume and the
-uploads directory.
-
-1. Back up the database:
-
-   ```bash
-   sudo docker compose --env-file /etc/goho/postgres.env -f /etc/goho/compose.yml \
-     exec -T postgres pg_dump -U goho -d goho > goho-$(date +%F).sql
-   ```
-
-2. Stop and disable the systemd services:
-
-   ```bash
-   sudo systemctl disable --now goho-server.service goho-postgres.service
-   ```
-
-3. Give the deploy user the existing photos. If `GOHO_UPLOADS_DIRECTORY` in
-   `server.env` points somewhere else, move the photos to
-   `/var/lib/goho/receipt-uploads` first.
-
-   ```bash
-   sudo chown -R goho:goho /var/lib/goho/receipt-uploads
-   ```
-
-4. In GitHub, open **Actions → deploy → Run workflow** on `dev`, then check
-   `https://<server address>/health` from a device on the tailnet.
-
-5. Once it works, remove the old units and the checkout:
-
-   ```bash
-   sudo rm /etc/systemd/system/goho-server.service /etc/systemd/system/goho-postgres.service
-   sudo rm -r /etc/systemd/system/goho-server.service.d /etc/goho/compose.yml
-   sudo systemctl daemon-reload
-   ```
+After completing host and GitHub setup, open **Actions → deploy → Run workflow**
+on `dev`. Check `https://<server address>/health` from a device on the tailnet.
 
 ## Day to day
 
@@ -199,7 +177,11 @@ uploads directory.
   rebuilds and deploys that commit.
 - **Logs:** `sudo docker logs --follow goho-deployment-server-1`
 - **Backups:** Compose does not back anything up. Keep copies of the `pg_dump`
-  output and `/var/lib/goho/receipt-uploads` off the machine.
+  output and `/var/lib/goho/receipt-uploads` off the machine. For example:
+
+  ```bash
+  sudo docker exec goho-deployment-postgres-1 pg_dump -U goho -d goho > goho.sql
+  ```
 
 ## Android app
 

@@ -1,8 +1,7 @@
 # Production stack for the Goho server. programs/goho-server/scripts/deploy.ts copies
 # this file to /opt/goho/goho-server/compose.yml. POSTGRES_PASSWORD comes from
-# /opt/goho/goho-server/.env, a link to /etc/goho/postgres.env. The project and
-# Postgres service match infra/deployment/goho-postgres so the existing data
-# volume is reused.
+# /opt/goho/goho-server/.env, a link to /etc/goho/postgres.env. Keep the project
+# and volume names stable so deployments reuse the database volume.
 name: goho-deployment
 
 services:

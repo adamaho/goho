@@ -110,10 +110,9 @@ pnpm --filter @goho/goho-server db:migrate
 `db:migrate` connects to that database and creates or updates its tables. These
 are separate commands when run directly. The root `pnpm server:dev` command
 runs them through Turbo before starting the server. Direct package `start` and
-`dev` commands do not run migrations. The [systemd unit](#systemd-service)
-runs `db:migrate` automatically before launching the server on each start or
-restart. For other deployments, run it explicitly before starting the new
-server version. CI does not migrate deployment databases.
+`dev` commands do not run migrations. The container entry point applies
+migrations before launching the server on each start or restart. For other
+deployments, run migrations explicitly before starting the new server version.
 
 ### How the runner works
 
@@ -165,11 +164,11 @@ creates a temporary schema, applies the real migration registry, and drops the
 schema afterward. No Google or OpenAI credentials are required.
 
 Database configuration and initial connectivity are required at server startup.
-The systemd unit applies migrations before launching the server. Direct launches
+The container entry point applies migrations before launching the server. Direct launches
 with `start` or `dev` require the separate migration command first.
 
 ## Host deployment
 
-For systemd and Docker Compose deployment, see the
+For Docker Compose deployment, see the
 [deployment guide](./DEPLOYMENT.md). Local development uses the
 [setup above](#local-setup).
