@@ -176,8 +176,9 @@ uploads directory.
 
 ## Day to day
 
-- **Deploy:** merge to `dev`. Changes outside the server, its packages and this
-  folder do not trigger a deploy. Run the workflow by hand to redeploy.
+- **Deploy:** merge to `dev`. The workflow deploys only when Turbo reports
+  `@goho/infra-deployment` as affected: a change to the server, a workspace
+  package it uses, or `infra/deployment`. Run the workflow by hand to redeploy.
 - **Roll back:** re-run the `deploy` workflow run of an earlier commit. It
   deploys that commit's image.
 - **Logs:** `sudo docker logs --follow goho-deployment-server-1`

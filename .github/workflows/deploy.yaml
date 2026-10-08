@@ -8,16 +8,6 @@ on:
   push:
     branches:
       - dev
-    paths:
-      - .dockerignore
-      - .github/workflows/deploy.yaml
-      - infra/deployment/docker/**
-      - package.json
-      - packages/core/**
-      - packages/goho-api/**
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - programs/goho-server/**
   workflow_dispatch:
 
 permissions: {}
@@ -30,8 +20,46 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/goho-server
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deploy: ${{ steps.affected.outputs.deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm and install
+        uses: ./.github/actions/setup-pnpm
+
+      # @goho/infra-deployment depends on goho-server, so Turbo marks it affected
+      # when the server, its workspace dependencies or the deployment files change.
+      - name: Check whether the deployment is affected
+        id: affected
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TURBO_SCM_BASE: ${{ github.event.before }}
+          TURBO_SCM_HEAD: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == workflow_dispatch ]]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          count="$(pnpm turbo ls --affected --filter=@goho/infra-deployment --output=json | jq '.packages.count')"
+          if [[ "$count" -gt 0 ]]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          fi
+
   image:
     name: image
+    needs: changes
+    if: needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

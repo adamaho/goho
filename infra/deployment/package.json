@@ -1,0 +1,9 @@
+{
+  "name": "@goho/infra-deployment",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Production deployment of the Goho server.",
+  "dependencies": {
+    "@goho/goho-server": "workspace:*"
+  }
+}

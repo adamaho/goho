@@ -1,17 +1,15 @@
-# Allowlist: the image context contains only what goho-server needs to run.
-# Anything not listed here, including env files and local data, never reaches the image.
-*
-!package.json
-!pnpm-lock.yaml
-!pnpm-workspace.yaml
-!packages/core/
-!packages/goho-api/
-!programs/goho-server/
-
+# turbo prune selects what goho-server needs; this keeps local-only and
+# secret files out of the build context entirely.
 **/node_modules
 **/.turbo
 **/.data
 **/.env
 **/.env.*
-**/test
+!**/.env.example
+**/.secrets
+**/dist
+**/build
 **/coverage
+**/*.log
+.git
+programs/goho-android
