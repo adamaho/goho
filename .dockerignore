@@ -1,0 +1,15 @@
+# turbo prune selects what goho-server needs; this keeps local-only and
+# secret files out of the build context entirely.
+**/node_modules
+**/.turbo
+**/.data
+**/.env
+**/.env.*
+!**/.env.example
+**/.secrets
+**/dist
+**/build
+**/coverage
+**/*.log
+.git
+programs/goho-android

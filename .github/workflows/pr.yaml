@@ -155,8 +155,12 @@ jobs:
       - name: Setup pnpm and install
         uses: ./.github/actions/setup-pnpm
 
-      - name: Build
-        run: pnpm build
+      # Packages opt into container builds with an image task.
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build packages and images
+        run: pnpm turbo run build image
 
   android:
     name: android

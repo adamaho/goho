@@ -5,7 +5,8 @@ and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
-The server binds to `127.0.0.1` and requires no authentication. It is intended for local use.
+The server binds to `127.0.0.1` by default and requires no authentication. It is intended
+for local use or a private network.
 
 For development and server setup, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 

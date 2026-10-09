@@ -1,0 +1,40 @@
+# Production stack for the Goho server. programs/goho-server/scripts/deploy.ts copies
+# this file to /opt/goho/goho-server/compose.yml. The database is the shared
+# Postgres server from infra/postgres, reached as `postgres` on the `goho` network.
+# POSTGRES_PASSWORD comes from /opt/goho/goho-server/.env, a link to
+# /etc/goho/postgres.env.
+name: goho-server
+
+services:
+  server:
+    image: ${GOHO_IMAGE:?Set GOHO_IMAGE to the image to deploy}
+    restart: unless-stopped
+    init: true
+    user: "${GOHO_UID:?Set GOHO_UID}:${GOHO_GID:?Set GOHO_GID}"
+    env_file: /etc/goho/server.env
+    environment:
+      GOHO_SERVER_HOST: 0.0.0.0
+      GOHO_SERVER_PORT: "13000"
+      GOHO_UPLOADS_DIRECTORY: /var/lib/goho/receipt-uploads
+      # The password must be URL-safe; the installer generates a hex token.
+      DATABASE_URL: postgresql://goho:${POSTGRES_PASSWORD}@postgres:5432/goho
+    ports:
+      # Only this machine can reach the API; Tailscale Serve publishes it to the tailnet.
+      - "127.0.0.1:13000:13000"
+    volumes:
+      - ${GOHO_UPLOADS_HOST_DIRECTORY:-/var/lib/goho/receipt-uploads}:/var/lib/goho/receipt-uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:13000/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+networks:
+  default:
+    name: goho
+    external: true

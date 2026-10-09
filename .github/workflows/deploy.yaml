@@ -1,0 +1,119 @@
+name: deploy
+
+# Programs opt in with a deploy task; Turbo supplies the affected workspace graph.
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  identify:
+    name: Identify programs to deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      programs: ${{ steps.plan.outputs.programs }}
+    env:
+      TURBO_SCM_BASE: ${{ github.event.before }}
+      TURBO_SCM_HEAD: ${{ github.sha }}
+      # A manual run deploys every program; a push deploys only affected ones.
+      TURBO_SELECTION: ${{ github.event_name == 'push' && '--affected' || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm and install
+        uses: ./.github/actions/setup-pnpm
+
+      - name: Identify programs to deploy
+        id: plan
+        run: |
+          programs="$(pnpm turbo run deploy $TURBO_SELECTION --dry=json |
+            jq -c '[.tasks[] | select(.task == "deploy" and .command != "<NONEXISTENT>") | .package] | unique')"
+          echo "programs=$programs" >> "$GITHUB_OUTPUT"
+          printf 'Programs to deploy: %s\n' "$programs"
+
+  deploy:
+    name: Deploy ${{ matrix.program }}
+    needs: identify
+    if: needs.identify.outputs.programs != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        program: ${{ fromJSON(needs.identify.outputs.programs) }}
+    # Restrict this environment to the dev branch in the repository settings.
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    env:
+      GOHO_IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      GOHO_DEPLOY_HOST: ${{ secrets.GOHO_DEPLOY_HOST }}
+      DEPLOY_PROGRAM: ${{ matrix.program }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm and install
+        uses: ./.github/actions/setup-pnpm
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:goho-ci
+          log-mode: quiet
+
+      - name: Create temporary host registry configuration
+        id: registry
+        run: |
+          config="$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
+            'mktemp -d /tmp/goho-registry.XXXXXXXXXX')"
+          echo "config=$config" >> "$GITHUB_OUTPUT"
+
+      - name: Log the server in to the registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+          REMOTE_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
+        # Each matrix job has separate host credentials, removed even if deployment fails.
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" |
+            ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
+              "docker --config '$REMOTE_DOCKER_CONFIG' login ghcr.io --username '$REGISTRY_USER' --password-stdin" >/dev/null
+
+      - name: Deploy
+        env:
+          GOHO_DEPLOY_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
+        run: pnpm turbo run deploy --filter="$DEPLOY_PROGRAM"
+
+      - name: Remove temporary host registry configuration
+        if: always() && steps.registry.outputs.config != ''
+        env:
+          REMOTE_DOCKER_CONFIG: ${{ steps.registry.outputs.config }}
+        run: |
+          ssh -o BatchMode=yes -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
+            "rm -rf -- '$REMOTE_DOCKER_CONFIG'"
