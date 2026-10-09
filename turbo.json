@@ -8,6 +8,7 @@
     "image": {
       "dependsOn": ["build"],
       "cache": false,
+      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
       "outputs": []
     },
     "transit": {
@@ -81,6 +82,17 @@
     },
     "deploy": {
       "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": [
+        "GITHUB_SHA",
+        "GOHO_IMAGE_REGISTRY",
+        "GOHO_DEPLOY_HOST",
+        "GOHO_DEPLOY_DOCKER_CONFIG"
+      ],
+      "outputs": []
+    },
+    "@goho/goho-server#deploy": {
+      "dependsOn": ["image"],
       "cache": false,
       "passThroughEnv": [
         "GITHUB_SHA",
