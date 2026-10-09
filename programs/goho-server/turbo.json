@@ -1,0 +1,12 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "image": {
+      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"]
+    },
+    "deploy": {
+      "dependsOn": ["image"]
+    }
+  }
+}

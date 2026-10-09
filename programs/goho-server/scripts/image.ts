@@ -50,7 +50,7 @@ const git = (...args: ReadonlyArray<string>) =>
   });
 
 /**
- * The build and deploy tasks use the same commit-tagged image.
+ * The image and deploy tasks use the same commit-tagged image.
  *
  * @category utilities
  * @since 0.1.0

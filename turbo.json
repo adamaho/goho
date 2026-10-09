@@ -3,9 +3,12 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "cache": false,
-      "passThroughEnv": ["GITHUB_SHA", "GOHO_IMAGE_REGISTRY"],
       "outputs": ["dist/**", "build/**"]
+    },
+    "image": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "outputs": []
     },
     "transit": {
       "dependsOn": ["^transit"]

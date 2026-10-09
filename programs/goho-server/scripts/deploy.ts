@@ -14,8 +14,8 @@ const sshOptions = [
   "LogLevel=ERROR",
 ];
 
-// Publishes the image produced by the build task, then applies this program's
-// Compose stack over Tailscale SSH. Turbo runs build before deploy.
+// Publishes the image produced by the image task, then applies this program's
+// Compose stack over Tailscale SSH. Turbo runs image before deploy.
 Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
