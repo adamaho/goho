@@ -1,7 +1,6 @@
 name: deploy
 
 # Programs opt in with a deploy task; Turbo supplies the affected workspace graph.
-# See infra/README.md for ownership and programs/goho-server/CONTRIBUTING.md for host setup.
 on:
   push:
     branches:
