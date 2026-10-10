@@ -1,5 +1,7 @@
+import com.android.build.api.variant.BuildConfigField
 import com.ncorti.ktfmt.gradle.tasks.KtfmtCheckTask
 import com.ncorti.ktfmt.gradle.tasks.KtfmtFormatTask
+import java.net.URI
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
@@ -16,6 +18,7 @@ val generatedClientDir = layout.buildDirectory.dir("generated/openapi")
 val checkedInClientDir =
     layout.projectDirectory.dir("src/main/kotlin/com/adamaho/goho/api/generated")
 val gohoServerUrl = providers.gradleProperty("gohoServerUrl").orElse("http://127.0.0.1:3000").get()
+val productionServerUrl = providers.gradleProperty("gohoProductionServerUrl").orElse("")
 
 tasks.withType<KtfmtCheckTask>().configureEach { exclude("**/api/generated/**") }
 
@@ -63,7 +66,16 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        buildConfigField("String", "GOHO_SERVER_URL", "\"$gohoServerUrl\"")
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("development") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            buildConfigField("String", "GOHO_SERVER_URL", "\"$gohoServerUrl\"")
+        }
+        create("production") { dimension = "environment" }
     }
 
     compileOptions {
@@ -75,6 +87,26 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+androidComponents {
+    onVariants(selector().withFlavor("environment" to "production")) { variant ->
+        variant.buildConfigFields?.put(
+            "GOHO_SERVER_URL",
+            productionServerUrl.map { value ->
+                val url =
+                    try {
+                        URI(value)
+                    } catch (_: java.net.URISyntaxException) {
+                        null
+                    }
+                require(url?.scheme == "https" && !url.host.isNullOrBlank()) {
+                    "Production builds require -PgohoProductionServerUrl=https://your-server"
+                }
+                BuildConfigField("String", "\"${url.toASCIIString()}\"", null)
+            },
+        )
     }
 }
 

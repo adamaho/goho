@@ -185,7 +185,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build and lint
-        run: ./gradlew :app:assembleDebug :app:lintDebug --no-daemon
+        run: ./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug --no-daemon
 
       - name: Generated client check
         run: |
