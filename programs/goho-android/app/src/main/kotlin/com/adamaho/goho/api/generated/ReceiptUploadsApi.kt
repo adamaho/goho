@@ -38,6 +38,7 @@ interface ReceiptUploadsApi {
      * Clears a failed upload and its original image off the bench. Queued, processing, and succeeded uploads return 409; delete the receipt to remove a successful scan.
      * Responses:
      *  - 204: <No Content>
+     *  - 403: Forbidden
      *  - 404: No receipt upload is wearing that number, bud.
      *  - 409: Only failed uploads can be deleted; this upload has a different status.
      *  - 500: The server could not delete this upload and its stored image.

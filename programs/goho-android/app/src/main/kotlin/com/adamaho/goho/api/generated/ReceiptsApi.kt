@@ -22,6 +22,7 @@ interface ReceiptsApi {
      * Responses:
      *  - 200: Success
      *  - 400: The payload is a bad pass; the response body stays empty.
+     *  - 403: Forbidden
      *  - 500: Receipt validation or persistence missed the net.
      *
      * @param createReceiptRequest 
@@ -36,6 +37,7 @@ interface ReceiptsApi {
      * Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
+     *  - 403: Forbidden
      *  - 404: No receipt is wearing that number, bud.
      *  - 500: The server could not delete this receipt and its stored image.
      *

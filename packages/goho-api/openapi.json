@@ -283,6 +283,9 @@
           "204": {
             "description": "<No Content>"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
             "content": {
@@ -506,6 +509,9 @@
           "400": {
             "description": "The payload is a bad pass; the response body stays empty."
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "Receipt validation or persistence missed the net.",
             "content": {
@@ -605,6 +611,9 @@
         "responses": {
           "204": {
             "description": "<No Content>"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "No receipt is wearing that number, bud.",

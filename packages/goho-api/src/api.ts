@@ -105,6 +105,7 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: HttpApiSchema.NoContent,
           error: [
+            HttpApiError.ForbiddenNoContent,
             HttpApiError.NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
@@ -188,6 +189,7 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: HttpApiSchema.NoContent,
           error: [
+            HttpApiError.ForbiddenNoContent,
             HttpApiError.NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -234,6 +236,7 @@ export const api = HttpApi.make("goho-server")
           payload: CreateReceiptRequest,
           success: DataResponse(Receipt),
           error: [
+            HttpApiError.ForbiddenNoContent,
             HttpApiError.BadRequestNoContent.annotate({
               description: "The payload is a bad pass; the response body stays empty.",
             }),

@@ -3,7 +3,7 @@ import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { Array, Effect, FileSystem, Layer } from "effect";
+import { Array, Effect, FileSystem, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
@@ -256,6 +256,67 @@ it.effect("accepts same-origin browser uploads directly and through the HTTPS pr
     }
   }).pipe(Effect.provide(TestLive)),
 );
+
+it.effect("denies cross-origin response access and preflights across the whole server", () =>
+  Effect.gen(function* () {
+    for (const path of ["/receipts", "/receipt-uploads", "/health", "/openapi.json", "/docs"]) {
+      const response = yield* HttpClient.get(path, {
+        headers: { origin: "https://unrelated.example" },
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+      expect(response.headers.vary).toContain("Origin");
+      const preflight = yield* HttpClient.options(path, {
+        headers: {
+          origin: "https://unrelated.example",
+          "access-control-request-method": "DELETE",
+        },
+      });
+      expect(preflight.status).toBe(204);
+      expect(preflight.headers["access-control-allow-origin"]).toBeUndefined();
+    }
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("rejects cross-origin receipt creation and deletions before calling services", () => {
+  let writes = 0;
+  return Effect.gen(function* () {
+    const headers = { origin: "https://unrelated.example" };
+    const responses = [
+      yield* HttpClient.post("/receipts", { headers, body: yield* HttpBody.json(createPayload) }),
+      yield* HttpClient.del(`/receipts/${receipt.id}`, { headers }),
+      yield* HttpClient.del(`/receipt-uploads/${receiptUpload.id}`, { headers }),
+    ];
+    for (const response of responses) {
+      expect(response.status).toBe(403);
+      expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    }
+    expect(writes).toBe(0);
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        {
+          insert: () =>
+            Effect.sync(() => {
+              writes++;
+              return receipt.id;
+            }),
+          delete: () =>
+            Effect.sync(() => {
+              writes++;
+              return Option.some({ fileId: null });
+            }),
+        },
+        {
+          delete: () =>
+            Effect.sync(() => {
+              writes++;
+            }),
+        },
+      ),
+    ),
+  );
+});
 
 it.effect("lists receipt uploads through the generated client", () =>
   Effect.gen(function* () {
