@@ -161,47 +161,6 @@ it.effect("uploads one receipt image and retrieves its status through the genera
     });
   }).pipe(Effect.provide(TestLive)),
 );
-it.effect("rejects cross-origin writes before parsing or calling services", () =>
-  Effect.gen(function* () {
-    const headers = { origin: "https://unrelated.example" };
-    const responses = [
-      yield* HttpClient.post("/receipt-uploads", {
-        headers,
-        body: HttpBody.text("invalid multipart", "multipart/form-data"),
-      }),
-      yield* HttpClient.post("/receipts", { headers, body: yield* HttpBody.json(createPayload) }),
-      yield* HttpClient.del(`/receipts/${receipt.id}`, { headers }),
-      yield* HttpClient.del(`/receipt-uploads/${receiptUpload.id}`, { headers }),
-    ];
-    for (const response of responses) expect(response.status).toBe(403);
-  }).pipe(
-    Effect.provide(
-      testLayer(
-        {
-          insert: () => Effect.die("Must not create receipts"),
-          delete: () => Effect.die("Must not delete receipts"),
-        },
-        { delete: () => Effect.die("Must not delete uploads") },
-      ),
-    ),
-  ),
-);
-
-it.effect("accepts same-origin uploads directly and through HTTPS", () =>
-  Effect.gen(function* () {
-    const target = new URL((yield* HttpClient.get("/health")).request.url);
-    for (const protocol of ["http", "https"]) {
-      const form = new FormData();
-      form.append("file", new File(["image bytes"], "receipt.png", { type: "image/png" }));
-      const response = yield* HttpClient.post("/receipt-uploads", {
-        headers: { origin: `${protocol}://${target.host}`, "x-forwarded-proto": protocol },
-        body: HttpBody.formData(form),
-      });
-      expect(response.status).toBe(202);
-    }
-  }).pipe(Effect.provide(TestLive)),
-);
-
 it.effect("denies cross-origin response access and preflights globally", () =>
   Effect.gen(function* () {
     for (const path of ["/receipts", "/docs"]) {

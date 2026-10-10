@@ -1,39 +1,11 @@
 import { api } from "@goho/goho-api/api";
 import { withData } from "@goho/goho-api/response";
-import { Effect, FileSystem, Layer, Option, Schema } from "effect";
-import { HttpMiddleware, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
+import { Effect, FileSystem, Layer, Schema } from "effect";
+import { HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
 
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
-
-// CORS controls browser response access; the guard also prevents cross-origin writes.
-const BrowserProtection = HttpRouter.middleware(
-  (handler) =>
-    Effect.gen(function* () {
-      const request = yield* HttpServerRequest.HttpServerRequest;
-      if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return yield* handler;
-
-      const site = request.headers["sec-fetch-site"];
-      const origin = request.headers.origin;
-      // Native Android and CLI clients do not send browser origin headers.
-      if (site !== undefined && site !== "same-origin") {
-        return HttpServerResponse.empty({ status: 403 });
-      }
-      if (origin !== undefined) {
-        // Use Host, not X-Forwarded-Host. Tailscale Serve supplies X-Forwarded-Proto.
-        const target = HttpServerRequest.toURL(request);
-        if (Option.isNone(target) || origin !== target.value.origin) {
-          return HttpServerResponse.empty({ status: 403 });
-        }
-      }
-      return yield* handler;
-    }).pipe(
-      // An empty allowedOrigins array means "*" in Effect; a predicate denies all.
-      HttpMiddleware.cors({ allowedOrigins: () => false }),
-    ),
-  { global: true },
-);
 
 const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers) =>
   Effect.gen(function* () {
@@ -100,5 +72,8 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([ReceiptUploadsLive, ReceiptsLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
-  Layer.merge(BrowserProtection),
+  Layer.merge(
+    // An empty allowedOrigins array means "*" in Effect; a predicate denies all.
+    HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),
+  ),
 );
