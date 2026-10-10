@@ -22,6 +22,7 @@ interface ReceiptUploadsApi {
      * Responses:
      *  - 202: Success
      *  - 400: The upload is missing a supported receipt image.
+     *  - 403: Forbidden
      *  - 500: The server could not store or queue the receipt image.
      *
      * @param file 

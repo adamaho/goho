@@ -124,6 +124,9 @@
           "400": {
             "description": "The upload is missing a supported receipt image."
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "500": {
             "description": "The server could not store or queue the receipt image.",
             "content": {

@@ -70,6 +70,7 @@ export const api = HttpApi.make("goho-server")
           payload: ReceiptUploadPayload,
           success: DataResponse(ReceiptUpload).pipe(HttpApiSchema.status(202)),
           error: [
+            HttpApiError.ForbiddenNoContent,
             HttpApiError.BadRequestNoContent.annotate({
               description: "The upload is missing a supported receipt image.",
             }),

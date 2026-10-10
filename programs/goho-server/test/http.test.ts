@@ -3,7 +3,7 @@ import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { Array, Effect, Layer } from "effect";
+import { Array, Effect, FileSystem, Layer } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
@@ -61,6 +61,7 @@ const testLayer = (
   repository: Partial<ReceiptRepository.Interface> = {},
   receiptUploads: Partial<ReceiptUploads.Interface> = {},
   storage: Partial<FileStorage.Interface> = {},
+  fileSystem: Partial<FileSystem.FileSystem> = {},
 ) =>
   HttpRouter.serve(
     Http.layer.pipe(
@@ -85,6 +86,11 @@ const testLayer = (
         ),
         receiptUploadsTest(receiptUploads),
       ]),
+      Layer.provide(
+        Layer.effect(FileSystem.FileSystem)(
+          Effect.map(FileSystem.FileSystem, (service) => ({ ...service, ...fileSystem })),
+        ),
+      ),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
 
@@ -161,6 +167,96 @@ it.effect("uploads one receipt image and retrieves its status through the genera
     });
   }).pipe(Effect.provide(TestLive)),
 );
+it.effect("rejects cross-origin uploads before temporary storage or queueing", () => {
+  let temporaryDirectories = 0;
+  let uploads = 0;
+  return Effect.gen(function* () {
+    const target = new URL((yield* HttpClient.get("/health")).request.url);
+    const cases: ReadonlyArray<Record<string, string>> = [
+      { origin: "https://unrelated.example" },
+      { origin: "null" },
+      { origin: "not-an-origin" },
+      { origin: `https://${target.hostname}:${Number(target.port) + 1}` },
+      { origin: target.origin },
+      { origin: "https://goho.example.attacker.example" },
+      { origin: "https://other.example", "sec-fetch-site": "same-site" },
+      { "sec-fetch-site": "cross-site" },
+      { "sec-fetch-site": "same-site" },
+      { "sec-fetch-site": "none" },
+      { origin: "https://unrelated.example", "sec-fetch-site": "same-origin" },
+      { origin: "https://unrelated.example", "x-forwarded-host": "unrelated.example" },
+    ];
+    for (const headers of cases) {
+      const form = new FormData();
+      form.append("file", new File(["image bytes"], "receipt.png", { type: "image/png" }));
+      const response = yield* HttpClient.post("/receipt-uploads", {
+        headers: { "x-forwarded-proto": "https", ...headers },
+        body: HttpBody.formData(form),
+      });
+      expect(response.status).toBe(403);
+      expect(yield* response.text).toBe("");
+    }
+    expect(temporaryDirectories).toBe(0);
+    expect(uploads).toBe(0);
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        {},
+        {
+          create: () =>
+            Effect.sync(() => {
+              uploads++;
+              return receiptUpload;
+            }),
+        },
+        {},
+        {
+          makeTempDirectoryScoped: () =>
+            Effect.suspend(() => {
+              temporaryDirectories++;
+              return Effect.die("Rejected uploads must not create temporary files");
+            }),
+        },
+      ),
+    ),
+  );
+});
+
+it.effect("rejects cross-origin requests before decoding malformed multipart bodies", () =>
+  Effect.gen(function* () {
+    const response = yield* HttpClient.post("/receipt-uploads", {
+      headers: { origin: "https://unrelated.example" },
+      body: HttpBody.text("not multipart", "multipart/form-data"),
+    });
+    expect(response.status).toBe(403);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("accepts same-origin browser uploads directly and through the HTTPS proxy", () =>
+  Effect.gen(function* () {
+    const target = new URL((yield* HttpClient.get("/health")).request.url);
+    const cases: ReadonlyArray<Record<string, string>> = [
+      { origin: target.origin },
+      {
+        origin: `https://${target.host}`,
+        "x-forwarded-proto": "https",
+        "sec-fetch-site": "same-origin",
+      },
+      { "sec-fetch-site": "same-origin" },
+    ];
+    for (const headers of cases) {
+      const form = new FormData();
+      form.append("file", new File(["image bytes"], "receipt.png", { type: "image/png" }));
+      const response = yield* HttpClient.post("/receipt-uploads", {
+        headers,
+        body: HttpBody.formData(form),
+      });
+      expect(response.status).toBe(202);
+      expect(yield* response.json).toEqual({ data: receiptUpload });
+    }
+  }).pipe(Effect.provide(TestLive)),
+);
+
 it.effect("lists receipt uploads through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
