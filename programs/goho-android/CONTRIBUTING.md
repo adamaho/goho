@@ -23,21 +23,21 @@ directory and put its `platform-tools` directory on `PATH` so `adb` is available
 ## Run the app
 
 In Android Studio, open `programs/goho-android` as a project, wait for Gradle
-sync, select the `app` run configuration and an emulator or connected device,
-then click Run.
+sync, select `developmentDebug` in the Build Variants window, then choose the
+`app` run configuration and an emulator or connected device and click Run.
 
 Or, from the repository root, build and install with the checked-in wrapper:
 
 ```bash
 cd programs/goho-android
-./gradlew :app:assembleDebug
+./gradlew :app:assembleDevelopmentDebug
 adb devices
-./gradlew :app:installDebug
+./gradlew :app:installDevelopmentDebug
 ```
 
 Start the emulator or connect the device before `adb devices`, then launch Goho
 from its app icon. The debug APK is at
-`app/build/outputs/apk/debug/app-debug.apk`. See the official
+`app/build/outputs/apk/development/debug/app-development-debug.apk`. See the official
 [command-line build guide](https://developer.android.com/build/building-cmdline)
 for other build and install options.
 
@@ -47,19 +47,48 @@ the network, run `adb reverse tcp:3000 tcp:3000` before opening Goho. With
 multiple devices connected, add `-s <device-id>` to the `adb` command. An HTTPS
 server URL can be supplied at build time with `-PgohoServerUrl=https://...`.
 
+## Install development and production together
+
+The `development` and `production` product flavours each support debug and
+release builds. **Goho Dev** (`com.adamaho.goho.dev`) and **Goho**
+(`com.adamaho.goho`) have separate app storage and update independently.
+
+Build and install the production debug variant alongside development:
+
+```bash
+./gradlew :app:installProductionDebug -PgohoProductionServerUrl=https://your-server
+```
+
+Production requires an explicit HTTPS URL; `gohoServerUrl` overrides only the
+development URL. You can also set `gohoProductionServerUrl` in your untracked
+user Gradle properties for Android Studio. Select `productionDebug` in the
+Build Variants window to run it. Its APK is at
+`app/build/outputs/apk/production/debug/app-production-debug.apk`.
+
+Both debug variants support installation over an already paired wireless ADB
+connection. Development uses `adb reverse tcp:3000 tcp:3000` for the local
+server; run it again after reconnecting. The loopback HTTP exception applies
+only to `developmentDebug`; production uses HTTPS.
+
 ## Verification
 
 Do not add or run automated tests for the Android app, including unit tests,
 instrumentation tests, screenshot test harnesses, or test-only dependencies.
 
-Validate Android changes with `:app:assembleDebug`, `:app:lintDebug`,
+Validate Android changes with `:app:assembleDevelopmentDebug`, `:app:lintDevelopmentDebug`,
 `:app:ktfmtCheck`, and manual visual and interaction checks.
 
-From `programs/goho-android`, run the same Android build and lint checks as CI:
+From `programs/goho-android`, build and lint both debug variants as CI does:
 
 ```bash
-./gradlew :app:assembleDebug :app:lintDebug
+./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug \
+  :app:assembleProductionDebug :app:lintProductionDebug \
+  -PgohoProductionServerUrl=https://example.invalid
 ```
+
+CI uses a non-routable example URL for build validation. Supply your actual
+HTTPS server URL when building an APK to install. Both APKs are produced in
+separate output directories in the same build.
 
 Format or check Kotlin source with the Android-specific pnpm shortcuts from the
 repository root:
