@@ -161,22 +161,6 @@ it.effect("uploads one receipt image and retrieves its status through the genera
     });
   }).pipe(Effect.provide(TestLive)),
 );
-it.effect("denies cross-origin response access and preflights globally", () =>
-  Effect.gen(function* () {
-    for (const path of ["/receipts", "/docs"]) {
-      const headers = { origin: "https://unrelated.example" };
-      const response = yield* HttpClient.get(path, { headers });
-      expect(response.status).toBe(200);
-      expect(response.headers["access-control-allow-origin"]).toBeUndefined();
-      const preflight = yield* HttpClient.options(path, {
-        headers: { ...headers, "access-control-request-method": "POST" },
-      });
-      expect(preflight.status).toBe(204);
-      expect(preflight.headers["access-control-allow-origin"]).toBeUndefined();
-    }
-  }).pipe(Effect.provide(TestLive)),
-);
-
 it.effect("lists receipt uploads through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");

@@ -73,7 +73,6 @@ export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" })
   Layer.provide([ReceiptUploadsLive, ReceiptsLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
-    // An empty allowedOrigins array means "*" in Effect; a predicate denies all.
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),
   ),
 );
