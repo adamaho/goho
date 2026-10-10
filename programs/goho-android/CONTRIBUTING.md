@@ -78,17 +78,11 @@ instrumentation tests, screenshot test harnesses, or test-only dependencies.
 Validate Android changes with `:app:assembleDevelopmentDebug`, `:app:lintDevelopmentDebug`,
 `:app:ktfmtCheck`, and manual visual and interaction checks.
 
-From `programs/goho-android`, build and lint both debug variants as CI does:
+From `programs/goho-android`, build and lint the development debug variant as CI does:
 
 ```bash
-./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug \
-  :app:assembleProductionDebug :app:lintProductionDebug \
-  -PgohoProductionServerUrl=https://example.invalid
+./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug
 ```
-
-CI uses a non-routable example URL for build validation. Supply your actual
-HTTPS server URL when building an APK to install. Both APKs are produced in
-separate output directories in the same build.
 
 Format or check Kotlin source with the Android-specific pnpm shortcuts from the
 repository root:

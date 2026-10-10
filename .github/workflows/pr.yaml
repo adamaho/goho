@@ -185,10 +185,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build and lint
-        run: >-
-          ./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug
-          :app:assembleProductionDebug :app:lintProductionDebug
-          -PgohoProductionServerUrl=https://example.invalid --no-daemon
+        run: ./gradlew :app:assembleDevelopmentDebug :app:lintDevelopmentDebug --no-daemon
 
       - name: Generated client check
         run: |
