@@ -1,6 +1,7 @@
 import { api } from "@goho/goho-api/api";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
+import { HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
 
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
@@ -71,4 +72,7 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
   Layer.provide([ReceiptUploadsLive, ReceiptsLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
+  Layer.merge(
+    HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),
+  ),
 );
