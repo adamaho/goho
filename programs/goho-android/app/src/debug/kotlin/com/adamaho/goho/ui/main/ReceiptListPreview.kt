@@ -103,13 +103,6 @@ fun ReceiptListEmptyPreview() = ListPreview(ReceiptOverviewState(hasLoaded = tru
 
 @Preview @Composable fun ReceiptListErrorPreview() = ListPreview(ReceiptOverviewState(error = true))
 
-@Preview(name = "Loading list – light", widthDp = 412, heightDp = 915)
-@Preview(
-    name = "Loading list – dark",
-    widthDp = 412,
-    heightDp = 915,
-    uiMode = Configuration.UI_MODE_NIGHT_YES,
-)
-@Preview(name = "Loading list – large text", widthDp = 320, heightDp = 640, fontScale = 2f)
+@Preview
 @Composable
 fun ReceiptListLoadingPreview() = ListPreview(ReceiptOverviewState(loading = true))
