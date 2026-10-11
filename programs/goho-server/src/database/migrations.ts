@@ -9,6 +9,7 @@ import receiptUploadFileId from "./migrations/0005-receipt-upload-file-id.ts";
 import dropReceiptIdempotency from "./migrations/0006-drop-receipt-idempotency.ts";
 import moveExtractionToUploads from "./migrations/0007-move-extraction-to-uploads.ts";
 import defaultReceiptCurrency from "./migrations/0008-default-receipt-currency.ts";
+import recordTimestamps from "./migrations/0009-record-timestamps.ts";
 
 /**
  * Explicit migration registry, shared by the migration command and tests.
@@ -27,6 +28,7 @@ export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
       "0006_drop_receipt_idempotency": dropReceiptIdempotency,
       "0007_move_extraction_to_uploads": moveExtractionToUploads,
       "0008_default_receipt_currency": defaultReceiptCurrency,
+      "0009_record_timestamps": recordTimestamps,
     }),
     table: "goho_migrations",
   });

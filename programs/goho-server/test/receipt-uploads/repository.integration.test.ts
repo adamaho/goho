@@ -68,8 +68,6 @@ it.effect("lists uploads newest first with their durable statuses", () =>
     yield* repo.createQueued(older);
     yield* repo.createQueued(newer);
     yield* repo.markProcessing(newer.id);
-    const sql = yield* SqlClient.SqlClient;
-    yield* sql`UPDATE receipt_uploads SET created_at = '2026-09-19' WHERE id = ${older.id}`;
     expect((yield* repo.list).map(({ id, status }) => ({ id, status }))).toEqual([
       { id: newer.id, status: "processing" },
       { id: older.id, status: "queued" },
