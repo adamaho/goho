@@ -1,6 +1,6 @@
 ---
 name: goho-design
-description: Goho's visual design system and screen specs for the native Android (Jetpack Compose) app. Use this skill whenever you build, change, or review any Goho UI, including the receipts list, receipt details, the Scan button, rows, status pills, colors, typography, spacing, icons or motion, even if the task only says "fix the list". Follow it instead of Material defaults, and build only the features it lists.
+description: Goho's visual design system, character identities, launcher icons, and screen specs for the native Android (Jetpack Compose) app. Use when creating or reviewing Goho UI, branding, Bram, Mira, their child, or character artwork. Follow the approved references instead of Material defaults, and build only supported features.
 ---
 
 # Goho design
@@ -10,6 +10,10 @@ Design handoff: October 8, 2026 gentle shrugging Bram for receipt load errors, b
 Goho is a family receipt-scanning app. The look is **warm, soft and friendly, with financial-app precision**: warm off-white in light mode, violet-charcoal in dark mode, one lavender accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
+
+## Character identity and launcher artwork
+
+For character, brand, or launcher-icon work, read [references/characters.md](references/characters.md) and inspect its linked PNG masters. It records the approved Bram, coral Mira, buttery-yellow child, and family portrait, with image metadata and hashes in `assets/illustrations/family/manifest.json`. These are durable identity references; the family portrait guides the launcher icons, which feature all three characters. They do not introduce extra receipt states or place characters in the text-only header. For icon variants, resource layout, and regeneration, also read [references/launcher-icons.md](references/launcher-icons.md).
 
 ## Bram refinements
 
@@ -54,11 +58,13 @@ The current handoff keeps the same receipt photo, merchant, amount and date head
 
 ## How to work
 
+For character or launcher artwork, start with `references/characters.md`. For native UI work:
+
 1. Read `references/tokens.md` and extend the existing app theme with the tokens needed for the requested screen. Use `assets/compose/GohoTheme.kt` as a reference; preserve the app's existing theme integration and bundled font resources.
 2. Build the primitives in `references/components.md`. `assets/compose/GohoComponents.kt` is a reference implementation of them; it has not been compiled, so treat it as a strong starting point and fix any API drift against the project's Compose version.
 3. Build screens from `references/screens.md`, which has the layout top to bottom with measurements, copy, states and behavior.
 4. Compare against the mockups listed in `assets/mockups/README.md`. The written spec wins if they disagree.
-5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current mockups together. Preserve supplied artwork; label older reference assets as historical rather than presenting them as current. Keep the neutral Bram identity reference and generation prompts in `assets/illustrations/bram/`, approved artwork in `assets/illustrations/`, and current screen references in `assets/mockups/`. Ship only the no-receipts, empty Needs attention and load-error illustrations. Keep neutral Bram artwork as design identity references only; defer other character states and concept sheets until their implementation.
+5. When an approved UI change alters the design, update the affected specs, Compose references, illustration assets, and current screen mockups together. Preserve supplied artwork; label older screen references as historical rather than presenting them as current. Keep neutral Bram and the shipped status-artwork prompts in `assets/illustrations/bram/`, approved family PNG masters and their manifest in `assets/illustrations/family/`, and only the selected launcher sources in `assets/launcher/`. Commit current app artwork and the approved individual/family identity references; keep unused character or icon candidates, exploration prompts, and generated launcher previews in ignored `.data/`. Ship only the no-receipts, empty Needs attention and load-error illustrations within app screens, plus the family together in the launcher icons. Defer other character states until their implementation.
 6. Verify the requested behavior against the current Goho server and Android flow before implementing it. Mockups do not establish backend support.
 7. Do not add or run automated Android tests or test harnesses. Validate Android changes with build, lint, formatting, and manual visual and interaction checks.
 

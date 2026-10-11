@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "pathBase": "this manifest directory",
+  "approvalContext": "User-approved Goho family artwork, preserved on 2026-10-10.",
+  "notes": [
+    "Canonical PNG masters are preserved unchanged; SHA-256 identifies their exact bytes.",
+    "Bram, Mira, the unnamed buttery-yellow child, and the family portrait are the retained identity references.",
+    "Only current app assets and these canonical references are committed. Exploration artwork, prompts and previews remain untracked."
+  ],
+  "assets": [
+    {
+      "id": "bram-neutral",
+      "version": "v3",
+      "role": "canonical Bram identity reference",
+      "status": "approved-current",
+      "usage": "reference only; existing receipt-state illustrations remain the shipped Bram artwork",
+      "file": "../bram/reference/bram-v3.png",
+      "sha256": "8eaa997389ecd24512192b7251c530bd21299a9ccb7e6cdf2b0ef94e53eb2983",
+      "width": 491,
+      "height": 328,
+      "format": "PNG",
+      "mode": "RGBA"
+    },
+    {
+      "id": "mira-neutral",
+      "version": "v1",
+      "role": "canonical Mira identity and standalone pose",
+      "status": "approved-current",
+      "approvalDate": "2026-10-10",
+      "usage": "brand reference",
+      "file": "mira-v1.png",
+      "sha256": "c679e44f3ce35b6e06b46bb884cebca8ddd1561219985abb81229a0b18b9e230",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA"
+    },
+    {
+      "id": "child-yellow",
+      "version": "v2",
+      "role": "canonical unnamed child identity",
+      "status": "approved-current",
+      "approvalDate": "2026-10-10",
+      "usage": "brand reference",
+      "file": "child-yellow-v2.png",
+      "sha256": "13e7021ca6d20e7f45290c04a676885c53c62b926d76032b7a5038e20b791acb",
+      "width": 1254,
+      "height": 1254,
+      "format": "PNG",
+      "mode": "RGBA"
+    },
+    {
+      "id": "family-portrait",
+      "version": "v1",
+      "role": "approved family relationship, relative scale and composition reference",
+      "status": "approved-current",
+      "approvalDate": "2026-10-10",
+      "usage": "brand reference and source for the family launcher adaptation; warm ivory background is intentional",
+      "file": "bram-mira-family-v1.png",
+      "sha256": "1113242a1dc802bb458a1172aa0dc8888fab1536bceb2b00a599f6a281ae3870",
+      "width": 1536,
+      "height": 1024,
+      "format": "PNG",
+      "mode": "RGB"
+    }
+  ]
+}

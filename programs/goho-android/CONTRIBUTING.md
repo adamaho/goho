@@ -70,6 +70,17 @@ connection. Development uses `adb reverse tcp:3000 tcp:3000` for the local
 server; run it again after reconnecting. The loopback HTTP exception applies
 only to `developmentDebug`; production uses HTTPS.
 
+## Launcher artwork
+
+Goho and Goho Dev show Bram, Mira, and their child together; development adds a
+small `DEV` badge. Production resources live in `app/src/main/res`, with development
+overrides in `app/src/development/res`. Follow the
+[launcher source and regeneration guide](../../.agents/skills/goho-design/references/launcher-icons.md)
+when updating icons. It covers the approved masters, isolated Sharp tool setup,
+`generate-launcher-icons.cjs`, adaptive and themed layers, and legacy exports.
+Commit the selected sources and generated Android resources; the generator saves
+review sheets and standalone exports under ignored `.data/launcher-preview/`.
+
 ## Verification
 
 Do not add or run automated tests for the Android app, including unit tests,
