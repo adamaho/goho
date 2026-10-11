@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.adamaho.goho.theme.*
+import com.adamaho.goho.ui.components.gohoSkeleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
@@ -126,6 +127,7 @@ internal fun ReceiptThumbnail(
                 if (sheetHeader) GohoSpacing.sheetThumbHeight else GohoSpacing.thumbHeight,
             )
             .clip(shape)
+            .gohoSkeleton(block = true)
             .background(background)
             .border(GohoSpacing.hairline, c.outline, shape),
         contentAlignment = Alignment.Center,

@@ -16,7 +16,7 @@ import java.util.Locale
 
 @Composable
 internal fun ReceiptItemsCard(
-    items: List<ReceiptItem>,
+    items: List<ReceiptItem>?,
     total: String,
     currencyCode: String,
     locale: Locale,
@@ -24,7 +24,8 @@ internal fun ReceiptItemsCard(
 ) {
     val c = GohoTheme.colors
     ReceiptCard(verticalPadding = GohoSpacing.itemCardTop) {
-        items.forEachIndexed { index, item ->
+        repeat(items?.size ?: 3) { index ->
+            val item = items?.get(index)
             if (index > 0) ReceiptDetailDivider()
             Row(
                 Modifier.fillMaxWidth()
@@ -36,16 +37,17 @@ internal fun ReceiptItemsCard(
                 horizontalArrangement = Arrangement.spacedBy(GohoSpacing.itemGap),
             ) {
                 Text(
-                    item.name,
-                    Modifier.weight(1f),
+                    item?.name.orEmpty(),
+                    Modifier.weight(1f).gohoSkeleton(fraction = 0.7f),
                     style = GohoTheme.type.listRow,
                     color = c.textPrimary,
                     maxLines = if (largeText) Int.MAX_VALUE else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val amount = receiptAmount(item.amount, locale)
+                val amount = receiptAmount(item?.amount, locale)
                 Text(
                     receiptMoneyText(amount, currencyCode, locale),
+                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
                     style = GohoTheme.type.listValue,
                     color = if (amount == "—") c.textTertiary else c.textPrimary,
                     maxLines = 1,
@@ -71,12 +73,13 @@ internal fun ReceiptItemsCard(
         ) {
             Text(
                 stringResource(R.string.receipt_total),
-                Modifier.weight(1f),
+                Modifier.weight(1f).gohoSkeleton(fraction = 0.7f),
                 style = GohoTheme.type.itemTotalLabel,
                 color = c.textPrimary,
             )
             Text(
                 receiptMoneyText(total, currencyCode, locale),
+                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
                 style = GohoTheme.type.itemTotalValue,
                 color = c.textPrimary,
             )

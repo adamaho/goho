@@ -201,16 +201,34 @@ fun ReceiptOverview(
                         }
                         if (isOpeningScanner)
                             item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
-                        if (!state.hasLoaded && showLoading)
+                        if (!state.hasLoaded && state.loading)
                             item("loading") {
-                                Box(
-                                    Modifier.fillMaxWidth()
-                                        .padding(vertical = GohoSpacing.contentGap),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    GohoLoadingIcon(
-                                        description = stringResource(R.string.receipts_loading)
-                                    )
+                                GohoSkeletonScope(loading = true) {
+                                    Column(
+                                        Modifier.loadingSemantics(
+                                            true,
+                                            stringResource(R.string.receipts_loading),
+                                        )
+                                    ) {
+                                        ReceiptSectionHeading("")
+                                        ReceiptCard {
+                                            repeat(4) { index ->
+                                                if (index > 0) ReceiptDivider()
+                                                ReceiptRow(
+                                                    null,
+                                                    clock,
+                                                    locale,
+                                                    zone,
+                                                    config.fontScale >= 1.3f ||
+                                                        config.screenWidthDp <
+                                                            GohoSpacing.compactWidth.value,
+                                                    onReceiptClick,
+                                                    { optionsEntry = it },
+                                                    thumbnails,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         sections.forEach { section ->
@@ -221,17 +239,8 @@ fun ReceiptOverview(
                                     exit = removal,
                                 ) {
                                     Column {
-                                        Text(
-                                            sectionTitle(section.group, locale, today.year),
-                                            style = GohoTheme.type.section,
-                                            color = c.textTertiary,
-                                            modifier =
-                                                Modifier.padding(
-                                                        start = GohoSpacing.textInsetFromMargin,
-                                                        top = GohoSpacing.sectionTop,
-                                                        bottom = GohoSpacing.sectionLabelBottom,
-                                                    )
-                                                    .semantics { heading() },
+                                        ReceiptSectionHeading(
+                                            sectionTitle(section.group, locale, today.year)
                                         )
                                         ReceiptCard {
                                             section.entries.forEachIndexed { index, entry ->
@@ -299,6 +308,23 @@ fun ReceiptOverview(
 }
 
 @Composable
+private fun ReceiptSectionHeading(title: String) {
+    Text(
+        title,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            Modifier.padding(
+                    start = GohoSpacing.textInsetFromMargin,
+                    top = GohoSpacing.sectionTop,
+                    bottom = GohoSpacing.sectionLabelBottom,
+                )
+                .gohoSkeleton(GohoSpacing.skeletonWidth)
+                .semantics { heading() },
+    )
+}
+
+@Composable
 private fun sectionTitle(group: ReceiptDateGroup, locale: Locale, year: Int): String =
     when (group.period) {
         ReceiptDatePeriod.Today -> stringResource(R.string.date_today)
@@ -358,7 +384,7 @@ private fun ListNotice(message: String, action: String? = null, onAction: () -> 
 
 @Composable
 private fun ReceiptRow(
-    entry: ReceiptListEntry,
+    entry: ReceiptListEntry?,
     now: Instant,
     locale: Locale,
     zone: ZoneId,
@@ -371,15 +397,17 @@ private fun ReceiptRow(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val title =
-        entry.merchant
-            ?: stringResource(
-                if (entry.status == ReceiptListStatus.Processing) R.string.receipt_new
-                else R.string.receipt_unknown
-            )
+        if (entry == null) ""
+        else
+            entry.merchant
+                ?: stringResource(
+                    if (entry?.status == ReceiptListStatus.Processing) R.string.receipt_new
+                    else R.string.receipt_unknown
+                )
     val today = now.atZone(zone).toLocalDate()
     val date =
-        when (entry.date) {
-            null -> stringResource(R.string.date_unknown)
+        when (entry?.date) {
+            null -> if (entry == null) "" else stringResource(R.string.date_unknown)
             today -> stringResource(R.string.date_today)
             today.minusDays(1) -> stringResource(R.string.date_yesterday)
             else ->
@@ -394,14 +422,14 @@ private fun ReceiptRow(
                 )
         }
     val justNow =
-        entry.status == ReceiptListStatus.Processing &&
+        entry?.status == ReceiptListStatus.Processing &&
             entry.uploadedAt != null &&
             entry.uploadedAt <= now &&
             now.epochSecond - entry.uploadedAt.epochSecond < 60
     val justNowLabel = stringResource(R.string.date_just_now)
     val metadata = buildAnnotatedString {
         if (
-            entry.uploadedAt != null &&
+            entry?.uploadedAt != null &&
                 entry.date == today &&
                 entry.uploadedAt.atZone(zone).toLocalDate() == today
         ) {
@@ -438,7 +466,7 @@ private fun ReceiptRow(
         )
     val optionsLabel = stringResource(R.string.receipt_options)
     val clickable =
-        if (entry.status != ReceiptListStatus.Processing)
+        if (entry != null && entry.status != ReceiptListStatus.Processing)
             Modifier.combinedClickable(
                 interactionSource = interaction,
                 indication = null,
@@ -466,7 +494,7 @@ private fun ReceiptRow(
         horizontalArrangement = Arrangement.spacedBy(GohoSpacing.thumbToText),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ReceiptThumbnail(entry.receiptId, entry.status, thumbnails)
+        ReceiptThumbnail(entry?.receiptId, entry?.status ?: ReceiptListStatus.Processed, thumbnails)
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(GohoSpacing.lineGap),
@@ -474,14 +502,20 @@ private fun ReceiptRow(
             if (expanded) {
                 Text(
                     title,
+                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth),
                     style = GohoTheme.type.rowTitle,
                     color =
-                        if (entry.status == ReceiptListStatus.Processed) c.textPrimary
+                        if (entry?.status == ReceiptListStatus.Processed) c.textPrimary
                         else c.textSecondary,
                 )
                 ReceiptRowAmount(entry, locale)
-                Text(metadata, style = GohoTheme.type.meta, color = c.textTertiary)
-                if (entry.status != ReceiptListStatus.Processed)
+                Text(
+                    metadata,
+                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth),
+                    style = GohoTheme.type.meta,
+                    color = c.textTertiary,
+                )
+                if (entry != null && entry.status != ReceiptListStatus.Processed)
                     ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
             } else {
                 Row(
@@ -490,10 +524,10 @@ private fun ReceiptRow(
                 ) {
                     Text(
                         title,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).gohoSkeleton(fraction = 0.8f),
                         style = GohoTheme.type.rowTitle,
                         color =
-                            if (entry.status == ReceiptListStatus.Processed) c.textPrimary
+                            if (entry?.status == ReceiptListStatus.Processed) c.textPrimary
                             else c.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -508,11 +542,11 @@ private fun ReceiptRow(
                 ) {
                     Text(
                         metadata,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).gohoSkeleton(fraction = 0.55f),
                         style = GohoTheme.type.meta,
                         color = c.textTertiary,
                     )
-                    if (entry.status != ReceiptListStatus.Processed)
+                    if (entry != null && entry.status != ReceiptListStatus.Processed)
                         ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
                 }
             }
@@ -521,9 +555,9 @@ private fun ReceiptRow(
 }
 
 @Composable
-private fun ReceiptRowAmount(entry: ReceiptListEntry, locale: Locale) {
+private fun ReceiptRowAmount(entry: ReceiptListEntry?, locale: Locale) {
     val c = GohoTheme.colors
-    if (entry.status == ReceiptListStatus.Processing) {
+    if (entry?.status == ReceiptListStatus.Processing) {
         Box(
             Modifier.size(GohoSpacing.skeletonWidth, GohoSpacing.skeletonHeight)
                 .clip(GohoShapes.pill)
@@ -532,13 +566,14 @@ private fun ReceiptRowAmount(entry: ReceiptListEntry, locale: Locale) {
     } else {
         Text(
             receiptMoneyText(
-                receiptAmount(entry.total, locale),
-                entry.currency,
+                receiptAmount(entry?.total, locale),
+                entry?.currency,
                 locale,
                 showCurrencyCode = true,
             ),
+            modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
             style = GohoTheme.type.rowTitle,
-            color = if (entry.total == null) c.textTertiary else c.textPrimary,
+            color = if (entry?.total == null) c.textTertiary else c.textPrimary,
         )
     }
 }

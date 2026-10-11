@@ -96,53 +96,58 @@ internal fun ReceiptDetailPhoto(image: ImageBitmap?, loading: Boolean, onOpen: (
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val description = stringResource(R.string.receipt_photo_open)
-    BoxWithConstraints(
-        Modifier.fillMaxWidth()
-            .height(GohoSpacing.detailPhotoHeight)
-            .gohoPress { progress }
-            .then(
-                if (image != null)
-                    Modifier.clickable(
-                            interactionSource = interaction,
-                            indication = null,
-                            role = Role.Button,
-                            onClickLabel = description,
-                            onClick = onOpen,
-                        )
-                        .semantics { contentDescription = description }
-                else Modifier
-            )
-            .clip(GohoShapes.card)
-            .background(Brush.radialGradient(listOf(c.photoWellCenter, c.photoWellEdge))),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (image != null) {
-            val ratio = image.width.toFloat() / image.height
-            val width =
-                minOf(
-                    maxWidth - GohoSpacing.photoPadding * 2,
-                    (maxHeight - GohoSpacing.photoPadding * 2) * ratio,
+    GohoSkeletonScope(loading) {
+        BoxWithConstraints(
+            Modifier.fillMaxWidth()
+                .height(GohoSpacing.detailPhotoHeight)
+                .gohoPress { progress }
+                .then(
+                    if (image != null && !loading)
+                        Modifier.clickable(
+                                interactionSource = interaction,
+                                indication = null,
+                                role = Role.Button,
+                                onClickLabel = description,
+                                onClick = onOpen,
+                            )
+                            .semantics { contentDescription = description }
+                    else Modifier
                 )
-            Image(
-                image,
-                null,
-                Modifier.size(width, width / ratio)
-                    .shadow(
-                        GohoSpacing.photoElevation,
-                        ambientColor = Color.Black,
-                        spotColor = Color.Black,
+                .clip(GohoShapes.card)
+                .loadingSemantics(loading, stringResource(R.string.receipt_photo_loading))
+                .gohoSkeleton(block = true)
+                .background(Brush.radialGradient(listOf(c.photoWellCenter, c.photoWellEdge))),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (image != null) {
+                val ratio = image.width.toFloat() / image.height
+                val width =
+                    minOf(
+                        maxWidth - GohoSpacing.photoPadding * 2,
+                        (maxHeight - GohoSpacing.photoPadding * 2) * ratio,
+                    )
+                Image(
+                    image,
+                    null,
+                    Modifier.size(width, width / ratio)
+                        .shadow(
+                            GohoSpacing.photoElevation,
+                            ambientColor = Color.Black,
+                            spotColor = Color.Black,
+                        ),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Text(
+                    stringResource(
+                        if (loading) R.string.receipt_photo_loading
+                        else R.string.receipt_photo_missing
                     ),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Text(
-                stringResource(
-                    if (loading) R.string.receipt_photo_loading else R.string.receipt_photo_missing
-                ),
-                style = GohoTheme.type.meta,
-                color = GohoDarkColors.textSecondary,
-                textAlign = TextAlign.Center,
-            )
+                    style = GohoTheme.type.meta,
+                    color = GohoDarkColors.textSecondary,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
@@ -157,8 +162,18 @@ internal fun ReceiptDetailRow(label: String, value: AnnotatedString, stacked: Bo
             .semantics(mergeDescendants = true) {}
     if (stacked) {
         Column(contentModifier, verticalArrangement = Arrangement.spacedBy(GohoSpacing.lineGap)) {
-            Text(label, style = GohoTheme.type.listRow, color = c.textSecondary)
-            Text(value, style = GohoTheme.type.listValue, color = c.textPrimary)
+            Text(
+                label,
+                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
+                style = GohoTheme.type.listRow,
+                color = c.textSecondary,
+            )
+            Text(
+                value,
+                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth),
+                style = GohoTheme.type.listValue,
+                color = c.textPrimary,
+            )
         }
     } else {
         Row(
@@ -168,13 +183,13 @@ internal fun ReceiptDetailRow(label: String, value: AnnotatedString, stacked: Bo
         ) {
             Text(
                 label,
-                Modifier.weight(0.36f),
+                Modifier.weight(0.36f).gohoSkeleton(fraction = 0.7f),
                 style = GohoTheme.type.listRow,
                 color = c.textSecondary,
             )
             Text(
                 value,
-                Modifier.weight(0.64f),
+                Modifier.weight(0.64f).gohoSkeleton(fraction = 0.8f, alignEnd = true),
                 style = GohoTheme.type.listValue,
                 color = c.textPrimary,
                 textAlign = TextAlign.End,

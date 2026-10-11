@@ -137,7 +137,7 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 - **Processing shimmer:** a highlight sweeps across the "Reading receipt…" text and the amount skeleton every 1.8s, linear, infinite. Shimmer colors: text `onAccentContainer` → `accentShimmer` → `onAccentContainer`; skeleton `skeletonBase` → `skeletonShimmer` → `skeletonBase`.
 - **Row → detail (nice to have):** shared-element transition from the row thumbnail to the detail photo frame.
 - **Status entrance:** 200ms fade and 6dp upward settle, once on appearance.
-- **Loading:** `LOADING_DELAY_MILLIS` = 200ms before showing an icon for actual initial receipt loading or retry. Cancel on completion/failure/disposal and restart for each attempt. `LOADING_SPIN_MILLIS` = 1000ms for one linear rotation. Do not show loading for already loaded background refreshes.
+- **Loading:** `LOADING_DELAY_MILLIS` = 200ms before revealing skeleton masks for initial receipt loading or an icon for retry. Cancel on completion/failure/disposal and restart for each attempt. `LOADING_SPIN_MILLIS` = 1000ms for one linear rotation. Do not show loading for already loaded background refreshes.
 - **Retry recovery:** 200ms crossfade of the error screen into the loaded state. Suppress the incoming status-content entrance so recovery animates only once.
 - **Reduced motion:** when the animator duration scale is 0, shimmer and the loading arc are static and entrance, recovery, and press transformations are disabled. The loading visibility delay remains 200ms.
 
@@ -155,3 +155,7 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 - Exactly two decimal places for every money amount, half-even rounding, locale grouping, proportional figures.
 
 - Show the trailing currency code only beside the details hero and receipt-list totals; omit it from other amounts.
+
+## Skeletons
+
+Use existing `skeletonBase`/`skeletonShimmer` colours and the 1.8s shimmer. Text masks retain their typography line height and draw at 60% height with 4dp corners. Minimum widths while loading: compact value/heading 52dp, title 144dp, date 196dp, hero 208dp. These are constrained by the existing parent; loaded elements keep their natural measurements. Full-block masks retain thumbnail and photo-frame shapes.

@@ -14,6 +14,9 @@ const systemPrompt = `Extract the receipt into the required structured receipt o
 - Apply item-specific adjustments before expanding quantities. When a quantity line shows a combined price, divide the adjusted total evenly across the expanded item entries so their prices sum to the adjusted line total.
 - Infer one transaction category from the purchased items.
 - Format the receipt date as YYYY-MM-DD.
+- Read numeric dates in the order printed by the merchant. Respect explicit format labels (YY/MM/DD, DD/MM/YY, MM/DD/YY), month names, and four-digit years before using contextual clues.
+- Two-digit years can appear FIRST. For example, 26/10/11 in YY/MM/DD format means 2026-10-11, not 2011-10-26. Do not assume the last number is always the year.
+- When an unlabelled numeric date has multiple valid interpretations, use the upload date supplied with the image to resolve the year and date order: prefer a plausible recent purchase on or before that date over a decades-old or future interpretation. For an upload on 2026-10-11, unlabelled 26/10/11 means 2026-10-11. This is only a tie-breaker: preserve clearly printed historical dates and explicit format labels, and never substitute the upload date for a missing receipt date.
 - Return transaction.currency as a required uppercase three-letter currency code (for example CAD, USD, or EUR), never null or omitted.
 - Identify the currency from explicit codes or symbols and the store's location. A bare $ symbol alone does not establish USD. Use CAD when the receipt provides no clues that identify another currency.
 - Return all prices, subtotal, tax, and total as numeric values without currency symbols.
@@ -30,6 +33,7 @@ export const extract = Effect.fn("@goho/Receipts.extract")(function* (input: {
   readonly bytes: Uint8Array;
   readonly fileName: string;
   readonly contentType: string;
+  readonly uploadedAt: string;
 }) {
   const ai = yield* Ai.Service;
   return yield* ai.generateObject({
@@ -40,7 +44,10 @@ export const extract = Effect.fn("@goho/Receipts.extract")(function* (input: {
       {
         role: "user",
         content: [
-          { type: "text", text: "Extract the structured receipt data from this image." },
+          {
+            type: "text",
+            text: `Extract the structured receipt data from this image. The receipt was uploaded at ${input.uploadedAt}. Use this only as context for ambiguous numeric dates.`,
+          },
           {
             type: "file",
             mediaType: input.contentType,
