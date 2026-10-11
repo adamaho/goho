@@ -4,21 +4,30 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
-## Current loading and status states (October 8, 2026)
+## Current skeleton loading (October 11, 2026)
+
+These are unedited manual screenshots of the development app on the Pixel 9 API 36 emulator, including system bars. GET responses were temporarily delayed through a local read-only proxy; the regular list rows and detail components rendered their loading states. No Android test harness or separate skeleton layout was used.
+
+- `initial-loading-light.png` and `initial-loading-dark.png`: Four existing list rows with shared text/thumbnail masks, plus the normal Receipts header and Scan action.
+- `receipt-detail-loading-light.png` and `receipt-detail-loading-dark.png`: The existing hero, photo frame, item card and detail rows under skeleton masks. Back remains enabled.
+- `large-font-list-loading.png`, `large-font-detail-loading.png`, `large-font-detail-loading-scrolled.png`: 320×640dp at 2× font scale with Remove animations enabled. Text masks remain static and both screens scroll. These captures include system bars and are 840×1680px; standard skeleton captures are 1080×2424px at 420dpi.
+
+Manual checks also covered successful loading, timeout/error recovery, back during detail loading, and accessibility hierarchy inspection. Loading regions expose one polite indeterminate-progress description without placeholder labels or actions. Two reduced-motion captures taken one second apart had identical content pixels. Compile, lint and formatting checks accompany these visual checks.
+
+## Current status states (October 8, 2026)
 
 These approved native Compose captures show the production ReceiptOverview and its components. They are app renders without system bars, not emulator screenshots or redrawn mock layouts. The current captures show Bram cradling a blank receipt in the no-receipts state, a calm thumbs-up with “All good” in the empty Needs attention state, and a gentle shrug with “A little hiccup” and the retry action in the load-error state. Content sits directly on the screen background, with a 4dp gap between each status illustration slot and title. The Receipts header is text-only in every state. None of the three status states has an enclosing card. Dedicated Bram artwork for other states is deferred until their feature is implemented.
 
 - `empty-needs-attention.png` and `empty-needs-attention-light.png`: Calm thumbs-up Bram with “All good” and “Nothing needs your attention right now.” directly on the screen background, text-only Receipts header, selected filter, and Scan.
 - `empty-no-receipts.png` and `empty-no-receipts-light.png`: No receipts yet, with Bram and copy directly on the screen background, no surrounding card, and Scan in its footer; no filters.
 - `load-error.png` and `load-error-light.png`: Gentle shrugging Bram with “A little hiccup”, “We couldn’t load your receipts. Let’s try again.” and the retry action directly on the screen background; title only in the header, no filters or Scan.
-- `initial-loading-light.png` and `initial-loading-dark.png`: Initial receipt loading icon after the 200ms delay, in both themes. No icon appears during the delay or on an already loaded background refresh.
 - `retry-running.png`, `retry-failed.png`, `retry-succeeded.png`: Disabled retry with its centered loading icon after 200ms and stable bounds, failure in place, and the loaded list after success (light).
 - `large-font-retry-running.png`: Retry loading icon at 2× text size; button bounds still reserve both labels.
 - `deleted-last-failed-overall.png`: Calm thumbs-up Bram and All good copy on the screen background, with a text-only Receipts header; Needs attention stays selected with All 0 after deleting the last failed receipt (light).
 - `large-font-load-error-scrolled.png`, `large-font-no-attention-scrolled.png`, `large-font-no-receipts-scrolled.png`: 2× font, scrolled to expose the body/action; Scan has its own footer where present.
 - `small-360-no-receipts.png` and `tall-no-receipts.png`: Short and tall layout references.
 
-Standard captures are 360×800dp at 2× (720×1600px). Edge captures use 360×640dp or 412×960dp. They were produced with the retired native Android graphics harness; its source and capture provenance remain in Git at commit `615f66c44af6c9bc77773af9bd5c4823fc756cb4`. This folder keeps the approved PNG references. There is no active automated Android test workflow: use build, lint and formatting checks plus manual visual and interaction checks, without adding tests or test harnesses.
+The October 8 status captures are 360×800dp at 2× (720×1600px). Edge captures use 360×640dp or 412×960dp. They were produced with the retired native Android graphics harness; its source and capture provenance remain in Git at commit `615f66c44af6c9bc77773af9bd5c4823fc756cb4`. This folder keeps the approved PNG references. There is no active automated Android test workflow: use build, lint and formatting checks plus manual visual and interaction checks, without adding tests or test harnesses.
 
 ## Historical layout references (October 2 v2)
 

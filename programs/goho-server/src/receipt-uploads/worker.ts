@@ -65,6 +65,7 @@ export const process: (
 
     const bytes = yield* storage.get(upload.fileId).pipe(failAs("storage_failed"));
     const parsed = yield* ReceiptExtraction.extract({
+      uploadedAt: upload.createdAt,
       bytes,
       fileName: upload.fileName,
       contentType: upload.contentType,

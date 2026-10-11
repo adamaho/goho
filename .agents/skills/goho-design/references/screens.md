@@ -159,8 +159,17 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Initial receipts loading**
 
-- While no list has loaded and a request is pending without an error, show no loading UI for 200ms. After that, show a horizontally centered 24dp stroked loading icon in `textSecondary` below the header, in the list’s notice position with `contentGap` vertical padding. Expose “Loading receipts…” as a polite live region with indeterminate progress.
-- Do not show the icon for requests that finish within 200ms or for background refreshes of an already loaded list.
+- Reuse the existing section heading, ReceiptCard, four ReceiptRows, thumbnails and text. Pass absent data while loading; do not create fake receipt models or duplicate the row layout.
+- Wrap the group in `GohoSkeletonScope` and apply `Modifier.gohoSkeleton` to the existing text and image elements. After 200ms, render skeletonBase/skeletonShimmer masks; preserve measured typography, row padding and large-text stacking. Keep the Receipts header and Scan available.
+- Expose one “Loading receipts…” polite live region with indeterminate progress. Placeholder descendants have no text or click semantics. Do not replace loaded content during background refreshes. Preserve the existing error/retry flow.
+
+**Receipt detail loading**
+
+- Keep the same LazyColumn, hero, photo frame, item card and detail rows. Mask their existing elements; use three absent item rows until receipt data arrives. Back remains available; hide the more menu until loaded.
+- Text masks occupy 60% of their measured line height, with 4dp corners. Photo and thumbnail masks fill their clipped bounds. Omit the photo section when the receipt is known to have no upload; separately mask an uploaded photo while it loads.
+- Expose “Loading receipt…” once as polite indeterminate progress. Conceal all placeholder semantics, including item names and money; do not make loading photos tappable. After loading, restore real content and actions. Failure replaces the masks with the existing retry state.
+- Use static masks when Remove animations is enabled. Both layouts must remain scrollable at 2× font size. Compose previews show masks immediately.
+- Current references: `initial-loading-light.png`, `initial-loading-dark.png`, `receipt-detail-loading-light.png`, `receipt-detail-loading-dark.png`, and the large-text captures listed in the mockup README.
 
 **Needs attention, nothing in it**
 

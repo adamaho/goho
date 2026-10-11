@@ -29,6 +29,7 @@ const upload: ReceiptUpload = {
 
 const dependencies = (options: {
   readonly currency?: string;
+  readonly generateObject?: Ai.Interface["generateObject"];
   readonly insertReceipt?: ReceiptRepository.Interface["insert"];
   readonly storageGet?: FileStorage.Interface["get"];
   readonly markProcessing?: ReceiptUploadRepository.Interface["markProcessing"];
@@ -43,11 +44,13 @@ const dependencies = (options: {
       delete: () => Effect.die("Unexpected storage.delete call"),
     }),
     Layer.succeed(Ai.Service, {
-      generateObject: ({ schema }) =>
-        Schema.decodeUnknownEffect(schema)({
-          ...parsedReceipt,
-          transaction: { ...parsedReceipt.transaction, currency: options.currency ?? "CAD" },
-        }).pipe(Effect.orDie),
+      generateObject:
+        options.generateObject ??
+        (({ schema }) =>
+          Schema.decodeUnknownEffect(schema)({
+            ...parsedReceipt,
+            transaction: { ...parsedReceipt.transaction, currency: options.currency ?? "CAD" },
+          }).pipe(Effect.orDie)),
     }),
     Layer.succeed(ReceiptRepository.Service, {
       delete: () => Effect.die("Unexpected receipt deletion"),
@@ -103,6 +106,27 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
         },
       },
     ]);
+  }),
+);
+
+it.effect("keeps the original upload date as extraction context when a job is retried later", () =>
+  Effect.gen(function* () {
+    yield* TestClock.setTime(Date.parse("2030-01-01T00:00:00.000Z"));
+    const prompts = yield* Ref.make<ReadonlyArray<string>>([]);
+    const layer = dependencies({
+      generateObject: ({ prompt, schema }) =>
+        Ref.update(prompts, (values) => [...values, JSON.stringify(prompt)]).pipe(
+          Effect.andThen(Schema.decodeUnknownEffect(schema)(parsedReceipt)),
+          Effect.orDie,
+        ),
+    });
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
+      Effect.provide(layer),
+    );
+    const observed = yield* Ref.get(prompts);
+    expect(observed).toHaveLength(1);
+    expect(observed[0]).toContain(upload.createdAt);
+    expect(observed[0]).not.toContain("2030-01-01");
   }),
 );
 

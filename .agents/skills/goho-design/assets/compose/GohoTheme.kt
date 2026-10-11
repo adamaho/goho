@@ -334,6 +334,10 @@ object GohoSpacing {
     val pillHorizontal = 9.dp
     val skeletonWidth = 52.dp
     val skeletonHeight = 12.dp
+    val skeletonRadius = 4.dp
+    val skeletonTitleWidth = 144.dp
+    val skeletonDateWidth = 196.dp
+    val skeletonHeroWidth = 208.dp
     val listBottom = 112.dp
     val fabHeight = 56.dp
     val fabStart = 18.dp

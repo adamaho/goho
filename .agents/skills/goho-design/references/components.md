@@ -34,11 +34,20 @@ Use one shared component for standard actions, with `variant: GohoButtonVariant`
 - Entrance: one 200ms fade with a 6dp upward settle; no looping character animation. Successful retry crossfades the whole error screen to the loaded state in 200ms without replaying the incoming status entrance. With reduced motion, render the final state immediately.
 - The retry button reserves space for both “Try again” and “Trying again…” at the current font scale, including 2× text. Hidden measurement labels have no semantics. Disable immediately, retain “Try again” for 200ms, then replace it with a centered loading icon while the request is actually pending. Failure restores “Try again” in place. Keep actual loading separate from the disabled outgoing recovery screen.
 
-## GohoLoadingIcon (receipt loading and retry)
+## GohoSkeletonScope and Modifier.gohoSkeleton
 
-- A 2dp stroked arc, 24dp in `textSecondary` for initial list loading and 18dp in `onAccent` inside the retry button. Rotate once every 1000ms; use a static arc with reduced motion.
-- Reveal only after 200ms of uninterrupted actual loading. Cancel on completion, failure or disposal and restart the delay for each attempt. Already loaded background refreshes stay quiet.
-- Initial loading exposes “Loading receipts…” as a polite live region with indeterminate progress. Retry exposes “Trying again…” and progress on the button; the nested icon is decorative.
+Reference: `assets/compose/GohoSkeleton.kt`; production: `ui/components/GohoSkeleton.kt`.
+
+- Use one scope around the existing loading content. The scope shares a reduced-motion-aware shimmer and the 200ms visibility delay. Nested scopes inherit the active parent so photo loading does not restart the whole screen's shimmer.
+- Add the modifier to existing Text and clipped image elements. Preserve their measurement; minimum-width tokens only apply while loading. Draw text masks at 60% of line height, with logical start/end alignment and 4dp corners. Images fill their existing bounds.
+- Clear placeholder semantics and put a single polite indeterminate progress description on the enclosing loading region. Keep navigation outside it and disable content actions until data exists.
+- Null row/item data reserves the same normal layout; never construct fake receipt objects. Keep already loaded content visible during background refreshes.
+
+## GohoLoadingIcon (retry actions)
+
+- A 2dp stroked arc, 18dp in `onAccent` inside the retry button. Rotate once every 1000ms; use a static arc with reduced motion.
+- Reveal only after 200ms of uninterrupted actual loading. Cancel on completion, failure or disposal and restart the delay for each attempt.
+- Retry exposes “Trying again…” and progress on the button; the nested icon is decorative. Initial list and detail loading use skeletons.
 
 ## GohoSheet (floating bottom sheet)
 

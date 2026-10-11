@@ -1,6 +1,6 @@
 // Goho UI primitives. Reference implementation from the design handoff; not compiled
 // against the project, so fix any API drift for the project's Compose version.
-// Bram status content and delayed receipt-loading icons follow the current screen specs.
+// Bram status content, shared skeletons and delayed retry icons follow the current screen specs.
 package com.goho.ui.components // TODO: match the app's package
 
 import androidx.compose.animation.core.Animatable
@@ -182,8 +182,8 @@ fun rememberShimmerBrush(base: Color, highlight: Color): Brush {
 // ---------- Receipt loading ----------
 
 // Drive this helper from actual pending work; each attempt restarts the delay.
-// Initial loading uses description = "Loading receipts…" after 200ms, only before a list has loaded.
-// Its host centers it horizontally in the list's notice position below the header.
+// Initial list/detail loading uses GohoSkeletonScope and gohoSkeleton (GohoSkeleton.kt).
+// Keep the real layout and mask its existing elements; expose one loading description on the region.
 // Retry uses the 18dp icon inside its disabled button; the outgoing recovery flag is not loading.
 @Composable
 internal fun rememberLoadingVisible(loading: Boolean): Boolean {

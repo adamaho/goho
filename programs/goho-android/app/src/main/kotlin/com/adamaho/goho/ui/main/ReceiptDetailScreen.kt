@@ -93,118 +93,132 @@ fun ReceiptDetailScreen(
             if (!loading && receipt != null) ReceiptMoreButton { optionsOpen = true }
         }
         val saved = receipt
-        if (loading || saved == null) {
+        if (!loading && saved == null) {
             Column(
                 Modifier.fillMaxSize().padding(horizontal = GohoSpacing.textInset),
                 verticalArrangement =
                     Arrangement.spacedBy(GohoSpacing.contentGap, Alignment.CenterVertically),
             ) {
                 Text(
-                    stringResource(
-                        if (loading) R.string.receipt_detail_loading
-                        else R.string.receipt_detail_load_failed
-                    ),
+                    stringResource(R.string.receipt_detail_load_failed),
                     style = GohoTheme.type.meta,
                     color = c.textSecondary,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
-                if (!loading)
-                    GohoActionButton(
-                        stringResource(R.string.receipt_detail_retry),
-                        { reloadKey++ },
-                        variant = GohoButtonVariant.Secondary,
-                    )
+                GohoActionButton(
+                    stringResource(R.string.receipt_detail_retry),
+                    { reloadKey++ },
+                    variant = GohoButtonVariant.Secondary,
+                )
             }
         } else {
             val date =
-                remember(saved.receiptDate) {
-                    runCatching { LocalDate.parse(saved.receiptDate) }.getOrNull()
+                remember(saved?.receiptDate) {
+                    runCatching { LocalDate.parse(saved?.receiptDate) }.getOrNull()
                 }
             val fullDate =
                 date?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale))
-                    ?: saved.receiptDate.ifBlank { "—" }
+                    ?: saved?.receiptDate.orEmpty().ifBlank { "—" }
             val shortDate =
                 date?.format(
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
-                ) ?: saved.receiptDate.ifBlank { "—" }
-            val code = saved.currency
-            val amount = receiptAmount(saved.total, locale)
+                ) ?: saved?.receiptDate.orEmpty().ifBlank { "—" }
+            val code = saved?.currency.orEmpty()
+            val amount = receiptAmount(saved?.total, locale)
             val total = receiptMoneyText(amount, code, locale)
-            val subtotal = receiptMoneyText(receiptAmount(saved.subtotal, locale), code, locale)
-            val tax = receiptMoneyText(receiptAmount(saved.tax, locale), code, locale)
-            val merchant = saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
+            val subtotal = receiptMoneyText(receiptAmount(saved?.subtotal, locale), code, locale)
+            val tax = receiptMoneyText(receiptAmount(saved?.tax, locale), code, locale)
+            val merchant =
+                if (saved == null) ""
+                else saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
             val rows = buildList {
                 add(stringResource(R.string.receipt_merchant) to AnnotatedString(merchant))
                 add(stringResource(R.string.receipt_date) to AnnotatedString(shortDate))
-                if (saved.category.isNotBlank())
+                if (loading || !saved?.category.isNullOrBlank())
                     add(
-                        stringResource(R.string.receipt_category) to AnnotatedString(saved.category)
+                        stringResource(R.string.receipt_category) to
+                            AnnotatedString(saved?.category.orEmpty())
                     )
                 add(stringResource(R.string.receipt_subtotal) to subtotal)
                 add(stringResource(R.string.receipt_tax) to tax)
-                if (saved.items.isEmpty()) add(stringResource(R.string.receipt_total) to total)
+                if (saved?.items?.isEmpty() == true)
+                    add(stringResource(R.string.receipt_total) to total)
             }
-            LazyColumn(
-                Modifier.fillMaxSize().headerFade(c.background),
-                contentPadding =
-                    PaddingValues(
-                        start = GohoSpacing.screenMargin,
-                        end = GohoSpacing.screenMargin,
-                        bottom = GohoSpacing.detailBottom,
-                    ),
-            ) {
-                item("hero") {
-                    Column(
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = GohoSpacing.textInsetFromMargin)
-                            .padding(top = GohoSpacing.contentGap),
-                        verticalArrangement = Arrangement.spacedBy(GohoSpacing.detailHeroGap),
-                    ) {
-                        Text(
-                            merchant,
-                            style = GohoTheme.type.rowTitle,
-                            color = c.textSecondary,
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        Text(
-                            receiptMoneyText(
+            GohoSkeletonScope(loading) {
+                LazyColumn(
+                    Modifier.fillMaxSize()
+                        .headerFade(c.background)
+                        .loadingSemantics(loading, stringResource(R.string.receipt_detail_loading)),
+                    contentPadding =
+                        PaddingValues(
+                            start = GohoSpacing.screenMargin,
+                            end = GohoSpacing.screenMargin,
+                            bottom = GohoSpacing.detailBottom,
+                        ),
+                ) {
+                    item("hero") {
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .padding(horizontal = GohoSpacing.textInsetFromMargin)
+                                .padding(top = GohoSpacing.contentGap),
+                            verticalArrangement = Arrangement.spacedBy(GohoSpacing.detailHeroGap),
+                        ) {
+                            Text(
+                                merchant,
+                                style = GohoTheme.type.rowTitle,
+                                color = c.textSecondary,
+                                modifier =
+                                    Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth)
+                                        .semantics { heading() },
+                            )
+                            Text(
+                                receiptMoneyText(
+                                    amount,
+                                    code,
+                                    locale,
+                                    GohoTheme.type.heroCurrencyCode,
+                                    showCurrencyCode = true,
+                                ),
+                                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonHeroWidth),
+                                style = GohoTheme.type.display,
+                                color = c.textPrimary,
+                            )
+                            Text(
+                                fullDate,
+                                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonDateWidth),
+                                style = GohoTheme.type.meta,
+                                color = c.textTertiary,
+                            )
+                        }
+                    }
+                    if (hasUpload == true || image != null || (hasUpload == null && imageLoading)) {
+                        item("photo") {
+                            Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
+                                ReceiptDetailPhoto(image, loading || imageLoading) {
+                                    photoOpen = true
+                                }
+                            }
+                        }
+                    }
+                    if (loading || saved?.items?.isNotEmpty() == true) {
+                        item("items") {
+                            DetailSectionHeading(stringResource(R.string.receipt_items_title))
+                            ReceiptItemsCard(
+                                saved?.items?.sortedBy { it.position },
                                 amount,
                                 code,
                                 locale,
-                                GohoTheme.type.heroCurrencyCode,
-                                showCurrencyCode = true,
-                            ),
-                            style = GohoTheme.type.display,
-                            color = c.textPrimary,
-                        )
-                        Text(fullDate, style = GohoTheme.type.meta, color = c.textTertiary)
-                    }
-                }
-                if (hasUpload == true || image != null || (hasUpload == null && imageLoading)) {
-                    item("photo") {
-                        Box(Modifier.padding(top = GohoSpacing.detailPhotoTop)) {
-                            ReceiptDetailPhoto(image, imageLoading) { photoOpen = true }
+                                stacked,
+                            )
                         }
                     }
-                }
-                if (saved.items.isNotEmpty()) {
-                    item("items") {
-                        DetailSectionHeading(stringResource(R.string.receipt_items_title))
-                        ReceiptItemsCard(
-                            saved.items.sortedBy { it.position },
-                            amount,
-                            code,
-                            locale,
-                            stacked,
-                        )
-                    }
-                }
-                item("details") {
-                    DetailSectionHeading(stringResource(R.string.receipt_details_section))
-                    ReceiptCard {
-                        rows.forEachIndexed { index, (label, value) ->
-                            if (index > 0) ReceiptDetailDivider()
-                            ReceiptDetailRow(label, value, stacked)
+                    item("details") {
+                        DetailSectionHeading(stringResource(R.string.receipt_details_section))
+                        ReceiptCard {
+                            rows.forEachIndexed { index, (label, value) ->
+                                if (index > 0) ReceiptDetailDivider()
+                                ReceiptDetailRow(label, value, stacked)
+                            }
                         }
                     }
                 }
@@ -249,6 +263,7 @@ private fun DetailSectionHeading(text: String) {
                     top = GohoSpacing.sectionTop,
                     bottom = GohoSpacing.sectionLabelBottom,
                 )
+                .gohoSkeleton(GohoSpacing.skeletonWidth)
                 .semantics { heading() },
     )
 }
