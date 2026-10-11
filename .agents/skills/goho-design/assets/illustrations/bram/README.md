@@ -11,4 +11,4 @@ Only the no-receipts pose, calm thumbs-up for the empty Needs attention filter, 
 
 Current native screen references and their historical provenance live in [mockups](../../mockups/README.md). Earlier artwork and review evidence remain in Git history.
 
-Approved Mira, the yellow child, and the family portrait are preserved alongside these assets. See the [character guide](../../../references/characters.md) for identity details and the [family manifest](../family/manifest.json) for current masters, prompts, and provenance. They remain brand references; the family portrait also guides the launcher icons featuring all three characters.
+Approved Mira, the yellow child, and the family portrait are preserved alongside these assets. See the [character guide](../../../references/characters.md) for identity details and the [family manifest](../family/manifest.json) for current masters, roles, and hashes. They remain brand references; the family portrait also guides the launcher icons featuring all three characters.

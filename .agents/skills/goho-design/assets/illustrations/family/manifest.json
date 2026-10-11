@@ -3,11 +3,9 @@
   "pathBase": "this manifest directory",
   "approvalContext": "User-approved Goho family artwork, preserved on 2026-10-10.",
   "notes": [
-    "PNG masters and prompt files are copied unchanged from the approved local generation outputs. SHA-256 identifies the exact bytes.",
-    "Prompt sourceImage and references strings are original generation-time aliases; resolve them through the provenance inputs below.",
-    "The child has no approved name or gender. Buttery yellow replaces the earlier lilac concept.",
-    "Family reference approval does not introduce new app screens or status illustrations. The launcher icons feature the family together, following the approved portrait; the earlier child-only direction is superseded.",
-    "Older candidates and shelved animation experiments are not current design references. Derived launcher resources are maintained separately."
+    "Canonical PNG masters are preserved unchanged; SHA-256 identifies their exact bytes.",
+    "Bram, Mira, the unnamed buttery-yellow child, and the family portrait are the retained identity references.",
+    "Only current app assets and these canonical references are committed. Exploration artwork, prompts and previews remain untracked."
   ],
   "assets": [
     {
@@ -21,11 +19,7 @@
       "width": 491,
       "height": 328,
       "format": "PNG",
-      "mode": "RGBA",
-      "provenance": {
-        "origin": "existing versioned original Bram reference",
-        "catalog": "../bram/README.md"
-      }
+      "mode": "RGBA"
     },
     {
       "id": "mira-neutral",
@@ -39,22 +33,7 @@
       "width": 1254,
       "height": 1254,
       "format": "PNG",
-      "mode": "RGBA",
-      "provenance": {
-        "tool": "built-in image_gen",
-        "prompt": {
-          "file": "mira-v1.prompt.json",
-          "sha256": "ad7b225c1922aa91a4c8eba8a224b3f32826b8509ea3b169bfc28f30803edf16"
-        },
-        "inputs": [
-          {
-            "alias": "female-family-v1.png",
-            "role": "historical generation input, not an approved current reference",
-            "retainedInRepository": false,
-            "sha256": "95c60e3c928641d728f754a959877753855c2c9548c4098aacbf02021fd3b448"
-          }
-        ]
-      }
+      "mode": "RGBA"
     },
     {
       "id": "child-yellow",
@@ -68,32 +47,7 @@
       "width": 1254,
       "height": 1254,
       "format": "PNG",
-      "mode": "RGBA",
-      "provenance": {
-        "tool": "built-in image_gen",
-        "prompt": {
-          "file": "child-yellow-v2.prompt.json",
-          "sha256": "77879198652ce2a7d336781cfcc608a78f4a0cbcb82bccf89376a9ac7b3e8a2e"
-        },
-        "inputs": [
-          {
-            "alias": "mira-bram-child-v1.png",
-            "role": "historical generation input, not an approved current reference",
-            "retainedInRepository": false,
-            "sha256": "25c30743a4fab493d302d23ed18aaceaca0ca1784367efe4fa2b4f652f18ff90"
-          },
-          {
-            "alias": "Bram lilac color reference",
-            "assetId": "bram-neutral",
-            "file": "../bram/reference/bram-v3.png"
-          },
-          {
-            "alias": "Mira coral color reference",
-            "assetId": "mira-neutral",
-            "file": "mira-v1.png"
-          }
-        ]
-      }
+      "mode": "RGBA"
     },
     {
       "id": "family-portrait",
@@ -107,31 +61,7 @@
       "width": 1536,
       "height": 1024,
       "format": "PNG",
-      "mode": "RGB",
-      "provenance": {
-        "tool": "built-in image_gen",
-        "prompt": {
-          "file": "bram-mira-family-v1.prompt.json",
-          "sha256": "fa12134250514e43a0d6232864c45d2929004b583efcbca9f96fa5f48c4c6ecd"
-        },
-        "inputs": [
-          {
-            "alias": ".agents/skills/goho-design/assets/illustrations/bram/reference/bram-v3.png",
-            "assetId": "bram-neutral",
-            "file": "../bram/reference/bram-v3.png"
-          },
-          {
-            "alias": "mira-v1.png",
-            "assetId": "mira-neutral",
-            "file": "mira-v1.png"
-          },
-          {
-            "alias": "mira-bram-child-v2.png",
-            "assetId": "child-yellow",
-            "file": "child-yellow-v2.png"
-          }
-        ]
-      }
+      "mode": "RGB"
     }
   ]
 }

@@ -8,6 +8,7 @@ const repo = path.resolve(__dirname, "../../..");
 const skill = path.join(repo, ".agents/skills/goho-design");
 const sources = path.join(skill, "assets/launcher");
 const app = path.join(repo, "programs/goho-android/app/src");
+const previewDirectory = path.join(repo, ".data/launcher-preview");
 const svg = (body) =>
   Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">${body}</svg>`,
@@ -31,25 +32,7 @@ async function main() {
 `,
   );
   const size = spec.canvasDp * 4;
-  let foreground;
-  if (spec.artwork.endsWith(".svg")) {
-    // Native foregrounds already use the full adaptive canvas.
-    foreground = await raster(path.resolve(sources, spec.artwork), size);
-  } else {
-    const placement = spec.artworkPlacementDp;
-    const artwork = await sharp(path.resolve(sources, spec.artwork))
-      .extract(spec.sourceCropPx)
-      .resize(placement.width * 4, placement.height * 4, {
-        fit: "contain",
-        background: "#00000000",
-      })
-      .png()
-      .toBuffer();
-    foreground = await blank(size)
-      .composite([{ input: artwork, left: placement.x * 4, top: placement.y * 4 }])
-      .png()
-      .toBuffer();
-  }
+  const foreground = await raster(path.resolve(sources, spec.artwork), size);
   const mono = await raster(path.join(sources, spec.monochrome), size);
   const badgeSource = await fs.readFile(path.join(sources, "dev-badge.svg"), "utf8");
   const badge = await raster(Buffer.from(badgeSource), size);
@@ -98,7 +81,7 @@ async function main() {
     };
     const visible = await sharp(full).extract(crop).png().toBuffer();
     await write(
-      path.join(sources, `${flavor}-v${spec.version}.png`),
+      path.join(previewDirectory, `${flavor}.png`),
       await sharp(visible).resize(512, 512).png().toBuffer(),
     );
     for (const [density, px] of Object.entries({
@@ -193,9 +176,9 @@ async function main() {
     .composite([...layers, { input: heading }])
     .png()
     .toBuffer();
-  await write(path.join(skill, "assets/mockups/launcher-icons.png"), preview);
+  await write(path.join(previewDirectory, "launcher-icons.png"), preview);
   console.log(
-    "Exported production and development launcher layers, legacy sizes, 512px icons, and preview.",
+    "Exported Android launcher resources; local PNG exports and preview are in .data/launcher-preview.",
   );
 }
 main().catch((error) => {

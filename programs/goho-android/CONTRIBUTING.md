@@ -78,6 +78,8 @@ overrides in `app/src/development/res`. Follow the
 [launcher source and regeneration guide](../../.agents/skills/goho-design/references/launcher-icons.md)
 when updating icons. It covers the approved masters, isolated Sharp tool setup,
 `generate-launcher-icons.cjs`, adaptive and themed layers, and legacy exports.
+Commit the selected sources and generated Android resources; the generator saves
+review sheets and standalone exports under ignored `.data/launcher-preview/`.
 
 ## Verification
 

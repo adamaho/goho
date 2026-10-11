@@ -1,15 +1,8 @@
 # Mockups
 
-## Launcher icons (October 11, 2026)
+## Launcher icons
 
-[launcher-icons.png](launcher-icons.png) is the current **v8 phone-trial** sheet: rounded, faceless flat family shapes, deeper lilac/coral/golden yellow, and thin transparent separators like the themed mask. It shows production and DEV colour icons, light/dark themed samples, and 48/64px treatments from the generated assets. This is a static asset rendering, not a phone screenshot or confirmation of installation. Launcher masks and themed colours vary by device and wallpaper. See the [launcher guide](../../references/launcher-icons.md) for current sources and regeneration; the [character guide](../../references/characters.md) links the unchanged canonical family masters.
-
-Historical comparisons remain available:
-
-- [launcher-family-sheet-v7.png](launcher-family-sheet-v7.png) compares rounded flat colour with soft depth, plus themed versions. [The v6 sheet](launcher-family-sheet-v6.png) keeps the earlier, wider shaded composition. Neither is the selected v8 colour treatment.
-- [launcher-flat-v3.png](launcher-flat-v3.png) and [launcher-flat-v4.png](launcher-flat-v4.png) preserve the earlier faceless silhouettes and palette experiments.
-- [launcher-icons-comparison.png](launcher-icons-comparison.png) compares full-body v1, closer portrait v2, and flat silhouette v4.
-- [launcher-icons-emulator.png](launcher-icons-emulator.png) is a historical manual screenshot of both v1 debug builds in the Pixel 9 API 36 emulator app drawer, captured October 11, 2026. It does not show v8.
+The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
 ## Current loading and status states (October 8, 2026)
 

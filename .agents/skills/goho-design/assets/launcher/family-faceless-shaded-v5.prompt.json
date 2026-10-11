@@ -1,8 +1,0 @@
-{
-  "version": 5,
-  "status": "review-candidate",
-  "method": "Built-in imagegen edit; original generated PNG preserved unchanged.",
-  "source": "family-foreground-v2.png",
-  "prompt": "Use case: precise-object-edit. Edit target: attached Goho family launcher foreground. Remove ONLY all facial features on all three characters: all eyes, eye highlights, mouths, smiles, and eyebrows. Fill these removed areas seamlessly with the surrounding character material and lighting, leaving smooth featureless faces. Preserve the EXACT three-character family grouping, poses, proportions, silhouettes, long arms, lilac Bram on left with exactly two cream horns and no curl, coral Mira on right with one crown curl and no horns, smaller buttery-yellow child front center with one curl and two cream horn buds. Keep the saturated original periwinkle/lilac, coral and golden buttery-yellow colours, the soft 3D volume, matte clay texture, gentle highlights, contact shadows, overlap shading, and cream horns. Do not flatten into vector shapes. No facial features of any kind. No extra objects, text, badges, outline, frame or cast shadow outside the family. Keep the same composition and framing with all horns/curls and bodies contained, no cropping. Output one high quality square PNG asset on a genuinely transparent background.",
-  "generatedFile": "exec-26053032-9cd8-4cd2-b2cf-b9c3933685a5.png"
-}

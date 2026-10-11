@@ -1,8 +1,0 @@
-{
-  "version": 7,
-  "status": "review-candidate",
-  "method": "Built-in imagegen edit; original generated PNG preserved unchanged.",
-  "source": ["family-rounded-flat-v6.svg", "family-rounded-shaded-v6.png"],
-  "prompt": "Use case: style-transfer. Image 1 is the EXACT composition and silhouette/layout target for an Android app icon. Image 2 is the material and character style reference ONLY. Render image 1 in the softly shaded rich-colour clay style of image 2. Keep the COMPACT overlapping three shapes from image 1: broad upright round lilac Bram left with two SMALL symmetric cream horns, round coral Mira right with a SHORT low sideways curl, round yellow child IN FRONT filling much of lower half with two tiny cream hornbuds and a tiny low curl. Preserve the exact outer silhouettes, width/height proportions, big relative size of child, small planted feet, all positions and overlaps of image 1. Group is compact, approximately 1.45 times wider than tall, NOT panoramic. Do not spread the parents or shrink child. Add soft rounded 3D volume, gentle rich material shading and subtle contact shadows. Long smooth rounded outer arm on Bram, a soft arm on Mira, simple little arms on child. Keep arms within image1 silhouettes. NO eyes, mouth, nose, eyebrows or facial features on any character. No tall peaks or tapered flame shapes. No text, logo, frame, sticker border, exterior shadow or halo. Transparent background with clean alpha outside the three figures. Square canvas, artwork fills the same bounds as image 1. This is one compact faceless three-character icon foreground, no sheet.",
-  "generatedFile": "exec-b19e30a2-0cfc-4850-a907-fd2a4166a55d.png"
-}

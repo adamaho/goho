@@ -82,9 +82,11 @@ shared AI integration stays in `packages/core`.
 
 For Goho UI, branding, characters, or launcher icons, start with the
 [Goho design skill](.agents/skills/goho-design/SKILL.md). Its character guide,
-PNG masters, prompts, and asset manifest preserve the approved designs across
-threads; launcher recipes and current mockups live alongside them. Keep these
-references and derived app assets aligned when changing an approved design.
+PNG masters, and asset manifest preserve the approved designs across threads.
+Keep only the selected launcher sources and app resources committed, alongside
+the approved individual and family portraits. Generated launcher previews and
+unused candidates or prompts belong in ignored `.data/`. Keep current references
+and derived app assets aligned when changing an approved design.
 
 ## Package Imports
 

@@ -16,6 +16,6 @@
     "label": "Goho Dev"
   },
   "note": "Selected for phone trial: deeper flat colour with transparent outlines between the rounded family; same faceless mask for themed icons. Canonical family masters unchanged. Android supplies adaptive mask.",
-  "artwork": "family-flat-v8.svg",
-  "monochrome": "family-rounded-monochrome-v6.svg"
+  "artwork": "family-foreground.svg",
+  "monochrome": "family-monochrome.svg"
 }
