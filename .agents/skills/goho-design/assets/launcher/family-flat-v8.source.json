@@ -1,0 +1,20 @@
+{
+  "version": 8,
+  "status": "selected-for-phone-trial",
+  "method": "Native SVG edit; preserve rounded v6 geometry and use matching themed negative-space separators.",
+  "source": "family-rounded-flat-v6.svg",
+  "separationMask": "family-rounded-monochrome-v6.svg",
+  "palette": {
+    "bram": "#6964BA",
+    "mira": "#D65B63",
+    "child": "#EABB35",
+    "background": "#FFF8EA"
+  },
+  "userDirection": "Flat colour, outlines like the themed characters, deeper colours informed by shaded areas with more pop.",
+  "notes": [
+    "No eyes, mouths, eyebrows, gradients or texture.",
+    "Keep the low curls, round bodies and tiny feet to avoid the earlier flame-like silhouette.",
+    "Thin transparent separation shows the launcher background between overlapping characters.",
+    "Canonical character masters remain unchanged."
+  ]
+}

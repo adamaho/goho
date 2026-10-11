@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "status": "historical-exploration",
+  "method": "Native SVG edit of the existing themed icon silhouettes; no image generation.",
+  "source": "family-monochrome-v2.svg",
+  "palette": {
+    "bram": "#9592DE",
+    "mira": "#EC8C84",
+    "child": "#F3D16A"
+  },
+  "background": "#FFF8EA",
+  "changes": [
+    "Remove eyes, mouths, eyebrows, inner seam lines, texture and shading.",
+    "Retain three overlapping silhouettes, horn and curl outlines, and family colors."
+  ],
+  "androidIntegration": "Historical comparison only; current integration is recorded in launcher-spec.json."
+}

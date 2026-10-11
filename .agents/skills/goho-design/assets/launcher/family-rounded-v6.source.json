@@ -1,0 +1,28 @@
+{
+  "version": 6,
+  "status": "historical-exploration",
+  "direction": "Rounder faceless family to avoid flame silhouette",
+  "palette": {
+    "bram": "#949AEE",
+    "mira": "#EC726E",
+    "child": "#FFDC63",
+    "background": "#FFF8EA"
+  },
+  "flat": "family-rounded-flat-v6.svg",
+  "monochrome": "family-rounded-monochrome-v6.svg",
+  "shaded": "family-rounded-shaded-v6.png",
+  "shadedCropPx": {
+    "left": 60,
+    "top": 228,
+    "width": 1418,
+    "height": 649
+  },
+  "shadedPlacementDp": {
+    "x": 23,
+    "y": 39,
+    "width": 62,
+    "height": 29
+  },
+  "preview": "../mockups/launcher-family-sheet-v6.png",
+  "androidIntegration": "Historical comparison only; current integration is recorded in launcher-spec.json."
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "background": "#FFF8EA",
+  "canvasDp": 108,
+  "legacyViewportDp": {
+    "x": 18,
+    "y": 18,
+    "size": 72
+  },
+  "production": {
+    "badge": false,
+    "label": "Goho"
+  },
+  "development": {
+    "badge": true,
+    "label": "Goho Dev"
+  },
+  "note": "Full family portrait is the current launcher direction. This compact derivative preserves Bram left, Mira right and the smaller yellow child in front. Crop removes transparent margins; scaling preserves aspect ratio. Android supplies the adaptive mask.",
+  "artwork": "family-foreground-v1.png",
+  "sourceCropPx": {
+    "left": 24,
+    "top": 190,
+    "width": 1210,
+    "height": 904
+  },
+  "artworkPlacementDp": {
+    "x": 22,
+    "y": 30,
+    "width": 64,
+    "height": 48
+  },
+  "monochrome": "family-monochrome.svg"
+}

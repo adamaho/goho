@@ -1,0 +1,21 @@
+{
+  "version": 8,
+  "background": "#FFF8EA",
+  "canvasDp": 108,
+  "legacyViewportDp": {
+    "x": 18,
+    "y": 18,
+    "size": 72
+  },
+  "production": {
+    "badge": false,
+    "label": "Goho"
+  },
+  "development": {
+    "badge": true,
+    "label": "Goho Dev"
+  },
+  "note": "Selected for phone trial: deeper flat colour with transparent outlines between the rounded family; same faceless mask for themed icons. Canonical family masters unchanged. Android supplies adaptive mask.",
+  "artwork": "family-flat-v8.svg",
+  "monochrome": "family-rounded-monochrome-v6.svg"
+}

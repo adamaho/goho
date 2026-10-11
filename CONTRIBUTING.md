@@ -78,6 +78,14 @@ Shared API contracts live in `packages/goho-api` and the generated client lives
 in `clients/goho-server`. Receipt orchestration stays in `programs/goho-server`;
 shared AI integration stays in `packages/core`.
 
+## Design references
+
+For Goho UI, branding, characters, or launcher icons, start with the
+[Goho design skill](.agents/skills/goho-design/SKILL.md). Its character guide,
+PNG masters, prompts, and asset manifest preserve the approved designs across
+threads; launcher recipes and current mockups live alongside them. Keep these
+references and derived app assets aligned when changing an approved design.
+
 ## Package Imports
 
 Define package-local aliases in `package.json` using Node's `imports` field:

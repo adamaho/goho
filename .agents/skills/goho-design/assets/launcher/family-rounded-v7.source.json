@@ -1,0 +1,34 @@
+{
+  "version": 7,
+  "status": "historical-exploration",
+  "direction": "Rounder faceless family to avoid flame silhouette",
+  "palette": {
+    "bram": "#949AEE",
+    "mira": "#EC726E",
+    "child": "#FFDC63",
+    "background": "#FFF8EA"
+  },
+  "flat": "family-rounded-flat-v6.svg",
+  "monochrome": "family-rounded-monochrome-v6.svg",
+  "shaded": "family-rounded-shaded-v7.png",
+  "shadedCropPx": {
+    "left": 60,
+    "top": 288,
+    "width": 1140,
+    "height": 770
+  },
+  "shadedPlacementDp": {
+    "x": 23,
+    "y": 35,
+    "width": 62,
+    "height": 42
+  },
+  "preview": "../mockups/launcher-family-sheet-v7.png",
+  "androidIntegration": "Historical comparison only; current integration is recorded in launcher-spec.json.",
+  "history": {
+    "v4": "Tapered faceless shapes resembled flames; superseded for this review.",
+    "v6": "Rounded flat/themed sources retained; first shaded composition too wide.",
+    "v7": "Tighter shaded group derived from the rounded flat layout."
+  },
+  "renderer": "../../../../../programs/goho-android/scripts/render-launcher-review.cjs"
+}

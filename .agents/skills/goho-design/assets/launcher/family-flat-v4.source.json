@@ -1,0 +1,20 @@
+{
+  "version": 4,
+  "status": "historical-exploration",
+  "method": "Native SVG edit of the existing themed icon silhouettes; no image generation.",
+  "source": "family-monochrome-v2.svg",
+  "palette": {
+    "bram": "#949AEE",
+    "mira": "#EC726E",
+    "child": "#FFDC63"
+  },
+  "background": "#FFF8EA",
+  "changes": [
+    "Remove eyes, mouths, eyebrows, inner seam lines, texture and shading.",
+    "Retain three overlapping silhouettes and identical horn and curl outlines.",
+    "Use more saturated periwinkle-lilac, coral and buttery yellow informed by the original family portrait; preserve all shape geometry."
+  ],
+  "androidIntegration": "Historical comparison only; current integration is recorded in launcher-spec.json.",
+  "basedOn": "family-flat-v3.svg",
+  "paletteReference": "../illustrations/family/bram-mira-family-v1.png"
+}
