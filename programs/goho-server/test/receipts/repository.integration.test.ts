@@ -15,6 +15,7 @@ import receiptUploadsMigration from "#src/database/migrations/0004-receipt-uploa
 import receiptUploadFileIdMigration from "#src/database/migrations/0005-receipt-upload-file-id.ts";
 import dropReceiptIdempotencyMigration from "#src/database/migrations/0006-drop-receipt-idempotency.ts";
 import moveExtractionToUploadsMigration from "#src/database/migrations/0007-move-extraction-to-uploads.ts";
+import defaultReceiptCurrencyMigration from "#src/database/migrations/0008-default-receipt-currency.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as Repository from "#src/receipts/repository.ts";
@@ -101,6 +102,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "drop_receipt_idempotency" },
       { name: "move_extraction_to_uploads" },
       { name: "default_receipt_currency" },
+      { name: "record_timestamps" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -302,6 +304,7 @@ it.effect("moves extraction results onto uploads and drops receipt source metada
       { column_name: "currency" },
       { column_name: "created_at" },
       { column_name: "id" },
+      { column_name: "updated_at" },
     ]);
   }).pipe(
     Effect.provide(
@@ -535,6 +538,194 @@ it.effect("rolls back all receipt data when photo deletion fails, then completes
     yield* service.delete(receiptId);
     expect(yield* repo.findById(receiptId)).toEqual(Option.none());
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual([]);
+    expect(yield* sql`SELECT * FROM receipt_items`).toEqual([]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("backfills record timestamps without replacing historical receipt or upload dates", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO receipts (
+        store_name, receipt_date, category, subtotal, tax, total, created_at
+      ) VALUES ('Legacy Store', '2011-10-26', 'Groceries', 10, 1, 11, '2026-10-11T14:00:00Z')
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount)
+      SELECT id, 0, 'Apples', 11 FROM receipts
+    `;
+    yield* sql`
+      INSERT INTO receipt_uploads (
+        id, file_id, file_name, content_type, status, created_at, updated_at
+      ) VALUES (
+        '00000000-0000-4000-8000-000000000001', 'legacy-photo', 'receipt.png',
+        'image/png', 'processing', '2026-10-11T13:59:00Z', '2026-10-11T13:59:30Z'
+      )
+    `;
+
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
+
+    expect(
+      yield* sql`
+      SELECT receipt_date::text,
+        created_at = '2026-10-11T14:00:00Z'::timestamptz AS original_creation,
+        updated_at = created_at AS initial_update
+      FROM receipts
+    `,
+    ).toEqual([{ receipt_date: "2011-10-26", original_creation: true, initial_update: true }]);
+    expect(
+      yield* sql`
+      SELECT item.created_at = receipt.created_at AS inherited_creation,
+        item.updated_at = item.created_at AS initial_update
+      FROM receipt_items item JOIN receipts receipt ON receipt.id = item.receipt_id
+    `,
+    ).toEqual([{ inherited_creation: true, initial_update: true }]);
+    expect(
+      yield* sql`
+      SELECT created_at = '2026-10-11T13:59:00Z'::timestamptz AS original_creation,
+        updated_at = '2026-10-11T13:59:30Z'::timestamptz AS original_update
+      FROM receipt_uploads
+    `,
+    ).toEqual([{ original_creation: true, original_update: true }]);
+    expect(
+      yield* sql`
+      SELECT table_name, column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name IN ('receipts', 'receipt_items', 'receipt_uploads')
+        AND column_name IN ('created_at', 'updated_at')
+      ORDER BY table_name, column_name
+    `,
+    ).toEqual(
+      ["receipt_items", "receipt_uploads", "receipts"].flatMap((table_name) =>
+        ["created_at", "updated_at"].map((column_name) => ({
+          table_name,
+          column_name,
+          data_type: "timestamp with time zone",
+          is_nullable: "NO",
+          column_default: "now()",
+        })),
+      ),
+    );
+    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([]);
+  }).pipe(
+    Effect.provide(
+      migratedDatabase({
+        "0001_receipts": receiptsMigration,
+        "0002_create_receipt": createReceiptMigration,
+        "0003_bigint_receipt_ids": bigintReceiptIdsMigration,
+        "0004_receipt_uploads": receiptUploadsMigration,
+        "0005_receipt_upload_file_id": receiptUploadFileIdMigration,
+        "0006_drop_receipt_idempotency": dropReceiptIdempotencyMigration,
+        "0007_move_extraction_to_uploads": moveExtractionToUploadsMigration,
+        "0008_default_receipt_currency": defaultReceiptCurrencyMigration,
+      }),
+    ),
+  ),
+);
+
+it.effect(
+  "defaults timestamps and preserves creation instants on direct updates in any time zone",
+  () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql.withTransaction(
+        Effect.gen(function* () {
+          yield* sql`SET LOCAL TIME ZONE 'America/Toronto'`;
+          yield* sql`
+        INSERT INTO receipts (store_name, receipt_date, category, subtotal, tax, total)
+        VALUES ('Example Store', '2011-10-26', 'Groceries', 10, 1, 11)
+      `;
+          yield* sql`
+        INSERT INTO receipt_items (receipt_id, position, name, amount)
+        SELECT id, 0, 'Apples', 11 FROM receipts
+      `;
+          yield* sql`
+        INSERT INTO receipt_uploads (id, file_id, file_name, content_type, status)
+        VALUES ('00000000-0000-4000-8000-000000000001', 'photo', 'receipt.png', 'image/png', 'queued')
+      `;
+          for (const table of ["receipts", "receipt_items", "receipt_uploads"]) {
+            expect(
+              yield* sql`
+          SELECT created_at = now() AS creation_default,
+            updated_at >= created_at AS valid_update
+          FROM ${sql(table)}
+        `,
+            ).toEqual([{ creation_default: true, valid_update: true }]);
+            expect(
+              yield* sql`
+          UPDATE ${sql(table)} SET created_at = '2000-01-01T00:00:00Z', updated_at = '2000-01-01T00:00:00Z'
+          RETURNING created_at = now() AS creation_preserved,
+            updated_at = statement_timestamp() AS update_recorded
+        `,
+            ).toEqual([{ creation_preserved: true, update_recorded: true }]);
+          }
+          expect(yield* sql`SELECT receipt_date::text FROM receipts`).toEqual([
+            { receipt_date: "2011-10-26" },
+          ]);
+        }),
+      );
+    }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("touches only affected parents for item inserts, edits, moves and deletes", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO receipts (store_name, receipt_date, category, subtotal, tax, total)
+      VALUES
+        ('First Store', '2026-10-11', 'Groceries', 10, 1, 11),
+        ('Second Store', '2026-10-11', 'Groceries', 10, 1, 11),
+        ('Unrelated Store', '2026-10-11', 'Groceries', 10, 1, 11)
+    `;
+    const snapshot = sql<{ id: number; created_at: string; updated_at: string }>`
+      SELECT id::int, created_at::text, updated_at::text FROM receipts ORDER BY id
+    `;
+    const changes = [
+      {
+        affected: [1],
+        run: sql`INSERT INTO receipt_items (receipt_id, position, name, amount) VALUES (1, 0, 'Apples', 11)`,
+      },
+      { affected: [1], run: sql`UPDATE receipt_items SET name = 'Pears', amount = 12` },
+      { affected: [1, 2], run: sql`UPDATE receipt_items SET receipt_id = 2` },
+      { affected: [2], run: sql`DELETE FROM receipt_items` },
+    ];
+    for (const change of changes) {
+      const before = yield* snapshot;
+      yield* change.run;
+      const after = yield* snapshot;
+      expect(after.map(({ id, created_at }) => ({ id, created_at }))).toEqual(
+        before.map(({ id, created_at }) => ({ id, created_at })),
+      );
+      for (const id of [1, 2, 3]) {
+        if (change.affected.includes(id)) {
+          expect(after.find((row) => row.id === id)).not.toEqual(
+            before.find((row) => row.id === id),
+          );
+        } else {
+          expect(after.find((row) => row.id === id)).toEqual(before.find((row) => row.id === id));
+        }
+      }
+    }
+
+    yield* sql`INSERT INTO receipt_items (receipt_id, position, name, amount) VALUES (1, 0, 'Apples', 11)`;
+    const parentsBefore = yield* snapshot;
+    const itemsBefore = yield* sql`SELECT * FROM receipt_items`;
+    const rolledBack = yield* sql
+      .withTransaction(
+        Effect.gen(function* () {
+          yield* sql`UPDATE receipt_items SET name = 'Should roll back'`;
+          return yield* new LaterStepFailed();
+        }),
+      )
+      .pipe(Effect.result);
+    expect(Result.isFailure(rolledBack) && rolledBack.failure._tag).toBe(
+      "GohoServer.Test.LaterStepFailed",
+    );
+    expect(yield* snapshot).toEqual(parentsBefore);
+    expect(yield* sql`SELECT * FROM receipt_items`).toEqual(itemsBefore);
+
+    yield* sql`DELETE FROM receipts`;
     expect(yield* sql`SELECT * FROM receipt_items`).toEqual([]);
   }).pipe(Effect.provide(DatabaseLive)),
 );

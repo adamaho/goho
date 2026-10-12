@@ -196,7 +196,7 @@ export const layer = Layer.effect(
       Request: ReceiptUploadId,
       Result: ReceiptUploadRow,
       execute: (uploadId) => sql`
-        UPDATE receipt_uploads SET status = 'processing', updated_at = now()
+        UPDATE receipt_uploads SET status = 'processing'
         WHERE id = ${uploadId} AND status IN ('queued', 'processing')
         RETURNING ${columns}
       `,
@@ -214,8 +214,7 @@ export const layer = Layer.effect(
         UPDATE receipt_uploads
         SET status = 'succeeded', receipt_id = ${request.receiptId},
           extraction_version = ${request.extractionVersion},
-          extracted_payload = ${request.extractedPayload}::jsonb,
-          updated_at = now()
+          extracted_payload = ${request.extractedPayload}::jsonb
         WHERE id = ${request.uploadId} AND status = 'processing'
         RETURNING ${columns}
       `,
@@ -226,7 +225,7 @@ export const layer = Layer.effect(
       Result: ReceiptUploadRow,
       execute: (request) => sql`
         UPDATE receipt_uploads
-        SET status = 'failed', failure_code = ${request.failureCode}, updated_at = now()
+        SET status = 'failed', failure_code = ${request.failureCode}
         WHERE id = ${request.uploadId} AND status IN ('queued', 'processing')
         RETURNING ${columns}
       `,

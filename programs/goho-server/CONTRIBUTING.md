@@ -73,10 +73,10 @@ and repository behavior in this server.
 ### Receipt schema
 
 `receipts` holds only receipt data: store, receipt date, category, subtotal, tax,
-total, currency, and creation time. `receipt_items` stores ordered item
-names and amounts, linked to a receipt. Dates use `date`, creation times use
-`timestamptz`, and amounts use `numeric` without two-decimal rounding. Currency
-applies to every item and total and defaults to CAD. The migration backfills
+total, and currency. `receipt_items` stores ordered item names and amounts,
+linked to a receipt. Purchase dates use `date`, and amounts use `numeric` without
+two-decimal rounding. Currency applies to every item and total and defaults to
+CAD. The migration backfills
 existing null currencies and makes the column non-null. Both API creation and
 GPT extraction require an explicit three-letter currency code; null and missing
 currency are rejected. Extraction preserves the receipt's currency and uses CAD
@@ -85,6 +85,19 @@ records this required field. See [receipt creation](./README.md#create-a-receipt
 
 `receipt_uploads` links each processed upload to its receipt and records the
 extraction version and validated extraction JSON once the upload succeeds.
+
+All three tables have required `created_at` and `updated_at` columns using
+`timestamptz`, which stores an absolute instant independent of the session time
+zone. New records default both timestamps to `now()`. Database triggers preserve
+`created_at` and set `updated_at` to the statement time on every update, including
+direct SQL edits. Inserting, editing, moving, or deleting an item also updates its
+parent receipt (both parents when moving an item). These changes roll back with
+the enclosing transaction. Cascading receipt deletion remains supported.
+
+Existing items inherit their receipt's creation time. Newly added `updated_at`
+values start at `created_at` because historical edit times are unknown. Existing
+upload timestamps are preserved. Receipt response fields remain unchanged; these
+columns prepare persistence for future editing endpoints.
 
 Decimal strings preserve the finite numeric values supplied by the parser; they
 cannot recover precision already lost upstream.
