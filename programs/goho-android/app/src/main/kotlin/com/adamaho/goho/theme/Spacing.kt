@@ -105,7 +105,6 @@ object GohoSpacing {
     val filterTop = 16.dp
     val filterPadding = 3.dp
     val filterGap = 6.dp
-    val filterSwipeThreshold = 48.dp
     val filterTouchInset = 4.dp
     val filterVisualHeight = 36.dp
     val placeholderWidth = 20.dp

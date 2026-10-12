@@ -38,7 +38,6 @@ fun ReceiptListHeader(
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
         }
-        if (showFilters && (total > 0 || attentionOnly))
-            ReceiptFilter(total, attention, attentionOnly, onSelect, locale)
+        if (showFilters) ReceiptFilter(total, attention, attentionOnly, onSelect, locale)
     }
 }

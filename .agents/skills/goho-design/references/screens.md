@@ -151,7 +151,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Layout and transitions**
 
-- Center the status content in the available content area below the fixed header and above a separate Scan footer when present, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
+- Center the status content in the available content area below the fixed header and above the persistent Scan button, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
 - Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
 - During retry, keep the error header and status content mounted. Disable the button immediately and keep “Try again” visible for the first 200ms. If the request is still pending, replace the label with a centered 18dp loading icon in `onAccent`, retaining “Trying again…” and indeterminate progress for accessibility. Reserve button space for both labels at the current font scale, including 2× text. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
 - Loading visibility follows the actual pending request, independently of the outgoing recovery screen’s disabled button. Cancel the delay/icon on completion, failure or disposal; every attempt starts a fresh 200ms delay.
@@ -179,13 +179,13 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **No receipts yet** (the account has no receipts at all)
 
-- Header shows the “Receipts” title (no filter). The Scan button stays.
+- Header shows the “Receipts” title and both page tabs, including All 0. The shared Scan button stays.
 - Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding and illustration size, with a 4dp gap before the title. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
 - Title "No receipts yet"; text "Tap Scan to add your first one." No button.
 
 **A little hiccup** (the list request failed)
 
-- Header shows only the “Receipts” title. No filter or Scan button.
+- Header shows only the “Receipts” title, with no filters. The shared Scan button stays available because scanning does not require the server.
 - Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
 - Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoActionButton (`Primary`) "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
 - Announce the status content as a polite live region when it appears.
@@ -202,8 +202,10 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 - Expose a “Refresh receipts” accessibility action on the content region and a single “Refreshing receipts…” indeterminate progress announcement on the indicator. The gesture cue changes from “Pull to refresh” to “Release to refresh”. Failure replaces the progress semantics with a polite “Refresh failed” announcement.
 - Review captures: `pull-refresh-light.png`, `pull-refresh-empty-dark.png`, `pull-refresh-error-light.png`, and `pull-refresh-large-text.png` in `assets/mockups/`.
 
-## Swipe between receipt filters
+## Horizontal receipt pages
 
-Swipe left on the list content to select Needs attention; swipe right to select All. Switch on release after at least 48dp horizontal travel beyond touch slop. Cancel short or interrupted drags and do not wrap at either end. Keep the fixed header and Scan in place; reuse the existing filter selection animation, one SegmentTick haptic on a changed selection, and scroll-to-top behavior. The same gesture works on the empty Needs attention content. Leave tab buttons accessible and tappable.
+All and Needs attention share one receipt data source and row layout, presented as two pages in a Compose HorizontalPager. Swipe left to reveal Needs attention and right to reveal All. Content tracks the finger throughout the drag, with both pages visible halfway; use the native distance/velocity settling behaviour and never wrap at the ends. Keep the adjacent page composed so its content is ready before the swipe finishes. Keep a separate vertical list and status scroll position on each page rather than resetting on tab changes.
 
-Use Compose horizontal-drag arbitration so vertical scrolling and pull-to-refresh keep their gestures, and row taps and long presses still work. Disable filter swipes during initial loading, full load errors, manual refresh, and open receipt options, and when the unfiltered list has no receipts and no filters. Background polling does not disable them.
+Keep the header and one Scan button mounted outside the pager. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
+
+Wrap the pager in the shared pull-to-refresh container so both pages refresh the same data with one indicator. Vertical scrolling, refresh, and receipt taps/holds retain their gestures. Disable page swipes during initial loading, full load errors, manual refresh and open receipt options. Background polling keeps pages interactive. Keep Scan available across loading, populated, empty and error states, with enough bottom space for list rows and status content to clear it. Scan only disables while the scanner is opening.
