@@ -4,6 +4,18 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Current receipt pager (October 12, 2026)
+
+Unedited manual development-app captures on the Pixel 9 API 36 emulator. All and Needs attention are adjacent horizontal pages sharing the existing receipt data and row components, with one fixed Scan button outside both pages.
+
+- `receipt-pager-half.png`: Both pages visible during a horizontal drag; header and Scan stay fixed.
+- `receipt-pager-all.png`, `receipt-pager-attention.png`: Settled All and empty Needs attention pages.
+- `receipt-pager-refresh.png`: Pull-to-refresh on Needs attention, with the full threshold ring above the content.
+- `receipt-pager-large-text-dark.png`: Scrollable status copy at 2× text size on a compact 320×457dp screen, with Scan clear of the content.
+- `receipt-pager-error.png`: Initial loading failure retains Scan alongside the retry action. A temporary local GET-only proxy supplied the failure; the normal server connection was restored afterward.
+
+Normal captures are 1080×2424px at 420dpi; the compact capture is 840×1200px. Manual checks confirmed one accessible Scan control, hidden inactive-page content, tab navigation, preserved list scroll position after visiting and scrolling the other page, vertical refresh, error recovery, and receipt taps and holds. No Android tests or harnesses were added. These supersede the previous switch-on-release filter captures. Older empty and error captures below remain artwork references; their per-state Scan placement and hidden tabs on All 0 are superseded by this pager.
+
 ## Current pull-to-refresh (October 12, 2026)
 
 These unedited development-app screenshots were captured manually on the Pixel 9 API 36 emulator with a temporary local GET-only proxy to delay or fail receipt requests. They follow the existing lavender accent, loading-icon style and shared secondary action button.
