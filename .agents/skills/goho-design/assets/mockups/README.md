@@ -4,6 +4,17 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Current filter swipes (October 12, 2026)
+
+Manual emulator captures of the existing list after horizontal gestures, with no new page layout:
+
+- `filter-swipe-attention-light.png`: Swipe left over a receipt to select the empty Needs attention filter.
+- `filter-swipe-all-light.png`: Swipe right over empty content to return to All.
+- `filter-swipe-large-text-dark.png`: Selected Needs attention after a swipe at 2× font size, 320×457dp in dark mode (840×1200px at 420dpi). The status content remains scrollable.
+- `filter-swipe-vertical-refresh.png`: A vertical pull still fills the refresh ring, without changing the filter.
+
+Normal captures are 1080×2424px at 420dpi. Accessibility hierarchy checks confirmed the selected tab changes with each direction and remains Needs attention when swiping left at that end. Short drags and rightward drags on All left All selected. Receipt taps opened details, long presses opened options, and vertical scrolling moved receipt content while the header stayed fixed. No Android tests or harnesses were added.
+
 ## Current pull-to-refresh (October 12, 2026)
 
 These unedited development-app screenshots were captured manually on the Pixel 9 API 36 emulator with a temporary local GET-only proxy to delay or fail receipt requests. They follow the existing lavender accent, loading-icon style and shared secondary action button.

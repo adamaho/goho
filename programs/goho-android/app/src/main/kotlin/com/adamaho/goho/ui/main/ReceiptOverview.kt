@@ -148,7 +148,20 @@ fun ReceiptOverview(
                     enabled =
                         !state.loading && error == state.error && (state.hasLoaded || state.error),
                     onRefresh = onRefresh,
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier =
+                        Modifier.weight(1f)
+                            .fillMaxWidth()
+                            .receiptFilterSwipe(
+                                enabled =
+                                    state.hasLoaded &&
+                                        !error &&
+                                        error == state.error &&
+                                        !state.refreshing &&
+                                        optionsEntry == null &&
+                                        (entries.isNotEmpty() || attentionOnly),
+                                attentionOnly = attentionOnly,
+                                onSelect = { attentionOnly = it },
+                            ),
                 ) {
                     Column(Modifier.fillMaxSize()) {
                         if (showStatus) {

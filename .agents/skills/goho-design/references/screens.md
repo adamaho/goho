@@ -201,3 +201,9 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 - On failure after a successful load, keep cached receipts and filter state. Show “Couldn’t refresh receipts. Your previous list is still here.” and a shared Secondary GohoActionButton labelled “Try again”. Clear the notice on retry; restore it on failure. Initial load failures retain the existing full error state.
 - Expose a “Refresh receipts” accessibility action on the content region and a single “Refreshing receipts…” indeterminate progress announcement on the indicator. The gesture cue changes from “Pull to refresh” to “Release to refresh”. Failure replaces the progress semantics with a polite “Refresh failed” announcement.
 - Review captures: `pull-refresh-light.png`, `pull-refresh-empty-dark.png`, `pull-refresh-error-light.png`, and `pull-refresh-large-text.png` in `assets/mockups/`.
+
+## Swipe between receipt filters
+
+Swipe left on the list content to select Needs attention; swipe right to select All. Switch on release after at least 48dp horizontal travel beyond touch slop. Cancel short or interrupted drags and do not wrap at either end. Keep the fixed header and Scan in place; reuse the existing filter selection animation, one SegmentTick haptic on a changed selection, and scroll-to-top behavior. The same gesture works on the empty Needs attention content. Leave tab buttons accessible and tappable.
+
+Use Compose horizontal-drag arbitration so vertical scrolling and pull-to-refresh keep their gestures, and row taps and long presses still work. Disable filter swipes during initial loading, full load errors, manual refresh, and open receipt options, and when the unfiltered list has no receipts and no filters. Background polling does not disable them.
