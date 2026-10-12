@@ -37,7 +37,7 @@ Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 
 
 ## Scope: build only what the app supports
 
-The app currently supports: the receipts list with All and Needs attention filters, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list and details through a shared options and confirmation sheet. Empty and error state designs for the list are in `references/screens.md` section 6.
+The app currently supports: the receipts list with All and Needs attention filters and pull-to-refresh, inline processing status, scanning from the Scan button, a scan preview with Upload and Cancel, and a read-only details screen for processed receipts with grouped line items and an expandable photo viewer, plus receipt deletion from the list and details through a shared options and confirmation sheet. Empty and error state designs for the list are in `references/screens.md` section 6.
 
 **Do not build, stub or add placeholder UI for any of these** (they are not supported yet):
 
@@ -73,6 +73,7 @@ For character or launcher artwork, start with `references/characters.md`. For na
 Preserve these refinements when adapting the reference code or older mockups:
 
 - Title the list “Receipts”. Keep smaller, separate filter tabs below the title in a fixed header (selected pill, no enclosing track), with no scroll-driven resizing or movement. Keep 44dp filter tap targets, both counts, a 12dp gap below the header, and the 12dp top fade.
+- Pull down at the top of the list or empty filter to refresh receipts and upload statuses together. Keep the header, selected filter, cached rows, and Scan in place. Fill the pull ring completely and give one threshold haptic before release; keep it spinning in reserved space during manual refresh, hide on success, and morph to an orange warning triangle on failure. Keep background polling quiet. A failed refresh retains cached content and offers the standard secondary retry action. See `references/screens.md` for details.
 - Sort each receipt day newest upload first, including successfully processed uploads. Rows without upload timestamps follow in stable server order; do not invent a timestamp for manual receipts.
 - Keep receipt rows fully visible at the bottom; do not add a gradient behind the Scan button.
 - Use a neutral receipt icon for missing photos, a lavender scanning receipt for processing, and an orange receipt with an attention mark for failures. These placeholders do not imply a new server field or image endpoint.

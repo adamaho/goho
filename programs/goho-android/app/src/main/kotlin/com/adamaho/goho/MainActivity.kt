@@ -146,7 +146,10 @@ class MainActivity : ComponentActivity() {
                                                 isOpeningScanner = isOpeningScanner,
                                                 scanError = scanError,
                                                 onScanClick = ::openScanner,
-                                                onRetryClick = ::refreshHistory,
+                                                onRetryClick = { refreshHistory() },
+                                                onRefresh = {
+                                                    refreshHistory(userInitiated = true)
+                                                },
                                                 onReceiptClick = {
                                                     backStack.add(ReceiptDetailRoute(it))
                                                 },
@@ -278,14 +281,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun refreshHistory() {
+    private fun refreshHistory(userInitiated: Boolean = false) {
         if (overviewState.loading) {
-            refreshAfterCurrent = true
+            if (userInitiated) {
+                // Join the in-flight request instead of scheduling a duplicate pull refresh.
+                overviewState = overviewState.copy(refreshing = true, refreshError = false)
+            } else refreshAfterCurrent = true
             return
         }
 
         val revision = historyRevision
-        overviewState = overviewState.copy(loading = true)
+        overviewState =
+            overviewState.copy(loading = true, refreshing = userInitiated, refreshError = false)
         lifecycleScope.launch {
             try {
                 val uploadsResponse = receiptUploadsApi.receiptUploadsList()
@@ -311,16 +318,27 @@ class MainActivity : ComponentActivity() {
                             hasLoaded = true,
                         )
                     } else {
-                        overviewState.copy(loading = false, error = true)
+                        overviewState.copy(
+                            loading = false,
+                            refreshing = false,
+                            error = !overviewState.hasLoaded,
+                            refreshError = overviewState.hasLoaded,
+                        )
                     }
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 Log.w("GohoReceipts", "Receipt listing failed", error)
-                overviewState = overviewState.copy(loading = false, error = true)
+                overviewState =
+                    overviewState.copy(
+                        loading = false,
+                        refreshing = false,
+                        error = !overviewState.hasLoaded,
+                        refreshError = overviewState.hasLoaded,
+                    )
             } finally {
                 if (refreshAfterCurrent) {
                     refreshAfterCurrent = false
-                    refreshHistory()
+                    refreshHistory(userInitiated = overviewState.refreshing)
                 }
             }
         }

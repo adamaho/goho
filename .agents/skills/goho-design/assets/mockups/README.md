@@ -4,6 +4,20 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Current pull-to-refresh (October 12, 2026)
+
+These unedited development-app screenshots were captured manually on the Pixel 9 API 36 emulator with a temporary local GET-only proxy to delay or fail receipt requests. They follow the existing lavender accent, loading-icon style and shared secondary action button.
+
+- `pull-refresh-enter.png`, `pull-refresh-exit-bounce.png`, `pull-refresh-exit-shrinking.png`, `pull-refresh-exit-hidden.png`: Current bounded 108% entrance/exit bounce and in-place shrink to zero with fading. Captured manually at 3× system animation duration to inspect intermediate frames, then restored to normal speed. Exit frames preserve the indicator centre while the ring contracts and disappears.
+- `pull-refresh-threshold-dark.png`: Fully closed ring before release. Android vibration history confirms one threshold tick.
+- `pull-refresh-loading-dark.png` and `pull-refresh-error-dark.png`: Pinned spinner and warning triangle in dark mode.
+- `pull-refresh-light.png`: Refreshing the populated list in reserved space above the receipts while filters and Scan remain anchored.
+- `pull-refresh-empty-dark.png`: Refreshing the empty Needs attention filter in dark mode without changing the selection.
+- `pull-refresh-error-light.png`: The ring morphs into an orange warning triangle for three seconds; failed refresh keeps the cached list and offers the shared Try again action.
+- `pull-refresh-large-text.png`: Dark mode at 320×640dp with 2× font scale and animations disabled. The indicator remains static, verified by identical app pixels in captures taken one second apart.
+
+Standard captures are 1080×2424px at 420dpi; the large-text capture is 840×1680px. Manual checks covered short pulls, threshold release, the recorded threshold haptic, repeated pulls during an active request, one request per endpoint, success dismissal, failure presentation, retry recovery, and progress/failure descriptions in the accessibility hierarchy. The warning replaces the progress role. Separate loading captures show the spinner rotating; the failure outline interpolates between matching circle and triangle perimeter samples. TalkBack action execution was not manually exercised. Android build, lint and formatting checks passed; no Android tests, harnesses or previews were added.
+
 ## Current skeleton loading (October 11, 2026)
 
 These are unedited manual screenshots of the development app on the Pixel 9 API 36 emulator, including system bars. GET responses were temporarily delayed through a local read-only proxy; the regular list rows and detail components rendered their loading states. No Android test harness or separate skeleton layout was used.

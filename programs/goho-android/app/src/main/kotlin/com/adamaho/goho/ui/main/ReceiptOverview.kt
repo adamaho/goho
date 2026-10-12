@@ -15,7 +15,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -55,6 +54,8 @@ data class ReceiptOverviewState(
     val hasLoaded: Boolean = false,
     val loading: Boolean = false,
     val error: Boolean = false,
+    val refreshing: Boolean = false,
+    val refreshError: Boolean = false,
 )
 
 @Composable
@@ -69,6 +70,7 @@ fun ReceiptOverview(
     modifier: Modifier = Modifier,
     previewTime: Instant? = null,
     deleteReceipt: suspend (ReceiptListEntry) -> Boolean = { false },
+    onRefresh: () -> Unit = onRetryClick,
 ) {
     val clock by
         produceState(initialValue = previewTime ?: Instant.now(), previewTime) {
@@ -140,136 +142,174 @@ fun ReceiptOverview(
                     locale,
                     showFilters = !error,
                 )
-                if (showStatus) {
-                    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                        Column(
-                            Modifier.fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                                .heightIn(min = maxHeight)
-                                .padding(
-                                    horizontal = GohoSpacing.screenMargin,
-                                    vertical = GohoSpacing.screenMargin,
-                                ),
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            if (!error) {
-                                scanError?.let { ListNotice(stringResource(it)) }
-                                if (isOpeningScanner)
-                                    ListNotice(stringResource(R.string.scan_opening))
-                            }
-                            when {
-                                error ->
-                                    ReceiptsConnectionErrorState(
-                                        onRetry = {
-                                            if (state.error && !state.loading) onRetryClick()
-                                        },
-                                        isRetrying = state.loading || !state.error,
-                                        showProgress = state.error && showLoading,
-                                    )
-                                attentionOnly ->
-                                    NoNeedsAttentionState(animateEntrance = !recovery.currentState)
-                                else -> NoReceiptsState(animateEntrance = !recovery.currentState)
-                            }
-                        }
-                    }
-                    if (showScan)
-                        Box(
-                            Modifier.fillMaxWidth()
-                                .padding(
-                                    start = GohoSpacing.screenMargin,
-                                    end = GohoSpacing.screenMargin,
-                                    top = GohoSpacing.screenMargin,
-                                    bottom = GohoSpacing.fabBottom,
-                                ),
-                            contentAlignment = Alignment.CenterEnd,
-                        ) {
-                            ScanButton(!isOpeningScanner, onScanClick)
-                        }
-                } else
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize().headerFade(c.background),
-                        contentPadding =
-                            PaddingValues(
-                                start = GohoSpacing.screenMargin,
-                                end = GohoSpacing.screenMargin,
-                                bottom = GohoSpacing.listBottom,
-                            ),
-                    ) {
-                        scanError?.let { error ->
-                            item("scan-error") { ListNotice(stringResource(error)) }
-                        }
-                        if (isOpeningScanner)
-                            item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
-                        if (!state.hasLoaded && state.loading)
-                            item("loading") {
-                                GohoSkeletonScope(loading = true) {
-                                    Column(
-                                        Modifier.loadingSemantics(
-                                            true,
-                                            stringResource(R.string.receipts_loading),
+                GohoPullToRefresh(
+                    refreshing = state.refreshing,
+                    failed = state.refreshError || state.error,
+                    enabled =
+                        !state.loading && error == state.error && (state.hasLoaded || state.error),
+                    onRefresh = onRefresh,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        if (showStatus) {
+                            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                                Column(
+                                    Modifier.fillMaxWidth()
+                                        .verticalScroll(rememberScrollState())
+                                        .heightIn(min = maxHeight)
+                                        .padding(
+                                            horizontal = GohoSpacing.screenMargin,
+                                            vertical = GohoSpacing.screenMargin,
+                                        ),
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    if (state.refreshError)
+                                        ListNotice(
+                                            stringResource(R.string.receipts_refresh_failed),
+                                            stringResource(R.string.receipts_retry),
+                                            onRefresh,
                                         )
-                                    ) {
-                                        ReceiptSectionHeading("")
-                                        ReceiptCard {
-                                            repeat(4) { index ->
-                                                if (index > 0) ReceiptDivider()
-                                                ReceiptRow(
-                                                    null,
-                                                    clock,
-                                                    locale,
-                                                    zone,
-                                                    config.fontScale >= 1.3f ||
-                                                        config.screenWidthDp <
-                                                            GohoSpacing.compactWidth.value,
-                                                    onReceiptClick,
-                                                    { optionsEntry = it },
-                                                    thumbnails,
-                                                )
-                                            }
-                                        }
+                                    if (!error) {
+                                        scanError?.let { ListNotice(stringResource(it)) }
+                                        if (isOpeningScanner)
+                                            ListNotice(stringResource(R.string.scan_opening))
+                                    }
+                                    when {
+                                        error ->
+                                            ReceiptsConnectionErrorState(
+                                                onRetry = {
+                                                    if (state.error && !state.loading)
+                                                        onRetryClick()
+                                                },
+                                                isRetrying = state.loading || !state.error,
+                                                showProgress =
+                                                    state.error && showLoading && !state.refreshing,
+                                            )
+                                        attentionOnly ->
+                                            NoNeedsAttentionState(
+                                                animateEntrance = !recovery.currentState
+                                            )
+                                        else ->
+                                            NoReceiptsState(
+                                                animateEntrance = !recovery.currentState
+                                            )
                                     }
                                 }
                             }
-                        sections.forEach { section ->
-                            item("section:${section.group}") {
-                                AnimatedVisibility(
-                                    section.entries.any { it.key in visibleKeys },
-                                    enter = EnterTransition.None,
-                                    exit = removal,
+                            if (showScan)
+                                Box(
+                                    Modifier.fillMaxWidth()
+                                        .padding(
+                                            start = GohoSpacing.screenMargin,
+                                            end = GohoSpacing.screenMargin,
+                                            top = GohoSpacing.screenMargin,
+                                            bottom = GohoSpacing.fabBottom,
+                                        ),
+                                    contentAlignment = Alignment.CenterEnd,
                                 ) {
-                                    Column {
-                                        ReceiptSectionHeading(
-                                            sectionTitle(section.group, locale, today.year)
+                                    ScanButton(!isOpeningScanner, onScanClick)
+                                }
+                        } else
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize().headerFade(c.background),
+                                contentPadding =
+                                    PaddingValues(
+                                        start = GohoSpacing.screenMargin,
+                                        end = GohoSpacing.screenMargin,
+                                        bottom = GohoSpacing.listBottom,
+                                    ),
+                            ) {
+                                if (state.refreshError)
+                                    item("refresh-error") {
+                                        ListNotice(
+                                            stringResource(R.string.receipts_refresh_failed),
+                                            stringResource(R.string.receipts_retry),
+                                            onRefresh,
                                         )
-                                        ReceiptCard {
-                                            section.entries.forEachIndexed { index, entry ->
-                                                key(entry.key) {
-                                                    AnimatedVisibility(
-                                                        entry.key in visibleKeys,
-                                                        enter = EnterTransition.None,
-                                                        exit = removal,
-                                                    ) {
-                                                        Column {
-                                                            ReceiptRow(
-                                                                entry,
-                                                                clock,
-                                                                locale,
-                                                                zone,
-                                                                config.fontScale >= 1.3f ||
-                                                                    config.screenWidthDp <
-                                                                        GohoSpacing.compactWidth
-                                                                            .value,
-                                                                onReceiptClick,
-                                                                { optionsEntry = it },
-                                                                thumbnails,
-                                                            )
-                                                            if (
-                                                                section.entries
-                                                                    .drop(index + 1)
-                                                                    .any { it.key in visibleKeys }
-                                                            )
-                                                                ReceiptDivider()
+                                    }
+                                scanError?.let { error ->
+                                    item("scan-error") { ListNotice(stringResource(error)) }
+                                }
+                                if (isOpeningScanner)
+                                    item("scanner") {
+                                        ListNotice(stringResource(R.string.scan_opening))
+                                    }
+                                if (!state.hasLoaded && state.loading)
+                                    item("loading") {
+                                        GohoSkeletonScope(loading = true) {
+                                            Column(
+                                                Modifier.loadingSemantics(
+                                                    true,
+                                                    stringResource(R.string.receipts_loading),
+                                                )
+                                            ) {
+                                                ReceiptSectionHeading("")
+                                                ReceiptCard {
+                                                    repeat(4) { index ->
+                                                        if (index > 0) ReceiptDivider()
+                                                        ReceiptRow(
+                                                            null,
+                                                            clock,
+                                                            locale,
+                                                            zone,
+                                                            config.fontScale >= 1.3f ||
+                                                                config.screenWidthDp <
+                                                                    GohoSpacing.compactWidth.value,
+                                                            onReceiptClick,
+                                                            { optionsEntry = it },
+                                                            thumbnails,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                sections.forEach { section ->
+                                    item("section:${section.group}") {
+                                        AnimatedVisibility(
+                                            section.entries.any { it.key in visibleKeys },
+                                            enter = EnterTransition.None,
+                                            exit = removal,
+                                        ) {
+                                            Column {
+                                                ReceiptSectionHeading(
+                                                    sectionTitle(section.group, locale, today.year)
+                                                )
+                                                ReceiptCard {
+                                                    section.entries.forEachIndexed { index, entry ->
+                                                        key(entry.key) {
+                                                            AnimatedVisibility(
+                                                                entry.key in visibleKeys,
+                                                                enter = EnterTransition.None,
+                                                                exit = removal,
+                                                            ) {
+                                                                Column {
+                                                                    ReceiptRow(
+                                                                        entry,
+                                                                        clock,
+                                                                        locale,
+                                                                        zone,
+                                                                        config.fontScale >= 1.3f ||
+                                                                            config.screenWidthDp <
+                                                                                GohoSpacing
+                                                                                    .compactWidth
+                                                                                    .value,
+                                                                        onReceiptClick,
+                                                                        { optionsEntry = it },
+                                                                        thumbnails,
+                                                                    )
+                                                                    if (
+                                                                        section.entries
+                                                                            .drop(index + 1)
+                                                                            .any {
+                                                                                it.key in
+                                                                                    visibleKeys
+                                                                            }
+                                                                    )
+                                                                        ReceiptDivider()
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -278,8 +318,8 @@ fun ReceiptOverview(
                                     }
                                 }
                             }
-                        }
                     }
+                }
             }
             if (showScan && !showStatus)
                 ScanButton(
@@ -360,25 +400,13 @@ private fun ListNotice(message: String, action: String? = null, onAction: () -> 
             color = c.textSecondary,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        if (action != null) {
-            val interaction = remember { MutableInteractionSource() }
-            val pressed by interaction.collectIsPressedAsState()
-            Box(
-                Modifier.heightIn(min = GohoSpacing.headerHeight)
-                    .clip(GohoShapes.pill)
-                    .background(if (pressed) c.surfaceMutedPressed else c.surfaceMuted)
-                    .clickable(
-                        interaction,
-                        indication = null,
-                        role = Role.Button,
-                        onClick = onAction,
-                    )
-                    .padding(horizontal = GohoSpacing.cardPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(action, style = GohoTheme.type.button, color = c.textPrimary)
-            }
-        }
+        if (action != null)
+            GohoActionButton(
+                action,
+                onAction,
+                modifier = Modifier.padding(top = GohoSpacing.contentGap),
+                variant = GohoButtonVariant.Secondary,
+            )
     }
 }
 
