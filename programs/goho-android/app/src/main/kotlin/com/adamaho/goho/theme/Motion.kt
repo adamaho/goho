@@ -2,6 +2,7 @@ package com.adamaho.goho.theme
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -10,6 +11,22 @@ import androidx.compose.ui.unit.dp
 object GohoMotion {
     const val LOADING_DELAY_MILLIS = 200L
     const val LOADING_SPIN_MILLIS = 1000
+    const val REFRESH_MIN_VISIBLE_MILLIS = 200L
+    const val REFRESH_BOUNCE_SCALE = 1.08f
+    val refreshEnter: AnimationSpec<Float> = keyframes {
+        durationMillis = 180
+        0f at 0
+        REFRESH_BOUNCE_SCALE at 110
+        1f at 180
+    }
+    val refreshExit: AnimationSpec<Float> = keyframes {
+        durationMillis = 220
+        1f at 0
+        REFRESH_BOUNCE_SCALE at 70
+        0f at 220
+    }
+    const val REFRESH_MORPH_MILLIS = 240
+    const val REFRESH_FAILURE_MILLIS = 3000L
     const val STATUS_ENTER_MILLIS = 200
     const val STATUS_CROSSFADE_MILLIS = 200
     val statusEnterTranslation = 6.dp
