@@ -4,6 +4,16 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Current button finishes (October 14, 2026)
+
+Unedited development-app screenshots from the Pixel 9 API 36 emulator (1080×2424px, 420dpi). These supersede button appearances in earlier captures; layout, artwork and interaction references below still apply.
+
+- `buttons-primary-light.png`, `buttons-primary-dark.png`: glossy deep-periwinkle primary retry and Scan buttons, white content, bright upper rim and inset reflection.
+- `buttons-secondary-light.png`, `buttons-secondary-dark.png`: frosted light retry action and refined dark charcoal retry action with a continuous grey outer rim, dark inner edge and soft shadow, alongside glossy Scan. A temporary unavailable local endpoint kept the existing receipt visible; the normal server connection was restored and retry recovery checked afterward.
+- `buttons-confirmation-dark.png`: glossy red destructive action and refined dark charcoal Cancel in the existing confirmation sheet. Cancel was exercised; no receipt was deleted.
+
+The purple face maintains at least 5.52:1 white-text contrast across the unpressed gradient; black reaches only 3.81:1. The frosting is a translucent surface treatment on the app's uniform backgrounds, without live backdrop blur. The API now selects numbered finish and colour independently. These existing flows map to 1/Purple, 2/Grey and 1/Red. The dark variant-2 border uses the reduced-lightness grey rim. Standard actions share the updated native surface; round navigation controls retain their separate style. Build, lint, Kotlin formatting and the repository checks passed. No Android tests, harnesses or preview activities were added.
+
 ## Current receipt pager (October 12, 2026)
 
 Unedited manual development-app captures on the Pixel 9 API 36 emulator. All and Needs attention are adjacent horizontal pages sharing the existing receipt data and row components, with one fixed Scan button outside both pages.

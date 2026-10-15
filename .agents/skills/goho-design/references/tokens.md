@@ -1,43 +1,45 @@
 # Goho tokens
 
-All values are dp or sp. Palette and geometry match the approved Bram implementation in PR #101.
+All values are dp or sp. Button finishes follow the October 14 glossy/frosted update; layout and illustration tokens retain the approved Bram design.
 
 ## Color
 
 Goho follows the system light/dark setting. Both palettes use the same token names; screens never branch on theme except where noted. The photo frame and photo viewer stay dark in both themes so receipts always sit on a dark well.
 
-| Token                                        | Dark                  | Light                    | Use                                                        |
-| -------------------------------------------- | --------------------- | ------------------------ | ---------------------------------------------------------- |
-| `background`                                 | `#15141D`             | `#FBF8F4`                | Screen background                                          |
-| `surface`                                    | `#1F1E2A`             | `#FFFFFF`                | Cards                                                      |
-| `surfaceMuted`                               | `#1F1E2A`             | `#F1EEF4`                | Round icon buttons, thumbnail placeholder                  |
-| `surfaceMutedPressed`                        | `#2B2A38`             | `#E6E2EC`                | Pressed round icon button                                  |
-| `segmentSelected`                            | `#2B2A38`             | `#FFFFFF`                | Selected filter segment                                    |
-| `surfacePressed`                             | `#252432`             | `#F7F4F9`                | Pressed row                                                |
-| `skeletonBase` / `skeletonShimmer`           | `#2B2A38` / `#3A3948` | `#ECE9F1` / `#FBF8F4`    | Amount skeleton while processing                           |
-| `photoWellCenter` / `photoWellEdge`          | `#2A2724` / `#0C0B0A` | `#2A2724` / `#0C0B0A`    | Photo frame gradient, viewer background (edge)             |
-| `photoControl`                               | `#1D1B19` 78%         | same                     | Close button on the photo well (icon `#F0EEEB`)            |
-| `textPrimary`                                | `#F1EFF8`             | `#26233A`                | Titles, merchants, amounts, values                         |
-| `textSecondary`                              | `#BBB8CC`             | `#5B5870`                | Detail labels, merchant on details, filter text and counts |
-| `textTertiary`                               | `#9794AB`             | `#6E6A83`                | Dates, section labels, "—", currency codes                 |
-| `divider`                                    | white 5%              | `#26233A` 6%             | Row separators inside cards                                |
-| `outline`                                    | white 6%              | `#26233A` 8%             | Thumbnail border                                           |
-| `accent`                                     | `#A6ABF0`             | `#8B91D6`                | Scan and primary button fill, processing scan line         |
-| `accentRing`                                 | `#8288D2`             | `#767CC2`                | Thin edge ring on Scan and primary buttons                 |
-| `accentPressed`                              | `#959AE3`             | `#7D83CB`                | Scan and primary button fill while pressed                 |
-| `onAccent`                                   | `#17183D`             | `#1B1C45`                | Label and icon on Scan and primary buttons                 |
-| `buttonSecondary` / `buttonSecondaryPressed` | `#2B2A38` / `#252432` | `#FFFFFF` / `#F7F4F9`    | Secondary button fill                                      |
-| `statusCard` / `statusCardRing`              | white 2.5% / white 7% | white 60% / `#26233A` 6% | Legacy status-card fill and ring; unused by current states |
-| `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6` | `#E9E9FB` / `#444AA0`    | "Reading receipt…" pill                                    |
-| `accentShimmer`                              | `#E4E5FD`             | `#9CA1E6`                | Shimmer highlight on "Reading receipt…"                    |
-| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717` | `#A34D16` / `#FFEADC`    | "Not processed" pill, attention count badge                |
-| `danger` / `dangerRing`                      | `#C52B2D` / `#A21F22` | `#BE2323` / `#9A1A1B`    | Destructive button fill and its edge ring                  |
-| `dangerPressed`                              | `#B01E22`             | `#A21A1B`                | Destructive button fill while pressed                      |
-| `onDanger`                                   | `#FFFFFF`             | `#FFFFFF`                | Label and icon on the destructive button                   |
-| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79` | `#FFE8E7` / `#B7191C`    | Delete row icon and label, deletion error text             |
-| `sheet`                                      | `#1F1E2A`             | `#FFFFFF`                | Bottom sheet surface                                       |
-| `grabber`                                    | `#3A3948`             | `#D9D6E2`                | Sheet drag handle                                          |
-| `scrim`                                      | black 55%             | `#26233A` 38%            | Behind sheets                                              |
+| Token                                        | Dark                          | Light                         | Use                                                                  |
+| -------------------------------------------- | ----------------------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `background`                                 | `#15141D`                     | `#FBF8F4`                     | Screen background                                                    |
+| `surface`                                    | `#1F1E2A`                     | `#FFFFFF`                     | Cards                                                                |
+| `surfaceMuted`                               | `#1F1E2A`                     | `#F1EEF4`                     | Round icon buttons, thumbnail placeholder                            |
+| `surfaceMutedPressed`                        | `#2B2A38`                     | `#E6E2EC`                     | Pressed round icon button                                            |
+| `segmentSelected`                            | `#2B2A38`                     | `#FFFFFF`                     | Selected filter segment                                              |
+| `surfacePressed`                             | `#252432`                     | `#F7F4F9`                     | Pressed row                                                          |
+| `skeletonBase` / `skeletonShimmer`           | `#2B2A38` / `#3A3948`         | `#ECE9F1` / `#FBF8F4`         | Amount skeleton while processing                                     |
+| `photoWellCenter` / `photoWellEdge`          | `#2A2724` / `#0C0B0A`         | `#2A2724` / `#0C0B0A`         | Photo frame gradient, viewer background (edge)                       |
+| `photoControl`                               | `#1D1B19` 78%                 | same                          | Close button on the photo well (icon `#F0EEEB`)                      |
+| `textPrimary`                                | `#F1EFF8`                     | `#26233A`                     | Titles, merchants, amounts, values                                   |
+| `textSecondary`                              | `#BBB8CC`                     | `#5B5870`                     | Detail labels, merchant on details, filter text and counts           |
+| `textTertiary`                               | `#9794AB`                     | `#6E6A83`                     | Dates, section labels, "—", currency codes                           |
+| `divider`                                    | white 5%                      | `#26233A` 6%                  | Row separators inside cards                                          |
+| `outline`                                    | white 6%                      | `#26233A` 8%                  | Thumbnail border                                                     |
+| `accent`                                     | `#A6ABF0`                     | `#8B91D6`                     | Processing and refresh indicators                                    |
+| `accentRing`                                 | `#353B70`                     | same                          | Lower edge of glossy primary buttons                                 |
+| `accentPressed`                              | `#959AE3`                     | `#7D83CB`                     | Reserved lavender pressed colour                                     |
+| `onAccent`                                   | `#17183D`                     | `#1B1C45`                     | Foreground paired with the lighter accent in Material theme mappings |
+| `buttonPrimary` / `buttonPrimaryPressed`     | `#5059A6` / `#414A8C`         | same                          | Glossy primary and Scan fill                                         |
+| `onButtonPrimary`                            | `#FFFFFF`                     | same                          | Primary labels, icons and loading arcs                               |
+| `buttonSecondary` / `buttonSecondaryPressed` | `#1F1E27` 94% / `#191820` 98% | `#F5F2FA` 82% / `#E8E2F1` 94% | Frosted secondary fill                                               |
+| `statusCard` / `statusCardRing`              | white 2.5% / white 7%         | white 60% / `#26233A` 6%      | Legacy status-card fill and ring; unused by current states           |
+| `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6`         | `#E9E9FB` / `#444AA0`         | "Reading receipt…" pill                                              |
+| `accentShimmer`                              | `#E4E5FD`                     | `#9CA1E6`                     | Shimmer highlight on "Reading receipt…"                              |
+| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717`         | `#A34D16` / `#FFEADC`         | "Not processed" pill, attention count badge                          |
+| `danger` / `dangerRing`                      | `#C52B2D` / `#A21F22`         | `#BE2323` / `#9A1A1B`         | Destructive button fill and its edge ring                            |
+| `dangerPressed`                              | `#B01E22`                     | `#A21A1B`                     | Destructive button fill while pressed                                |
+| `onDanger`                                   | `#FFFFFF`                     | `#FFFFFF`                     | Label and icon on the destructive button                             |
+| `dangerContainer` / `onDangerContainer`      | `#4D1C1B` / `#F87E79`         | `#FFE8E7` / `#B7191C`         | Delete row icon and label, deletion error text                       |
+| `sheet`                                      | `#1F1E2A`                     | `#FFFFFF`                     | Bottom sheet surface                                                 |
+| `grabber`                                    | `#3A3948`                     | `#D9D6E2`                     | Sheet drag handle                                                    |
+| `scrim`                                      | black 55%                     | `#26233A` 38%                 | Behind sheets                                                        |
 
 The accent is lavender in both themes; attention stays orange and destructive actions stay red. Bottom sheets use the same violet neutrals as other surfaces in every menu, confirmation, deleting and error state. Photo wells retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
 
@@ -50,7 +52,7 @@ Contrast measured from the opaque sRGB token pairs (dark / light):
 - `onAccentContainer` on `accentContainer`: 7.27:1 / 6.41:1.
 - `attention` on `attentionContainer`: 6.01:1 / 4.97:1.
 
-Filter text and counts use `textSecondary`; use the dark foreground `onAccent` on lavender buttons in both themes.
+Filter text and counts use `textSecondary`. The primary hue follows Bram’s blue-lavender body (approximately 234° HSV), darkened for white text rather than shifted toward red-violet. Primary and Scan use white `onButtonPrimary` in both themes: 6.32:1 on the base, at least 5.52:1 across the entire unpressed gradient, and at least 6.94:1 when pressed. Black reaches only 3.81:1 even at the brightest gradient point, failing the 4.5:1 normal-text requirement. Edge highlights are outside the content inset. Disabled actions retain the existing 40% opacity and are exempt from active-control contrast requirements.
 
 ## Typography
 
@@ -107,18 +109,17 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 
 Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highlight on cards; light mode on a faint ring plus a soft shadow.
 
-**Button treatment** (Scan FAB, primary, danger and secondary buttons): a flat fill (no gradient), a thin ring 1dp inside the edge in a darker shade of the fill, a second faint light ring 1dp further in, and a soft, wide drop shadow.
+**Button treatment** (numbered finish × independent colour): shared native `GohoButtonSurface.kt`, with existing 20dp action / 24dp Scan corners. Colour chooses the base/pressed pair and content independently of the finish: Purple uses deep-periwinkle and white, Red uses red and white, Grey uses the theme’s neutral face and `textPrimary`. Variant 1 applies the glossy finish; variant 2 applies the frosted/rimmed finish. Existing primary/Scan, destructive and secondary actions use 1/Purple, 1/Red and 2/Grey respectively. The variant 1 face runs from white 6% over the fill at the top, through the fill at 45%, to black 14% over the fill at the bottom. Pressed colours use the same finish. No bright shine crosses the label.
 
-| Button                  | Ring (outer / inner)  | Shadow                                               |
-| ----------------------- | --------------------- | ---------------------------------------------------- |
-| Primary and Scan, light | `#767CC2` / white 22% | 0 1 2 at 16% + 0 10 24 (−8 spread) at 32%, `#3A3D86` |
-| Primary and Scan, dark  | `#8288D2` / white 22% | 0 1 2 at 40% + 0 10 24 (−8) at 60%, black            |
-| Danger, light           | `#9A1A1B` / white 14% | 0 1 2 at 16% + 0 10 24 (−8) at 32%, `#6E0F0F`        |
-| Danger, dark            | `#A21F22` / white 16% | As primary dark                                      |
-| Secondary, light        | `#26233A` 6% / none   | 0 1 2 at 5% + 0 10 24 (−10) at 18%, `#26233A`        |
-| Secondary, dark         | white 8% / none       | 0 1 2 at 12% + 0 10 24 (−10) at 20%, black           |
+For variant 1 and light variant 2, the 1dp outer rim runs from white 85% (light) / 62% (dark) at the top to the variant's edge colour at 45%. A second 1dp inset reflection at 1.5dp fades from white 32% (primary), 14%/16% (danger light/dark), or the secondary rim to transparent halfway down, then the lower shade. Primary lower rim is `#353B70`; danger retains its red edge.
 
-Pressed: the fill steps to its pressed color, the wide shadow drops away (keep the near shadow), plus the Goho press (97% scale, 1dp down). With reduced motion, press progress stays zero.
+Variant 2 / Grey in light mode keeps its pale-violet translucent face, white 6% sheen, violet `#5059A6` 2.5% lower shade, bright white rim and inset reflection. Dark variant 2 / Grey follows the later charcoal reference: `#1F1E27` at 94%, pressed `#191820` at 98%, with just white 1% at the top and black 2.5% at the bottom. It should read almost flat, with no purple glow. A continuous 1.5dp outer rim runs from `#44434D` at the top to `#35343E` at 45%; a 1dp dark `#0F0E16` inner edge sits 2.5dp inside the outline. Keep its existing soft shadow and light `textPrimary` label. The stronger rim and dark inner separation provide depth without a bright top reflection.
+
+This is a frosted **surface treatment**, not a live backdrop blur: current secondary actions sit on uniform screen/sheet backgrounds. Text is never blurred. If placed over images or moving content in a future feature, add a real background capture/blur rather than blurring the button's content.
+
+Shadows retain the existing two layers: 0/1/2dp near + 0/10/24dp wide (−8dp spread filled, −10dp secondary). Primary light uses `#343C75` at 16%/32%; danger light uses `#6E0F0F` at the same alphas. Filled dark uses black 40%/60%. Secondary light uses `#26233A` at 5%/18%; dark uses black 12%/20%.
+
+Pressed: darken the fill, fade both shadows, scale to 97% and move down 1dp. No ripple. Preserve spring release, disabled 40% opacity and reduced-motion handling.
 
 | Element                 | Dark                                           | Light                                    |
 | ----------------------- | ---------------------------------------------- | ---------------------------------------- |

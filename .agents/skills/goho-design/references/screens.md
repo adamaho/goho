@@ -1,5 +1,7 @@
 # Goho screens
 
+All standard actions and Scan use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`; their existing layouts and behaviour are unchanged.
+
 Three screens, a photo viewer, the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
 List and details receipt options and deletion use the same supported server endpoints. Verify server support before implementing new behavior.
@@ -153,7 +155,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 - Center the status content in the available content area below the fixed header and above the persistent Scan button, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
 - Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
-- During retry, keep the error header and status content mounted. Disable the button immediately and keep “Try again” visible for the first 200ms. If the request is still pending, replace the label with a centered 18dp loading icon in `onAccent`, retaining “Trying again…” and indeterminate progress for accessibility. Reserve button space for both labels at the current font scale, including 2× text. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
+- During retry, keep the error header and status content mounted. Disable the button immediately and keep “Try again” visible for the first 200ms. If the request is still pending, replace the label with a centered 18dp loading icon in `onButtonPrimary`, retaining “Trying again…” and indeterminate progress for accessibility. Reserve button space for both labels at the current font scale, including 2× text. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
 - Loading visibility follows the actual pending request, independently of the outgoing recovery screen’s disabled button. Cancel the delay/icon on completion, failure or disposal; every attempt starts a fresh 200ms delay.
 - With Remove animations enabled, entrance, recovery, and press are static. Loading uses a static arc after the same 200ms delay. Keep existing copy unchanged.
 

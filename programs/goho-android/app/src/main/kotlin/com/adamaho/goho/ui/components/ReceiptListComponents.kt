@@ -134,14 +134,14 @@ fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
             for ((x, sx) in listOf(lo to 1f, hi to -1f)) {
                 for ((y, sy) in listOf(lo to 1f, hi to -1f)) {
                     drawLine(
-                        c.onAccent,
+                        c.onButtonPrimary,
                         Offset(x, y),
                         Offset(x + sx * arm, y),
                         stroke,
                         StrokeCap.Round,
                     )
                     drawLine(
-                        c.onAccent,
+                        c.onButtonPrimary,
                         Offset(x, y),
                         Offset(x, y + sy * arm),
                         stroke,
@@ -150,14 +150,18 @@ fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
                 }
             }
             drawLine(
-                c.onAccent,
+                c.onButtonPrimary,
                 Offset(size.width * 0.3f, size.height / 2),
                 Offset(size.width * 0.7f, size.height / 2),
                 stroke,
                 StrokeCap.Round,
             )
         }
-        Text(stringResource(R.string.scan_short), style = GohoTheme.type.button, color = c.onAccent)
+        Text(
+            stringResource(R.string.scan_short),
+            style = GohoTheme.type.button,
+            color = c.onButtonPrimary,
+        )
     }
 }
 

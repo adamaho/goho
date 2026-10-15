@@ -7,22 +7,29 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 ## GohoScanFab
 
 - 56 tall, shape `fab` 24, padding 18 left / 22 right.
-- Fill: flat `accent`; pressed `accentPressed`. Edge and shadow: the button treatment in `tokens.md` (thin darker ring, faint inner light ring, soft wide shadow).
-- Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onAccent`. Content description "Scan receipt".
+- Fill: glossy `buttonPrimary`; pressed `buttonPrimaryPressed`. Edge and shadow: the shared `GohoButtonSurface.kt` treatment in `tokens.md` (bright upper rim, inset reflection, darker lower edge, soft wide shadow).
+- Content: scan icon 22dp, 9dp gap, "Scan" in `button` style, color `onButtonPrimary`. Content description "Scan receipt".
 - Placed bottom right over the list without a bottom gradient. Keep enough list padding for the final row to scroll clear of the button.
 
 ## GohoActionButton
 
-Use one shared component for standard actions, with `variant: GohoButtonVariant` set to `Primary` (the default), `Secondary`, or `Destructive`. The variant owns the fill, pressed fill, rings, shadows, content color and typography; screens must not override these styles. Scan keeps its specialized layout while sharing the button surface treatment. Round navigation and photo-viewer controls remain separate components.
+Use one shared component for standard actions. The finish is `variant: Int = 1`, restricted to 1 or 2 by annotation and a runtime check. Colour is independent: `color: GohoButtonColor = GohoButtonColor.Purple`, with `Purple`, `Red`, and `Grey`. All six combinations are supported. Scan keeps its specialized layout and uses variant 1 / Purple through the same surface. Round navigation and photo-viewer controls remain separate.
 
+```kotlin
+GohoActionButton("Upload receipt", onUpload, variant = 1, color = GohoButtonColor.Purple)
+GohoActionButton("Cancel", onCancel, variant = 2, color = GohoButtonColor.Grey)
+GohoActionButton("Delete receipt", onDelete, variant = 1, color = GohoButtonColor.Red)
+```
+
+- Variant 1: glossy face, bright upper rim, inset reflection, soft wide shadow; weight 600 label.
+- Variant 2: frosted finish in light mode, almost flat face with a dim grey outer rim and dark inner edge in dark mode; quieter shadows and weight 500 label. The base colour is still selected independently.
+- Purple uses `buttonPrimary` / `buttonPrimaryPressed` and white `onButtonPrimary`; red uses `danger` / `dangerPressed` and white `onDanger`; grey uses `buttonSecondary` / `buttonSecondaryPressed` with `textPrimary`. Red remains reserved for destructive actions in product flows.
 - Full width inside the screen margin, at least 52dp tall, shape `button` 20 (not a pill), horizontal padding 20.
-- Optional decorative 18dp icon with an 8dp gap. Use the variant's content color for the icon.
-- `Primary`: flat `accent` fill, `accentPressed` when pressed, and `button` label in `onAccent`.
-- `Secondary`: `buttonSecondary` fill (white in light, raised violet-charcoal in dark), `buttonSecondaryPressed` when pressed, and `buttonSecondary` label at weight 500 in `textPrimary`. Keep its faint ring and soft shadow, including the quieter dark-mode shadow from `tokens.md`. Stack under a primary or destructive action with a 10dp gap; don't use text-only link buttons for actions.
-- `Destructive`: flat `danger` fill, `dangerPressed` when pressed, and `button` label in `onDanger`. Only for the final confirming action of something destructive; red is never used for anything else.
-- All variants use the shared button edge and shadow treatment in `tokens.md`.
+- Optional decorative icon slot: the button supplies `LocalContentColor` from the chosen palette. Material icons and `UploadIcon` inherit it; custom drawing should read it too. Use 18dp icons and an 8dp gap.
+- The shared `GohoButtonColor.kt` palette resolver owns fill, pressed fill, content tint and shadow colour. `GohoButtonSurface.kt` applies the numbered finish; screens do not implement their own styling.
+- Existing primary actions map to 1 / Purple, secondary actions to 2 / Grey, and destructive confirmation to 1 / Red. Stack actions with a 10dp gap.
 - Disabled: whole button at 40% alpha, no press, not clickable.
-- Loading: replace the label with an 18dp loading icon in the variant's content color. The receipts retry action does this after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative. Callers disable immediately while work is pending.
+- Loading: replace the label with an 18dp loading icon in the chosen colour palette's content colour. The receipts retry action does this after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative. Callers disable immediately while work is pending.
 
 ## Status content (empty and error states)
 
@@ -45,7 +52,7 @@ Reference: `assets/compose/GohoSkeleton.kt`; production: `ui/components/GohoSkel
 
 ## GohoLoadingIcon (retry actions)
 
-- A 2dp stroked arc, 18dp in `onAccent` inside the retry button. Rotate once every 1000ms; use a static arc with reduced motion.
+- A 2dp stroked arc, 18dp in `onButtonPrimary` inside the retry button. Rotate once every 1000ms; use a static arc with reduced motion.
 - Reveal only after 200ms of uninterrupted actual loading. Cancel on completion, failure or disposal and restart the delay for each attempt.
 - Retry exposes “Trying again…” and progress on the button; the nested icon is decorative. Initial list and detail loading use skeletons.
 
