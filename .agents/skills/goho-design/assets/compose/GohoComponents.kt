@@ -70,6 +70,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
+import androidx.annotation.IntRange
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -247,15 +250,9 @@ private fun GohoButtonBase(
     modifier: Modifier,
     enabled: Boolean,
     minHeight: Dp,
-    shape: Shape,
-    shadowColor: Color,
-    nearShadowAlpha: Float,
-    wideShadowAlpha: Float,
-    wideShadowSpread: Dp,
-    fill: (Float) -> Brush,
-    ring: Color,
-    innerRing: Color,
-    cornerRadius: Dp,
+    shape: RoundedCornerShape,
+    @IntRange(from = 1, to = 2) variant: Int = 1,
+    color: GohoButtonColor = GohoButtonColor.Purple,
     contentPadding: PaddingValues,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -266,26 +263,7 @@ private fun GohoButtonBase(
         modifier = modifier
             .gohoPressTransform { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .dropShadow(shape, Shadow(radius = 24.dp, spread = wideShadowSpread,
-                offset = DpOffset(0.dp, 10.dp), color = shadowColor, alpha = wideShadowAlpha * (1f - p)))
-            .dropShadow(shape, Shadow(radius = 2.dp,
-                offset = DpOffset(0.dp, 1.dp), color = shadowColor, alpha = nearShadowAlpha))
-            .clip(shape)
-            .background(fill(p))
-            .border(1.dp, ring, shape)
-            .drawWithContent {
-                drawContent()
-                if (innerRing.alpha > 0f) {
-                    val inset = 1.5.dp.toPx()
-                    drawRoundRect(
-                        color = innerRing,
-                        topLeft = Offset(inset, inset),
-                        size = Size(size.width - inset * 2, size.height - inset * 2),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius((cornerRadius - 1.5.dp).toPx()),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
-                    )
-                }
-            }
+            .gohoButtonSurface(GohoTheme.colors, shape, p, variant, color)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -310,41 +288,29 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
         enabled = true,
         minHeight = 56.dp,
         shape = GohoShapes.fab,
-        shadowColor = c.accentShadow,
-        nearShadowAlpha = c.buttonShadowAlpha,
-        wideShadowAlpha = c.buttonWideShadowAlpha,
-        wideShadowSpread = (-8).dp,
-        fill = { p -> SolidColor(lerpColor(c.accent, c.accentPressed, p)) },
-        ring = c.accentRing,
-        innerRing = c.buttonInnerRing,
-        cornerRadius = 24.dp,
         contentPadding = PaddingValues(start = 18.dp, end = 22.dp),
     ) {
-        Icon(scanIcon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onAccent)
-        Text("Scan", style = GohoTheme.type.button, color = c.onAccent)
+        Icon(scanIcon, contentDescription = null, modifier = Modifier.size(22.dp), tint = c.onButtonPrimary)
+        Text("Scan", style = GohoTheme.type.button, color = c.onButtonPrimary)
     }
 }
 
-enum class GohoButtonVariant { Primary, Secondary, Destructive }
 
 @Composable
 fun GohoActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    variant: GohoButtonVariant = GohoButtonVariant.Primary,
+    @IntRange(from = 1, to = 2) variant: Int = 1,
+    color: GohoButtonColor = GohoButtonColor.Purple,
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
     reserveSpaceFor: List<String> = emptyList(),
     loading: Boolean = false, // Already delayed by rememberLoadingVisible; disable immediately at the caller.
 ) {
     val c = GohoTheme.colors
-    val secondary = variant == GohoButtonVariant.Secondary
-    val contentColor = when (variant) {
-        GohoButtonVariant.Primary -> c.onAccent
-        GohoButtonVariant.Secondary -> c.textPrimary
-        GohoButtonVariant.Destructive -> c.onDanger
-    }
+    val secondary = variant == 2
+    val contentColor = c.buttonPalette(color).content
     val style = if (secondary) GohoTheme.type.buttonSecondary else GohoTheme.type.button
     GohoButtonBase(
         onClick = onClick,
@@ -357,33 +323,11 @@ fun GohoActionButton(
         enabled = enabled,
         minHeight = GohoSpacing.buttonHeight,
         shape = GohoShapes.button,
-        shadowColor = when (variant) {
-            GohoButtonVariant.Primary -> c.accentShadow
-            GohoButtonVariant.Secondary -> c.shadow
-            GohoButtonVariant.Destructive -> c.dangerShadow
-        },
-        nearShadowAlpha = if (secondary) c.secondaryShadowAlpha else c.buttonShadowAlpha,
-        wideShadowAlpha = if (secondary) c.secondaryWideShadowAlpha else c.buttonWideShadowAlpha,
-        wideShadowSpread = if (secondary) GohoSpacing.secondaryWideShadowSpread else GohoSpacing.buttonWideShadowSpread,
-        fill = { p -> SolidColor(when (variant) {
-            GohoButtonVariant.Primary -> lerpColor(c.accent, c.accentPressed, p)
-            GohoButtonVariant.Secondary -> lerpColor(c.buttonSecondary, c.buttonSecondaryPressed, p)
-            GohoButtonVariant.Destructive -> lerpColor(c.danger, c.dangerPressed, p)
-        }) },
-        ring = when (variant) {
-            GohoButtonVariant.Primary -> c.accentRing
-            GohoButtonVariant.Secondary -> c.secondaryRing
-            GohoButtonVariant.Destructive -> c.dangerRing
-        },
-        innerRing = when (variant) {
-            GohoButtonVariant.Primary -> c.buttonInnerRing
-            GohoButtonVariant.Secondary -> Color.Transparent
-            GohoButtonVariant.Destructive -> c.dangerInnerRing
-        },
-        cornerRadius = 20.dp,
+        variant = variant,
+        color = color,
         contentPadding = PaddingValues(horizontal = GohoSpacing.buttonHorizontal),
     ) {
-        icon?.invoke()
+        CompositionLocalProvider(LocalContentColor provides contentColor) { icon?.invoke() }
         Box(contentAlignment = Alignment.Center) {
             reserveSpaceFor.forEach { label ->
                 Text(label, style = style, textAlign = TextAlign.Center,

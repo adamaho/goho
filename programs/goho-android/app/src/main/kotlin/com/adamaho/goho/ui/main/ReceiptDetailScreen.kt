@@ -108,7 +108,8 @@ fun ReceiptDetailScreen(
                 GohoActionButton(
                     stringResource(R.string.receipt_detail_retry),
                     { reloadKey++ },
-                    variant = GohoButtonVariant.Secondary,
+                    variant = 2,
+                    color = GohoButtonColor.Grey,
                 )
             }
         } else {

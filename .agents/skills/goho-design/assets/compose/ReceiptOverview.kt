@@ -447,7 +447,8 @@ private fun ListNotice(message: String, action: String? = null, onAction: () -> 
                 action,
                 onAction,
                 modifier = Modifier.padding(top = GohoSpacing.contentGap),
-                variant = GohoButtonVariant.Secondary,
+                variant = 2,
+                color = GohoButtonColor.Grey,
             )
     }
 }

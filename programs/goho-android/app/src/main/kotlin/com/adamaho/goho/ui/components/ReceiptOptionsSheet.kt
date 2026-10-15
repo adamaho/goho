@@ -242,14 +242,16 @@ internal fun ReceiptOptionsSheet(
                                 }
                             },
                             enabled = !deleting,
-                            variant = GohoButtonVariant.Destructive,
+                            variant = 1,
+                            color = GohoButtonColor.Red,
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         )
                         Spacer(Modifier.height(GohoSpacing.buttonGap))
                         GohoActionButton(
                             stringResource(R.string.receipt_cancel),
                             ::dismiss,
-                            variant = GohoButtonVariant.Secondary,
+                            variant = 2,
+                            color = GohoButtonColor.Grey,
                             enabled = !deleting,
                             modifier = Modifier.focusRequester(focus),
                         )
