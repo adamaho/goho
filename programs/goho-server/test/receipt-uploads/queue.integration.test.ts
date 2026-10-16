@@ -34,7 +34,7 @@ const DatabaseLive = Layer.effectContext(
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
     const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
+    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -69,7 +69,7 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
 
 const makeJob = Effect.gen(function* () {
   const crypto = yield* Crypto.Crypto;
-  return { uploadId: ReceiptUploadId.make(yield* crypto.randomUUIDv4) };
+  return { uploadId: ReceiptUploadId.make(yield* crypto.randomUUIDv4()) };
 }).pipe(Effect.provide(NodeCrypto.layer));
 
 class RetryableProcessingError extends Schema.TaggedError<RetryableProcessingError>()(

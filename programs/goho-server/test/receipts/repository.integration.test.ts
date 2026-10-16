@@ -45,7 +45,7 @@ const DatabaseLive = Layer.effectContext(
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
     const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
+    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -70,7 +70,7 @@ const migratedDatabase = (migrations: Parameters<typeof PgMigrator.fromRecord>[0
       const adminContext = yield* Layer.build(Postgres.layer({ url }));
       const admin = Context.get(adminContext, SqlClient.SqlClient);
       const crypto = yield* Crypto.Crypto;
-      const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
+      const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
       yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
         admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
       );

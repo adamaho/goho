@@ -3,13 +3,13 @@
 # Build from the repository root: docker build -f programs/goho-server/Dockerfile .
 FROM node:24-bookworm-slim AS base
 # Keep in sync with packageManager in the root package.json.
-RUN npm install --global pnpm@12.8.1 && npm cache clean --force
+RUN npm install --global pnpm@12.11.2 && npm cache clean --force
 WORKDIR /app
 
 FROM base AS pruner
 COPY . .
 # Keep in sync with the turbo version in the pnpm catalog.
-RUN pnpm dlx turbo@2.11.6 prune @goho/goho-server --docker
+RUN pnpm dlx turbo@2.11.8 prune @goho/goho-server --docker
 
 FROM base AS installer
 # Dependency manifests only, so this layer is reused until dependencies change.

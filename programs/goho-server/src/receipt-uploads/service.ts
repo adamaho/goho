@@ -128,7 +128,7 @@ export const layer = Layer.effect(
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
       function* (input: UploadInput) {
-        const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4);
+        const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
         const upload = yield* transaction
