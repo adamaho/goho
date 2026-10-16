@@ -18,7 +18,7 @@ const DatabaseLive = Layer.effectContext(
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
     const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
+    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -38,14 +38,14 @@ const DatabaseLive = Layer.effectContext(
 const makeUpload = Effect.gen(function* () {
   const crypto = yield* Crypto.Crypto;
   return {
-    id: ReceiptUploadId.make(yield* crypto.randomUUIDv4),
+    id: ReceiptUploadId.make(yield* crypto.randomUUIDv4()),
     fileId: FileId.make("drive-file-id"),
     fileName: "example.png",
     contentType: "image/png" as const,
   };
 }).pipe(Effect.provide(NodeCrypto.layer));
 
-const makeUploadId = Crypto.Crypto.use((crypto) => crypto.randomUUIDv4).pipe(
+const makeUploadId = Crypto.Crypto.use((crypto) => crypto.randomUUIDv4()).pipe(
   Effect.map(ReceiptUploadId.make),
   Effect.provide(NodeCrypto.layer),
 );

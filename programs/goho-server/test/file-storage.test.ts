@@ -40,7 +40,7 @@ it.effect("maps filesystem failures to the storage boundary", () =>
     const storage = yield* FileStorage.Service.pipe(
       Effect.provide(FileStorage.layerFileSystem({ directory })),
     );
-    const missingFileId = FileStorage.FileId.make(yield* crypto.randomUUIDv4);
+    const missingFileId = FileStorage.FileId.make(yield* crypto.randomUUIDv4());
     const result = yield* storage.get(missingFileId).pipe(Effect.result);
 
     expect(Result.isFailure(result) && result.failure).toMatchObject({

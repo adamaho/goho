@@ -22,7 +22,7 @@ export const toolkit = Toolkit.make(
 );
 
 /**
- * Runs receipt tool handlers with their client dependency.
+ * Provides receipt tool handlers and their client dependency for MCP registration.
  *
  * @category layers
  * @since 0.1.0
@@ -34,4 +34,4 @@ export const layer = toolkit
     create_receipt: CreateReceipt.handle,
     delete_receipt: DeleteReceipt.handle,
   })
-  .pipe(Layer.provide(GohoServerClient.layer));
+  .pipe(Layer.provideMerge(GohoServerClient.layer));
