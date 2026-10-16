@@ -8,13 +8,13 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 
 | Token                                        | Dark                          | Light                         | Use                                                                  |
 | -------------------------------------------- | ----------------------------- | ----------------------------- | -------------------------------------------------------------------- |
-| `background`                                 | `#15141D`                     | `#FBF8F4`                     | Screen background                                                    |
+| `background`                                 | `#15141D`                     | `#F5F4FD`                     | Screen background                                                    |
 | `surface`                                    | `#1F1E2A`                     | `#FFFFFF`                     | Cards                                                                |
-| `surfaceMuted`                               | `#1F1E2A`                     | `#F1EEF4`                     | Round icon buttons, thumbnail placeholder                            |
-| `surfaceMutedPressed`                        | `#2B2A38`                     | `#E6E2EC`                     | Pressed round icon button                                            |
+| `surfaceMuted`                               | `#1F1E2A`                     | `#F0EFF7`                     | Round icon buttons, thumbnail placeholder                            |
+| `surfaceMutedPressed`                        | `#2B2A38`                     | `#E4E2EE`                     | Pressed round icon button                                            |
 | `segmentSelected`                            | `#2B2A38`                     | `#FFFFFF`                     | Selected filter segment                                              |
-| `surfacePressed`                             | `#252432`                     | `#F7F4F9`                     | Pressed row                                                          |
-| `skeletonBase` / `skeletonShimmer`           | `#2B2A38` / `#3A3948`         | `#ECE9F1` / `#FBF8F4`         | Amount skeleton while processing                                     |
+| `surfacePressed`                             | `#252432`                     | `#F5F4FA`                     | Pressed row                                                          |
+| `skeletonBase` / `skeletonShimmer`           | `#2B2A38` / `#3A3948`         | `#EAE8F3` / `#F5F4FD`         | Amount skeleton while processing                                     |
 | `photoWellCenter` / `photoWellEdge`          | `#2A2724` / `#0C0B0A`         | `#2A2724` / `#0C0B0A`         | Photo frame gradient, viewer background (edge)                       |
 | `photoControl`                               | `#1D1B19` 78%                 | same                          | Close button on the photo well (icon `#F0EEEB`)                      |
 | `textPrimary`                                | `#F1EFF8`                     | `#26233A`                     | Titles, merchants, amounts, values                                   |
@@ -28,7 +28,7 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `onAccent`                                   | `#17183D`                     | `#1B1C45`                     | Foreground paired with the lighter accent in Material theme mappings |
 | `buttonPrimary` / `buttonPrimaryPressed`     | `#5059A6` / `#414A8C`         | same                          | Glossy primary and Scan fill                                         |
 | `onButtonPrimary`                            | `#FFFFFF`                     | same                          | Primary labels, icons and loading arcs                               |
-| `buttonSecondary` / `buttonSecondaryPressed` | `#1F1E27` 94% / `#191820` 98% | `#F5F2FA` 82% / `#E8E2F1` 94% | Frosted secondary fill                                               |
+| `buttonSecondary` / `buttonSecondaryPressed` | `#1F1E27` 94% / `#191820` 98% | `#FAF8FD` 96% / `#F0ECF6` 98% | Frosted secondary fill                                               |
 | `statusCard` / `statusCardRing`              | white 2.5% / white 7%         | white 60% / `#26233A` 6%      | Legacy status-card fill and ring; unused by current states           |
 | `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6`         | `#E9E9FB` / `#444AA0`         | "Reading receipt…" pill                                              |
 | `accentShimmer`                              | `#E4E5FD`                     | `#9CA1E6`                     | Shimmer highlight on "Reading receipt…"                              |
@@ -41,13 +41,13 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `grabber`                                    | `#3A3948`                     | `#D9D6E2`                     | Sheet drag handle                                                    |
 | `scrim`                                      | black 55%                     | `#26233A` 38%                 | Behind sheets                                                        |
 
-The accent is lavender in both themes; attention stays orange and destructive actions stay red. Bottom sheets use the same violet neutrals as other surfaces in every menu, confirmation, deleting and error state. Photo wells retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
+Light mode uses a pale lavender background (`#F5F4FD`, approximately 247° hue) aligned with dark `#15141D`; muted surfaces, pressed rows and skeletons follow the same violet neutral family. White cards and sheets retain their separation. The accent is lavender in both themes; attention stays orange and destructive actions stay red. Bottom sheets use the same violet neutrals as other surfaces in every menu, confirmation, deleting and error state. Photo wells retain their existing values. Do not infer new OKLCH source coordinates from the previous jade palette.
 
 Contrast measured from the opaque sRGB token pairs (dark / light):
 
-- `textTertiary` on `background`: 6.21:1 / 4.89:1.
+- `textTertiary` on `background`: 6.21:1 / 4.75:1.
 - `textTertiary` on `surface`: 5.59:1 / 5.18:1.
-- `textTertiary` on `surfaceMuted`: 5.59:1 / 4.51:1.
+- `textTertiary` on `surfaceMuted`: 5.59:1 / 4.54:1.
 - `onAccent` on `accent`: 7.86:1 / 5.48:1.
 - `onAccentContainer` on `accentContainer`: 7.27:1 / 6.41:1.
 - `attention` on `attentionContainer`: 6.01:1 / 4.97:1.
@@ -113,11 +113,11 @@ Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highl
 
 For variant 1 and light variant 2, the 1dp outer rim runs from white 85% (light) / 62% (dark) at the top to the variant's edge colour at 45%. A second 1dp inset reflection at 1.5dp fades from white 32% (primary), 14%/16% (danger light/dark), or the secondary rim to transparent halfway down, then the lower shade. Primary lower rim is `#353B70`; danger retains its red edge.
 
-Variant 2 / Grey in light mode keeps its pale-violet translucent face, white 6% sheen, violet `#5059A6` 2.5% lower shade, bright white rim and inset reflection. Dark variant 2 / Grey follows the later charcoal reference: `#1F1E27` at 94%, pressed `#191820` at 98%, with just white 1% at the top and black 2.5% at the bottom. It should read almost flat, with no purple glow. A continuous 1.5dp outer rim runs from `#44434D` at the top to `#35343E` at 45%; a 1dp dark `#0F0E16` inner edge sits 2.5dp inside the outline. Keep its existing soft shadow and light `textPrimary` label. The stronger rim and dark inner separation provide depth without a bright top reflection.
+Variant 2 / Grey in light mode uses a brighter, nearly opaque pale-violet face (`#FAF8FD` at 96%, pressed `#F0ECF6` at 98%) to resist shadow bleed from neighbouring buttons, white 6% sheen, violet `#5059A6` 2.5% lower shade, bright white rim and inset reflection. Dark variant 2 / Grey follows the later charcoal reference: `#1F1E27` at 94%, pressed `#191820` at 98%, with just white 1% at the top and black 2.5% at the bottom. It should read almost flat, with no purple glow. A continuous 1.5dp outer rim runs from `#44434D` at the top to `#35343E` at 45%; a 1dp dark `#0F0E16` inner edge sits 2.5dp inside the outline. Keep its existing soft shadow and light `textPrimary` label. The stronger rim and dark inner separation provide depth without a bright top reflection.
 
 This is a frosted **surface treatment**, not a live backdrop blur: current secondary actions sit on uniform screen/sheet backgrounds. Text is never blurred. If placed over images or moving content in a future feature, add a real background capture/blur rather than blurring the button's content.
 
-Shadows retain the existing two layers: 0/1/2dp near + 0/10/24dp wide (−8dp spread filled, −10dp secondary). Primary light uses `#343C75` at 16%/32%; danger light uses `#6E0F0F` at the same alphas. Filled dark uses black 40%/60%. Secondary light uses `#26233A` at 5%/18%; dark uses black 12%/20%.
+Shadows use two layers. Light variant 1 uses 0/1/2dp near + 0/4/16dp wide (−8dp spread), tightened to avoid muddying a secondary action 10dp below. Primary light uses `#343C75` at 12%/18%; danger light uses `#6E0F0F` at the same alphas. Dark variant 1 and both variant 2 themes retain 0/1/2dp near + 0/10/24dp wide (−8dp spread filled, −10dp secondary). Filled dark uses black 40%/60%. Secondary light uses `#26233A` at 5%/18%; dark uses black 12%/20%.
 
 Pressed: darken the fill, fade both shadows, scale to 97% and move down 1dp. No ripple. Preserve spring release, disabled 40% opacity and reduced-motion handling.
 

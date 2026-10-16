@@ -4,6 +4,14 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Lavender light palette (October 15, 2026)
+
+`palette-lavender-light.png` is an unedited Goho Dev capture on the paired Pixel 9 (1080×2424px), showing the current list palette and tightened Scan shadow. Light mode now uses `#F5F4FD` as its background and shimmer highlight, matching the approximately 247° hue of dark `#15141D`. Muted surfaces, pressed surfaces and skeleton masks use the same violet neutral family. White cards and sheets remain distinct. Earlier light-mode screenshots show the historical warm background; the written palette in `references/tokens.md` takes precedence.
+
+## Light button refinement (October 15, 2026)
+
+`buttons-scan-light.png` is an unedited native Goho Dev capture on the paired Pixel 9 (1080×2424px), showing the tighter light-mode variant 1 shadow. The wide shadow now uses 16dp blur, 4dp downward offset and 18% opacity; the near shadow uses 12%. Light Grey uses a brighter `#FAF8FD` face at 96% opacity, pressed `#F0ECF6` at 98%, to reduce neighbouring shadow bleed. See `references/tokens.md` for the current values. The October 14 light captures below are historical for button shadows and grey fills; dark captures remain current. The updated dev build is installed for on-device review of stacked actions.
+
 ## Current button finishes (October 14, 2026)
 
 Unedited development-app screenshots from the Pixel 9 API 36 emulator (1080×2424px, 420dpi). These supersede button appearances in earlier captures; layout, artwork and interaction references below still apply.

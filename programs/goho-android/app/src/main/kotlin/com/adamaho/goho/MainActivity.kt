@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
+    private var uploadToReveal by mutableStateOf<String?>(null)
     private var receiptPollingJob: Job? = null
     private var refreshAfterCurrent = false
     private var historyRevision = 0L
@@ -141,6 +142,8 @@ class MainActivity : ComponentActivity() {
                                         NavEntry(route) {
                                             ReceiptOverview(
                                                 state = overviewState,
+                                                uploadToReveal = uploadToReveal,
+                                                onUploadRevealed = { uploadToReveal = null },
                                                 deleteReceipt = ::deleteReceipt,
                                                 loadReceiptImage = ::loadReceiptImage,
                                                 isOpeningScanner = isOpeningScanner,
@@ -404,6 +407,7 @@ class MainActivity : ComponentActivity() {
                             status != null &&
                             status != ReceiptUploadsCreate202ResponseData.Status.failed
                     ) {
+                        uploadToReveal = response.body()?.data?.id?.toString()
                         scannedImageUri = null
                         refreshHistory()
                         UploadStatus.Submitted
