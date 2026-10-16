@@ -43,6 +43,8 @@ object GohoSpacing {
     val darkGlassRingInset = 2.5.dp
     val buttonShadowRadius = 2.dp
     val buttonShadowY = 1.dp
+    val lightButtonWideShadowRadius = 16.dp
+    val lightButtonWideShadowY = 4.dp
     val buttonWideShadowRadius = 24.dp
     val buttonWideShadowY = 10.dp
     val buttonWideShadowSpread = (-8).dp

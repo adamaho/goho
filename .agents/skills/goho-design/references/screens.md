@@ -111,6 +111,8 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 - GohoActionButton (`Primary`) "Upload receipt" with an upload icon. Keeps its current behavior.
 - GohoActionButton (`Secondary`) "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
 
+After a successful upload, return to All at scroll position zero. Reset again when the refreshed list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. Failed uploads and cancelled scans do not reset scrolling.
+
 While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
 
 ## 5. Receipt options sheet and delete confirmation

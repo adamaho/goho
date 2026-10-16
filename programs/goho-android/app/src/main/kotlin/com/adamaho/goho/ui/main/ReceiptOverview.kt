@@ -76,6 +76,8 @@ fun ReceiptOverview(
     previewTime: Instant? = null,
     deleteReceipt: suspend (ReceiptListEntry) -> Boolean = { false },
     onRefresh: () -> Unit = onRetryClick,
+    uploadToReveal: String? = null,
+    onUploadRevealed: () -> Unit = {},
 ) {
     val clock by
         produceState(initialValue = previewTime ?: Instant.now(), previewTime) {
@@ -106,6 +108,17 @@ fun ReceiptOverview(
     }
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
+    val uploadedEntryVisible =
+        uploadToReveal != null && entries.any { it.key == "upload:$uploadToReveal" }
+    LaunchedEffect(uploadToReveal, uploadedEntryVisible) {
+        if (uploadToReveal == null) return@LaunchedEffect
+        // Reset on return, then again when the uploaded row arrives: stable item keys
+        // otherwise preserve the old first visible receipt as rows are inserted above it.
+        lastHapticPage = 0
+        pagerState.scrollToPage(0)
+        allListState.scrollToItem(0)
+        if (uploadedEntryVisible) onUploadRevealed()
+    }
     var optionsEntry by remember { mutableStateOf<ReceiptListEntry?>(null) }
     val currentLoadImage by rememberUpdatedState(loadReceiptImage)
     val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }

@@ -32,6 +32,7 @@ internal fun Modifier.gohoButtonSurface(
     require(variant == 1 || variant == 2) { "Button variant must be 1 or 2" }
     val p = progress.coerceIn(0f, 1f)
     val filled = variant == 1
+    val lightFilled = filled && !colors.isDark
     val palette = colors.buttonPalette(color)
     val fill = lerp(palette.fill, palette.pressed, p)
     val ring = if (filled) palette.ring else colors.secondaryRing
@@ -59,11 +60,18 @@ internal fun Modifier.gohoButtonSurface(
     return this.dropShadow(
             shape,
             Shadow(
-                radius = GohoSpacing.buttonWideShadowRadius,
+                radius =
+                    if (lightFilled) GohoSpacing.lightButtonWideShadowRadius
+                    else GohoSpacing.buttonWideShadowRadius,
                 spread =
                     if (filled) GohoSpacing.buttonWideShadowSpread
                     else GohoSpacing.secondaryWideShadowSpread,
-                offset = DpOffset(GohoSpacing.flatElevation, GohoSpacing.buttonWideShadowY),
+                offset =
+                    DpOffset(
+                        GohoSpacing.flatElevation,
+                        if (lightFilled) GohoSpacing.lightButtonWideShadowY
+                        else GohoSpacing.buttonWideShadowY,
+                    ),
                 color = shadowColor,
                 alpha = wideAlpha * (1f - p),
             ),

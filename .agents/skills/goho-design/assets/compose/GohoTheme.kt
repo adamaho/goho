@@ -173,14 +173,14 @@ val GohoLightColors =
         sheet = Color(0xFFFFFFFF),
         grabber = Color(0xFFD9D6E2),
         scrim = Color(0xFF26233A).copy(alpha = 0.38f),
-        background = Color(0xFFFBF8F4),
+        background = Color(0xFFF5F4FD),
         surface = Color(0xFFFFFFFF),
-        surfaceMuted = Color(0xFFF1EEF4),
-        surfaceMutedPressed = Color(0xFFE6E2EC),
+        surfaceMuted = Color(0xFFF0EFF7),
+        surfaceMutedPressed = Color(0xFFE4E2EE),
         segmentSelected = Color(0xFFFFFFFF),
-        surfacePressed = Color(0xFFF7F4F9),
-        skeletonBase = Color(0xFFECE9F1),
-        skeletonShimmer = Color(0xFFFBF8F4),
+        surfacePressed = Color(0xFFF5F4FA),
+        skeletonBase = Color(0xFFEAE8F3),
+        skeletonShimmer = Color(0xFFF5F4FD),
         photoWellCenter = PhotoWellCenter,
         photoWellEdge = PhotoWellEdge,
         photoControl = PhotoControl,
@@ -204,8 +204,8 @@ val GohoLightColors =
         glassEdgeHighlight = Color.White.copy(alpha = 0.85f),
         glassInnerRing = Color.White.copy(alpha = 0.65f),
         buttonEdgeHighlight = Color.White.copy(alpha = 0.85f),
-        buttonSecondary = Color(0xFFF5F2FA).copy(alpha = 0.82f),
-        buttonSecondaryPressed = Color(0xFFE8E2F1).copy(alpha = 0.94f),
+        buttonSecondary = Color(0xFFFAF8FD).copy(alpha = 0.96f),
+        buttonSecondaryPressed = Color(0xFFF0ECF6).copy(alpha = 0.98f),
         accentShadow = Color(0xFF343C75),
         accentContainer = Color(0xFFE9E9FB),
         onAccentContainer = Color(0xFF444AA0),
@@ -215,8 +215,8 @@ val GohoLightColors =
         buttonInnerRing = Color.White.copy(alpha = 0.32f),
         dangerInnerRing = Color.White.copy(alpha = 0.14f),
         secondaryRing = Color.White.copy(alpha = 0.65f),
-        buttonShadowAlpha = 0.16f,
-        buttonWideShadowAlpha = 0.32f,
+        buttonShadowAlpha = 0.12f,
+        buttonWideShadowAlpha = 0.18f,
         secondaryShadowAlpha = 0.05f,
         secondaryWideShadowAlpha = 0.18f,
         statusCard = Color.White.copy(alpha = 0.6f),
@@ -320,6 +320,8 @@ object GohoSpacing {
     val darkGlassRingInset = 2.5.dp
     val buttonShadowRadius = 2.dp
     val buttonShadowY = 1.dp
+    val lightButtonWideShadowRadius = 16.dp
+    val lightButtonWideShadowY = 4.dp
     val buttonWideShadowRadius = 24.dp
     val buttonWideShadowY = 10.dp
     val buttonWideShadowSpread = (-8).dp
