@@ -23,7 +23,7 @@ private fun receipt(id: String, merchant: String, date: String, total: String, c
         "0",
         total,
         currency,
-        listOf(ReceiptItem(0, "Purchase", total)),
+        listOf(ReceiptItem(id, 0, "Purchase", total)),
     )
 
 private fun upload(id: Int, status: ReceiptUploadsList200ResponseDataInner.Status, time: String) =

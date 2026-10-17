@@ -55,7 +55,13 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
           ),
         ),
       )
-      .handle("create", ({ payload }) => receipts.create(payload).pipe(Effect.map(withData)));
+      .handle("create", ({ payload }) => receipts.create(payload).pipe(Effect.map(withData)))
+      .handle("patch", ({ params, payload }) =>
+        receipts.patch(params.receiptId, payload).pipe(Effect.map(withData)),
+      )
+      .handle("patchItem", ({ params, payload }) =>
+        receipts.patchItem(params.receiptId, params.itemId, payload).pipe(Effect.map(withData)),
+      );
   }),
 );
 

@@ -18,7 +18,7 @@ const receipt = {
   tax: "0.75",
   total: "11",
   currency: "CAD",
-  items: [{ position: 0, name: "Apples", amount: "11" }],
+  items: [{ id: "7", position: 0, name: "Apples", amount: "11" }],
 };
 
 describe("receipts list", () => {

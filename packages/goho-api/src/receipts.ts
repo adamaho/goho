@@ -162,6 +162,119 @@ export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u
 export type ReceiptId = typeof ReceiptId.Type;
 
 /**
+ * Receipt corrections. Only supplied fields change; at least one is required.
+ * The HTTP contract also rejects unsupported properties.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const PatchReceiptRequest = Schema.Struct({
+  storeName: Schema.optionalKey(ReceiptFields.storeName),
+  receiptDate: Schema.optionalKey(ReceiptFields.receiptDate),
+  category: Schema.optionalKey(ReceiptFields.category),
+})
+  .check(Schema.isMinProperties(1))
+  .annotate({
+    identifier: "PatchReceiptRequest",
+    description:
+      "Receipt details to correct, bud. Send at least one field; left-out fields stay put, and names are trimmed and stay nonempty.",
+    examples: [{ receiptDate: "2026-09-14" }, { storeName: "Corner Store", category: "Snacks" }],
+  });
+
+/**
+ * Decoded receipt corrections.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface PatchReceiptRequest extends Schema.Schema.Type<typeof PatchReceiptRequest> {}
+
+/**
+ * Item name correction. The HTTP contract rejects unsupported properties.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const PatchReceiptItemRequest = Schema.Struct({
+  name: ReceiptItemInput.fields.name,
+}).annotate({
+  identifier: "PatchReceiptItemRequest",
+  description: "A new name for an existing line item; it is trimmed and stays nonempty.",
+  examples: [{ name: "Granny Smith apples" }],
+});
+
+/**
+ * Decoded item name correction.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface PatchReceiptItemRequest extends Schema.Schema.Type<
+  typeof PatchReceiptItemRequest
+> {}
+
+const maxItemId = 9_223_372_036_854_775_807n;
+
+/**
+ * Persisted receipt item identity: canonical positive decimal text within
+ * PostgreSQL `bigint` range, kept as a string so clients cannot round it.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptItemId = Schema.String.check(
+  Schema.isPattern(/^[1-9]\d{0,18}$/u),
+  Schema.makeFilter((value) => BigInt(value) <= maxItemId, {
+    expected: `an ID no greater than ${maxItemId}`,
+    // JSON Schema has no numeric bound for strings; the description states the range.
+    toJsonSchema: () => ({}),
+  }),
+)
+  .annotate({
+    identifier: "ReceiptItemId",
+    description: `The item's positive number on the roster, from 1 through ${maxItemId} without leading zeros. It sticks with the item through renames.`,
+    examples: ["7"],
+  })
+  .pipe(Schema.brand("ReceiptItemId"));
+
+/**
+ * Decoded persisted receipt item identity.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export type ReceiptItemId = typeof ReceiptItemId.Type;
+
+/**
+ * Saved receipt line item, returned within a receipt or alone after a rename.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptItem = Schema.Struct({
+  id: ReceiptItemId.annotateKey({
+    description: "The item's roster number; use it to target this item.",
+  }),
+  position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
+    description: "Zero-based spot in the receipt lineup.",
+    examples: [0],
+  }),
+  ...ReceiptItemInput.fields,
+}).annotate({
+  identifier: "ReceiptItem",
+  description: "A saved receipt line item in its original slot.",
+  examples: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
+});
+
+/**
+ * Decoded saved receipt line item.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ReceiptItem extends Schema.Schema.Type<typeof ReceiptItem> {}
+
+/**
  * Complete receipt returned after creation or an idempotent replay.
  *
  * @category models
@@ -172,19 +285,7 @@ export const Receipt = Schema.Struct({
     description: "The receipt's roster number, kept the same on a replay.",
   }),
   ...ReceiptFields,
-  items: Schema.NonEmptyArray(
-    Schema.Struct({
-      position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
-        description: "Zero-based spot in the receipt lineup.",
-        examples: [0],
-      }),
-      ...ReceiptItemInput.fields,
-    }).annotate({
-      identifier: "ReceiptItem",
-      description: "A saved receipt line item in its original slot.",
-      examples: [{ position: 0, name: "Apples", amount: "10.25" }],
-    }),
-  ).annotate({
+  items: Schema.NonEmptyArray(ReceiptItem).annotate({
     description: "Items lined up by ascending position.",
   }),
 }).annotate({
@@ -201,7 +302,7 @@ export const Receipt = Schema.Struct({
       tax: "0.75",
       total: "11",
       currency: "USD",
-      items: [{ position: 0, name: "Apples", amount: "10.25" }],
+      items: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
     },
   ],
 });

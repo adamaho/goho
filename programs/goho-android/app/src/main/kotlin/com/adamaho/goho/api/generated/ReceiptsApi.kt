@@ -10,9 +10,12 @@ import com.squareup.moshi.Json
 import com.adamaho.goho.api.generated.model.CreateReceiptRequest
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorInternalServerErrorEncoded
 import com.adamaho.goho.api.generated.model.EffectHttpApiErrorNotFoundEncoded
+import com.adamaho.goho.api.generated.model.PatchReceiptItemRequest
+import com.adamaho.goho.api.generated.model.PatchReceiptRequest
 import com.adamaho.goho.api.generated.model.ReceiptsCreate200Response
 import com.adamaho.goho.api.generated.model.ReceiptsGet200Response
 import com.adamaho.goho.api.generated.model.ReceiptsList200Response
+import com.adamaho.goho.api.generated.model.ReceiptsPatchItem200Response
 
 interface ReceiptsApi {
     /**
@@ -87,5 +90,40 @@ interface ReceiptsApi {
      */
     @GET("receipts")
     suspend fun receiptsList(): Response<ReceiptsList200Response>
+
+    /**
+     * PATCH receipts/{receiptId}
+     * Correct receipt details
+     * Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.
+     *  - 404: No receipt is wearing that number, bud.
+     *  - 500: The server could not save this correction; nothing changed.
+     *
+     * @param receiptId 
+     * @param patchReceiptRequest 
+     * @return [ReceiptsGet200Response]
+     */
+    @PATCH("receipts/{receiptId}")
+    suspend fun receiptsPatch(@Path("receiptId") receiptId: kotlin.String, @Body patchReceiptRequest: PatchReceiptRequest): Response<ReceiptsGet200Response>
+
+    /**
+     * PATCH receipts/{receiptId}/items/{itemId}
+     * Rename a receipt item
+     * Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved.
+     *  - 404: That receipt has no item wearing this number, bud.
+     *  - 500: The server could not save this correction; nothing changed.
+     *
+     * @param receiptId 
+     * @param itemId 
+     * @param patchReceiptItemRequest 
+     * @return [ReceiptsPatchItem200Response]
+     */
+    @PATCH("receipts/{receiptId}/items/{itemId}")
+    suspend fun receiptsPatchItem(@Path("receiptId") receiptId: kotlin.String, @Path("itemId") itemId: kotlin.String, @Body patchReceiptItemRequest: PatchReceiptItemRequest): Response<ReceiptsPatchItem200Response>
 
 }

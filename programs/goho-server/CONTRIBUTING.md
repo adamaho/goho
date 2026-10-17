@@ -107,7 +107,12 @@ caller's transaction the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction, so the
 upload's status transition is what prevents duplicate receipts from redelivered
 jobs.
-Repeated item names are allowed because identity uses position within a receipt.
+
+Each item has a database-generated `bigint` identity `id`, which is its primary
+key and stays with the item through renames and position changes. `position`
+remains the item's order and is unique within its receipt. Repeated item names
+are allowed. Migration 0010 adds the identity column, which fills existing rows
+without firing update triggers, so item and receipt timestamps keep their values.
 
 ### Running migrations locally
 

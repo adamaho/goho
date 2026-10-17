@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Exposes receipt uploads, retrieval, creation, deletion, health checks,
+Exposes receipt uploads, retrieval, creation, correction, deletion, health checks,
 and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
@@ -78,10 +78,34 @@ HTTP 500 with `{"_tag":"InternalServerError"}`.
 JSON body shown in Swagger. Every successful call saves a new receipt.
 
 Names are trimmed and decimal strings normalized (`11.00` becomes `11`). The
-complete receipt is returned under `data`.
+complete receipt is returned under `data`. Each returned item has a
+server-generated `id`, a decimal string like receipt IDs, and its zero-based
+`position` in the receipt.
 
 Invalid payloads return HTTP 400 with an empty body; validation or persistence
 failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
+
+### Correct a receipt
+
+`PATCH /receipts/:receiptId` corrects one or more of `storeName`, `receiptDate`,
+and `category`. Omitted fields keep their values. It returns HTTP 200 with the
+complete saved receipt under `data`.
+
+`PATCH /receipts/:receiptId/items/:itemId` renames an existing item on that
+receipt using its `id` and a JSON body containing only `name`. It returns HTTP
+200 with only the saved item (`id`, `position`, `name`, and `amount`) under
+`data`; fetch the receipt to see the rest of it.
+
+Names and categories are trimmed and must stay nonempty; dates must be real
+`YYYY-MM-DD` dates. Amounts, currency, item positions, the item lineup, the
+upload record, the original photo, and stored extraction data do not change.
+Repeating a correction with the same values succeeds, and later corrections win.
+
+Empty bodies, unsupported or null fields, invalid values, malformed receipt IDs,
+and malformed or out-of-range item IDs return HTTP 400 with an empty body;
+nothing is saved, even when some supplied fields are valid. A missing receipt, or an item
+ID that is not on that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
+return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
 
 ### Delete a receipt
 
