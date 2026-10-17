@@ -12,6 +12,14 @@ import { calculateTotals, formatDecimal, parsePrice } from "./money.ts";
  */
 export const HEADER = ["store", "date", "category", "item", "price", "source_file_id"] as const;
 
+// Accepted names per column, lowercase. Google Sheets RAW exports label the
+// price column "Cost"; the alias is only valid in that position.
+const HEADER_NAMES: ReadonlyArray<ReadonlyArray<string>> = HEADER.map((name) =>
+  name === "price" ? [name, "cost"] : [name],
+);
+
+const EXPECTED_HEADER = `expected exactly 6 columns in this order: ${HEADER.join(",")} (names are trimmed and case-insensitive; "cost" may replace "price", as in Google Sheets RAW exports)`;
+
 /**
  * Every imported receipt uses this currency; amounts are not converted.
  *
@@ -223,25 +231,28 @@ const toReceipt = ({ first, rest }: Group): PlannedReceipt => {
 const checkHeader = (
   records: ReadonlyArray<SourceRecord>,
 ): Result.Result<ReadonlyArray<SourceRecord>, InvalidHeader> => {
-  const expected = HEADER.join(",");
   const header = records[0];
   if (header === undefined) {
-    return Result.fail(new InvalidHeader({ message: `CSV is empty; expected header ${expected}` }));
+    return Result.fail(new InvalidHeader({ message: `CSV is empty; ${EXPECTED_HEADER}` }));
   }
   const actual = header.fields.map((field) => field.trim());
   // Compare field by field: a single quoted field containing commas is not six columns.
   if (actual.length !== HEADER.length) {
     return Result.fail(
       new InvalidHeader({
-        message: `CSV header must have ${HEADER.length} fields (${expected}) but had ${actual.length}: ${JSON.stringify(actual)}`,
+        message: `CSV header has ${actual.length} ${actual.length === 1 ? "field" : "fields"} ${JSON.stringify(actual)}; ${EXPECTED_HEADER}`,
       }),
     );
   }
-  return actual.every((field, index) => field === HEADER[index])
+  // Positional matching also rejects reordered, duplicated, or missing columns.
+  const mismatch = HEADER_NAMES.findIndex(
+    (names, index) => !names.includes(actual[index]?.toLowerCase() ?? ""),
+  );
+  return mismatch === -1
     ? Result.succeed(records.slice(1))
     : Result.fail(
         new InvalidHeader({
-          message: `CSV header must be ${expected} but was ${actual.join(",")}`,
+          message: `CSV header column ${mismatch + 1} is ${JSON.stringify(actual[mismatch])} but must be ${HEADER_NAMES[mismatch]?.map((name) => JSON.stringify(name)).join(" or ")}; ${EXPECTED_HEADER}`,
         }),
       );
 };

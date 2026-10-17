@@ -72,39 +72,80 @@ describe("CSV parsing", () => {
     );
     expect(plan.receipts).toHaveLength(1);
   });
+});
 
-  it("rejects empty files and missing or wrong headers", () => {
-    expect(failure("")._tag).toBe("RawCsvImporter.InvalidHeader");
-    expect(failure("Metro,2024-12-31,Grocery,Milk,1.00,")).toMatchObject({
+describe("CSV header", () => {
+  const expectedHeader =
+    'expected exactly 6 columns in this order: store,date,category,item,price,source_file_id (names are trimmed and case-insensitive; "cost" may replace "price", as in Google Sheets RAW exports)';
+  const row = "Metro,2024-12-31,Grocery,Milk,1.50,";
+
+  it("accepts the Google Sheets RAW export header and reads Cost as the price", () => {
+    const plan = planned(`Store,Date,Category,Item,Cost,source_file_id\n${row}`);
+    expect(plan.errors).toEqual([]);
+    expect(plan.receipts).toMatchObject([
+      { subtotal: "1.50", tax: "0.20", total: "1.70", items: [{ name: "Milk", amount: "1.50" }] },
+    ]);
+  });
+
+  it("keeps accepting the canonical header with trimmed, case-insensitive names", () => {
+    for (const header of [
+      "store,date,category,item,price,source_file_id",
+      " STORE , Date,category ,ITEM, Price ,Source_File_ID",
+      "store,date,category,item,COST,source_file_id",
+    ]) {
+      expect(planned(`${header}\n${row}`).receipts).toHaveLength(1);
+    }
+  });
+
+  it("rejects empty files and headers with missing or extra columns", () => {
+    expect(failure("")).toMatchObject({
       _tag: "RawCsvImporter.InvalidHeader",
-      message:
-        "CSV header must be store,date,category,item,price,source_file_id but was Metro,2024-12-31,Grocery,Milk,1.00,",
+      message: `CSV is empty; ${expectedHeader}`,
     });
-    expect(failure("store,date,category,item,price\nMetro,2024-12-31,Grocery,Milk,1.00")._tag).toBe(
+    expect(failure(`Store,Date,Category,Item,Cost\n${row}`)).toMatchObject({
+      _tag: "RawCsvImporter.InvalidHeader",
+      message: `CSV header has 5 fields ["Store","Date","Category","Item","Cost"]; ${expectedHeader}`,
+    });
+    expect(failure(`Store,Date,Category,Item,Cost,source_file_id,Notes\n${row}`)._tag).toBe(
       "RawCsvImporter.InvalidHeader",
     );
-    expect(failure("date,store,category,item,price,source_file_id")._tag).toBe(
-      "RawCsvImporter.InvalidHeader",
-    );
+  });
+
+  it("rejects wrong, reordered, duplicated, and misplaced alias columns by position", () => {
+    const cases = [
+      ["Metro,2024-12-31,Grocery,Milk,1.00,", 1, "Metro", '"store"'],
+      ["Store,Date,Category,Item,Amount,source_file_id", 5, "Amount", '"price" or "cost"'],
+      ["Date,Store,Category,Item,Cost,source_file_id", 1, "Date", '"store"'],
+      ["Store,Store,Category,Item,Cost,source_file_id", 2, "Store", '"date"'],
+      ["Store,Date,Category,Item,Price,Cost", 6, "Cost", '"source_file_id"'],
+      ["Store,Date,Category,Cost,Price,source_file_id", 4, "Cost", '"item"'],
+      ["Store,Date,Category,Item,,source_file_id", 5, "", '"price" or "cost"'],
+    ] as const;
+    for (const [header, column, actual, allowed] of cases) {
+      expect(failure(`${header}\n${row}`)).toMatchObject({
+        _tag: "RawCsvImporter.InvalidHeader",
+        message: `CSV header column ${column} is ${JSON.stringify(actual)} but must be ${allowed}; ${expectedHeader}`,
+      });
+    }
   });
 
   it("rejects a header quoted into one field even though its text lists every column", () => {
-    expect(
-      failure(
-        '"store,date,category,item,price,source_file_id"\nMetro,2024-12-31,Groceries,Milk,1.50,',
-      ),
-    ).toMatchObject({
-      _tag: "RawCsvImporter.InvalidHeader",
-      message:
-        'CSV header must have 6 fields (store,date,category,item,price,source_file_id) but had 1: ["store,date,category,item,price,source_file_id"]',
-    });
-    expect(
-      failure(
-        'store,"date,category",item,price,source_file_id\nMetro,2024-12-31,Groceries,Milk,1.50,',
-      )._tag,
-    ).toBe("RawCsvImporter.InvalidHeader");
+    for (const header of [
+      '"store,date,category,item,price,source_file_id"',
+      '"Store,Date,Category,Item,Cost,source_file_id"',
+    ]) {
+      expect(failure(`${header}\n${row}`)).toMatchObject({
+        _tag: "RawCsvImporter.InvalidHeader",
+        message: `CSV header has 1 field ${JSON.stringify([header.slice(1, -1)])}; ${expectedHeader}`,
+      });
+    }
+    expect(failure(`store,"date,category",item,price,source_file_id\n${row}`)._tag).toBe(
+      "RawCsvImporter.InvalidHeader",
+    );
   });
+});
 
+describe("CSV parsing errors", () => {
   it("fails visibly on malformed quoting without claiming later records were validated", () => {
     const unclosed = failure(rawCsv('Metro,2024-12-31,Grocery,"Milk,1.00,', "Metro,bad,,,,"));
     expect(unclosed._tag).toBe("RawCsvImporter.MalformedCsv");
