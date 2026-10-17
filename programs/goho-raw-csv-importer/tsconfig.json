@@ -1,7 +1,0 @@
-{
-  "extends": "@goho/tool-tsconfig/program",
-  "compilerOptions": {
-    "rootDir": "."
-  },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
-}
