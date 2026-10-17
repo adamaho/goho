@@ -13,7 +13,7 @@ Reference implementations live in `assets/compose/GohoComponents.kt`. Every pres
 
 ## GohoActionButton
 
-Use one shared component for standard actions. The finish is `variant: Int = 1`, restricted to 1 or 2 by annotation and a runtime check. Colour is independent: `color: GohoButtonColor = GohoButtonColor.Purple`, with `Purple`, `Red`, and `Grey`. All six combinations are supported. Scan keeps its specialized layout and uses variant 1 / Purple through the same surface. Round navigation and photo-viewer controls remain separate.
+Use one shared component for standard actions. The finish is `variant: Int = 1`, restricted to 1 or 2 by annotation and a runtime check. Colour is independent: `color: GohoButtonColor = GohoButtonColor.Purple`, with `Purple`, `Red`, and `Grey`. All six combinations are supported. Scan keeps its specialized layout and uses variant 1 / Purple through the same surface. Icon-only actions use `GohoIconButton` with the same surface and palette; they keep a compact round layout.
 
 ```kotlin
 GohoActionButton("Upload receipt", onUpload, variant = 1, color = GohoButtonColor.Purple)
@@ -73,7 +73,10 @@ Reference: `assets/compose/GohoSkeleton.kt`; production: `ui/components/GohoSkel
 
 ## GohoIconButton (round)
 
-- 44dp circle, fill `surfaceMuted`, pressed `surfaceMutedPressed`, 20dp icon in `textPrimary`. Used for back and the overflow (three-dot, `MoreHoriz`) button on the details screen. (The photo viewer's close button is a GohoPhotoControlButton.)
+- Shared icon-only API: required `contentDescription`, `onClick` and decorative `icon` slot; optional `modifier`, `variant` (1 or 2, default 2), `color` (Purple, Red or Grey, default Grey), `enabled` and visual `opacity` lambda.
+- 44dp circle using `GohoShapes.pill` and the exact `GohoButtonSurface` finish used by labelled action buttons. Back and overflow use variant 2/Grey, with 20dp icons inheriting `LocalContentColor`. Preserve RTL mirroring for Back.
+- Shares the 97% press scale, 1dp drop, reduced-motion support, no ripple and 40% disabled appearance. Disabled controls cannot be activated. The outer button owns its accessible label and role; icon descendants are decorative.
+- Visual opacity fades only the drawing, retaining the touch target and TalkBack node for photo controls. Reference: `assets/compose/GohoIconButton.kt`.
 
 ## ReceiptFilter
 
@@ -148,8 +151,8 @@ One formatter for every amount in the app (list rows, hero, items, total):
 ## GohoPhotoControlButton
 
 - The close button in the photo viewer.
-- 44dp circle, fill `photoControl` (`#1D1B19` at 78%), 1dp inner border white at 8%, 17–20dp icon in `#F0EEEB`. Same look in both themes, because it always sits on a dark well or a photo.
-- Uses the Goho press.
+- Delegates to `GohoIconButton` with variant 2/Grey under the dark Goho theme in both app themes, because it sits on the dark photo well. Uses the shared 44dp circle, charcoal face, grey rim, inner edge, shadow and 20dp close icon.
+- Preserve visual fade, close semantics and the Goho press; no separate photo-button surface.
 
 ## Icons
 

@@ -4,6 +4,10 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Shared icon buttons (October 17, 2026)
+
+`icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `GohoIconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
+
 ## Lavender light palette (October 15, 2026)
 
 `palette-lavender-light.png` is an unedited Goho Dev capture on the paired Pixel 9 (1080×2424px), showing the current list palette and tightened Scan shadow. Light mode now uses `#F5F4FD` as its background and shimmer highlight, matching the approximately 247° hue of dark `#15141D`. Muted surfaces, pressed surfaces and skeleton masks use the same violet neutral family. White cards and sheets remain distinct. Earlier light-mode screenshots show the historical warm background; the written palette in `references/tokens.md` takes precedence.
@@ -20,7 +24,7 @@ Unedited development-app screenshots from the Pixel 9 API 36 emulator (1080×242
 - `buttons-secondary-light.png`, `buttons-secondary-dark.png`: frosted light retry action and refined dark charcoal retry action with a continuous grey outer rim, dark inner edge and soft shadow, alongside glossy Scan. A temporary unavailable local endpoint kept the existing receipt visible; the normal server connection was restored and retry recovery checked afterward.
 - `buttons-confirmation-dark.png`: glossy red destructive action and refined dark charcoal Cancel in the existing confirmation sheet. Cancel was exercised; no receipt was deleted.
 
-The purple face maintains at least 5.52:1 white-text contrast across the unpressed gradient; black reaches only 3.81:1. The frosting is a translucent surface treatment on the app's uniform backgrounds, without live backdrop blur. The API now selects numbered finish and colour independently. These existing flows map to 1/Purple, 2/Grey and 1/Red. The dark variant-2 border uses the reduced-lightness grey rim. Standard actions share the updated native surface; round navigation controls retain their separate style. Build, lint, Kotlin formatting and the repository checks passed. No Android tests, harnesses or preview activities were added.
+The purple face maintains at least 5.52:1 white-text contrast across the unpressed gradient; black reaches only 3.81:1. The frosting is a translucent surface treatment on the app's uniform backgrounds, without live backdrop blur. The API now selects numbered finish and colour independently. These existing flows map to 1/Purple, 2/Grey and 1/Red. The dark variant-2 border uses the reduced-lightness grey rim. Standard actions share the updated native surface; round navigation controls now follow the October 17 shared icon-button treatment. Build, lint, Kotlin formatting and the repository checks passed. No Android tests, harnesses or preview activities were added.
 
 ## Current receipt pager (October 12, 2026)
 

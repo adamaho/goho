@@ -31,7 +31,7 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 
 ## 2. Receipt details (processed receipts only)
 
-**Top bar** (status bar inset, 56 tall, `screenMargin` sides): round back button on the left, round overflow button (`MoreHoriz`, content description "More options") on the right. No title.
+**Top bar** (status bar inset, 56 tall, `screenMargin` sides): variant 2/Grey `GohoIconButton` for back on the left, matching round overflow button (`MoreHoriz`, content description "More options") on the right. No title. Draw the top bar above the scroll body’s header fade so icon shadows soften naturally without a horizontal cutoff beneath the buttons.
 
 **Hero** (12 below the bar, `textInset` sides)
 
