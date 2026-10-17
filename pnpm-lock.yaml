@@ -165,8 +165,8 @@ settings:
 catalogs:
   default:
     '@adamaho/nopeus-oxfmt-config':
-      specifier: 0.1.0
-      version: 0.1.0
+      specifier: 0.1.1
+      version: 0.1.1
     '@adamaho/nopeus-oxlint-config':
       specifier: 0.5.0
       version: 0.5.0
@@ -222,7 +222,7 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxfmt-config':
         specifier: 'catalog:'
-        version: 0.1.0(oxfmt@0.71.0)
+        version: 0.1.1(oxfmt@0.71.0)
       oxfmt:
         specifier: 'catalog:'
         version: 0.71.0
@@ -500,11 +500,11 @@ importers:
 
 packages:
 
-  '@adamaho/nopeus-oxfmt-config@0.1.0':
-    resolution: {integrity: sha512-KcBQq4RK0yTJiJLtlBLOSD7AfujHji19W/LZKkSx+vCWJfpqUHvwIPfQ+fkiAc/GjuA8+4RhV8F8PseO7FB6dA==}
+  '@adamaho/nopeus-oxfmt-config@0.1.1':
+    resolution: {integrity: sha512-hr4g7osMxFimnQwuS5dYohiDAdaBxDprvrcUQNOjld46CFs+tNvTsKWGqu8/9wM3Au1hE5Lgeeet8S97geXJsQ==}
     engines: {node: ^22.18.0 || >=24.0.0}
     peerDependencies:
-      oxfmt: ^0.71.0
+      oxfmt: '>=0.71.0 <1'
 
   '@adamaho/nopeus-oxlint-config@0.5.0':
     resolution: {integrity: sha512-lOhTxSm2qD7Ejr4H6+xkDEotkZH+S64h9557f/20nUWhxX9t1tt7YogXn3f83FYd94nKmdiJ95AhzB3ctWzX6w==}
@@ -1641,7 +1641,7 @@ packages:
 
 snapshots:
 
-  '@adamaho/nopeus-oxfmt-config@0.1.0(oxfmt@0.71.0)':
+  '@adamaho/nopeus-oxfmt-config@0.1.1(oxfmt@0.71.0)':
     dependencies:
       oxfmt: 0.71.0
 
