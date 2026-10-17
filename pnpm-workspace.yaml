@@ -22,6 +22,7 @@ catalog:
   "@effect/platform-node": 4.0.5
   "@effect/tsgo": 0.53.0
   "@types/node": 24.19.2
+  csv-parse: 7.0.3
   effect: 4.0.5
   oxfmt: 0.71.0
   oxlint: 1.88.0

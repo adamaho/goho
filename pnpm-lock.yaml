@@ -194,6 +194,9 @@ catalogs:
     '@types/node':
       specifier: 24.19.2
       version: 24.19.2
+    csv-parse:
+      specifier: 7.0.3
+      version: 7.0.3
     effect:
       specifier: 4.0.5
       version: 4.0.5
@@ -406,6 +409,58 @@ importers:
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.0.5(effect@4.0.5)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.2(@types/node@24.19.2)))
+      '@goho/tool-tsconfig':
+        specifier: workspace:*
+        version: link:../../tools/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.19.2
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.71.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.88.0
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.4(@types/node@24.19.2)(vite@8.3.2(@types/node@24.19.2))
+
+  programs/goho-raw-csv-importer:
+    dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.5(effect@4.0.5)(redis@6.3.0)
+      '@goho/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@goho/goho-api':
+        specifier: workspace:*
+        version: link:../../packages/goho-api
+      csv-parse:
+        specifier: 'catalog:'
+        version: 7.0.3
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.5
+    devDependencies:
+      '@adamaho/nopeus-oxlint-config':
+        specifier: 'catalog:'
+        version: 0.5.0(oxlint@1.88.0)
+      '@adamaho/nopeus-oxlint-plugin':
+        specifier: 'catalog:'
+        version: 0.10.1(oxlint@1.88.0)
+      '@effect/vitest':
+        specifier: 'catalog:'
+        version: 4.0.5(effect@4.0.5)(vitest@5.0.4(@types/node@24.19.2)(vite@8.3.2(@types/node@24.19.2)))
+      '@goho/goho-server':
+        specifier: workspace:*
+        version: link:../goho-server
       '@goho/tool-tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -1302,6 +1357,9 @@ packages:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
     engines: {node: '>=18'}
 
+  csv-parse@7.0.3:
+    resolution: {integrity: sha512-YFd3QM/yo17vH91L1IOZuvl09zM0zEEtdfTcOCKWcMdM++MNaQSyp09slXyFCLaPXvHstQFx/xC8myiFHSMUvw==}
+
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -2116,6 +2174,8 @@ snapshots:
       balanced-match: 4.0.4
 
   chai@6.3.0: {}
+
+  csv-parse@7.0.3: {}
 
   detect-libc@2.1.2: {}
 
