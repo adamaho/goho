@@ -741,7 +741,9 @@ it.effect("gives populated items unique BIGINT IDs without changing their data o
     const renamed = Option.getOrThrow(
       yield* repo.updateItem(ReceiptId.make("1"), ids[1]!, { name: "Pears" }),
     );
-    expect(renamed.items.map(({ id, name }) => ({ id, name }))).toEqual([
+    expect(renamed).toEqual({ ...migrated.items[1], name: "Pears" });
+    const reread = Option.getOrThrow(yield* repo.findById(ReceiptId.make("1")));
+    expect(reread.items.map(({ id, name }) => ({ id, name }))).toEqual([
       { id: ids[0], name: "Apples" },
       { id: ids[1], name: "Pears" },
     ]);
@@ -811,11 +813,14 @@ it.effect("keeps item IDs through renames and direct position changes", () =>
     yield* sql`UPDATE receipt_items SET position = 0 WHERE id = ${adjustment!}`;
     yield* sql`UPDATE receipt_items SET position = 1 WHERE id = ${apples!}`;
     const renamed = yield* repo.updateItem(receiptId, apples!, { name: "Granny Smith apples" });
-    expect(Option.getOrThrow(renamed).items).toEqual([
+    // The returned item reports its current position, not the one it was created in.
+    expect(renamed).toEqual(
+      Option.some({ id: apples, position: 1, name: "Granny Smith apples", amount: "12.00" }),
+    );
+    expect(Option.getOrThrow(yield* repo.findById(receiptId)).items).toEqual([
       { id: adjustment, position: 0, name: "Adjustment", amount: "-1.0" },
-      { id: apples, position: 1, name: "Granny Smith apples", amount: "12.00" },
+      Option.getOrThrow(renamed),
     ]);
-    expect(yield* repo.findById(receiptId)).toEqual(renamed);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -1051,12 +1056,12 @@ it.effect("renames one item by ID and touches only that item and its receipt", (
     const itemsBefore = yield* itemTimes(receiptId);
 
     const saved = yield* repo.updateItem(receiptId, original.items[1]!.id, { name: "Coupon" });
+    expect(saved).toEqual(Option.some({ ...original.items[1]!, name: "Coupon" }));
     const expected = {
       ...original,
-      items: [original.items[0], { ...original.items[1]!, name: "Coupon" }],
+      items: [original.items[0], Option.getOrThrow(saved)],
     };
-    expect(saved).toEqual(Option.some(expected));
-    expect(yield* repo.findById(receiptId)).toEqual(saved);
+    expect(yield* repo.findById(receiptId)).toEqual(Option.some(expected));
     expect((yield* repo.list).find((entry) => entry.id === receiptId)).toEqual(expected);
 
     const parentAfter = yield* receiptTimes(receiptId);
@@ -1094,7 +1099,8 @@ it.effect("accepts same-value corrections and records them as updates", () =>
     const itemsBefore = yield* itemTimes(receiptId);
     expect(
       yield* repo.updateItem(receiptId, original.items[0].id, { name: original.items[0].name }),
-    ).toEqual(Option.some(original));
+    ).toEqual(Option.some(original.items[0]));
+    expect(yield* repo.findById(receiptId)).toEqual(Option.some(original));
     const itemsAfter = yield* itemTimes(receiptId);
     expect(itemsAfter[0]!.updated_at).not.toBe(itemsBefore[0]!.updated_at);
     expect(itemsAfter[1]).toEqual(itemsBefore[1]);
@@ -1148,8 +1154,8 @@ it.effect("rolls back failed corrections, including their timestamps", () =>
     const before = yield* snapshot;
 
     for (const attempt of [
-      repo.update(receiptId, { receiptDate: "2024-09-02", storeName: "Rejected" }),
-      repo.updateItem(receiptId, firstItem!, { name: "Rejected" }),
+      Effect.asVoid(repo.update(receiptId, { receiptDate: "2024-09-02", storeName: "Rejected" })),
+      Effect.asVoid(repo.updateItem(receiptId, firstItem!, { name: "Rejected" })),
     ]) {
       const result = yield* Effect.result(attempt);
       expect(Result.isFailure(result) && result.failure._tag).toBe(
@@ -1195,7 +1201,8 @@ it.effect("waits for a concurrent receipt deletion and then reports the item as 
     // Either order is coherent: a rename after deletion finds nothing; one before it is deleted.
     expect(Option.isSome(deleted)).toBe(true);
     expect(yield* repo.findById(receiptId)).toEqual(Option.none());
-    if (Option.isSome(renamed)) expect(renamed.value.items[0]!.name).toBe("Pears");
+    if (Option.isSome(renamed))
+      expect(renamed.value).toMatchObject({ id: firstItem, name: "Pears" });
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -1281,11 +1288,16 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
       body: yield* HttpBody.json({ name: " Pears " }),
     });
     expect(trimmedItem.status).toBe(200);
+    // Exactly the saved item comes back, with no receipt fields alongside it.
+    expect(yield* trimmedItem.json).toStrictEqual({
+      data: { id: first, position: 0, name: "Pears", amount: "12.00" },
+    });
     const renamed = yield* client.receipts.patchItem({
       params: { receiptId, itemId: second! },
       payload: { name: "Coupon" },
     });
-    expect(renamed.data).toEqual({
+    expect(renamed).toEqual({ data: { id: second, position: 1, name: "Coupon", amount: "-1.0" } });
+    const saved = {
       ...original,
       storeName: "Corner Store",
       receiptDate: "2024-09-02",
@@ -1293,9 +1305,9 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
         { id: first, position: 0, name: "Pears", amount: "12.00" },
         { id: second, position: 1, name: "Coupon", amount: "-1.0" },
       ],
-    });
-    expect(yield* client.receipts.get({ params: { receiptId } })).toEqual(renamed);
-    expect(yield* client.receipts.list()).toEqual({ data: [renamed.data, otherBefore] });
+    };
+    expect(yield* client.receipts.get({ params: { receiptId } })).toEqual({ data: saved });
+    expect(yield* client.receipts.list()).toEqual({ data: [saved, otherBefore] });
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(before[2]);
   }).pipe(Effect.provide(HttpDatabaseLive)),
 );

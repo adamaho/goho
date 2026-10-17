@@ -15,6 +15,7 @@ import com.adamaho.goho.api.generated.model.PatchReceiptRequest
 import com.adamaho.goho.api.generated.model.ReceiptsCreate200Response
 import com.adamaho.goho.api.generated.model.ReceiptsGet200Response
 import com.adamaho.goho.api.generated.model.ReceiptsList200Response
+import com.adamaho.goho.api.generated.model.ReceiptsPatchItem200Response
 
 interface ReceiptsApi {
     /**
@@ -110,7 +111,7 @@ interface ReceiptsApi {
     /**
      * PATCH receipts/{receiptId}/items/{itemId}
      * Rename a receipt item
-     * Renames one existing item and returns the complete receipt. The item&#39;s amount, position, and the rest of the lineup stay put.
+     * Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.
      * Responses:
      *  - 200: Success
      *  - 400: The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved.
@@ -120,9 +121,9 @@ interface ReceiptsApi {
      * @param receiptId 
      * @param itemId 
      * @param patchReceiptItemRequest 
-     * @return [ReceiptsGet200Response]
+     * @return [ReceiptsPatchItem200Response]
      */
     @PATCH("receipts/{receiptId}/items/{itemId}")
-    suspend fun receiptsPatchItem(@Path("receiptId") receiptId: kotlin.String, @Path("itemId") itemId: kotlin.String, @Body patchReceiptItemRequest: PatchReceiptItemRequest): Response<ReceiptsGet200Response>
+    suspend fun receiptsPatchItem(@Path("receiptId") receiptId: kotlin.String, @Path("itemId") itemId: kotlin.String, @Body patchReceiptItemRequest: PatchReceiptItemRequest): Response<ReceiptsPatchItem200Response>
 
 }

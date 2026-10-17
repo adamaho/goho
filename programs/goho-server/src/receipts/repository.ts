@@ -8,6 +8,7 @@ import {
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,
   type Receipt,
+  type ReceiptItem,
 } from "@goho/goho-api/receipts";
 import { Array, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
@@ -50,14 +51,14 @@ export interface Interface {
     changes: PatchReceiptRequest,
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
   /**
-   * Renames one existing item and returns the complete saved receipt from the
-   * same transaction; none when the receipt has no item with that ID.
+   * Renames one existing item and returns the saved item; none when the receipt
+   * has no item with that ID.
    */
   readonly updateItem: (
     receiptId: ReceiptId,
     itemId: ReceiptItemId,
     changes: PatchReceiptItemRequest,
-  ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
+  ) => Effect.Effect<Option.Option<ReceiptItem>, PersistenceError>;
 }
 
 /**
@@ -182,12 +183,12 @@ export const layer = Layer.effect(
 
     const updateItemRow = SqlSchema.findOneOption({
       Request: Schema.Struct({ receiptId: ReceiptId, itemId: ReceiptItemId, name: Schema.String }),
-      Result: Schema.Struct({ id: ReceiptItemIdFromDatabase }),
+      Result: ItemRow,
       // Matching the parent too keeps another receipt's item out of reach.
       execute: ({ receiptId, itemId, name }) => sql`
         UPDATE receipt_items SET name = ${name}
         WHERE id = ${itemId} AND receipt_id = ${receiptId}
-        RETURNING id
+        RETURNING id, position, name, amount::text
       `,
     });
 
@@ -348,9 +349,7 @@ export const layer = Layer.effect(
             // Lock the receipt before its item, matching deletion's lock order; the
             // item trigger then touches the receipt this transaction already holds.
             if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
-            const updated = yield* updateItemRow({ receiptId, itemId, name: changes.name });
-            if (Option.isNone(updated)) return Option.none();
-            return yield* readReceipt(receiptId);
+            return yield* updateItemRow({ receiptId, itemId, name: changes.name });
           }),
         ),
       Effect.mapError((cause) => new PersistenceError({ operation: "updateItem", cause })),

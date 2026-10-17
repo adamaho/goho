@@ -16,6 +16,7 @@ import {
   PatchReceiptRequest,
   Receipt,
   ReceiptId,
+  ReceiptItem,
   ReceiptItemId,
 } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
@@ -286,7 +287,7 @@ export const api = HttpApi.make("goho-server")
         HttpApiEndpoint.patch("patchItem", "/receipts/:receiptId/items/:itemId", {
           params: { receiptId: ReceiptId, itemId: ReceiptItemId },
           payload: PatchReceiptItemRequest,
-          success: DataResponse(Receipt),
+          success: DataResponse(ReceiptItem),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
@@ -304,7 +305,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Rename a receipt item")
           .annotate(
             OpenApi.Description,
-            "Renames one existing item and returns the complete receipt. The item's amount, position, and the rest of the lineup stay put.",
+            "Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.",
           ),
       ),
   );
