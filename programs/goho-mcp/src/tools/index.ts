@@ -7,6 +7,8 @@ import * as CreateReceipt from "./create-receipt.ts";
 import * as DeleteReceipt from "./delete-receipt.ts";
 import * as GetReceipt from "./get-receipt.ts";
 import * as ListReceipts from "./list-receipts.ts";
+import * as PatchReceiptItem from "./patch-receipt-item.ts";
+import * as PatchReceipt from "./patch-receipt.ts";
 
 /**
  * The receipt tools offered over MCP.
@@ -19,6 +21,8 @@ export const toolkit = Toolkit.make(
   GetReceipt.tool,
   CreateReceipt.tool,
   DeleteReceipt.tool,
+  PatchReceipt.tool,
+  PatchReceiptItem.tool,
 );
 
 /**
@@ -33,5 +37,7 @@ export const layer = toolkit
     get_receipt: GetReceipt.handle,
     create_receipt: CreateReceipt.handle,
     delete_receipt: DeleteReceipt.handle,
+    patch_receipt: PatchReceipt.handle,
+    patch_receipt_item: PatchReceiptItem.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));

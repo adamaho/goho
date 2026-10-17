@@ -12,6 +12,8 @@ const ToolList = Schema.Struct({
       annotations: Schema.Struct({
         readOnlyHint: Schema.Boolean,
         destructiveHint: Schema.Boolean,
+        idempotentHint: Schema.Boolean,
+        openWorldHint: Schema.Boolean,
       }),
     }),
   ),
@@ -29,10 +31,20 @@ it.effect("registers the receipt tools through MCP", () =>
       "get_receipt",
       "create_receipt",
       "delete_receipt",
+      "patch_receipt",
+      "patch_receipt_item",
     ]);
     expect(discovered.tools[0]?.annotations.readOnlyHint).toBe(true);
     expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
     expect(discovered.tools[2]?.annotations.readOnlyHint).toBe(false);
+    for (const name of ["patch_receipt", "patch_receipt_item"]) {
+      expect(discovered.tools.find((tool) => tool.name === name)?.annotations).toEqual({
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
+    }
     expect(discovered.tools[3]?.annotations).toMatchObject({
       readOnlyHint: false,
       destructiveHint: true,

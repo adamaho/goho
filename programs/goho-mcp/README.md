@@ -2,7 +2,7 @@
 
 Goho receipts are small, structured records that give an MCP client a useful
 read and write workflow. This local stdio server exposes receipt lookup,
-creation, and deletion through the existing Goho HTTP API, so it can be tested without hosting
+creation, correction, and deletion through the existing Goho HTTP API, so it can be tested without hosting
 or an OpenAI key.
 
 ## Agent-first setup
@@ -106,3 +106,14 @@ while the client is connected and reserves stdout for protocol messages.
   removes that receipt, its items, and any scanned image. It returns the deleted
   ID. Try it on the receipt you just created, then confirm `get_receipt` reports
   it as not found.
+- `patch_receipt` takes a string `receipt_id` and a `changes` object containing
+  at least one of `storeName`, `receiptDate` (YYYY-MM-DD), or `category`. For
+  example: `{"receipt_id":"42","changes":{"category":"Household"}}`.
+  It returns the complete saved receipt. Omitted fields stay unchanged;
+  amounts, currency, and items cannot be patched.
+- `patch_receipt_item` takes string `receipt_id` and `item_id` values and a
+  `changes` object with a nonblank `name`. Use an item ID returned by
+  `get_receipt` or `list_receipts`, for example:
+  `{"receipt_id":"42","item_id":"7","changes":{"name":"Granny Smith apples"}}`.
+  It returns the saved item with its ID, position, name, and amount.
+  Only the name changes. Both patch tools trim names and reject unsupported fields.
