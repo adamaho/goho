@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,15 +27,15 @@ import com.adamaho.goho.theme.*
 
 @Composable
 internal fun ReceiptBackButton(onClick: () -> Unit) {
-    val c = GohoTheme.colors
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    ReceiptDetailIconButton(stringResource(R.string.receipt_back), onClick) {
+    GohoIconButton(stringResource(R.string.receipt_back), onClick) {
+        val tint = LocalContentColor.current
         Canvas(Modifier.size(GohoSpacing.detailBackIcon)) {
             fun point(x: Float, y: Float) =
                 Offset(size.width * (if (rtl) 1f - x else x), size.height * y)
             fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
                 drawLine(
-                    c.textPrimary,
+                    tint,
                     point(x1, y1),
                     point(x2, y2),
                     GohoSpacing.iconStroke.toPx(),
@@ -49,44 +50,17 @@ internal fun ReceiptBackButton(onClick: () -> Unit) {
 
 @Composable
 internal fun ReceiptMoreButton(onClick: () -> Unit) {
-    val c = GohoTheme.colors
-    ReceiptDetailIconButton(stringResource(R.string.receipt_more_options), onClick) {
+    GohoIconButton(stringResource(R.string.receipt_more_options), onClick) {
+        val tint = LocalContentColor.current
         Canvas(Modifier.size(GohoSpacing.detailBackIcon)) {
             for (x in listOf(0.2f, 0.5f, 0.8f)) {
                 drawCircle(
-                    c.textPrimary,
+                    tint,
                     GohoSpacing.detailMenuDotRadius.toPx(),
                     Offset(size.width * x, size.height / 2),
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ReceiptDetailIconButton(
-    description: String,
-    onClick: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    val c = GohoTheme.colors
-    val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
-    Box(
-        Modifier.size(GohoSpacing.headerHeight)
-            .gohoPress { progress }
-            .clip(GohoShapes.pill)
-            .background(lerp(c.surfaceMuted, c.surfaceMutedPressed, progress.coerceIn(0f, 1f)))
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
     }
 }
 

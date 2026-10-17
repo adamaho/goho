@@ -343,28 +343,7 @@ fun GohoActionButton(
     }
 }
 
-@Composable
-fun GohoIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val c = GohoTheme.colors
-    val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
-    Box(
-        modifier = modifier
-            .gohoPressTransform { progress }
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(lerpColor(c.surfaceMuted, c.surfaceMutedPressed, progress.coerceIn(0f, 1f)))
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp), tint = c.textPrimary)
-    }
-}
+// Shared icon-only actions live in GohoIconButton.kt.
 
 // ---------- Pills and badges ----------
 
@@ -800,21 +779,12 @@ fun GohoPhotoControlButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     iconSize: Dp = 20.dp,
+    opacity: () -> Float = { 1f },
 ) {
-    val c = GohoTheme.colors
-    val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
-    Box(
-        modifier
-            .gohoPressTransform { progress }
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(c.photoControl)
-            .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(iconSize), tint = Color(0xFFF0EEEB))
+    GohoTheme(darkTheme = true) {
+        GohoIconButton(contentDescription, onClick, modifier, opacity = opacity) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(iconSize))
+        }
     }
 }
 
@@ -824,7 +794,7 @@ fun GohoPhotoControlButton(
 //   with scale and offset held in Animatable so springs and the double-tap animation share state.
 // - Swipe to close at fit: detectVerticalDragGestures, mapping drag distance to translationY,
 //   scale (min 0.86 at 300dp) and background alpha (down to 0.55).
-// - Controls: wrap GohoPhotoControlButton in AnimatedVisibility(fadeIn/fadeOut 200ms) driven by the
+// - Controls: pass visual opacity to GohoPhotoControlButton while preserving its TalkBack node, driven by the
 //   same flag that shows and hides system bars via WindowInsetsControllerCompat.
 
 // ---------- Sheet ----------

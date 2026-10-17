@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.zIndex
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.theme.*
@@ -83,7 +84,9 @@ fun ReceiptDetailScreen(
     val stacked = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     Column(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
         Row(
-            Modifier.fillMaxWidth()
+            // Keep the button shadows above the scroll body’s header fade.
+            Modifier.zIndex(1f)
+                .fillMaxWidth()
                 .heightIn(min = GohoSpacing.detailTopBarHeight)
                 .padding(horizontal = GohoSpacing.screenMargin),
             horizontalArrangement = Arrangement.SpaceBetween,
