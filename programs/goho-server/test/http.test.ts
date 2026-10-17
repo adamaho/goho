@@ -1,9 +1,15 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
-import { CreateReceiptRequest, Receipt, ReceiptId } from "@goho/goho-api/receipts";
+import {
+  CreateReceiptRequest,
+  type PatchReceiptItemRequest,
+  type PatchReceiptRequest,
+  Receipt,
+  ReceiptId,
+} from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { Array, Effect, Layer } from "effect";
+import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
@@ -79,6 +85,8 @@ const testLayer = (
               findById: () => Effect.succeedSome(receipt),
               insert: () => Effect.succeed(receipt.id),
               list: Effect.succeed([receipt]),
+              update: () => Effect.die("Unexpected receipt update"),
+              updateItem: () => Effect.die("Unexpected item update"),
               ...repository,
             }),
           ]),
@@ -335,6 +343,8 @@ it.effect(
                 create: () => Effect.die("Health must not create receipts"),
                 get: () => Effect.die("Health must not get receipts"),
                 list: Effect.die("Health must not list receipts"),
+                patch: () => Effect.die("Health must not correct receipts"),
+                patchItem: () => Effect.die("Health must not rename items"),
               }),
               receiptUploadsTest(),
             ]),
@@ -487,4 +497,248 @@ it.effect("returns the documented status for missing, non-failed, and unavailabl
       }).pipe(Effect.provide(testLayer({}, { delete: () => Effect.fail(error) })));
     }
   }),
+);
+
+const recordUpdates = () => {
+  const updates: Array<{ receiptId: ReceiptId; changes: PatchReceiptRequest }> = [];
+  const itemUpdates: Array<{
+    receiptId: ReceiptId;
+    position: number;
+    changes: PatchReceiptItemRequest;
+  }> = [];
+  const repository: Partial<ReceiptRepository.Interface> = {
+    update: (receiptId, changes) =>
+      Effect.sync(() => {
+        updates.push({ receiptId, changes });
+        return Option.some({ ...receipt, ...changes });
+      }),
+    updateItem: (receiptId, position, changes) =>
+      Effect.sync(() => {
+        itemUpdates.push({ receiptId, position, changes });
+        return Option.some({ ...receipt, items: [{ ...receipt.items[0], ...changes }] });
+      }),
+  };
+  return { updates, itemUpdates, repository };
+};
+
+it.effect("corrects receipt fields through the generated client and returns the receipt", () => {
+  const recorded = recordUpdates();
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    for (const payload of [
+      { receiptDate: "2024-09-02" },
+      { storeName: "Corner Store" },
+      { category: "Snacks" },
+      { storeName: "Corner Store", receiptDate: "2024-09-02", category: "Snacks" },
+    ]) {
+      expect(yield* client.receipts.patch({ params: { receiptId: receipt.id }, payload })).toEqual({
+        data: { ...receipt, ...payload },
+      });
+    }
+    expect(recorded.updates).toEqual([
+      { receiptId: receipt.id, changes: { receiptDate: "2024-09-02" } },
+      { receiptId: receipt.id, changes: { storeName: "Corner Store" } },
+      { receiptId: receipt.id, changes: { category: "Snacks" } },
+      {
+        receiptId: receipt.id,
+        changes: { storeName: "Corner Store", receiptDate: "2024-09-02", category: "Snacks" },
+      },
+    ]);
+  }).pipe(Effect.provide(testLayer(recorded.repository)));
+});
+
+it.effect("trims corrected names and passes only supplied fields to the repository", () => {
+  const recorded = recordUpdates();
+  return Effect.gen(function* () {
+    const response = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
+      body: yield* HttpBody.json({ storeName: "  Corner Store ", category: "\tSnacks\n" }),
+    });
+    expect(response.status).toBe(200);
+    expect(yield* response.json).toEqual({
+      data: { ...receipt, storeName: "Corner Store", category: "Snacks" },
+    });
+    expect(recorded.updates).toEqual([
+      { receiptId: receipt.id, changes: { storeName: "Corner Store", category: "Snacks" } },
+    ]);
+  }).pipe(Effect.provide(testLayer(recorded.repository)));
+});
+
+it.effect("renames an item by position through the generated client and trims the name", () => {
+  const recorded = recordUpdates();
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    expect(
+      yield* client.receipts.patchItem({
+        params: { receiptId: receipt.id, position: 0 },
+        payload: { name: "Pears" },
+      }),
+    ).toEqual({ data: { ...receipt, items: [{ ...receipt.items[0], name: "Pears" }] } });
+    const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/2147483647`, {
+      body: yield* HttpBody.json({ name: "  Granny Smith apples  " }),
+    });
+    expect(response.status).toBe(200);
+    expect(recorded.itemUpdates).toEqual([
+      { receiptId: receipt.id, position: 0, changes: { name: "Pears" } },
+      { receiptId: receipt.id, position: 2147483647, changes: { name: "Granny Smith apples" } },
+    ]);
+  }).pipe(Effect.provide(testLayer(recorded.repository)));
+});
+
+it.effect("rejects empty, unsupported, mixed, null, and invalid receipt corrections", () => {
+  const recorded = recordUpdates();
+  return Effect.gen(function* () {
+    for (const payload of [
+      {},
+      { amount: "1" },
+      { subtotal: "1" },
+      { tax: "1" },
+      { total: "1" },
+      { currency: "USD" },
+      { items: [{ name: "Apples", amount: "11" }] },
+      { id: "43" },
+      { createdAt: "2026-09-20T00:00:00.000Z" },
+      { updatedAt: "2026-09-20T00:00:00.000Z" },
+      { storeName: "Corner Store", total: "12" },
+      { receiptDate: "2024-09-02", currency: "USD" },
+      { category: "Snacks", items: [] },
+      { storeName: null },
+      { receiptDate: null },
+      { category: null },
+      { storeName: "Corner Store", category: null },
+      { storeName: "" },
+      { storeName: "   " },
+      { category: " " },
+      { storeName: 42 },
+      { receiptDate: "2024-02-30" },
+      { receiptDate: "2024/09/02" },
+      { receiptDate: "2024-9-2" },
+      null,
+      [],
+      [{ storeName: "Corner Store" }],
+      "Corner Store",
+      42,
+    ]) {
+      const response = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
+        body: yield* HttpBody.json(payload),
+      });
+      expect(response.status, JSON.stringify(payload)).toBe(400);
+      expect(yield* response.text).toBe("");
+    }
+    const unparsable = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
+      body: HttpBody.text("{", "application/json"),
+    });
+    expect(unparsable.status).toBe(400);
+    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
+      const response = yield* HttpClient.patch(`/receipts/${id}`, {
+        body: yield* HttpBody.json({ storeName: "Corner Store" }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(recorded.updates).toEqual([]);
+  }).pipe(Effect.provide(testLayer(recorded.repository)));
+});
+
+it.effect("rejects invalid item renames and malformed positions without saving", () => {
+  const recorded = recordUpdates();
+  return Effect.gen(function* () {
+    for (const payload of [
+      {},
+      { name: null },
+      { name: "" },
+      { name: "   " },
+      { name: 42 },
+      { amount: "1" },
+      { name: "Pears", amount: "1" },
+      { name: "Pears", position: 1 },
+      { name: "Pears", currency: "USD" },
+      null,
+      [],
+      "Pears",
+    ]) {
+      const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/0`, {
+        body: yield* HttpBody.json(payload),
+      });
+      expect(response.status, JSON.stringify(payload)).toBe(400);
+    }
+    for (const position of [
+      "-1",
+      "01",
+      "00",
+      "1.0",
+      "1e1",
+      "+1",
+      "%201",
+      "0x1",
+      "abc",
+      "2147483648",
+      "9999999999",
+      "99999999999999999999",
+    ]) {
+      const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/${position}`, {
+        body: yield* HttpBody.json({ name: "Pears" }),
+      });
+      expect(response.status, position).toBe(400);
+      expect(yield* response.text).toBe("");
+    }
+    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
+      const response = yield* HttpClient.patch(`/receipts/${id}/items/0`, {
+        body: yield* HttpBody.json({ name: "Pears" }),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(recorded.itemUpdates).toEqual([]);
+  }).pipe(Effect.provide(testLayer(recorded.repository)));
+});
+
+it.effect("returns HTTP 404 when correcting a missing receipt or item", () =>
+  Effect.gen(function* () {
+    const receiptResponse = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
+      body: yield* HttpBody.json({ storeName: "Corner Store" }),
+    });
+    expect(receiptResponse.status).toBe(404);
+    expect(yield* receiptResponse.json).toEqual({ _tag: "NotFound" });
+    const itemResponse = yield* HttpClient.patch(`/receipts/${receipt.id}/items/5`, {
+      body: yield* HttpBody.json({ name: "Pears" }),
+    });
+    expect(itemResponse.status).toBe(404);
+    expect(yield* itemResponse.json).toEqual({ _tag: "NotFound" });
+  }).pipe(
+    Effect.provide(
+      testLayer({ update: () => Effect.succeedNone, updateItem: () => Effect.succeedNone }),
+    ),
+  ),
+);
+
+it.effect("returns HTTP 500 without exposing correction failure details", () =>
+  Effect.gen(function* () {
+    for (const [url, payload] of [
+      [`/receipts/${receipt.id}`, { storeName: "Corner Store" }],
+      [`/receipts/${receipt.id}/items/0`, { name: "Pears" }],
+    ] as const) {
+      const response = yield* HttpClient.patch(url, { body: yield* HttpBody.json(payload) });
+      expect(response.status).toBe(500);
+      const text = yield* response.text;
+      expect(text).not.toContain("private database details");
+      expect(JSON.parse(text)).toEqual({ _tag: "InternalServerError" });
+    }
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        update: () =>
+          Effect.fail(
+            new ReceiptRepository.PersistenceError({
+              operation: "update",
+              cause: "private database details",
+            }),
+          ),
+        updateItem: () =>
+          Effect.fail(
+            new ReceiptRepository.PersistenceError({
+              operation: "updateItem",
+              cause: "private database details",
+            }),
+          ),
+      }),
+    ),
+  ),
 );

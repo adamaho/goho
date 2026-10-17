@@ -626,6 +626,75 @@
         },
         "description": "Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.",
         "summary": "Delete a receipt"
+      },
+      "patch": {
+        "tags": ["receipts"],
+        "operationId": "receipts.patch",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved."
+          },
+          "404": {
+            "description": "No receipt is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save this correction; nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.",
+        "summary": "Correct receipt details",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchReceiptRequest"
+              }
+            }
+          },
+          "required": true
+        }
       }
     },
     "/receipts/{receiptId}/image": {
@@ -687,6 +756,85 @@
         "description": "Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.",
         "summary": "Get a receipt image"
       }
+    },
+    "/receipts/{receiptId}/items/{position}": {
+      "patch": {
+        "tags": ["receipts"],
+        "operationId": "receipts.patchItem",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptId"
+            },
+            "required": true
+          },
+          {
+            "name": "position",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/ReceiptItemPosition"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Receipt"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed position. Nothing is saved."
+          },
+          "404": {
+            "description": "That receipt has no item in this position, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save this correction; nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Renames one existing item and returns the complete receipt. The item's amount, position, and the rest of the lineup stay put.",
+        "summary": "Rename a receipt item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchReceiptItemRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
   },
   "components": {
@@ -697,6 +845,17 @@
           "_tag": {
             "type": "string",
             "enum": ["InternalServerError"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "effect_HttpApiError_NotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["NotFound"]
           }
         },
         "required": ["_tag"],
@@ -877,6 +1036,67 @@
         "description": "The receipt's positive number on the roster, bud.",
         "examples": ["42"]
       },
+      "ReceiptItemPosition": {
+        "type": "string",
+        "pattern": "^(?:0|[1-9]\\d{0,9})$",
+        "description": "The item's zero-based spot in the receipt lineup, from 0 through 2147483647, without leading zeros.",
+        "examples": ["0"]
+      },
+      "PatchReceiptItemRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Item name on the receipt.",
+            "examples": ["Apples"]
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false,
+        "description": "A new name for an existing line item; it is trimmed and stays nonempty.",
+        "examples": [
+          {
+            "name": "Granny Smith apples"
+          }
+        ]
+      },
+      "PatchReceiptRequest": {
+        "type": "object",
+        "properties": {
+          "storeName": {
+            "type": "string",
+            "description": "Store or merchant named on the receipt.",
+            "examples": ["Example Store"]
+          },
+          "receiptDate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CalendarDate"
+              },
+              {
+                "description": "Date the purchase hit the ice."
+              }
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Receipt category in the lineup.",
+            "examples": ["Groceries"]
+          }
+        },
+        "additionalProperties": false,
+        "minProperties": 1,
+        "description": "Receipt details to correct, bud. Send at least one field; left-out fields stay put, and names are trimmed and stay nonempty.",
+        "examples": [
+          {
+            "receiptDate": "2026-09-14"
+          },
+          {
+            "storeName": "Corner Store",
+            "category": "Snacks"
+          }
+        ]
+      },
       "CreateReceiptRequest": {
         "type": "object",
         "properties": {
@@ -1013,17 +1233,6 @@
           }
         ]
       },
-      "effect_HttpApiError_NotFoundEncoded": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["NotFound"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
       "effect_HttpApiError_ConflictEncoded": {
         "type": "object",
         "properties": {
@@ -1068,7 +1277,7 @@
     },
     {
       "name": "receipts",
-      "description": "Receipt retrieval, creation, and deletion plays."
+      "description": "Receipt retrieval, creation, correction, and deletion plays."
     }
   ]
 }

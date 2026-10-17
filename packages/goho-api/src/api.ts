@@ -10,7 +10,14 @@ import {
 } from "effect/http-api";
 
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
-import { CreateReceiptRequest, Receipt, ReceiptId } from "./receipts.ts";
+import {
+  CreateReceiptRequest,
+  PatchReceiptItemRequest,
+  PatchReceiptRequest,
+  Receipt,
+  ReceiptId,
+  ReceiptItemPosition,
+} from "./receipts.ts";
 import { DataResponse } from "./response.ts";
 
 // Payload schemas
@@ -22,6 +29,9 @@ const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema })
     maxTotalSize: "21 megabytes",
   }),
 );
+
+// Corrections reject unsupported fields so a mixed payload never partly saves.
+const strictPayload = { onExcessProperty: "error" } as const;
 
 // API groups
 
@@ -143,7 +153,7 @@ export const api = HttpApi.make("goho-server")
       ),
     // Receipts
     HttpApiGroup.make("receipts")
-      .annotate(OpenApi.Description, "Receipt retrieval, creation, and deletion plays.")
+      .annotate(OpenApi.Description, "Receipt retrieval, creation, correction, and deletion plays.")
       .add(
         HttpApiEndpoint.get("list", "/receipts", {
           success: DataResponse(
@@ -245,6 +255,56 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Creates the receipt and items in one clean play. Every call saves a new receipt.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.patch("patch", "/receipts/:receiptId", {
+          params: { receiptId: ReceiptId },
+          payload: PatchReceiptRequest,
+          success: DataResponse(Receipt),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.",
+            }),
+            HttpApiError.NotFound.annotate({
+              description: "No receipt is wearing that number, bud.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not save this correction; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Correct receipt details")
+          .annotate(
+            OpenApi.Description,
+            "Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.patch("patchItem", "/receipts/:receiptId/items/:position", {
+          params: { receiptId: ReceiptId, position: ReceiptItemPosition },
+          payload: PatchReceiptItemRequest,
+          success: DataResponse(Receipt),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed position. Nothing is saved.",
+            }),
+            HttpApiError.NotFound.annotate({
+              description: "That receipt has no item in this position, bud.",
+            }),
+            HttpApiError.InternalServerError.annotate({
+              description: "The server could not save this correction; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Rename a receipt item")
+          .annotate(
+            OpenApi.Description,
+            "Renames one existing item and returns the complete receipt. The item's amount, position, and the rest of the lineup stay put.",
           ),
       ),
   );

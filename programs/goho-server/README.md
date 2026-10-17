@@ -1,6 +1,6 @@
 # @goho/goho-server
 
-Exposes receipt uploads, retrieval, creation, deletion, health checks,
+Exposes receipt uploads, retrieval, creation, correction, deletion, health checks,
 and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
@@ -82,6 +82,25 @@ complete receipt is returned under `data`.
 
 Invalid payloads return HTTP 400 with an empty body; validation or persistence
 failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
+
+### Correct a receipt
+
+`PATCH /receipts/:receiptId` corrects one or more of `storeName`, `receiptDate`,
+and `category`. Omitted fields keep their values. `PATCH
+/receipts/:receiptId/items/:position` renames an existing item using its
+zero-based `position` and a JSON body containing only `name`. Both return HTTP
+200 with the complete saved receipt under `data`.
+
+Names and categories are trimmed and must stay nonempty; dates must be real
+`YYYY-MM-DD` dates. Amounts, currency, item positions, the item lineup, the
+upload record, the original photo, and stored extraction data do not change.
+Repeating a correction with the same values succeeds, and later corrections win.
+
+Empty bodies, unsupported or null fields, invalid values, and malformed receipt
+IDs or positions return HTTP 400 with an empty body; nothing is saved, even when
+some supplied fields are valid. A missing receipt, or a position with no item on
+that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
+return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
 
 ### Delete a receipt
 

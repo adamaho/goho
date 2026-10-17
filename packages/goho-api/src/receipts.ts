@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
   description: "Nonempty text with the extra whitespace scraped off the boards.",
@@ -160,6 +160,90 @@ export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u
  * @since 0.1.0
  */
 export type ReceiptId = typeof ReceiptId.Type;
+
+/**
+ * Receipt corrections. Only supplied fields change; at least one is required.
+ * The HTTP contract also rejects unsupported properties.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const PatchReceiptRequest = Schema.Struct({
+  storeName: Schema.optionalKey(ReceiptFields.storeName),
+  receiptDate: Schema.optionalKey(ReceiptFields.receiptDate),
+  category: Schema.optionalKey(ReceiptFields.category),
+})
+  .check(Schema.isMinProperties(1))
+  .annotate({
+    identifier: "PatchReceiptRequest",
+    description:
+      "Receipt details to correct, bud. Send at least one field; left-out fields stay put, and names are trimmed and stay nonempty.",
+    examples: [{ receiptDate: "2026-09-14" }, { storeName: "Corner Store", category: "Snacks" }],
+  });
+
+/**
+ * Decoded receipt corrections.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface PatchReceiptRequest extends Schema.Schema.Type<typeof PatchReceiptRequest> {}
+
+/**
+ * Item name correction. The HTTP contract rejects unsupported properties.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const PatchReceiptItemRequest = Schema.Struct({
+  name: ReceiptItemInput.fields.name,
+}).annotate({
+  identifier: "PatchReceiptItemRequest",
+  description: "A new name for an existing line item; it is trimmed and stays nonempty.",
+  examples: [{ name: "Granny Smith apples" }],
+});
+
+/**
+ * Decoded item name correction.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface PatchReceiptItemRequest extends Schema.Schema.Type<
+  typeof PatchReceiptItemRequest
+> {}
+
+const maxItemPosition = 2_147_483_647;
+
+/**
+ * Zero-based receipt item position from a URL path. Accepts canonical decimal
+ * text from 0 through 2147483647 so positions fit PostgreSQL `integer`.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptItemPosition = Schema.String.check(
+  Schema.isPattern(/^(?:0|[1-9]\d{0,9})$/u),
+  Schema.makeFilter((value) => Number(value) <= maxItemPosition, {
+    expected: `a position no greater than ${maxItemPosition}`,
+    // JSON Schema has no numeric bound for strings; the description states the range.
+    toJsonSchema: () => ({}),
+  }),
+).pipe(
+  Schema.decodeTo(
+    Schema.Int.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(maxItemPosition)),
+    {
+      decode: SchemaGetter.transform(Number),
+      encode: SchemaGetter.transform(String),
+    },
+  ),
+  // OpenAPI documents the encoded path text.
+  Schema.annotateEncoded({
+    identifier: "ReceiptItemPosition",
+    description: `The item's zero-based spot in the receipt lineup, from 0 through ${maxItemPosition}, without leading zeros.`,
+    examples: ["0"],
+  }),
+);
 
 /**
  * Complete receipt returned after creation or an idempotent replay.
