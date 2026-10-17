@@ -5,6 +5,7 @@ import {
   type PatchReceiptRequest,
   type Receipt,
   type ReceiptId,
+  type ReceiptItemId,
 } from "@goho/goho-api/receipts";
 import { Array, BigDecimal, Context, Effect, Layer, Option } from "effect";
 import { HttpApiError } from "effect/http-api";
@@ -60,10 +61,10 @@ export class Service extends Context.Service<
       receiptId: ReceiptId,
       changes: PatchReceiptRequest,
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
-    /** Renames an existing item; fails with NotFound when the receipt has no such position. */
+    /** Renames an existing item; fails with NotFound when the receipt has no item with that ID. */
     readonly patchItem: (
       receiptId: ReceiptId,
-      position: number,
+      itemId: ReceiptItemId,
       changes: PatchReceiptItemRequest,
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
     readonly delete: (
@@ -159,8 +160,8 @@ export const layer = Layer.effect(
     );
 
     const patchItem = Effect.fn("@goho/ReceiptService.patchItem")(
-      (receiptId: ReceiptId, position: number, changes: PatchReceiptItemRequest) =>
-        repository.updateItem(receiptId, position, changes).pipe(Effect.flatMap(requireSaved)),
+      (receiptId: ReceiptId, itemId: ReceiptItemId, changes: PatchReceiptItemRequest) =>
+        repository.updateItem(receiptId, itemId, changes).pipe(Effect.flatMap(requireSaved)),
       Effect.catchTag("GohoServer.ReceiptRepository.PersistenceError", correctionFailed),
     );
 

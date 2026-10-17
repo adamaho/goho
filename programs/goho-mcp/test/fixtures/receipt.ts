@@ -13,7 +13,7 @@ export const receipt = {
   tax: "1.72",
   total: "23.22",
   currency: "USD",
-  items: [{ position: 0, name: "Apples", amount: "4.5" }],
+  items: [{ id: "7", position: 0, name: "Apples", amount: "4.5" }],
 };
 
 /**

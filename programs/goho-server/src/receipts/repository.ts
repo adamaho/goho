@@ -3,6 +3,7 @@ import {
   DecimalString,
   Receipt as ReceiptSchema,
   ReceiptId,
+  ReceiptItemId,
   type CreateReceiptRequest,
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,
@@ -12,7 +13,7 @@ import { Array, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import { FileId } from "#src/file-storage.ts";
-import { ReceiptIdFromDatabase } from "#src/schema.ts";
+import { ReceiptIdFromDatabase, ReceiptItemIdFromDatabase } from "#src/schema.ts";
 
 /**
  * Expected failure while reading or saving a receipt.
@@ -50,11 +51,11 @@ export interface Interface {
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
   /**
    * Renames one existing item and returns the complete saved receipt from the
-   * same transaction; none when the receipt has no item at that position.
+   * same transaction; none when the receipt has no item with that ID.
    */
   readonly updateItem: (
     receiptId: ReceiptId,
-    position: number,
+    itemId: ReceiptItemId,
     changes: PatchReceiptItemRequest,
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
 }
@@ -83,6 +84,7 @@ const ReceiptRow = Schema.Struct({
 });
 
 const ItemRow = Schema.Struct({
+  id: ReceiptItemIdFromDatabase,
   position: Schema.Int,
   name: Schema.String,
   amount: DecimalString,
@@ -90,6 +92,7 @@ const ItemRow = Schema.Struct({
 
 const ReceiptListRow = Schema.Struct({
   ...ReceiptRow.fields,
+  item_id: Schema.NullOr(ReceiptItemIdFromDatabase),
   item_position: Schema.NullOr(Schema.Int),
   item_name: Schema.NullOr(Schema.String),
   item_amount: Schema.NullOr(DecimalString),
@@ -178,12 +181,13 @@ export const layer = Layer.effect(
     });
 
     const updateItemRow = SqlSchema.findOneOption({
-      Request: Schema.Struct({ receiptId: ReceiptId, position: Schema.Int, name: Schema.String }),
-      Result: Schema.Struct({ position: Schema.Int }),
-      execute: ({ receiptId, position, name }) => sql`
+      Request: Schema.Struct({ receiptId: ReceiptId, itemId: ReceiptItemId, name: Schema.String }),
+      Result: Schema.Struct({ id: ReceiptItemIdFromDatabase }),
+      // Matching the parent too keeps another receipt's item out of reach.
+      execute: ({ receiptId, itemId, name }) => sql`
         UPDATE receipt_items SET name = ${name}
-        WHERE receipt_id = ${receiptId} AND position = ${position}
-        RETURNING position
+        WHERE id = ${itemId} AND receipt_id = ${receiptId}
+        RETURNING id
       `,
     });
 
@@ -191,7 +195,7 @@ export const layer = Layer.effect(
       Request: ReceiptId,
       Result: ItemRow,
       execute: (receiptId) => sql`
-        SELECT position, name, amount::text
+        SELECT id, position, name, amount::text
         FROM receipt_items WHERE receipt_id = ${receiptId} ORDER BY position
       `,
     });
@@ -228,7 +232,8 @@ export const layer = Layer.effect(
       execute: () => sql`
         SELECT r.id, r.store_name, r.receipt_date::text, r.category,
           r.subtotal::text, r.tax::text, r.total::text, r.currency,
-          i.position AS item_position, i.name AS item_name, i.amount::text AS item_amount
+          i.id AS item_id, i.position AS item_position, i.name AS item_name,
+          i.amount::text AS item_amount
         FROM receipts r
         LEFT JOIN receipt_items i ON i.receipt_id = r.id
         ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
@@ -297,8 +302,14 @@ export const layer = Layer.effect(
           };
           receipts.set(row.id, receipt);
         }
-        if (row.item_position !== null && row.item_name !== null && row.item_amount !== null) {
+        if (
+          row.item_id !== null &&
+          row.item_position !== null &&
+          row.item_name !== null &&
+          row.item_amount !== null
+        ) {
           receipt.items.push({
+            id: row.item_id,
             position: row.item_position,
             name: row.item_name,
             amount: row.item_amount,
@@ -331,13 +342,13 @@ export const layer = Layer.effect(
     );
 
     const updateItem = Effect.fn("@goho/ReceiptRepository.updateItem")(
-      (receiptId: ReceiptId, position: number, changes: PatchReceiptItemRequest) =>
+      (receiptId: ReceiptId, itemId: ReceiptItemId, changes: PatchReceiptItemRequest) =>
         sql.withTransaction(
           Effect.gen(function* () {
             // Lock the receipt before its item, matching deletion's lock order; the
             // item trigger then touches the receipt this transaction already holds.
             if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
-            const updated = yield* updateItemRow({ receiptId, position, name: changes.name });
+            const updated = yield* updateItemRow({ receiptId, itemId, name: changes.name });
             if (Option.isNone(updated)) return Option.none();
             return yield* readReceipt(receiptId);
           }),

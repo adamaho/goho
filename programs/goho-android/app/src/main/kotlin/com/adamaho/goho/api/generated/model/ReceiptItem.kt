@@ -30,6 +30,7 @@ import com.squareup.moshi.JsonClass
 /**
  * A saved receipt line item in its original slot.
  *
+ * @param id The item's roster number; use it to target this item.
  * @param position Zero-based spot in the receipt lineup.
  * @param name Item name on the receipt.
  * @param amount Item amount; negative adjustments can suit up too.
@@ -37,6 +38,10 @@ import com.squareup.moshi.JsonClass
 
 
 data class ReceiptItem (
+
+    /* The item's roster number; use it to target this item. */
+    @Json(name = "id")
+    val id: kotlin.String,
 
     /* Zero-based spot in the receipt lineup. */
     @Json(name = "position")

@@ -1,4 +1,4 @@
-import { Schema, SchemaGetter } from "effect";
+import { Schema } from "effect";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
   description: "Nonempty text with the extra whitespace scraped off the boards.",
@@ -213,37 +213,37 @@ export interface PatchReceiptItemRequest extends Schema.Schema.Type<
   typeof PatchReceiptItemRequest
 > {}
 
-const maxItemPosition = 2_147_483_647;
+const maxItemId = 9_223_372_036_854_775_807n;
 
 /**
- * Zero-based receipt item position from a URL path. Accepts canonical decimal
- * text from 0 through 2147483647 so positions fit PostgreSQL `integer`.
+ * Persisted receipt item identity: canonical positive decimal text within
+ * PostgreSQL `bigint` range, kept as a string so clients cannot round it.
  *
  * @category models
  * @since 0.1.0
  */
-export const ReceiptItemPosition = Schema.String.check(
-  Schema.isPattern(/^(?:0|[1-9]\d{0,9})$/u),
-  Schema.makeFilter((value) => Number(value) <= maxItemPosition, {
-    expected: `a position no greater than ${maxItemPosition}`,
+export const ReceiptItemId = Schema.String.check(
+  Schema.isPattern(/^[1-9]\d{0,18}$/u),
+  Schema.makeFilter((value) => BigInt(value) <= maxItemId, {
+    expected: `an ID no greater than ${maxItemId}`,
     // JSON Schema has no numeric bound for strings; the description states the range.
     toJsonSchema: () => ({}),
   }),
-).pipe(
-  Schema.decodeTo(
-    Schema.Int.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(maxItemPosition)),
-    {
-      decode: SchemaGetter.transform(Number),
-      encode: SchemaGetter.transform(String),
-    },
-  ),
-  // OpenAPI documents the encoded path text.
-  Schema.annotateEncoded({
-    identifier: "ReceiptItemPosition",
-    description: `The item's zero-based spot in the receipt lineup, from 0 through ${maxItemPosition}, without leading zeros.`,
-    examples: ["0"],
-  }),
-);
+)
+  .annotate({
+    identifier: "ReceiptItemId",
+    description: `The item's positive number on the roster, from 1 through ${maxItemId} without leading zeros. It sticks with the item through renames.`,
+    examples: ["7"],
+  })
+  .pipe(Schema.brand("ReceiptItemId"));
+
+/**
+ * Decoded persisted receipt item identity.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export type ReceiptItemId = typeof ReceiptItemId.Type;
 
 /**
  * Complete receipt returned after creation or an idempotent replay.
@@ -258,6 +258,9 @@ export const Receipt = Schema.Struct({
   ...ReceiptFields,
   items: Schema.NonEmptyArray(
     Schema.Struct({
+      id: ReceiptItemId.annotateKey({
+        description: "The item's roster number; use it to target this item.",
+      }),
       position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
         description: "Zero-based spot in the receipt lineup.",
         examples: [0],
@@ -266,7 +269,7 @@ export const Receipt = Schema.Struct({
     }).annotate({
       identifier: "ReceiptItem",
       description: "A saved receipt line item in its original slot.",
-      examples: [{ position: 0, name: "Apples", amount: "10.25" }],
+      examples: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
     }),
   ).annotate({
     description: "Items lined up by ascending position.",
@@ -285,7 +288,7 @@ export const Receipt = Schema.Struct({
       tax: "0.75",
       total: "11",
       currency: "USD",
-      items: [{ position: 0, name: "Apples", amount: "10.25" }],
+      items: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
     },
   ],
 });
