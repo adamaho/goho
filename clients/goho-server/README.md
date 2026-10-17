@@ -19,7 +19,7 @@ const listReceipts = Effect.gen(function* () {
 Call the effect from the consuming program's runtime. Requests are not automatically retried.
 
 See the [server API reference](../../programs/goho-server/README.md#api) for
-receipt uploads, retrieval, and creation. The server exposes OpenAPI at `/openapi.json`
+receipt uploads, retrieval, creation, correction, and deletion. The server exposes OpenAPI at `/openapi.json`
 and Swagger UI at `/docs`.
 
 Successful responses use the shared `{ data: ... }` envelope defined by

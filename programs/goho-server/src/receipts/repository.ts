@@ -4,6 +4,8 @@ import {
   Receipt as ReceiptSchema,
   ReceiptId,
   type CreateReceiptRequest,
+  type PatchReceiptItemRequest,
+  type PatchReceiptRequest,
   type Receipt,
 } from "@goho/goho-api/receipts";
 import { Array, Context, Effect, Layer, Option, Schema } from "effect";
@@ -38,6 +40,23 @@ export interface Interface {
   ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
   readonly insert: (receipt: CreateReceiptRequest) => Effect.Effect<ReceiptId, PersistenceError>;
   readonly list: Effect.Effect<ReadonlyArray<Receipt>, PersistenceError>;
+  /**
+   * Saves only the supplied receipt fields and returns the complete saved receipt
+   * from the same transaction; none when the receipt does not exist.
+   */
+  readonly update: (
+    receiptId: ReceiptId,
+    changes: PatchReceiptRequest,
+  ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
+  /**
+   * Renames one existing item and returns the complete saved receipt from the
+   * same transaction; none when the receipt has no item at that position.
+   */
+  readonly updateItem: (
+    receiptId: ReceiptId,
+    position: number,
+    changes: PatchReceiptItemRequest,
+  ) => Effect.Effect<Option.Option<Receipt>, PersistenceError>;
 }
 
 /**
@@ -142,6 +161,32 @@ export const layer = Layer.effect(
       `,
     });
 
+    const updateReceiptRow = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        receiptId: ReceiptId,
+        // Encoding keeps only these editable columns, so no other field can reach the SET list.
+        changes: Schema.Struct({
+          storeName: Schema.optionalKey(Schema.String),
+          receiptDate: Schema.optionalKey(CalendarDate),
+          category: Schema.optionalKey(Schema.String),
+        }).pipe(Schema.encodeKeys({ storeName: "store_name", receiptDate: "receipt_date" })),
+      }),
+      Result: IdRow,
+      execute: ({ receiptId, changes }) => sql`
+        UPDATE receipts SET ${sql.update(changes)} WHERE id = ${receiptId} RETURNING id
+      `,
+    });
+
+    const updateItemRow = SqlSchema.findOneOption({
+      Request: Schema.Struct({ receiptId: ReceiptId, position: Schema.Int, name: Schema.String }),
+      Result: Schema.Struct({ position: Schema.Int }),
+      execute: ({ receiptId, position, name }) => sql`
+        UPDATE receipt_items SET name = ${name}
+        WHERE receipt_id = ${receiptId} AND position = ${position}
+        RETURNING position
+      `,
+    });
+
     const findItemRows = SqlSchema.findNonEmpty({
       Request: ReceiptId,
       Result: ItemRow,
@@ -190,23 +235,25 @@ export const layer = Layer.effect(
       `,
     });
 
+    const readReceipt = Effect.fnUntraced(function* (receiptId: ReceiptId) {
+      const receipt = yield* findReceiptRow(receiptId);
+      if (Option.isNone(receipt)) return Option.none();
+      const items = yield* findItemRows(receiptId);
+      return Option.some({
+        id: receipt.value.id,
+        storeName: receipt.value.store_name,
+        receiptDate: receipt.value.receipt_date,
+        category: receipt.value.category,
+        subtotal: receipt.value.subtotal,
+        tax: receipt.value.tax,
+        total: receipt.value.total,
+        currency: receipt.value.currency,
+        items,
+      } satisfies Receipt);
+    });
+
     const findById = Effect.fn("@goho/ReceiptRepository.findById")(
-      function* (receiptId: ReceiptId) {
-        const receipt = yield* findReceiptRow(receiptId);
-        if (Option.isNone(receipt)) return Option.none();
-        const items = yield* findItemRows(receiptId);
-        return Option.some({
-          id: receipt.value.id,
-          storeName: receipt.value.store_name,
-          receiptDate: receipt.value.receipt_date,
-          category: receipt.value.category,
-          subtotal: receipt.value.subtotal,
-          tax: receipt.value.tax,
-          total: receipt.value.total,
-          currency: receipt.value.currency,
-          items,
-        } satisfies Receipt);
-      },
+      readReceipt,
       Effect.mapError((cause) => new PersistenceError({ operation: "findById", cause })),
     );
     // Callers may compose this into a larger transaction, where it becomes a savepoint.
@@ -264,6 +311,40 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/ReceiptRepository.list"),
     );
 
-    return Service.of({ delete: deleteReceipt, findById, insert, list });
+    // Only whitelisted editable columns are written; omitted fields keep their values.
+    const update = Effect.fn("@goho/ReceiptRepository.update")(
+      (receiptId: ReceiptId, changes: PatchReceiptRequest) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const hasChanges =
+              changes.storeName !== undefined ||
+              changes.receiptDate !== undefined ||
+              changes.category !== undefined;
+            if (hasChanges) {
+              const updated = yield* updateReceiptRow({ receiptId, changes });
+              if (Option.isNone(updated)) return Option.none();
+            }
+            return yield* readReceipt(receiptId);
+          }),
+        ),
+      Effect.mapError((cause) => new PersistenceError({ operation: "update", cause })),
+    );
+
+    const updateItem = Effect.fn("@goho/ReceiptRepository.updateItem")(
+      (receiptId: ReceiptId, position: number, changes: PatchReceiptItemRequest) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            // Lock the receipt before its item, matching deletion's lock order; the
+            // item trigger then touches the receipt this transaction already holds.
+            if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
+            const updated = yield* updateItemRow({ receiptId, position, name: changes.name });
+            if (Option.isNone(updated)) return Option.none();
+            return yield* readReceipt(receiptId);
+          }),
+        ),
+      Effect.mapError((cause) => new PersistenceError({ operation: "updateItem", cause })),
+    );
+
+    return Service.of({ delete: deleteReceipt, findById, insert, list, update, updateItem });
   }),
 );
