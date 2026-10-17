@@ -5,6 +5,7 @@ import { Argument, Command } from "effect/cli";
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
+import { patchCommand, patchItemCommand } from "./receipt-patches.ts";
 import { statusCommand, uploadCommand } from "./receipt-uploads.ts";
 
 const listCommand = Command.make("list").pipe(
@@ -81,12 +82,20 @@ const deleteCommand = Command.make("delete", {
 );
 
 /**
- * Command group for receipt uploads, retrieval, and deletion.
+ * Command group for receipt uploads, retrieval, corrections, and deletion.
  *
  * @category commands
  * @since 0.1.0
  */
 export const receiptsCommand = Command.make("receipts").pipe(
   Command.withDescription("Manage receipts"),
-  Command.withSubcommands([listCommand, viewCommand, deleteCommand, uploadCommand, statusCommand]),
+  Command.withSubcommands([
+    listCommand,
+    viewCommand,
+    patchCommand,
+    patchItemCommand,
+    deleteCommand,
+    uploadCommand,
+    statusCommand,
+  ]),
 );
