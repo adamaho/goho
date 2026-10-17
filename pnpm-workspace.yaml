@@ -11,7 +11,7 @@ allowBuilds:
   msgpackr-extract: true
 
 catalog:
-  "@adamaho/nopeus-oxfmt-config": 0.1.0
+  "@adamaho/nopeus-oxfmt-config": 0.1.1
   "@effect/sql-pg": 4.0.5
   "@effect/vitest": 4.0.5
   vitest: 5.0.4
