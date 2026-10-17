@@ -57,63 +57,65 @@ internal fun Modifier.gohoButtonSurface(
             0.45f to ring,
             1f to ring,
         )
-    return this.dropShadow(
-            shape,
-            Shadow(
-                radius =
-                    if (lightFilled) GohoSpacing.lightButtonWideShadowRadius
-                    else GohoSpacing.buttonWideShadowRadius,
-                spread =
-                    if (filled) GohoSpacing.buttonWideShadowSpread
-                    else GohoSpacing.secondaryWideShadowSpread,
-                offset =
-                    DpOffset(
-                        GohoSpacing.flatElevation,
-                        if (lightFilled) GohoSpacing.lightButtonWideShadowY
-                        else GohoSpacing.buttonWideShadowY,
-                    ),
-                color = shadowColor,
-                alpha = wideAlpha * (1f - p),
-            ),
-        )
-        .dropShadow(
-            shape,
-            Shadow(
-                radius = GohoSpacing.buttonShadowRadius,
-                offset = DpOffset(GohoSpacing.flatElevation, GohoSpacing.buttonShadowY),
-                color = shadowColor,
-                alpha = nearAlpha * (1f - p),
-            ),
-        )
-        .clip(shape)
-        .background(finish)
-        .border(ringWidth, edge, shape)
-        .drawWithCache {
-            val inset =
-                (if (darkGlass) GohoSpacing.darkGlassRingInset else GohoSpacing.buttonRingInset)
-                    .toPx()
-            val radius = (shape.topStart.toPx(size, this) - inset).coerceAtLeast(0f)
-            val insetSize =
-                Size(
-                    (size.width - 2 * inset).coerceAtLeast(0f),
-                    (size.height - 2 * inset).coerceAtLeast(0f),
-                )
-            val reflection =
-                Brush.verticalGradient(
-                    0f to innerRing,
-                    0.5f to if (darkGlass) innerRing else Color.Transparent,
-                    1f to if (darkGlass) innerRing else shade,
-                )
-            onDrawWithContent {
-                drawContent()
-                // Keep the bright reflection at the edge, away from labels and icons.
-                drawRoundRect(
-                    brush = reflection,
-                    topLeft = Offset(inset, inset),
-                    size = insetSize,
-                    cornerRadius = CornerRadius(radius),
-                    style = Stroke(GohoSpacing.hairline.toPx()),
-                )
-            }
+    val surface =
+        this.dropShadow(
+                shape,
+                Shadow(
+                    radius =
+                        if (lightFilled) GohoSpacing.lightButtonWideShadowRadius
+                        else GohoSpacing.buttonWideShadowRadius,
+                    spread =
+                        if (filled) GohoSpacing.buttonWideShadowSpread
+                        else GohoSpacing.secondaryWideShadowSpread,
+                    offset =
+                        DpOffset(
+                            GohoSpacing.flatElevation,
+                            if (lightFilled) GohoSpacing.lightButtonWideShadowY
+                            else GohoSpacing.buttonWideShadowY,
+                        ),
+                    color = shadowColor,
+                    alpha = wideAlpha * (1f - p),
+                ),
+            )
+            .dropShadow(
+                shape,
+                Shadow(
+                    radius = GohoSpacing.buttonShadowRadius,
+                    offset = DpOffset(GohoSpacing.flatElevation, GohoSpacing.buttonShadowY),
+                    color = shadowColor,
+                    alpha = nearAlpha * (1f - p),
+                ),
+            )
+            .clip(shape)
+            .background(finish)
+            .border(ringWidth, edge, shape)
+
+    // A dark inset ring reads as a gap between the face and the outer border.
+    if (darkGlass) return surface
+    return surface.drawWithCache {
+        val inset = GohoSpacing.buttonRingInset.toPx()
+        val radius = (shape.topStart.toPx(size, this) - inset).coerceAtLeast(0f)
+        val insetSize =
+            Size(
+                (size.width - 2 * inset).coerceAtLeast(0f),
+                (size.height - 2 * inset).coerceAtLeast(0f),
+            )
+        val reflection =
+            Brush.verticalGradient(
+                0f to innerRing,
+                0.5f to Color.Transparent,
+                1f to shade,
+            )
+        onDrawWithContent {
+            drawContent()
+            // Keep the bright reflection at the edge, away from labels and icons.
+            drawRoundRect(
+                brush = reflection,
+                topLeft = Offset(inset, inset),
+                size = insetSize,
+                cornerRadius = CornerRadius(radius),
+                style = Stroke(GohoSpacing.hairline.toPx()),
+            )
         }
+    }
 }

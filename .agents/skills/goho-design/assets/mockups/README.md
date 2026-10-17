@@ -6,7 +6,9 @@ The current family icon sources and Android resources are documented in the [lau
 
 ## Shared icon buttons (October 17, 2026)
 
-`icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `GohoIconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
+`icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `GohoIconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. Dark variant 2 now joins the face directly to the border, without the inset dark ring seen in older captures. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
+
+`buttons-continuous-border-dark.png` shows the same uninterrupted variant 2/Grey border on Cancel in the confirmation sheet. The dark inset ring has been removed from the shared surface for both round and labelled controls. Cancel was exercised without deleting the receipt.
 
 ## Lavender light palette (October 15, 2026)
 

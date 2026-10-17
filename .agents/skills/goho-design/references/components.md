@@ -22,7 +22,7 @@ GohoActionButton("Delete receipt", onDelete, variant = 1, color = GohoButtonColo
 ```
 
 - Variant 1: glossy face, bright upper rim, inset reflection, soft wide shadow; weight 600 label.
-- Variant 2: frosted finish in light mode, almost flat face with a dim grey outer rim and dark inner edge in dark mode; quieter shadows and weight 500 label. The base colour is still selected independently.
+- Variant 2: frosted finish in light mode, almost flat face with a dim grey outer rim meeting the face directly in dark mode; quieter shadows and weight 500 label. The base colour is still selected independently.
 - Purple uses `buttonPrimary` / `buttonPrimaryPressed` and white `onButtonPrimary`; red uses `danger` / `dangerPressed` and white `onDanger`; grey uses `buttonSecondary` / `buttonSecondaryPressed` with `textPrimary`. Red remains reserved for destructive actions in product flows.
 - Full width inside the screen margin, at least 52dp tall, shape `button` 20 (not a pill), horizontal padding 20.
 - Optional decorative icon slot: the button supplies `LocalContentColor` from the chosen palette. Material icons and `UploadIcon` inherit it; custom drawing should read it too. Use 18dp icons and an 8dp gap.
@@ -151,7 +151,7 @@ One formatter for every amount in the app (list rows, hero, items, total):
 ## GohoPhotoControlButton
 
 - The close button in the photo viewer.
-- Delegates to `GohoIconButton` with variant 2/Grey under the dark Goho theme in both app themes, because it sits on the dark photo well. Uses the shared 44dp circle, charcoal face, grey rim, inner edge, shadow and 20dp close icon.
+- Delegates to `GohoIconButton` with variant 2/Grey under the dark Goho theme in both app themes, because it sits on the dark photo well. Uses the shared 44dp circle, charcoal face, grey rim, shadow and 20dp close icon.
 - Preserve visual fade, close semantics and the Goho press; no separate photo-button surface.
 
 ## Icons

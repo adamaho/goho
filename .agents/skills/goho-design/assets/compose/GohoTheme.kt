@@ -317,7 +317,6 @@ object GohoSpacing {
     val buttonIconGap = 8.dp
     val buttonRingInset = 1.5.dp
     val darkGlassRingWidth = 1.5.dp
-    val darkGlassRingInset = 2.5.dp
     val buttonShadowRadius = 2.dp
     val buttonShadowY = 1.dp
     val lightButtonWideShadowRadius = 16.dp
