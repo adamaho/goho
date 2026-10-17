@@ -23,11 +23,18 @@ directory. Run with `--help` for usage.
 
 ## Input
 
-The first record must be exactly this header:
+The first record must be a header with exactly these six columns in this order:
 
 ```text
 store,date,category,item,price,source_file_id
 ```
+
+Header names are trimmed and matched case-insensitively. The fifth column may
+be named `cost` instead of `price`, so a Google Sheets RAW export with the
+header `Store,Date,Category,Item,Cost,source_file_id` imports without renaming.
+`cost` is accepted only in the fifth column. Missing, extra, duplicated,
+reordered, or renamed columns are rejected, as is a header quoted into a
+single field. The error names the first wrong column and the accepted layout.
 
 - Quoted commas, doubled quotes, and line breaks inside quoted fields are
   supported. Malformed quoting stops parsing; records after it are not

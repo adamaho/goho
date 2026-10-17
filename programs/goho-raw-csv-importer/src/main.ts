@@ -51,7 +51,9 @@ const apply = Effect.fn("@goho/RawCsvImporter.apply")(function* (
 
 const command = Command.make("goho-import-raw-csv", {
   file: Flag.String("file").pipe(
-    Flag.withDescription("Path to a local RAW CSV export with the store,date,... header."),
+    Flag.withDescription(
+      "Path to a local RAW CSV export with the store,date,category,item,price (or cost),source_file_id header.",
+    ),
   ),
   apply: Flag.Boolean("apply").pipe(
     Flag.withDefault(false),

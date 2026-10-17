@@ -95,13 +95,50 @@ describe("dry run", () => {
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
-  it.effect("fails visibly on a wrong header", () =>
+  it.effect("previews a Google Sheets RAW export header with Cost as the price column", () =>
     Effect.gen(function* () {
-      const file = yield* writeCsv("store,date,item,price\nMetro,2024-12-31,Milk,1.00\n");
+      const canonicalFile = yield* writeCsv(validCsv);
+      const nativeFile = yield* writeCsv(
+        validCsv.replace(
+          "store,date,category,item,price,source_file_id",
+          "Store,Date,Category,Item,Cost,source_file_id",
+        ),
+      );
+      const canonical = yield* runImporter(["--file", canonicalFile]);
+      const native = yield* runImporter(["--file", nativeFile]);
+      expect(native.stderr).toBe("");
+      expect(native.code).toBe(0);
+      expect(native.stdout).toContain(
+        [
+          '  0. "Milk" 0.10 CAD (record 2, line 2)',
+          '  1. "Eggs" 0.20 CAD (record 4, line 4)',
+          "  Subtotal 0.30 CAD; calculated tax 0.04 CAD; calculated total 0.34 CAD",
+        ].join("\n"),
+      );
+      expect(native.stdout).toContain(
+        "  Subtotal 5.00 CAD; calculated tax 0.65 CAD; calculated total 5.65 CAD",
+      );
+      // Only the header differs, so the plan is identical to the canonical file's.
+      expect(native.stdout.replace(nativeFile, "<file>")).toBe(
+        canonical.stdout.replace(canonicalFile, "<file>"),
+      );
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it.effect("fails visibly on a wrong header with the accepted header layout", () =>
+    Effect.gen(function* () {
+      const file = yield* writeCsv(
+        "Store,Date,Category,Item,Amount,source_file_id\nMetro,2024-12-31,Grocery,Milk,1.00,\n",
+      );
       const result = yield* runImporter(["--file", file]);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain(
-        'CSV header must have 6 fields (store,date,category,item,price,source_file_id) but had 4: ["store","date","item","price"]',
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe(
+        [
+          'CSV header column 5 is "Amount" but must be "price" or "cost"; expected exactly 6 columns in this order: store,date,category,item,price,source_file_id (names are trimmed and case-insensitive; "cost" may replace "price", as in Google Sheets RAW exports)',
+          "Import blocked: the CSV could not be read reliably. Nothing was written.",
+          "",
+        ].join("\n"),
       );
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
