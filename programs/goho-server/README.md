@@ -88,10 +88,13 @@ failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
 ### Correct a receipt
 
 `PATCH /receipts/:receiptId` corrects one or more of `storeName`, `receiptDate`,
-and `category`. Omitted fields keep their values. `PATCH
-/receipts/:receiptId/items/:itemId` renames an existing item on that receipt
-using its `id` and a JSON body containing only `name`. Both return HTTP 200
-with the complete saved receipt under `data`.
+and `category`. Omitted fields keep their values. It returns HTTP 200 with the
+complete saved receipt under `data`.
+
+`PATCH /receipts/:receiptId/items/:itemId` renames an existing item on that
+receipt using its `id` and a JSON body containing only `name`. It returns HTTP
+200 with only the saved item (`id`, `position`, `name`, and `amount`) under
+`data`; fetch the receipt to see the rest of it.
 
 Names and categories are trimmed and must stay nonempty; dates must be real
 `YYYY-MM-DD` dates. Amounts, currency, item positions, the item lineup, the

@@ -525,7 +525,7 @@ const recordUpdates = () => {
     updateItem: (receiptId, itemId, changes) =>
       Effect.sync(() => {
         itemUpdates.push({ receiptId, itemId, changes });
-        return Option.some({ ...receipt, items: [{ ...receipt.items[0], ...changes }] });
+        return Option.some({ ...receipt.items[0], id: itemId, ...changes });
       }),
   };
   return { updates, itemUpdates, repository };
@@ -573,7 +573,7 @@ it.effect("trims corrected names and passes only supplied fields to the reposito
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
 
-it.effect("renames an item by ID through the generated client and trims the name", () => {
+it.effect("renames an item by ID through the generated client and returns only the item", () => {
   const recorded = recordUpdates();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
@@ -582,12 +582,15 @@ it.effect("renames an item by ID through the generated client and trims the name
         params: { receiptId: receipt.id, itemId },
         payload: { name: "Pears" },
       }),
-    ).toEqual({ data: { ...receipt, items: [{ ...receipt.items[0], name: "Pears" }] } });
+    ).toEqual({ data: { ...receipt.items[0], name: "Pears" } });
     // The largest PostgreSQL bigint stays exact text end to end.
     const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/9223372036854775807`, {
       body: yield* HttpBody.json({ name: "  Granny Smith apples  " }),
     });
     expect(response.status).toBe(200);
+    expect(yield* response.json).toStrictEqual({
+      data: { id: "9223372036854775807", position: 0, name: "Granny Smith apples", amount: "11" },
+    });
     expect(recorded.itemUpdates).toEqual([
       { receiptId: receipt.id, itemId, changes: { name: "Pears" } },
       {

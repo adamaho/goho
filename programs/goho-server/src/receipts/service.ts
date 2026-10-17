@@ -5,6 +5,7 @@ import {
   type PatchReceiptRequest,
   type Receipt,
   type ReceiptId,
+  type ReceiptItem,
   type ReceiptItemId,
 } from "@goho/goho-api/receipts";
 import { Array, BigDecimal, Context, Effect, Layer, Option } from "effect";
@@ -25,10 +26,8 @@ const correctionFailed = (error: unknown) =>
     Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
   );
 
-const requireSaved = Option.match({
-  onNone: () => Effect.fail(new HttpApiError.NotFound()),
-  onSome: (receipt: Receipt) => Effect.succeed(receipt),
-});
+const requireSaved = <A>(saved: Option.Option<A>) =>
+  Effect.fromOption(saved).pipe(Effect.mapError(() => new HttpApiError.NotFound()));
 
 const normalizeDecimal = (value: DecimalString) =>
   DecimalString.make(BigDecimal.format(BigDecimal.normalize(BigDecimal.fromStringUnsafe(value))));
@@ -61,12 +60,15 @@ export class Service extends Context.Service<
       receiptId: ReceiptId,
       changes: PatchReceiptRequest,
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
-    /** Renames an existing item; fails with NotFound when the receipt has no item with that ID. */
+    /**
+     * Renames an existing item and returns only that item; fails with NotFound
+     * when the receipt has no item with that ID.
+     */
     readonly patchItem: (
       receiptId: ReceiptId,
       itemId: ReceiptItemId,
       changes: PatchReceiptItemRequest,
-    ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
+    ) => Effect.Effect<ReceiptItem, HttpApiError.NotFound | HttpApiError.InternalServerError>;
     readonly delete: (
       receiptId: ReceiptId,
     ) => Effect.Effect<void, HttpApiError.NotFound | HttpApiError.InternalServerError>;

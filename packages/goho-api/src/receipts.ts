@@ -246,6 +246,35 @@ export const ReceiptItemId = Schema.String.check(
 export type ReceiptItemId = typeof ReceiptItemId.Type;
 
 /**
+ * Saved receipt line item, returned within a receipt or alone after a rename.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ReceiptItem = Schema.Struct({
+  id: ReceiptItemId.annotateKey({
+    description: "The item's roster number; use it to target this item.",
+  }),
+  position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
+    description: "Zero-based spot in the receipt lineup.",
+    examples: [0],
+  }),
+  ...ReceiptItemInput.fields,
+}).annotate({
+  identifier: "ReceiptItem",
+  description: "A saved receipt line item in its original slot.",
+  examples: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
+});
+
+/**
+ * Decoded saved receipt line item.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ReceiptItem extends Schema.Schema.Type<typeof ReceiptItem> {}
+
+/**
  * Complete receipt returned after creation or an idempotent replay.
  *
  * @category models
@@ -256,22 +285,7 @@ export const Receipt = Schema.Struct({
     description: "The receipt's roster number, kept the same on a replay.",
   }),
   ...ReceiptFields,
-  items: Schema.NonEmptyArray(
-    Schema.Struct({
-      id: ReceiptItemId.annotateKey({
-        description: "The item's roster number; use it to target this item.",
-      }),
-      position: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
-        description: "Zero-based spot in the receipt lineup.",
-        examples: [0],
-      }),
-      ...ReceiptItemInput.fields,
-    }).annotate({
-      identifier: "ReceiptItem",
-      description: "A saved receipt line item in its original slot.",
-      examples: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
-    }),
-  ).annotate({
+  items: Schema.NonEmptyArray(ReceiptItem).annotate({
     description: "Items lined up by ascending position.",
   }),
 }).annotate({
