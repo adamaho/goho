@@ -60,32 +60,39 @@ export const parseRecords = (
   text: string,
 ): Result.Result<ReadonlyArray<SourceRecord>, MalformedCsv> => {
   const records: Array<SourceRecord> = [];
-  try {
-    parse(text, {
-      bom: true,
-      relax_column_count: true,
-      on_record: (fields, context) => {
-        // Unquoted line breaks end records, so a record spans one line plus the
-        // breaks preserved inside its quoted values. The parser's own line count
-        // treats a quoted CRLF as two lines.
-        const firstLine = (records.at(-1)?.lastLine ?? 0) + 1;
-        const breaks = fields.reduce(
-          (count, field) => count + (field.match(/\r\n|\r|\n/gu)?.length ?? 0),
-          0,
-        );
-        records.push({ record: context.records, firstLine, lastLine: firstLine + breaks, fields });
-        return fields;
-      },
-    });
-    return Result.succeed(records);
-  } catch (error) {
-    if (error instanceof CsvError) {
-      return Result.fail(
-        new MalformedCsv({
+  return Result.try({
+    try: () => {
+      parse(text, {
+        bom: true,
+        relax_column_count: true,
+        on_record: (fields, context) => {
+          // Unquoted line breaks end records, so a record spans one line plus the
+          // breaks preserved inside its quoted values. The parser's own line count
+          // treats a quoted CRLF as two lines.
+          const firstLine = (records.at(-1)?.lastLine ?? 0) + 1;
+          const breaks = fields.reduce(
+            (count, field) => count + (field.match(/\r\n|\r|\n/gu)?.length ?? 0),
+            0,
+          );
+          records.push({
+            record: context.records,
+            firstLine,
+            lastLine: firstLine + breaks,
+            fields,
+          });
+          return fields;
+        },
+      });
+      return records;
+    },
+    // Only CSV syntax errors are expected failures; anything else is rethrown as a defect.
+    catch: (error) => {
+      if (error instanceof CsvError) {
+        return new MalformedCsv({
           message: `${error.message}. No records were validated after this point.`,
-        }),
-      );
-    }
-    throw error;
-  }
+        });
+      }
+      throw error;
+    },
+  });
 };

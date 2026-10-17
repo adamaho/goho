@@ -23,7 +23,7 @@ const migratedSchema = Effect.gen(function* () {
     SqlClient.SqlClient,
   );
   const crypto = yield* Crypto.Crypto;
-  const schema = `test_${(yield* crypto.randomUUIDv4).replaceAll("-", "")}`;
+  const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
   yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
     admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
   );
