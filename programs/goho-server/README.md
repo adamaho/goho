@@ -78,7 +78,9 @@ HTTP 500 with `{"_tag":"InternalServerError"}`.
 JSON body shown in Swagger. Every successful call saves a new receipt.
 
 Names are trimmed and decimal strings normalized (`11.00` becomes `11`). The
-complete receipt is returned under `data`.
+complete receipt is returned under `data`. Each returned item has a
+server-generated `id`, a decimal string like receipt IDs, and its zero-based
+`position` in the receipt.
 
 Invalid payloads return HTTP 400 with an empty body; validation or persistence
 failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
@@ -87,19 +89,19 @@ failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 `PATCH /receipts/:receiptId` corrects one or more of `storeName`, `receiptDate`,
 and `category`. Omitted fields keep their values. `PATCH
-/receipts/:receiptId/items/:position` renames an existing item using its
-zero-based `position` and a JSON body containing only `name`. Both return HTTP
-200 with the complete saved receipt under `data`.
+/receipts/:receiptId/items/:itemId` renames an existing item on that receipt
+using its `id` and a JSON body containing only `name`. Both return HTTP 200
+with the complete saved receipt under `data`.
 
 Names and categories are trimmed and must stay nonempty; dates must be real
 `YYYY-MM-DD` dates. Amounts, currency, item positions, the item lineup, the
 upload record, the original photo, and stored extraction data do not change.
 Repeating a correction with the same values succeeds, and later corrections win.
 
-Empty bodies, unsupported or null fields, invalid values, and malformed receipt
-IDs or positions return HTTP 400 with an empty body; nothing is saved, even when
-some supplied fields are valid. A missing receipt, or a position with no item on
-that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
+Empty bodies, unsupported or null fields, invalid values, malformed receipt IDs,
+and malformed or out-of-range item IDs return HTTP 400 with an empty body;
+nothing is saved, even when some supplied fields are valid. A missing receipt, or an item
+ID that is not on that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
 return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
 
 ### Delete a receipt

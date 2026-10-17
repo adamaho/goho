@@ -16,7 +16,7 @@ import {
   PatchReceiptRequest,
   Receipt,
   ReceiptId,
-  ReceiptItemPosition,
+  ReceiptItemId,
 } from "./receipts.ts";
 import { DataResponse } from "./response.ts";
 
@@ -283,17 +283,17 @@ export const api = HttpApi.make("goho-server")
           ),
       )
       .add(
-        HttpApiEndpoint.patch("patchItem", "/receipts/:receiptId/items/:position", {
-          params: { receiptId: ReceiptId, position: ReceiptItemPosition },
+        HttpApiEndpoint.patch("patchItem", "/receipts/:receiptId/items/:itemId", {
+          params: { receiptId: ReceiptId, itemId: ReceiptItemId },
           payload: PatchReceiptItemRequest,
           success: DataResponse(Receipt),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
-                "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed position. Nothing is saved.",
+                "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved.",
             }),
             HttpApiError.NotFound.annotate({
-              description: "That receipt has no item in this position, bud.",
+              description: "That receipt has no item wearing this number, bud.",
             }),
             HttpApiError.InternalServerError.annotate({
               description: "The server could not save this correction; nothing changed.",

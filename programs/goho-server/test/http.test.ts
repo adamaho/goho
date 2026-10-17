@@ -7,6 +7,7 @@ import {
   type PatchReceiptRequest,
   Receipt,
   ReceiptId,
+  ReceiptItemId,
 } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
 import { Array, Effect, Layer, Option } from "effect";
@@ -35,8 +36,13 @@ const createPayload = CreateReceiptRequest.make({
 const receipt = Receipt.make({
   ...createPayload,
   id: ReceiptId.make("42"),
-  items: Array.map(createPayload.items, (item, position) => ({ ...item, position })),
+  items: Array.map(createPayload.items, (item, position) => ({
+    ...item,
+    id: ReceiptItemId.make(String(position + 7)),
+    position,
+  })),
 });
+const itemId = receipt.items[0].id;
 
 const receiptUpload = ReceiptUpload.make({
   id: ReceiptUploadId.make("7d89d8f7-6f0c-4df2-a2a9-94771638ac99"),
@@ -148,6 +154,10 @@ it.effect("gets one complete receipt through the generated client", () =>
     const client = yield* Client.make("");
     expect(yield* client.receipts.get({ params: { receiptId: receipt.id } })).toEqual({
       data: receipt,
+    });
+    const response = yield* HttpClient.get(`/receipts/${receipt.id}`);
+    expect(yield* response.json).toMatchObject({
+      data: { id: "42", items: [{ id: "7", position: 0 }] },
     });
   }).pipe(Effect.provide(TestLive)),
 );
@@ -503,7 +513,7 @@ const recordUpdates = () => {
   const updates: Array<{ receiptId: ReceiptId; changes: PatchReceiptRequest }> = [];
   const itemUpdates: Array<{
     receiptId: ReceiptId;
-    position: number;
+    itemId: ReceiptItemId;
     changes: PatchReceiptItemRequest;
   }> = [];
   const repository: Partial<ReceiptRepository.Interface> = {
@@ -512,9 +522,9 @@ const recordUpdates = () => {
         updates.push({ receiptId, changes });
         return Option.some({ ...receipt, ...changes });
       }),
-    updateItem: (receiptId, position, changes) =>
+    updateItem: (receiptId, itemId, changes) =>
       Effect.sync(() => {
-        itemUpdates.push({ receiptId, position, changes });
+        itemUpdates.push({ receiptId, itemId, changes });
         return Option.some({ ...receipt, items: [{ ...receipt.items[0], ...changes }] });
       }),
   };
@@ -563,23 +573,28 @@ it.effect("trims corrected names and passes only supplied fields to the reposito
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
 
-it.effect("renames an item by position through the generated client and trims the name", () => {
+it.effect("renames an item by ID through the generated client and trims the name", () => {
   const recorded = recordUpdates();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
     expect(
       yield* client.receipts.patchItem({
-        params: { receiptId: receipt.id, position: 0 },
+        params: { receiptId: receipt.id, itemId },
         payload: { name: "Pears" },
       }),
     ).toEqual({ data: { ...receipt, items: [{ ...receipt.items[0], name: "Pears" }] } });
-    const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/2147483647`, {
+    // The largest PostgreSQL bigint stays exact text end to end.
+    const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/9223372036854775807`, {
       body: yield* HttpBody.json({ name: "  Granny Smith apples  " }),
     });
     expect(response.status).toBe(200);
     expect(recorded.itemUpdates).toEqual([
-      { receiptId: receipt.id, position: 0, changes: { name: "Pears" } },
-      { receiptId: receipt.id, position: 2147483647, changes: { name: "Granny Smith apples" } },
+      { receiptId: receipt.id, itemId, changes: { name: "Pears" } },
+      {
+        receiptId: receipt.id,
+        itemId: "9223372036854775807",
+        changes: { name: "Granny Smith apples" },
+      },
     ]);
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
@@ -638,57 +653,62 @@ it.effect("rejects empty, unsupported, mixed, null, and invalid receipt correcti
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
 
-it.effect("rejects invalid item renames and malformed positions without saving", () => {
-  const recorded = recordUpdates();
-  return Effect.gen(function* () {
-    for (const payload of [
-      {},
-      { name: null },
-      { name: "" },
-      { name: "   " },
-      { name: 42 },
-      { amount: "1" },
-      { name: "Pears", amount: "1" },
-      { name: "Pears", position: 1 },
-      { name: "Pears", currency: "USD" },
-      null,
-      [],
-      "Pears",
-    ]) {
-      const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/0`, {
-        body: yield* HttpBody.json(payload),
-      });
-      expect(response.status, JSON.stringify(payload)).toBe(400);
-    }
-    for (const position of [
-      "-1",
-      "01",
-      "00",
-      "1.0",
-      "1e1",
-      "+1",
-      "%201",
-      "0x1",
-      "abc",
-      "2147483648",
-      "9999999999",
-      "99999999999999999999",
-    ]) {
-      const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/${position}`, {
-        body: yield* HttpBody.json({ name: "Pears" }),
-      });
-      expect(response.status, position).toBe(400);
-      expect(yield* response.text).toBe("");
-    }
-    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
-      const response = yield* HttpClient.patch(`/receipts/${id}/items/0`, {
-        body: yield* HttpBody.json({ name: "Pears" }),
-      });
-      expect(response.status).toBe(400);
-    }
-    expect(recorded.itemUpdates).toEqual([]);
-  }).pipe(Effect.provide(testLayer(recorded.repository)));
-});
+it.effect(
+  "rejects invalid item renames and malformed or overflowing item IDs without saving",
+  () => {
+    const recorded = recordUpdates();
+    return Effect.gen(function* () {
+      for (const payload of [
+        {},
+        { name: null },
+        { name: "" },
+        { name: "   " },
+        { name: 42 },
+        { amount: "1" },
+        { name: "Pears", amount: "1" },
+        { name: "Pears", position: 1 },
+        { name: "Pears", id: "8" },
+        { name: "Pears", currency: "USD" },
+        null,
+        [],
+        "Pears",
+      ]) {
+        const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/${itemId}`, {
+          body: yield* HttpBody.json(payload),
+        });
+        expect(response.status, JSON.stringify(payload)).toBe(400);
+      }
+      for (const id of [
+        "0",
+        "-1",
+        "01",
+        "00",
+        "1.0",
+        "1e1",
+        "+1",
+        "%201",
+        "0x1",
+        "abc",
+        "9223372036854775808",
+        "9999999999999999999",
+        "10000000000000000000",
+      ]) {
+        const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/${id}`, {
+          body: yield* HttpBody.json({ name: "Pears" }),
+        });
+        expect(response.status, id).toBe(400);
+        expect(yield* response.text).toBe("");
+      }
+      for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
+        const response = yield* HttpClient.patch(`/receipts/${id}/items/${itemId}`, {
+          body: yield* HttpBody.json({ name: "Pears" }),
+        });
+        expect(response.status).toBe(400);
+      }
+      expect(recorded.itemUpdates).toEqual([]);
+    }).pipe(Effect.provide(testLayer(recorded.repository)));
+  },
+);
 
 it.effect("returns HTTP 404 when correcting a missing receipt or item", () =>
   Effect.gen(function* () {
@@ -713,7 +733,7 @@ it.effect("returns HTTP 500 without exposing correction failure details", () =>
   Effect.gen(function* () {
     for (const [url, payload] of [
       [`/receipts/${receipt.id}`, { storeName: "Corner Store" }],
-      [`/receipts/${receipt.id}/items/0`, { name: "Pears" }],
+      [`/receipts/${receipt.id}/items/${itemId}`, { name: "Pears" }],
     ] as const) {
       const response = yield* HttpClient.patch(url, { body: yield* HttpBody.json(payload) });
       expect(response.status).toBe(500);

@@ -757,7 +757,7 @@
         "summary": "Get a receipt image"
       }
     },
-    "/receipts/{receiptId}/items/{position}": {
+    "/receipts/{receiptId}/items/{itemId}": {
       "patch": {
         "tags": ["receipts"],
         "operationId": "receipts.patchItem",
@@ -771,10 +771,10 @@
             "required": true
           },
           {
-            "name": "position",
+            "name": "itemId",
             "in": "path",
             "schema": {
-              "$ref": "#/components/schemas/ReceiptItemPosition"
+              "$ref": "#/components/schemas/ReceiptItemId"
             },
             "required": true
           }
@@ -799,10 +799,10 @@
             }
           },
           "400": {
-            "description": "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed position. Nothing is saved."
+            "description": "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved."
           },
           "404": {
-            "description": "That receipt has no item in this position, bud.",
+            "description": "That receipt has no item wearing this number, bud.",
             "content": {
               "application/json": {
                 "schema": {
@@ -972,6 +972,7 @@
             "currency": "USD",
             "items": [
               {
+                "id": "7",
                 "position": 0,
                 "name": "Apples",
                 "amount": "10.25"
@@ -983,6 +984,16 @@
       "ReceiptItem": {
         "type": "object",
         "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReceiptItemId"
+              },
+              {
+                "description": "The item's roster number; use it to target this item."
+              }
+            ]
+          },
           "position": {
             "type": "integer",
             "minimum": 0,
@@ -1007,11 +1018,12 @@
             ]
           }
         },
-        "required": ["position", "name", "amount"],
+        "required": ["id", "position", "name", "amount"],
         "additionalProperties": false,
         "description": "A saved receipt line item in its original slot.",
         "examples": [
           {
+            "id": "7",
             "position": 0,
             "name": "Apples",
             "amount": "10.25"
@@ -1024,6 +1036,12 @@
         "description": "An exact decimal kept as text so no precision gets lost in the shuffle.",
         "examples": ["10.25", "-1.50", "1e2", "1E2"]
       },
+      "ReceiptItemId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The item's positive number on the roster, from 1 through 9223372036854775807 without leading zeros. It sticks with the item through renames.",
+        "examples": ["7"]
+      },
       "CalendarDate": {
         "type": "string",
         "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
@@ -1035,12 +1053,6 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The receipt's positive number on the roster, bud.",
         "examples": ["42"]
-      },
-      "ReceiptItemPosition": {
-        "type": "string",
-        "pattern": "^(?:0|[1-9]\\d{0,9})$",
-        "description": "The item's zero-based spot in the receipt lineup, from 0 through 2147483647, without leading zeros.",
-        "examples": ["0"]
       },
       "PatchReceiptItemRequest": {
         "type": "object",
