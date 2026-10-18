@@ -1,26 +1,21 @@
 # Contributing to @goho/goho-server
 
-Follow the repository-wide guidance in the root
-[CONTRIBUTING.md](../../CONTRIBUTING.md) in addition to this package-specific
-setup.
-
-## Prerequisites
-
-### Development environment
-
-Follow the root [development setup](../../CONTRIBUTING.md#development-setup)
-to install Node.js, pnpm, and workspace dependencies before running server commands.
+Follow the root [CONTRIBUTING.md](../../CONTRIBUTING.md) as well as this guide.
+Complete its [development setup](../../CONTRIBUTING.md#development-setup) to
+install Node.js, pnpm, and workspace dependencies before running server commands.
 
 ## Runtime configuration
 
-Configure the environment file before starting:
+Configure these in the environment file before starting the server:
 
-- `GOHO_SERVER_HOST`: bind address; defaults to `127.0.0.1`. The container image sets `0.0.0.0`.
-- `GOHO_SERVER_PORT`: defaults to `3000`.
-- `DATABASE_URL`: required PostgreSQL connection URL. The pool must connect at startup.
-- `GOHO_UPLOADS_DIRECTORY`: required directory for durable original receipt files.
-- `OPENAI_API_KEY`: nonempty local placeholder, or a real key for image extraction.
-- `OPENAI_MODEL`: model used for image extraction.
+| Variable                 | Purpose                                                                    |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `GOHO_SERVER_HOST`       | Bind address. Defaults to `127.0.0.1`; the container image sets `0.0.0.0`. |
+| `GOHO_SERVER_PORT`       | Defaults to `3000`.                                                        |
+| `DATABASE_URL`           | Required PostgreSQL connection URL. The pool must connect at startup.      |
+| `GOHO_UPLOADS_DIRECTORY` | Required directory for durable original receipt files.                     |
+| `OPENAI_API_KEY`         | A nonempty local placeholder, or a real key for image extraction.          |
+| `OPENAI_MODEL`           | Model used for image extraction.                                           |
 
 ## Local Setup
 
@@ -30,34 +25,170 @@ Copy the environment template:
 cp programs/goho-server/.env.example programs/goho-server/.env
 ```
 
-The example contains a nonempty OpenAI placeholder. It is enough to start the
-server and work with receipts created through the API or seed command.
+Its OpenAI placeholder is enough to start the server and work with receipts
+created through the API or the seed command.
 
-From the repository root, start PostgreSQL, apply migrations, and run the
-server in watch mode with one command:
+From the repository root, start PostgreSQL, apply migrations, and run the server
+in watch mode:
 
 ```bash
 pnpm server:dev
 ```
 
-In a second terminal, seed the local database after the server is ready:
+Once the server is ready, seed the local database from a second terminal:
 
 ```bash
 pnpm --filter @goho/goho-server db:seed
 ```
 
-The seed command creates four fictional receipts through the receipt creation
-API. It uses `http://127.0.0.1:3000` by default; set `GOHO_SERVER_URL` to target
-another local server. Seeding skips when any receipt already exists, so reruns
-do not add duplicates. Seeding does not upload images or call OpenAI.
+- Seeding creates four fictional receipts through the receipt creation API.
+- It targets `http://127.0.0.1:3000`; set `GOHO_SERVER_URL` for another local server.
+- It skips when any receipt already exists, so reruns add no duplicates.
+- It does not upload images or call OpenAI.
 
-To process uploaded receipt images, replace the placeholder with a real
-`OPENAI_API_KEY` in the ignored `.env` file. Ensure the key has access to the
-configured `OPENAI_MODEL` and billing is enabled, then follow the
-[CLI setup](../goho-cli/README.md). An OpenAI key is not needed for local receipt
-creation, reading, or seeding.
+An OpenAI key is not needed to create, read, or seed receipts locally. To process
+uploaded receipt images, put a real `OPENAI_API_KEY` in the ignored `.env` file.
+The key needs access to the configured `OPENAI_MODEL` with billing enabled. Then
+follow the [CLI setup](../goho-cli/README.md).
 
-## Verification
+## Database changes
+
+Use the shared Postgres layer from `@goho/core`. Receipt tables, migrations, and
+repository behavior stay in this server.
+
+### Receipts and items
+
+- `receipts` holds only receipt data: store, receipt date, category, subtotal,
+  tax, total, and currency.
+- `receipt_items` stores each item's name and amount, linked to its receipt.
+- Purchase dates use `date`. Amounts use `numeric` without two-decimal rounding.
+  Decimal strings keep the finite values the parser supplies; they cannot recover
+  precision already lost upstream.
+- Currency applies to every item and total. The column is non-null and defaults to
+  CAD; its migration backfilled existing nulls with CAD.
+- API creation and GPT extraction both require an explicit three-letter currency
+  code and reject null or missing values. Extraction keeps the receipt's currency,
+  or uses CAD when nothing on the receipt suggests another. Extraction version 1
+  records this required field. See [receipt creation](./README.md#create-a-receipt).
+
+Each item has a database-generated `bigint` identity `id` as its primary key. It
+stays with the item through renames and position changes. `position` is the
+item's order and is unique within its receipt; repeated item names are allowed.
+Migration 0010 filled IDs for existing rows without firing update triggers, so
+their timestamps kept their values.
+
+### Uploads and transactions
+
+`receipt_uploads` links each processed upload to its receipt. Once the upload
+succeeds, it records the extraction version and the validated extraction JSON.
+
+The repository inserts a receipt and all its items in one transaction. Inside a
+caller's transaction, the insert joins it as a savepoint. Upload processing
+inserts the receipt and marks the upload succeeded in one transaction. That
+status change is what stops redelivered jobs from creating duplicate receipts.
+
+### Record timestamps
+
+`receipts`, `receipt_items`, and `receipt_uploads` have required `created_at` and
+`updated_at` columns. They use `timestamptz`, which stores an absolute instant
+whatever the session time zone.
+
+- New records default both timestamps to `now()`.
+- On every update, including direct SQL, triggers keep `created_at` and set
+  `updated_at` to the statement time.
+- Inserting, editing, moving, or deleting an item also updates its parent
+  receipt's `updated_at`. Moving an item updates both receipts.
+- These changes roll back with the enclosing transaction. Cascading receipt
+  deletion still works.
+- The backfill gave existing items their receipt's creation time. Every new
+  `updated_at` started at `created_at`, because past edit times are unknown.
+  Existing upload timestamps were kept.
+- Receipt responses do not include these timestamps.
+
+### Edit history
+
+Two tables record saved corrections, from PATCH requests and direct SQL alike.
+Current receipt and item rows remain the source of truth, and nothing reads this
+history yet.
+
+| Table                  | Records                                  | Required references (all `ON DELETE CASCADE`)             |
+| ---------------------- | ---------------------------------------- | --------------------------------------------------------- |
+| `receipt_history`      | `store_name`, `receipt_date`, `category` | `receipt_id`                                              |
+| `receipt_item_history` | `item_name`                              | `receipt_id` (the item's receipt at edit time), `item_id` |
+
+- Update triggers write one row per field whose value actually changes. Each row
+  stores the field, its before and after values, an operation ID, and an
+  `edited_at` instant equal to the record's `updated_at`.
+- Each updated receipt or item row gets its own operation ID, so fields changed
+  together share one. A later update gets another, even in the same transaction.
+- Dates are stored as ISO `YYYY-MM-DD` text whatever the session's DateStyle.
+- Inserts, same-value writes, parent timestamp updates from item changes, and
+  other columns record nothing.
+- Migration 0011 adds no baseline for existing rows, so history starts with the
+  next edit.
+- History commits or rolls back with its edit. If a history row cannot be
+  written, the edit fails.
+- Deleting a receipt deletes its receipt and item history. Deleting an item
+  deletes that item's history.
+
+### Running migrations locally
+
+`DATABASE_URL` in `programs/goho-server/.env` points to the local Compose database
+in the example. From the repository root:
+
+```bash
+pnpm --filter @goho/infra-local infra:up
+pnpm --filter @goho/goho-server db:migrate
+```
+
+`infra:up` starts Postgres and creates the database on first startup. `db:migrate`
+connects to it and creates or updates the tables. Where migrations run:
+
+- `pnpm server:dev` runs both commands through Turbo before starting the server.
+- Direct package `start` and `dev` commands do not run migrations; run
+  `db:migrate` first.
+- The container entry point applies migrations before launching the server, on
+  every start or restart.
+- Other deployments must run migrations explicitly before starting a new server
+  version.
+
+### How the runner works
+
+`src/database/migrate.ts` loads the connection and calls the registry in
+`src/database/migrations.ts`, which uses Effect's `PgMigrator.fromRecord` and
+`PgMigrator.run`.
+
+- The runner creates `goho_migrations` if needed and reads the highest completed
+  migration ID.
+- It runs registered migrations with higher IDs in numeric order, recording each
+  ID, name, and completion time.
+- Pending migrations and their records run in one transaction, so a failure rolls
+  back the whole pending batch. The `goho_migrations` table itself may remain
+  after a failed first run.
+- Rerunning a completed batch does nothing. Applied files are not checksummed and
+  do not rerun when their contents change.
+
+### Adding a migration
+
+1. Create the next numbered file under `src/database/migrations`, for example
+   `0002-receipt-notes.ts`. Its ID must be higher than every existing migration;
+   do not insert an older number into the sequence.
+2. Default-export an `Effect.gen` that obtains `SqlClient.SqlClient` and runs the
+   SQL, following `0001-receipts.ts`. The SQL must be able to run inside a
+   transaction, so operations such as `CREATE INDEX CONCURRENTLY` cannot be used.
+3. Import the file in `src/database/migrations.ts` and add it to the record, for
+   example `"0002_receipt_notes": receiptNotes`. The key uses an underscore after
+   the numeric ID; the file name uses kebab-case. Files are not discovered
+   automatically, and there is no migration generator.
+4. Run `db:migrate` locally, then again to confirm nothing remains. Add an
+   integration assertion for the resulting schema or behavior. For a change that
+   transforms existing data, test upgrading a populated old schema as well as a
+   fresh database.
+5. Commit the new file and registry entry with the code that uses the schema.
+   Once a migration has run on a shared database, leave it unchanged and make
+   corrections in a new migration. There is no down or rollback command.
+
+## Verification and tests
 
 Run the repository checks before submitting changes:
 
@@ -65,140 +196,15 @@ Run the repository checks before submitting changes:
 pnpm check
 ```
 
-## Database changes
-
-Use the shared Postgres layer from `@goho/core`. Keep receipt tables, migrations,
-and repository behavior in this server.
-
-### Receipt schema
-
-`receipts` holds only receipt data: store, receipt date, category, subtotal, tax,
-total, and currency. `receipt_items` stores ordered item names and amounts,
-linked to a receipt. Purchase dates use `date`, and amounts use `numeric` without
-two-decimal rounding. Currency applies to every item and total and defaults to
-CAD. The migration backfills
-existing null currencies and makes the column non-null. Both API creation and
-GPT extraction require an explicit three-letter currency code; null and missing
-currency are rejected. Extraction preserves the receipt's currency and uses CAD
-when the receipt gives no clues identifying another currency. Extraction version 1
-records this required field. See [receipt creation](./README.md#create-a-receipt).
-
-`receipt_uploads` links each processed upload to its receipt and records the
-extraction version and validated extraction JSON once the upload succeeds.
-
-All three tables have required `created_at` and `updated_at` columns using
-`timestamptz`, which stores an absolute instant independent of the session time
-zone. New records default both timestamps to `now()`. Database triggers preserve
-`created_at` and set `updated_at` to the statement time on every update, including
-direct SQL edits. Inserting, editing, moving, or deleting an item also updates its
-parent receipt (both parents when moving an item). These changes roll back with
-the enclosing transaction. Cascading receipt deletion remains supported.
-
-Existing items inherit their receipt's creation time. Newly added `updated_at`
-values start at `created_at` because historical edit times are unknown. Existing
-upload timestamps are preserved. Receipt response fields remain unchanged; these
-columns prepare persistence for future editing endpoints.
-
-Decimal strings preserve the finite numeric values supplied by the parser; they
-cannot recover precision already lost upstream.
-
-The repository inserts a receipt and all its items in one transaction; inside a
-caller's transaction the insert joins it as a savepoint. Upload processing
-inserts the receipt and marks the upload succeeded in one transaction, so the
-upload's status transition is what prevents duplicate receipts from redelivered
-jobs.
-
-Each item has a database-generated `bigint` identity `id`, which is its primary
-key and stays with the item through renames and position changes. `position`
-remains the item's order and is unique within its receipt. Repeated item names
-are allowed. Migration 0010 adds the identity column, which fills existing rows
-without firing update triggers, so item and receipt timestamps keep their values.
-
-`receipt_history` records saved corrections to a receipt's store name, purchase
-date, or category. `receipt_item_history` records changes to an item's name as
-field `item_name`. Update triggers capture PATCH requests and direct SQL alike,
-writing one row per field whose value actually changes. Each row holds the field,
-its before and after values, the required receipt ID, an `edited_at` instant
-matching the record's `updated_at`, and an operation ID. Item history rows also
-require the item ID; their receipt ID is the item's receipt at edit time. Every
-updated receipt or item row gets its own
-operation ID, so fields changed together share one; a later update, even in the
-same transaction, gets another. Dates are stored as ISO `YYYY-MM-DD` text
-whatever the session's DateStyle. Inserts, same-value writes, timestamp touches
-from item changes, and other columns record nothing. Migration 0011 adds no
-baseline for existing rows, so history starts with the next edit. History rows
-commit or roll back with their edit, and a failure to record one fails the edit.
-Deleting a receipt deletes its receipt and item history; deleting an item
-deletes that item's history. Current receipt and item rows remain the source of truth, and nothing
-reads this history yet.
-
-### Running migrations locally
-
-Set `DATABASE_URL` in `programs/goho-server/.env`. The example points to the local
-Compose database. From the repository root:
-
-```bash
-pnpm --filter @goho/infra-local infra:up
-pnpm --filter @goho/goho-server db:migrate
-```
-
-`infra:up` starts Postgres and creates the database on its first startup.
-`db:migrate` connects to that database and creates or updates its tables. These
-are separate commands when run directly. The root `pnpm server:dev` command
-runs them through Turbo before starting the server. Direct package `start` and
-`dev` commands do not run migrations. The container entry point applies
-migrations before launching the server on each start or restart. For other
-deployments, run migrations explicitly before starting the new server version.
-
-### How the runner works
-
-`src/database/migrate.ts` loads the connection and calls the registry in
-`src/database/migrations.ts`. The registry uses Effect's `PgMigrator.fromRecord`
-and `PgMigrator.run`.
-
-The runner creates `goho_migrations` if needed, reads the highest completed
-migration ID, and runs registered migrations with higher IDs in numeric order.
-It records their IDs, names, and completion timestamps. Pending migrations and
-their history entries run in one transaction: a failure rolls back that pending
-batch. The history table itself may remain after an unsuccessful first run.
-Rerunning a completed batch does nothing. Applied files are not checksummed or
-rerun when their contents change.
-
-### Adding a migration
-
-1. Create the next numbered file under `src/database/migrations`, for example
-   `0002-receipt-notes.ts`. Use a unique ID higher than every existing migration;
-   do not insert an older number into the sequence.
-2. Default-export an `Effect.gen` that obtains `SqlClient.SqlClient` and executes
-   the SQL changes, following `0001-receipts.ts`. Use SQL that can run inside a
-   transaction; operations such as `CREATE INDEX CONCURRENTLY` cannot run here.
-3. Import the file in `src/database/migrations.ts` and add it to the record, for
-   example `"0002_receipt_notes": receiptNotes`. The registry key uses an
-   underscore after the numeric ID; the file name uses kebab-case. Files are not
-   discovered automatically, and there is no migration generator.
-4. Run `db:migrate` locally, then run it again to confirm no migrations remain.
-   Add an integration assertion for the resulting schema or behavior. For a
-   change that transforms existing data, test upgrading a populated old schema
-   as well as creating a fresh database.
-5. Commit the new file and registry entry with the code that uses the schema.
-   Once a migration has been applied to a shared database, leave it unchanged;
-   make corrections in a new migration. There is no down/rollback command.
-
-### Tests
-
 Test selection lives in `vitest.config.ts`, with named `unit` and `integration`
-projects. Unit tests exclude `*.integration.test.ts` and do not need a database:
+projects. Unit tests exclude `*.integration.test.ts` and need no database:
 
 ```bash
 pnpm --filter @goho/goho-server test:unit
 ```
 
-For integration tests, start the isolated test database documented in
-[local infrastructure](../../infra/local/README.md), supply `TEST_DATABASE_URL`,
-and run `pnpm --filter @goho/goho-server test:integration`. Each repository test
+For integration tests, start the isolated test database described in
+[local infrastructure](../../infra/local/README.md), set `TEST_DATABASE_URL`, and
+run `pnpm --filter @goho/goho-server test:integration`. Each repository test
 creates a temporary schema, applies the real migration registry, and drops the
 schema afterward. No Google or OpenAI credentials are required.
-
-Database configuration and initial connectivity are required at server startup.
-The container entry point applies migrations before launching the server. Direct launches
-with `start` or `dev` require the separate migration command first.
