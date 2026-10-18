@@ -1185,6 +1185,7 @@ it.effect("rolls back failed corrections, including their timestamps", () =>
       sql`SELECT * FROM receipts`,
       sql`SELECT * FROM receipt_items ORDER BY position`,
       sql`SELECT * FROM receipt_uploads`,
+      sql`SELECT * FROM receipt_edit_history`,
     ]);
     const before = yield* snapshot;
 
@@ -1207,7 +1208,11 @@ it.effect("joins the caller's transaction for corrections and rolls back with it
     const sql = yield* SqlClient.SqlClient;
     const receiptId = yield* repo.insert(receiptInput);
     const [firstItem] = yield* itemIds(receiptId);
-    const snapshot = Effect.all([sql`SELECT * FROM receipts`, sql`SELECT * FROM receipt_items`]);
+    const snapshot = Effect.all([
+      sql`SELECT * FROM receipts`,
+      sql`SELECT * FROM receipt_items`,
+      sql`SELECT * FROM receipt_edit_history`,
+    ]);
     const before = yield* snapshot;
     const result = yield* sql
       .withTransaction(
@@ -1283,6 +1288,7 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
       sql`SELECT * FROM receipts ORDER BY id`,
       sql`SELECT * FROM receipt_items ORDER BY receipt_id, position`,
       sql`SELECT * FROM receipt_uploads`,
+      sql`SELECT * FROM receipt_edit_history`,
     ]);
     const before = yield* snapshot;
 
@@ -1344,6 +1350,41 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
     expect(yield* client.receipts.get({ params: { receiptId } })).toEqual({ data: saved });
     expect(yield* client.receipts.list()).toEqual({ data: [saved, otherBefore] });
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(before[2]);
+    // History stores the trimmed values against the patched receipt and items.
+    expect(yield* editHistory).toEqual([
+      {
+        operation: 1,
+        receipt_id: receiptId,
+        item_id: null,
+        field: "receipt_date",
+        before_value: "2024-09-01",
+        after_value: "2024-09-02",
+      },
+      {
+        operation: 1,
+        receipt_id: receiptId,
+        item_id: null,
+        field: "store_name",
+        before_value: "Example Store",
+        after_value: "Corner Store",
+      },
+      {
+        operation: 2,
+        receipt_id: receiptId,
+        item_id: first,
+        field: "item_name",
+        before_value: "Apples",
+        after_value: "Pears",
+      },
+      {
+        operation: 3,
+        receipt_id: receiptId,
+        item_id: second,
+        field: "item_name",
+        before_value: "Adjustment",
+        after_value: "Coupon",
+      },
+    ]);
   }).pipe(Effect.provide(HttpDatabaseLive)),
 );
 
@@ -1439,8 +1480,9 @@ it.effect("records each changed receipt field and item rename, grouped per row u
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     const receiptId = yield* repo.insert(receiptInput);
-    const other = yield* repo.insert(receiptInput);
-    const [apples, adjustment] = yield* itemIds(receiptId);
+    // An unrelated receipt, so the whole-table history checks also show isolation.
+    yield* repo.insert(receiptInput);
+    const [apples] = yield* itemIds(receiptId);
     expect(yield* editHistory).toEqual([]);
 
     yield* repo.update(receiptId, {
@@ -1489,13 +1531,6 @@ it.effect("records each changed receipt field and item rename, grouped per row u
         ORDER BY history.id
       `,
     ).toEqual([{ matches_update: false }, { matches_update: true }]);
-    expect(Option.getOrThrow(yield* repo.findById(receiptId)).items.map(({ id }) => id)).toEqual([
-      apples,
-      adjustment,
-    ]);
-    expect(
-      yield* sql`SELECT count(*)::int AS count FROM receipt_edit_history WHERE receipt_id = ${other}`,
-    ).toEqual([{ count: 0 }]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -1605,13 +1640,12 @@ it.effect("records direct SQL edits per row update in any session date style and
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("rolls back edits and history together on failures, rollbacks and savepoints", () =>
+it.effect("rolls back edits whose history cannot be recorded, including within savepoints", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     const receiptId = yield* insertScannedReceipt;
     const [apples] = yield* itemIds(receiptId);
-    yield* sql`ALTER TABLE receipts ADD CONSTRAINT reject_store CHECK (store_name <> 'Rejected')`;
     // Lets an edit itself succeed while recording its history fails.
     yield* sql`
       ALTER TABLE receipt_edit_history
@@ -1628,26 +1662,11 @@ it.effect("rolls back edits and history together on failures, rollbacks and save
     const persistenceError = "GohoServer.ReceiptRepository.PersistenceError";
     const attempts: ReadonlyArray<readonly [Effect.Effect<unknown, { _tag: string }>, string]> = [
       [
-        repo.update(receiptId, { receiptDate: "2024-09-02", storeName: "Rejected" }),
-        persistenceError,
-      ],
-      [
         repo.update(receiptId, { receiptDate: "2024-09-02", category: "Unrecordable" }),
         persistenceError,
       ],
       [repo.updateItem(receiptId, apples!, { name: "Unrecordable" }), persistenceError],
       [sql`UPDATE receipts SET category = 'Snacks', store_name = 'Unrecordable'`, "SqlError"],
-      [
-        sql.withTransaction(
-          repo
-            .update(receiptId, { storeName: "Corner Store" })
-            .pipe(
-              Effect.andThen(repo.updateItem(receiptId, apples!, { name: "Pears" })),
-              Effect.andThen(new LaterStepFailed()),
-            ),
-        ),
-        "GohoServer.Test.LaterStepFailed",
-      ],
     ];
     for (const [attempt, tag] of attempts) {
       const result = yield* Effect.result(attempt);
@@ -1739,55 +1758,4 @@ it.effect("deletes edit history with its receipt or item and keeps other history
       },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
-);
-
-it.effect(
-  "records HTTP corrections against their receipt and item, and nothing for rejections",
-  () =>
-    Effect.gen(function* () {
-      const receiptId = yield* insertScannedReceipt;
-      const client = yield* Client.make("");
-      const { data: original } = yield* client.receipts.get({ params: { receiptId } });
-      const [first] = original.items.map(({ id }) => id);
-
-      for (const [url, payload, status] of [
-        [`/receipts/${receiptId}`, { storeName: "Corner Store", total: "1" }, 400],
-        [`/receipts/${receiptId}/items/${first}`, { name: " " }, 400],
-        ["/receipts/999", { category: "Snacks" }, 404],
-        [`/receipts/${receiptId}/items/9223372036854775807`, { name: "Pears" }, 404],
-      ] as const) {
-        const response = yield* HttpClient.patch(url, { body: yield* HttpBody.json(payload) });
-        expect(response.status, url).toBe(status);
-      }
-      expect(yield* editHistory).toEqual([]);
-
-      const corrected = yield* client.receipts.patch({
-        params: { receiptId },
-        payload: { storeName: "Corner Store", category: original.category },
-      });
-      expect(corrected).toEqual({ data: { ...original, storeName: "Corner Store" } });
-      const renamed = yield* client.receipts.patchItem({
-        params: { receiptId, itemId: first! },
-        payload: { name: "Pears" },
-      });
-      expect(renamed).toEqual({ data: { ...original.items[0], name: "Pears" } });
-      expect(yield* editHistory).toEqual([
-        {
-          operation: 1,
-          receipt_id: receiptId,
-          item_id: null,
-          field: "store_name",
-          before_value: "Example Store",
-          after_value: "Corner Store",
-        },
-        {
-          operation: 2,
-          receipt_id: receiptId,
-          item_id: first,
-          field: "item_name",
-          before_value: "Apples",
-          after_value: "Pears",
-        },
-      ]);
-    }).pipe(Effect.provide(HttpDatabaseLive)),
 );
