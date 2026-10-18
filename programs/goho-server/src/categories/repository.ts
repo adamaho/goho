@@ -42,7 +42,7 @@ export interface Interface {
    * when none exists. A created category joins the caller's transaction and rolls
    * back with it; reusing a category leaves its row unchanged.
    */
-  readonly resolve: (name: string) => Effect.Effect<CategoryId, PersistenceError>;
+  readonly findOrCreate: (name: string) => Effect.Effect<CategoryId, PersistenceError>;
 }
 
 /**
@@ -99,7 +99,7 @@ export const layer = Layer.effect(
     // Looking up first keeps reuse from consuming identity values. When a
     // concurrent transaction commits the same name after that lookup, the insert
     // does nothing and a new statement sees the committed row.
-    const resolve = Effect.fn("@goho/CategoryRepository.resolve")(
+    const findOrCreate = Effect.fn("@goho/CategoryRepository.findOrCreate")(
       function* (name: string) {
         const existing = yield* findId(name);
         if (Option.isSome(existing)) return existing.value.id;
@@ -108,9 +108,9 @@ export const layer = Layer.effect(
         const committed = yield* findId(name).pipe(Effect.flatMap(Effect.fromOption));
         return committed.id;
       },
-      Effect.mapError((cause) => new PersistenceError({ operation: "resolve", cause })),
+      Effect.mapError((cause) => new PersistenceError({ operation: "findOrCreate", cause })),
     );
 
-    return Service.of({ listNames, resolve });
+    return Service.of({ findOrCreate, listNames });
   }),
 );

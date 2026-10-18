@@ -278,7 +278,7 @@ export const layer = Layer.effect(
       function* (receipt: CreateReceiptRequest) {
         return yield* sql.withTransaction(
           Effect.gen(function* () {
-            const categoryId = yield* categories.resolve(receipt.category);
+            const categoryId = yield* categories.findOrCreate(receipt.category);
             const { id } = yield* insertReceiptRow({ ...receipt, categoryId });
             yield* insertItemRows(
               Array.map(receipt.items, (item, position) => ({
@@ -348,7 +348,9 @@ export const layer = Layer.effect(
               // Locking first returns a missing receipt before its category can be created.
               if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
               const categoryChange =
-                category === undefined ? {} : { categoryId: yield* categories.resolve(category) };
+                category === undefined
+                  ? {}
+                  : { categoryId: yield* categories.findOrCreate(category) };
               yield* updateReceiptRow({ receiptId, changes: { ...fields, ...categoryChange } });
             }
             return yield* readReceipt(receiptId);

@@ -45,7 +45,7 @@ const dependencies = (options: {
       : Layer.succeed(Transaction.Service, { run: options.transaction }),
     Layer.succeed(CategoryRepository.Service, {
       listNames: options.categoryNames ?? Effect.succeed([]),
-      resolve: () => Effect.die("Unexpected category resolution"),
+      findOrCreate: () => Effect.die("Unexpected category creation"),
     }),
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
