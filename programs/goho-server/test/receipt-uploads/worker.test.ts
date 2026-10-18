@@ -2,10 +2,11 @@ import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { type CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
-import { Effect, Fiber, Layer, Ref, Schema } from "effect";
+import { Effect, Fiber, Layer, Ref, Result, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
+import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
@@ -29,6 +30,8 @@ const upload: ReceiptUpload = {
 
 const dependencies = (options: {
   readonly currency?: string;
+  readonly categoryNames?: CategoryRepository.Interface["listNames"];
+  readonly transaction?: Transaction.Interface["run"];
   readonly generateObject?: Ai.Interface["generateObject"];
   readonly insertReceipt?: ReceiptRepository.Interface["insert"];
   readonly storageGet?: FileStorage.Interface["get"];
@@ -37,7 +40,13 @@ const dependencies = (options: {
   readonly markFailed?: ReceiptUploadRepository.Interface["markFailed"];
 }) =>
   Layer.mergeAll(
-    Transaction.layerTest,
+    options.transaction === undefined
+      ? Transaction.layerTest
+      : Layer.succeed(Transaction.Service, { run: options.transaction }),
+    Layer.succeed(CategoryRepository.Service, {
+      listNames: options.categoryNames ?? Effect.succeed([]),
+      resolve: () => Effect.die("Unexpected category resolution"),
+    }),
     Layer.succeed(FileStorage.Service, {
       put: () => Effect.die("Unexpected storage.put call"),
       get: options.storageGet ?? (() => Effect.succeed(new Uint8Array([1, 2, 3]))),
@@ -129,6 +138,64 @@ it.effect("keeps the original upload date as extraction context when a job is re
     expect(observed).toHaveLength(1);
     expect(observed[0]).toContain(upload.createdAt);
     expect(observed[0]).not.toContain("2030-01-01");
+  }),
+);
+
+it.effect("offers current category names to extraction before the save transaction", () =>
+  Effect.gen(function* () {
+    for (const [names, guidance] of [
+      [
+        ["groceries", "household"],
+        'Existing categories, as a JSON array: ["groceries","household"]',
+      ],
+      [[], "There are no existing categories yet."],
+    ] as const) {
+      const events = yield* Ref.make<ReadonlyArray<string>>([]);
+      const record = (event: string) => Ref.update(events, (values) => [...values, event]);
+      yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+        Effect.provide(
+          dependencies({
+            categoryNames: record("categories").pipe(Effect.as(names)),
+            generateObject: ({ prompt, schema }) =>
+              record(JSON.stringify(prompt)).pipe(
+                Effect.andThen(Schema.decodeUnknownEffect(schema)(parsedReceipt)),
+                Effect.orDie,
+              ),
+            transaction: (self) => record("transaction").pipe(Effect.andThen(self)),
+          }),
+        ),
+      );
+      const [categories, prompt, transaction] = yield* Ref.get(events);
+      expect([categories, transaction]).toEqual(["categories", "transaction"]);
+      expect(prompt).toContain(JSON.stringify(guidance));
+    }
+  }),
+);
+
+it.effect("fails without calling AI when category names cannot be read", () =>
+  Effect.gen(function* () {
+    const failures = yield* Ref.make<ReadonlyArray<string>>([]);
+    const result = yield* Worker.process(
+      { uploadId: upload.id },
+      { id: upload.id, attempts: 3 },
+    ).pipe(
+      Effect.provide(
+        dependencies({
+          categoryNames: Effect.fail(
+            new CategoryRepository.PersistenceError({ operation: "listNames", cause: "down" }),
+          ),
+          generateObject: () => Effect.die("Unexpected AI request"),
+          insertReceipt: () => Effect.die("Unexpected receipt creation"),
+          markFailed: (_, failureCode) =>
+            Ref.update(failures, (values) => [...values, failureCode]).pipe(
+              Effect.as({ ...upload, status: "failed", failureCode }),
+            ),
+        }),
+      ),
+      Effect.result,
+    );
+    expect(Result.isFailure(result) && result.failure.failureCode).toBe("internal_error");
+    expect(yield* Ref.get(failures)).toEqual(["internal_error"]);
   }),
 );
 

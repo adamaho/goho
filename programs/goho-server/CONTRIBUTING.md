@@ -58,8 +58,8 @@ repository behavior stay in this server.
 
 ### Receipts and items
 
-- `receipts` holds only receipt data: store, receipt date, category, subtotal,
-  tax, total, and currency.
+- `receipts` holds only receipt data: store, receipt date, required category
+  reference, subtotal, tax, total, and currency.
 - `receipt_items` stores each item's name and amount, linked to its receipt.
 - Purchase dates use `date`. Amounts use `numeric` without two-decimal rounding.
   Decimal strings keep the finite values the parser supplies; they cannot recover
@@ -77,6 +77,27 @@ item's order and is unique within its receipt; repeated item names are allowed.
 Migration 0010 filled IDs for existing rows without firing update triggers, so
 their timestamps kept their values.
 
+### Categories
+
+`categories` is one shared catalog of names, with a generated `bigint` identity
+`id`. Each receipt's required `category_id` references it; a referenced
+category cannot be deleted. The API still reads and writes a `category` string.
+
+- Names are stored as PostgreSQL's `lower(btrim(name))`. Database constraints
+  keep them unique, nonempty, trimmed, and lowercase. Case variants share one
+  category; different words such as `grocery` and `groceries` stay separate.
+- Saving a receipt finds its category by name or creates it in the same
+  transaction, so a failed or rolled-back save leaves no new category behind. A
+  PATCH for a missing receipt creates nothing. Reusing a category does not update it.
+- Categories stay when their receipts are deleted or moved to another category.
+- Upload processing reads the current names before each AI request and offers
+  them as suggestions; the model may return a new name. The stored extraction
+  keeps the category as the model returned it.
+- Migration 0012 built the catalog from existing receipt categories, trimming
+  space-padded legacy values from direct SQL, and linked
+  each receipt without firing update triggers, so timestamps stayed and no
+  history was added.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload
@@ -89,8 +110,8 @@ status change is what stops redelivered jobs from creating duplicate receipts.
 
 ### Record timestamps
 
-`receipts`, `receipt_items`, and `receipt_uploads` have required `created_at` and
-`updated_at` columns. They use `timestamptz`, which stores an absolute instant
+`categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
+`created_at` and `updated_at` columns. They use `timestamptz`, which stores an absolute instant
 whatever the session time zone.
 
 - New records default both timestamps to `now()`.
@@ -122,6 +143,8 @@ history yet.
 - Each updated receipt or item row gets its own operation ID, so fields changed
   together share one. A later update gets another, even in the same transaction.
 - Dates are stored as ISO `YYYY-MM-DD` text whatever the session's DateStyle.
+- A category change is a change of `category_id`, recorded with the old and new
+  category names. Rows recorded before migration 0012 keep their original case.
 - Inserts, same-value writes, parent timestamp updates from item changes, and
   other columns record nothing.
 - Migration 0011 adds no baseline for existing rows, so history starts with the

@@ -12,7 +12,7 @@ const systemPrompt = `Extract the receipt into the required structured receipt o
 - Associate item-specific sale, discount, coupon, and TPD/<item number> adjustment lines with the referenced item and subtract the adjustment from that item's price.
 - Do not return sale, discount, coupon, or adjustment lines as separate item entries. Ignore them when they cannot be associated with a specific item.
 - Apply item-specific adjustments before expanding quantities. When a quantity line shows a combined price, divide the adjusted total evenly across the expanded item entries so their prices sum to the adjusted line total.
-- Infer one transaction category from the purchased items.
+- Infer one transaction category from the purchased items. Reuse an existing category supplied with the image when one fits; otherwise return a new short category name.
 - Format the receipt date as YYYY-MM-DD.
 - Read numeric dates in the order printed by the merchant. Respect explicit format labels (YY/MM/DD, DD/MM/YY, MM/DD/YY), month names, and four-digit years before using contextual clues.
 - Two-digit years can appear FIRST. For example, 26/10/11 in YY/MM/DD format means 2026-10-11, not 2011-10-26. Do not assume the last number is always the year.
@@ -23,8 +23,14 @@ const systemPrompt = `Extract the receipt into the required structured receipt o
 - Preserve monetary values exactly as displayed on the receipt; do not convert currencies.
 - Ignore payment methods, loyalty identifiers, and unrelated barcodes unless they are needed to identify the store or receipt date.`;
 
+const categoryGuidance = (categories: ReadonlyArray<string>) =>
+  categories.length === 0
+    ? "There are no existing categories yet."
+    : `Existing categories, as a JSON array: ${JSON.stringify(categories)}`;
+
 /**
- * Extracts structured receipt data from one supported image.
+ * Extracts structured receipt data from one supported image. Existing category
+ * names are suggestions; the model may return a new one.
  *
  * @category workflows
  * @since 0.1.0
@@ -34,6 +40,7 @@ export const extract = Effect.fn("@goho/Receipts.extract")(function* (input: {
   readonly fileName: string;
   readonly contentType: string;
   readonly uploadedAt: string;
+  readonly categories: ReadonlyArray<string>;
 }) {
   const ai = yield* Ai.Service;
   return yield* ai.generateObject({
@@ -48,6 +55,7 @@ export const extract = Effect.fn("@goho/Receipts.extract")(function* (input: {
             type: "text",
             text: `Extract the structured receipt data from this image. The receipt was uploaded at ${input.uploadedAt}. Use this only as context for ambiguous numeric dates.`,
           },
+          { type: "text", text: categoryGuidance(input.categories) },
           {
             type: "file",
             mediaType: input.contentType,

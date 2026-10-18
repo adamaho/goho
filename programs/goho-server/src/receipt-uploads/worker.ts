@@ -2,6 +2,7 @@ import { Ai } from "@goho/core";
 import { ReceiptUploadFailureCode } from "@goho/goho-api/receipt-uploads";
 import { Effect, Layer, Schedule, Schema } from "effect";
 
+import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as ReceiptExtraction from "#src/receipts/extraction.ts";
@@ -32,6 +33,7 @@ export const process: (
   void,
   ProcessingError,
   | Ai.Service
+  | CategoryRepository.Service
   | FileStorage.Service
   | ReceiptRepository.Service
   | ReceiptUploadRepository.Service
@@ -44,6 +46,7 @@ export const process: (
     const uploads = yield* ReceiptUploadRepository.Service;
     const storage = yield* FileStorage.Service;
     const receipts = yield* ReceiptRepository.Service;
+    const categories = yield* CategoryRepository.Service;
     const transaction = yield* Transaction.Service;
 
     // A finished upload means another delivery already recorded its outcome.
@@ -64,11 +67,14 @@ export const process: (
     if (upload === null) return;
 
     const bytes = yield* storage.get(upload.fileId).pipe(failAs("storage_failed"));
+    // Read on every attempt so the model sees categories saved since the last one.
+    const categoryNames = yield* categories.listNames.pipe(failAs("internal_error"));
     const parsed = yield* ReceiptExtraction.extract({
       uploadedAt: upload.createdAt,
       bytes,
       fileName: upload.fileName,
       contentType: upload.contentType,
+      categories: categoryNames,
     }).pipe(failAs("processing_failed"));
     const receipt = ReceiptModel.prepareReceipt(parsed);
     const extraction = { version: ReceiptModel.extractionVersion, payload: parsed };

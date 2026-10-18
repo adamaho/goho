@@ -10,6 +10,7 @@ import {
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 
+import * as CategoryRepository from "./categories/repository.ts";
 import * as Database from "./database/client.ts";
 import * as Transaction from "./database/transaction.ts";
 import * as FileStorage from "./file-storage.ts";
@@ -22,7 +23,11 @@ import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as Ai from "./services/ai.ts";
 
-const RepositoryLive = ReceiptRepository.layer.pipe(Layer.provide(Database.layer));
+const CategoryRepositoryLive = CategoryRepository.layer.pipe(Layer.provide(Database.layer));
+
+const RepositoryLive = ReceiptRepository.layer.pipe(
+  Layer.provide([CategoryRepositoryLive, Database.layer]),
+);
 
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
   Layer.provide(Database.layer),
@@ -55,6 +60,7 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
 const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
   Layer.provide([
     Ai.layer,
+    CategoryRepositoryLive,
     FileStorageLive,
     ReceiptUploadQueueLive,
     ReceiptUploadRepositoryLive,
