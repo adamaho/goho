@@ -56,6 +56,10 @@ follow the [CLI setup](../goho-cli/README.md).
 Use the shared Postgres layer from `@goho/core`. Receipt tables, migrations, and
 repository behavior stay in this server.
 
+Return the same record schema from create and update operations as from the
+corresponding find operation. Define the schema once and share it across those
+operations.
+
 ### Receipts and items
 
 - `receipts` holds only receipt data: store, receipt date, required category

@@ -278,8 +278,8 @@ export const layer = Layer.effect(
       function* (receipt: CreateReceiptRequest) {
         return yield* sql.withTransaction(
           Effect.gen(function* () {
-            const categoryId = yield* categories.findOrCreate(receipt.category);
-            const { id } = yield* insertReceiptRow({ ...receipt, categoryId });
+            const category = yield* categories.findOrCreate(receipt.category);
+            const { id } = yield* insertReceiptRow({ ...receipt, categoryId: category.id });
             yield* insertItemRows(
               Array.map(receipt.items, (item, position) => ({
                 receipt_id: id,
@@ -350,7 +350,7 @@ export const layer = Layer.effect(
               const categoryChange =
                 category === undefined
                   ? {}
-                  : { categoryId: yield* categories.findOrCreate(category) };
+                  : { categoryId: (yield* categories.findOrCreate(category)).id };
               yield* updateReceiptRow({ receiptId, changes: { ...fields, ...categoryChange } });
             }
             return yield* readReceipt(receiptId);

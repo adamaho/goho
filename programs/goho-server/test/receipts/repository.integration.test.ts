@@ -651,6 +651,10 @@ it.effect("reuses one lowercase category per name and keeps categories without r
     yield* repo.insert({ ...receiptInput, category: "GROCERIES" });
     // Reuse is a lookup: the category row, including its timestamps, stays as created.
     expect(yield* catalog).toEqual(created);
+    // Finding returns the stored record with its canonical name.
+    expect([yield* categories.findOrCreate("  GroCeries ")]).toEqual(
+      created.map(({ id, name }) => ({ id, name })),
+    );
 
     // Distinct words stay separate; concurrent saves of one new name share a category.
     yield* Effect.all(
@@ -666,8 +670,15 @@ it.effect("reuses one lowercase category per name and keeps categories without r
       "snacks",
     ]);
 
+    // Creating returns the same record shape, with the name trimmed and lowercased.
+    const household = yield* categories.findOrCreate(" HouseHold ");
+    expect(household.name).toBe("household");
+    expect(yield* sql`SELECT id, name FROM categories WHERE id = ${household.id}`).toEqual([
+      household,
+    ]);
     yield* repo.update(first, { category: "Household" });
     for (const { id } of yield* repo.list) yield* repo.delete(id);
+    expect(yield* categories.findOrCreate("household")).toEqual(household);
     expect(yield* categories.listNames).toEqual(["groceries", "grocery", "household", "snacks"]);
     expect((yield* catalog)[0]).toEqual(created[0]);
   }).pipe(Effect.provide(DatabaseLive)),
