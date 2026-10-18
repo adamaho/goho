@@ -114,20 +114,22 @@ remains the item's order and is unique within its receipt. Repeated item names
 are allowed. Migration 0010 adds the identity column, which fills existing rows
 without firing update triggers, so item and receipt timestamps keep their values.
 
-`receipt_edit_history` records saved corrections to a receipt's store name,
-purchase date, or category, and to an item's name. Update triggers capture PATCH
-requests and direct SQL alike, writing one row per field whose value actually
-changes. Each row holds the field, its before and after values, the receipt ID,
-the item ID for item names, an `edited_at` instant matching the record's
-`updated_at`, and an operation ID. Every updated receipt or item row gets its own
+`receipt_history` records saved corrections to a receipt's store name, purchase
+date, or category. `receipt_item_history` records changes to an item's name as
+field `item_name`. Update triggers capture PATCH requests and direct SQL alike,
+writing one row per field whose value actually changes. Each row holds the field,
+its before and after values, the required receipt ID, an `edited_at` instant
+matching the record's `updated_at`, and an operation ID. Item history rows also
+require the item ID; their receipt ID is the item's receipt at edit time. Every
+updated receipt or item row gets its own
 operation ID, so fields changed together share one; a later update, even in the
 same transaction, gets another. Dates are stored as ISO `YYYY-MM-DD` text
 whatever the session's DateStyle. Inserts, same-value writes, timestamp touches
 from item changes, and other columns record nothing. Migration 0011 adds no
 baseline for existing rows, so history starts with the next edit. History rows
 commit or roll back with their edit, and a failure to record one fails the edit.
-Deleting a receipt deletes its history; deleting an item deletes that item's
-history. Current receipt and item rows remain the source of truth, and nothing
+Deleting a receipt deletes its receipt and item history; deleting an item
+deletes that item's history. Current receipt and item rows remain the source of truth, and nothing
 reads this history yet.
 
 ### Running migrations locally
