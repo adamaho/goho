@@ -1,18 +1,18 @@
-package com.goho.ui.components
+package com.adamaho.goho.ui.components
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import com.goho.ui.theme.GohoColors
+import com.adamaho.goho.theme.GohoColors
 
 /** Colour is independent of the numbered button finish. */
-enum class GohoButtonColor {
+enum class ButtonColor {
     Purple,
     Red,
     Grey,
 }
 
 @Immutable
-internal data class GohoButtonPalette(
+internal data class ButtonPalette(
     val fill: Color,
     val pressed: Color,
     val content: Color,
@@ -21,10 +21,10 @@ internal data class GohoButtonPalette(
     val shadow: Color,
 )
 
-internal fun GohoColors.buttonPalette(color: GohoButtonColor): GohoButtonPalette =
+internal fun GohoColors.buttonPalette(color: ButtonColor): ButtonPalette =
     when (color) {
-        GohoButtonColor.Purple ->
-            GohoButtonPalette(
+        ButtonColor.Purple ->
+            ButtonPalette(
                 buttonPrimary,
                 buttonPrimaryPressed,
                 onButtonPrimary,
@@ -32,8 +32,8 @@ internal fun GohoColors.buttonPalette(color: GohoButtonColor): GohoButtonPalette
                 buttonInnerRing,
                 accentShadow,
             )
-        GohoButtonColor.Red ->
-            GohoButtonPalette(
+        ButtonColor.Red ->
+            ButtonPalette(
                 danger,
                 dangerPressed,
                 onDanger,
@@ -41,8 +41,8 @@ internal fun GohoColors.buttonPalette(color: GohoButtonColor): GohoButtonPalette
                 dangerInnerRing,
                 dangerShadow,
             )
-        GohoButtonColor.Grey ->
-            GohoButtonPalette(
+        ButtonColor.Grey ->
+            ButtonPalette(
                 buttonSecondary,
                 buttonSecondaryPressed,
                 textPrimary,

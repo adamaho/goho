@@ -17,7 +17,8 @@ List and details receipt options and deletion use the same supported server endp
 
 - Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ReceiptCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
-- A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed.
+- Processed rows show their display-only category tag beneath the price, aligned right: required icon, visible label, 4dp corners and the shared colour mapping. Blank categories omit the tag. Long names wrap; large-text/narrow layouts stack the right-aligned amount and tag without squeezing the date. Tapping a category still opens its receipt.
+- A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
 - Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
 - Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
 - Leave bottom padding in the list so the last row can scroll clear of the Scan button.
@@ -31,7 +32,7 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 
 ## 2. Receipt details (processed receipts only)
 
-**Top bar** (status bar inset, 56 tall, `screenMargin` sides): variant 2/Grey `GohoIconButton` for back on the left, matching round overflow button (`MoreHoriz`, content description "More options") on the right. No title. Draw the top bar above the scroll body’s header fade so icon shadows soften naturally without a horizontal cutoff beneath the buttons.
+**Top bar** (status bar inset, 56 tall, `screenMargin` sides): variant 2/Grey `IconButton` for back on the left, matching round overflow button (`MoreHoriz`, content description "More options") on the right. No title. Draw the top bar above the scroll body’s header fade so icon shadows soften naturally without a horizontal cutoff beneath the buttons.
 
 **Hero** (12 below the bar, `textInset` sides)
 
@@ -48,7 +49,7 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 
 **Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
 
-- Merchant, Date ("Sep 24, 2026"), Category when present, Subtotal and Tax. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
+- Merchant, Date ("Sep 24, 2026"), Category when present (using the same `ReceiptCategoryTag` as the list), Subtotal and Tax. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
 
 The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
@@ -65,7 +66,7 @@ Opened by tapping the photo area on the details screen. Mockups: `photo-viewer.p
 
 - Always dark, in light mode too: wrap the screen in `GohoTheme(darkTheme = true)`.
 - Full screen, edge to edge, background `photoWellEdge`. The photo is drawn with `ContentScale.Fit`, centered, with no frame or rounded corners.
-- One control: a close button (GohoPhotoControlButton with `Icons.Rounded.Close`, content description "Close photo") at the top left, 16dp from the left edge and 4dp below the status bar inset.
+- One control: a close button (PhotoControlButton with `Icons.Rounded.Close`, content description "Close photo") at the top left, 16dp from the left edge and 4dp below the status bar inset.
 - System bars: transparent with light icons.
 - The photo's content description is "Receipt photo, {merchant}" (or "Receipt photo" when there's no merchant).
 
@@ -104,12 +105,12 @@ Shown after the ML Kit document scanner returns a capture. Replaces the current 
 
 **Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the available space above the footer. The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
 
-**Status line:** show upload progress or an upload failure only. The ready state has no status line or warning about the receipt not being uploaded. This approved refinement supersedes the status line in the supplied mockups.
+**Status tag:** use `Tag` for the existing upload progress/submitted copy (Purple, scan icon, text shimmer) or upload failure (Orange, warning icon). Keep the polite status announcement. The ready state has no status line or warning about the receipt not being uploaded. This approved refinement supersedes the status line in the supplied mockups.
 
 **Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
 
-- GohoActionButton (`Primary`) "Upload receipt" with an upload icon. Keeps its current behavior.
-- GohoActionButton (`Secondary`) "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
+- ActionButton (`Primary`) "Upload receipt" with an upload icon. Keeps its current behavior.
+- ActionButton (`Secondary`) "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
 
 After a successful upload, return to All at scroll position zero. Reset again when the refreshed list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. Failed uploads and cancelled scans do not reset scrolling.
 
@@ -117,14 +118,14 @@ While an upload is in progress, keep the existing behavior; if the button needs 
 
 ## 5. Receipt options sheet and delete confirmation
 
-One GohoSheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed row. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
+One Sheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed row. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
 
 **Receipt header** (identical in both states; it never moves or changes)
 
 - A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
 - Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
 - Store name: 18/24 SemiBold, −1.5%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
-- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (currency symbol with no trailing code), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the "Not processed" pill, an 8dp gap, then the date or time ("Today, 8:14 AM").
+- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (currency symbol with no trailing code), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the Orange warning-icon "Not processed" tag, an 8dp gap, then the date or time ("Today, 8:14 AM").
 
 **Menu state** (traditional list items)
 
@@ -133,7 +134,7 @@ One GohoSheet, opened from the details screen's overflow button, by pressing and
 
 **Confirmation state** (same sheet; never a second sheet)
 
-- 18dp below the header, with 20dp side padding: GohoActionButton (`Destructive`) "Delete receipt" (no icon), then GohoActionButton (`Secondary`) "Cancel", 10dp apart, 20dp bottom padding. Omit the confirmation heading and description, including where supplied mockups show them.
+- 18dp below the header, with 20dp side padding: ActionButton (`Destructive`) "Delete receipt" (no icon), then ActionButton (`Secondary`) "Cancel", 10dp apart, 20dp bottom padding. Omit the confirmation heading and description, including where supplied mockups show them.
 - Announce the pane as "Delete receipt"; keyboard focus moves to Cancel when confirmation opens.
 
 **Behavior**
@@ -164,7 +165,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 **Initial receipts loading**
 
 - Reuse the existing section heading, ReceiptCard, four ReceiptRows, thumbnails and text. Pass absent data while loading; do not create fake receipt models or duplicate the row layout.
-- Wrap the group in `GohoSkeletonScope` and apply `Modifier.gohoSkeleton` to the existing text and image elements. After 200ms, render skeletonBase/skeletonShimmer masks; preserve measured typography, row padding and large-text stacking. Keep the Receipts header and Scan available.
+- Wrap the group in `SkeletonScope` and apply `Modifier.skeleton` to the existing text and image elements. After 200ms, render skeletonBase/skeletonShimmer masks; preserve measured typography, row padding and large-text stacking. Keep the Receipts header and Scan available.
 - Expose one “Loading receipts…” polite live region with indeterminate progress. Placeholder descendants have no text or click semantics. Do not replace loaded content during background refreshes. Preserve the existing error/retry flow.
 
 **Receipt detail loading**
@@ -191,7 +192,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 - Header shows only the “Receipts” title, with no filters. The shared Scan button stays available because scanning does not require the server.
 - Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
-- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width GohoActionButton (`Primary`) "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
+- Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width ActionButton (`Primary`) "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
 - Announce the status content as a polite live region when it appears.
 
 ## Pull-to-refresh on the receipts list
@@ -202,7 +203,7 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 - Preserve the selected filter and mounted rows while refreshing. Do not replace existing content with skeletons or move the header and Scan. Loading an initial list continues to use skeletons, while automatic polling stays quiet.
 - Reserve space below the header as the user pulls, so the 44dp indicator never covers a receipt row. The lavender arc fills to a complete 360° ring at the 80dp threshold and gives one GestureThresholdActivate haptic per pull, even if the finger moves back and forth across the threshold. On release, keep the indicator in that space and rotate a 270° arc once per second for the whole request. Keep the spinning indicator visible for at least 200ms from refresh start, then give it a small 108% anticipation bounce and shrink it to zero in place over 220ms, fading as it shrinks. On appearance, scale from zero through 108% to 100% over 180ms. Keep the reserved space until the indicator is invisible, then settle the list; never slide a completed indicator upward. Cancelled, below-threshold pulls still retract with the finger. Requests longer than 200ms add no extra wait. Apply the same minimum before showing a failure; update receipt data immediately. On failure, morph the ring into an attention-orange outlined warning triangle with an exclamation mark over 240ms; hold it for three seconds before the same bounce-to-zero dismissal. Keep Scan anchored as the content area changes height. Disable spin and snap the morph and dismissal when animations are disabled. Use the existing surface, accent/attention, pill shape and soft 2dp shadow tokens.
 - Do not start another request while a refresh is running. An explicit refresh can join an in-flight request; retain the existing deletion-revision guard so stale responses cannot restore deleted rows.
-- On failure after a successful load, keep cached receipts and filter state. Show “Couldn’t refresh receipts. Your previous list is still here.” and a shared Secondary GohoActionButton labelled “Try again”. Clear the notice on retry; restore it on failure. Initial load failures retain the existing full error state.
+- On failure after a successful load, keep cached receipts and filter state. Show “Couldn’t refresh receipts. Your previous list is still here.” and a shared Secondary ActionButton labelled “Try again”. Clear the notice on retry; restore it on failure. Initial load failures retain the existing full error state.
 - Expose a “Refresh receipts” accessibility action on the content region and a single “Refreshing receipts…” indeterminate progress announcement on the indicator. The gesture cue changes from “Pull to refresh” to “Release to refresh”. Failure replaces the progress semantics with a polite “Refresh failed” announcement.
 - Review captures: `pull-refresh-light.png`, `pull-refresh-empty-dark.png`, `pull-refresh-error-light.png`, and `pull-refresh-large-text.png` in `assets/mockups/`.
 
@@ -210,6 +211,6 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 
 All and Needs attention share one receipt data source and row layout, presented as two pages in a Compose HorizontalPager. Swipe left to reveal Needs attention and right to reveal All. Content tracks the finger throughout the drag, with both pages visible halfway; use the native distance/velocity settling behaviour and never wrap at the ends. Keep the adjacent page composed so its content is ready before the swipe finishes. Keep a separate vertical list and status scroll position on each page rather than resetting on tab changes.
 
-Keep the header and one Scan button mounted outside the pager. Anchor Scan to the window’s bottom-right safe area in every state, including the first cold-start frame; ignore outgoing keyboard insets on this screen and respect system bars and display cutouts. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
+Keep the header and one Scan button mounted outside the pager. Anchor Scan 24dp from the end edge and 28dp above the window’s bottom safe area in every state, including the first cold-start frame; ignore outgoing keyboard insets on this screen and respect system bars and display cutouts. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
 
 Wrap the pager in the shared pull-to-refresh container so both pages refresh the same data with one indicator. Vertical scrolling, refresh, and receipt taps/holds retain their gestures. Disable page swipes during initial loading, full load errors, manual refresh and open receipt options. Background polling keeps pages interactive. Keep Scan available across loading, populated, empty and error states, with enough bottom space for list rows and status content to clear it. Scan only disables while the scanner is opening.

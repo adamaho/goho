@@ -82,6 +82,7 @@ object GohoSpacing {
     val detailRowHeight = 47.dp
     val sectionTop = 24.dp
     val sectionLabelBottom = 8.dp
+    val fabMarginEnd = 24.dp
     val fabBottom = 28.dp
     val hairline = 1.dp
     val headerHeight = 44.dp
@@ -89,6 +90,12 @@ object GohoSpacing {
     val headerFadeHeight = 12.dp
     val lineGap = 5.dp
     val contentGap = 12.dp
+    val tagHeight = 24.dp
+    val tagHorizontal = 8.dp
+    val tagVertical = 4.dp
+    val tagIcon = 14.dp
+    val tagIconGap = 5.dp
+    val tagMaxWidth = 160.dp
     val pillHeight = 22.dp
     val pillHorizontal = 9.dp
     val skeletonWidth = 52.dp

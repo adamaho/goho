@@ -18,14 +18,16 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
-import com.adamaho.goho.ui.components.GohoActionButton
-import com.adamaho.goho.ui.components.GohoButtonColor
+import com.adamaho.goho.ui.components.ActionButton
+import com.adamaho.goho.ui.components.ButtonColor
+import com.adamaho.goho.ui.components.Tag
 import com.adamaho.goho.ui.components.UploadIcon
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -126,15 +128,21 @@ internal fun ScanPreviewContent(
                     UploadStatus.Failed -> R.string.upload_failed
                 }
             if (statusText != null) {
-                Text(
-                    stringResource(statusText),
-                    style = GohoTheme.type.meta,
+                Tag(
+                    label = stringResource(statusText),
+                    icon =
+                        painterResource(
+                            if (uploadStatus == UploadStatus.Failed) R.drawable.ic_tag_failed
+                            else R.drawable.ic_tag_processing
+                        ),
                     color =
-                        if (uploadStatus == UploadStatus.Failed) c.attention else c.textTertiary,
+                        if (uploadStatus == UploadStatus.Failed) TagColor.Orange
+                        else TagColor.Purple,
                     modifier =
                         Modifier.padding(horizontal = GohoSpacing.textInset)
                             .padding(top = GohoSpacing.contentGap)
                             .semantics { liveRegion = LiveRegionMode.Polite },
+                    shimmer = busy,
                 )
             }
             Column(
@@ -142,7 +150,7 @@ internal fun ScanPreviewContent(
                     .padding(top = GohoSpacing.previewFooterTop),
                 verticalArrangement = Arrangement.spacedBy(GohoSpacing.buttonGap),
             ) {
-                GohoActionButton(
+                ActionButton(
                     stringResource(
                         if (busy) R.string.upload_busy
                         else if (uploadStatus == UploadStatus.Failed) R.string.upload_retry
@@ -152,11 +160,11 @@ internal fun ScanPreviewContent(
                     enabled = !busy,
                     icon = { UploadIcon() },
                 )
-                GohoActionButton(
+                ActionButton(
                     stringResource(R.string.scan_cancel),
                     onCancelClick,
                     variant = 2,
-                    color = GohoButtonColor.Grey,
+                    color = ButtonColor.Grey,
                     enabled = !busy,
                 )
             }

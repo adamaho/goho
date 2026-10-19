@@ -23,7 +23,7 @@ fun ReceiptsConnectionErrorState(
         animateEntrance = animateEntrance,
         announcePolitely = true,
     ) {
-        GohoActionButton(
+        ActionButton(
             text = if (showProgress) retrying else retry,
             onClick = onRetry,
             enabled = !isRetrying,

@@ -14,7 +14,7 @@ import com.adamaho.goho.R
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.ReceiptOptionsSheet
-import com.adamaho.goho.ui.components.ReceiptStatusPill
+import com.adamaho.goho.ui.components.ReceiptUploadTag
 import com.adamaho.goho.ui.components.receiptMoneyText
 import java.time.LocalDate
 import java.time.ZoneId
@@ -61,7 +61,7 @@ internal fun ReceiptOptions(
                     horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sectionLabelBottom),
                     verticalArrangement = Arrangement.spacedBy(GohoSpacing.sheetSummaryLineGap),
                 ) {
-                    ReceiptStatusPill(processing = false)
+                    ReceiptUploadTag(processing = false)
                     Text(
                         dateLabel,
                         style = GohoTheme.type.listRow,

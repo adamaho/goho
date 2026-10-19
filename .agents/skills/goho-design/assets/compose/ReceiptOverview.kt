@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.buildAnnotatedString
@@ -148,7 +149,7 @@ fun ReceiptOverview(
                 locale,
                 showFilters = !state.error && state.hasLoaded,
             )
-            GohoPullToRefresh(
+            PullToRefresh(
                 refreshing = state.refreshing,
                 failed = state.refreshError || state.error,
                 enabled = !state.loading && (state.hasLoaded || state.error),
@@ -205,7 +206,7 @@ fun ReceiptOverview(
             !isOpeningScanner,
             onScanClick,
             Modifier.align(Alignment.BottomEnd)
-                .padding(end = GohoSpacing.screenMargin, bottom = GohoSpacing.fabBottom),
+                .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom),
         )
     }
     optionsEntry?.let { entry ->
@@ -330,7 +331,7 @@ private fun ReceiptListPage(
                     item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
                 if (!state.hasLoaded && state.loading)
                     item("loading") {
-                        GohoSkeletonScope(loading = true) {
+                        SkeletonScope(loading = true) {
                             Column(
                                 Modifier.loadingSemantics(
                                     true,
@@ -421,7 +422,7 @@ private fun ReceiptSectionHeading(title: String) {
                     top = GohoSpacing.sectionTop,
                     bottom = GohoSpacing.sectionLabelBottom,
                 )
-                .gohoSkeleton(GohoSpacing.skeletonWidth)
+                .skeleton(GohoSpacing.skeletonWidth)
                 .semantics { heading() },
     )
 }
@@ -463,12 +464,12 @@ private fun ListNotice(message: String, action: String? = null, onAction: () -> 
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
         if (action != null)
-            GohoActionButton(
+            ActionButton(
                 action,
                 onAction,
                 modifier = Modifier.padding(top = GohoSpacing.contentGap),
                 variant = 2,
-                color = GohoButtonColor.Grey,
+                color = ButtonColor.Grey,
             )
     }
 }
@@ -593,21 +594,22 @@ private fun ReceiptRow(
             if (expanded) {
                 Text(
                     title,
-                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth),
+                    modifier = Modifier.skeleton(GohoSpacing.skeletonTitleWidth),
                     style = GohoTheme.type.rowTitle,
                     color =
                         if (entry?.status == ReceiptListStatus.Processed) c.textPrimary
                         else c.textSecondary,
                 )
-                ReceiptRowAmount(entry, locale)
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    ReceiptRowAmount(entry, locale)
+                }
+                ReceiptEntryTag(entry, Modifier.align(Alignment.End))
                 Text(
                     metadata,
-                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth),
+                    modifier = Modifier.skeleton(GohoSpacing.skeletonTitleWidth),
                     style = GohoTheme.type.meta,
                     color = c.textTertiary,
                 )
-                if (entry != null && entry.status != ReceiptListStatus.Processed)
-                    ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
             } else {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(GohoSpacing.contentGap),
@@ -615,7 +617,7 @@ private fun ReceiptRow(
                 ) {
                     Text(
                         title,
-                        modifier = Modifier.weight(1f).gohoSkeleton(fraction = 0.8f),
+                        modifier = Modifier.weight(1f).skeleton(fraction = 0.8f),
                         style = GohoTheme.type.rowTitle,
                         color =
                             if (entry?.status == ReceiptListStatus.Processed) c.textPrimary
@@ -633,15 +635,30 @@ private fun ReceiptRow(
                 ) {
                     Text(
                         metadata,
-                        modifier = Modifier.weight(1f).gohoSkeleton(fraction = 0.55f),
+                        modifier = Modifier.weight(1f).skeleton(fraction = 0.55f),
                         style = GohoTheme.type.meta,
                         color = c.textTertiary,
                     )
-                    if (entry != null && entry.status != ReceiptListStatus.Processed)
-                        ReceiptStatusPill(entry.status == ReceiptListStatus.Processing)
+                    ReceiptEntryTag(entry, Modifier.widthIn(max = GohoSpacing.tagMaxWidth))
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ReceiptEntryTag(entry: ReceiptListEntry?, modifier: Modifier = Modifier) {
+    when {
+        entry == null ->
+            Tag(
+                label = "",
+                icon = painterResource(R.drawable.ic_tag_other),
+                color = TagColor.Grey,
+                modifier = modifier.skeleton(GohoSpacing.skeletonWidth, block = true),
+            )
+        entry.status != ReceiptListStatus.Processed ->
+            ReceiptUploadTag(entry.status == ReceiptListStatus.Processing, modifier)
+        !entry.category.isNullOrBlank() -> ReceiptCategoryTag(entry.category, modifier)
     }
 }
 
@@ -662,7 +679,7 @@ private fun ReceiptRowAmount(entry: ReceiptListEntry?, locale: Locale) {
                 locale,
                 showCurrencyCode = true,
             ),
-            modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
+            modifier = Modifier.skeleton(GohoSpacing.skeletonWidth),
             style = GohoTheme.type.rowTitle,
             color = if (entry?.total == null) c.textTertiary else c.textPrimary,
         )

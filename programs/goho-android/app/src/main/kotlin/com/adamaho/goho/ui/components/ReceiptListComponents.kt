@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -69,34 +68,6 @@ fun ReceiptDivider() {
 }
 
 @Composable
-fun ReceiptStatusPill(processing: Boolean) {
-    val c = GohoTheme.colors
-    val fg = if (processing) c.onAccentContainer else c.attention
-    val bg = if (processing) c.accentContainer else c.attentionContainer
-    Box(
-        modifier =
-            Modifier.heightIn(min = GohoSpacing.pillHeight)
-                .clip(GohoShapes.pill)
-                .background(bg)
-                .padding(horizontal = GohoSpacing.pillHorizontal),
-        contentAlignment = Alignment.Center,
-    ) {
-        CenteredPillLabel(
-            stringResource(
-                if (processing) R.string.receipt_reading else R.string.receipt_not_processed
-            ),
-            style =
-                if (processing)
-                    GohoTheme.type.label.copy(
-                        brush = shimmerBrush(fg, lerpColor(fg, c.accentShimmer, 0.15f))
-                    )
-                else GohoTheme.type.label,
-            color = if (processing) Color.Unspecified else fg,
-        )
-    }
-}
-
-@Composable
 fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -105,9 +76,9 @@ fun ScanButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
     val description = stringResource(R.string.scan_receipt)
     Row(
         modifier
-            .gohoPress { if (enabled) progress else 0f }
+            .pressFeedback { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .gohoButtonSurface(c, GohoShapes.fab, p)
+            .buttonSurface(c, GohoShapes.fab, p)
             .clickable(
                 interactionSource = interaction,
                 indication = null,

@@ -4,13 +4,32 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Shared category and upload tags (October 19, 2026)
+
+These unedited native Goho Dev screenshots come from the Pixel 9 API 36 emulator (1080×2424px at 420dpi, except the compact captures below). The regular app rendered temporary, read-only sample API responses for the nine colours and upload states; no records were created or changed. The normal dev-server receipts were also checked. No separate preview activity, Android tests or test harness was added.
+
+- `receipt-tags-light.png`, `receipt-tags-dark.png`: Categories beneath the right-aligned price, required leading icons, Purple processing and Orange failure tags. These supersede the old fully rounded status pills in earlier screenshots.
+- `receipt-tags-more-light.png`, `receipt-tags-more-dark.png`: Remaining colours, the Grey fallback for a long unknown category, and no tag for a blank category. Long names wrap while the date retains space.
+- `receipt-tag-detail-light.png`, `receipt-tag-detail-dark.png`: The same Home icon/colour tag in Details. Tapping the list tag opened this receipt; it does not introduce a separate action.
+- `receipt-tag-failed-sheet-dark.png`: Tapping “Not processed” still opens receipt options; the sheet uses the same shared warning tag. The sheet was dismissed without deleting anything.
+- `receipt-tags-large-text-dark.png`, `receipt-tags-long-large-text-dark.png`: 320×640dp, 2× font scale, animations disabled (840×1680px). Labels wrap, icons remain present and rows scroll. The amount and tag stay right-aligned in the stacked layout. Processing-tag pixels were unchanged across two captures with animations disabled.
+- `receipt-tags-loading-light.png`: Existing list rows and their tag elements under the shared skeleton scope, with real server reads temporarily delayed. Scan remains at the fixed bottom/end inset.
+
+`Tag` is a display-only primitive requiring a Painter, label and one of nine `TagColor` values. Category and receipt-upload wrappers supply their existing labels and icon/colour mappings. See `references/components.md`, `references/tokens.md`, the mirrored Compose sources and `assets/icons/tags/README.md` for the API, measurements, palette and Lucide attribution. Scan preview's existing upload status copy also uses the component; that capture/upload interaction was not exercised in this screenshot session.
+
+Manual checks covered both palettes, all category colours, long/unknown and blank categories, tag-area navigation, failed-row options, narrow/large-text layout, static reduced-motion tags and initial skeleton loading. Android build, lint and Kotlin formatting passed. Older captures remain references for their named interactions or artwork; this section is the current tag reference.
+
+## Scan horizontal inset (October 18, 2026)
+
+`scan-inset-light.png` and `scan-inset-dark.png` are unedited Pixel 9 API 36 emulator captures (1080×2424px) of the loaded receipt list. Scan now sits 24dp from the end edge, 8dp farther inward than the 16dp receipt-card margin. Its bottom position remains 28dp above the navigation safe area. Manual bounds inspection confirmed the 8dp horizontal move with unchanged vertical bounds. These supersede the horizontal Scan placement in earlier captures; the cold-start captures below remain references for vertical anchoring.
+
 ## Cold-start Scan placement (October 18, 2026)
 
 `cold-start-loading-light.png` and `cold-start-loading-dark.png` are unedited Pixel 9 API 36 emulator captures (1080×2424px), with real dev-server reads temporarily delayed to expose initial loading. Scan remains at the bottom right while skeletons are visible. A cold launch from launcher search with the keyboard open reproduced the previous lift; frame captures after the fix keep Scan at the bottom before skeletons appear, during loading and after receipts arrive. The receipt screen uses system-bar and display-cutout insets without reserving outgoing keyboard space. The same position was checked in the error state. These are the current cold-start layout references.
 
 ## Shared icon buttons (October 17, 2026)
 
-`icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `GohoIconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. Dark variant 2 now joins the face directly to the border, without the inset dark ring seen in older captures. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
+`icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `IconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. Dark variant 2 now joins the face directly to the border, without the inset dark ring seen in older captures. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
 
 `buttons-continuous-border-dark.png` shows the same uninterrupted variant 2/Grey border on Cancel in the confirmation sheet. The dark inset ring has been removed from the shared surface for both round and labelled controls. Cancel was exercised without deleting the receipt.
 

@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 @Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, widthDp = 412, heightDp = 892)
 @Preview(name = "Large type", fontScale = 1.5f, widthDp = 412, heightDp = 892)
 @Composable
-fun GohoFoundationPreview() {
+fun FoundationPreview() {
     GohoTheme {
         val colors = GohoTheme.colors
         val type = GohoTheme.type

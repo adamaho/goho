@@ -21,7 +21,7 @@ private val LocalSkeleton = staticCompositionLocalOf<Skeleton?> { null }
 
 /** Shares a single, reduced-motion-aware shimmer across the existing content layout. */
 @Composable
-internal fun GohoSkeletonScope(loading: Boolean, content: @Composable () -> Unit) {
+internal fun SkeletonScope(loading: Boolean, content: @Composable () -> Unit) {
     val inherited = LocalSkeleton.current
     val delayed = rememberLoadingVisible(loading)
     val visible = delayed || LocalInspectionMode.current
@@ -36,7 +36,7 @@ internal fun GohoSkeletonScope(loading: Boolean, content: @Composable () -> Unit
 
 /** Masks an existing element without replacing its layout or exposing placeholder semantics. */
 @Composable
-internal fun Modifier.gohoSkeleton(
+internal fun Modifier.skeleton(
     minWidth: Dp = Dp.Unspecified,
     fraction: Float = 1f,
     block: Boolean = false,

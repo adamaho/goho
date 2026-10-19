@@ -30,9 +30,9 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `onButtonPrimary`                            | `#FFFFFF`                     | same                          | Primary labels, icons and loading arcs                               |
 | `buttonSecondary` / `buttonSecondaryPressed` | `#1F1E27` 94% / `#191820` 98% | `#FAF8FD` 96% / `#F0ECF6` 98% | Frosted secondary fill                                               |
 | `statusCard` / `statusCardRing`              | white 2.5% / white 7%         | white 60% / `#26233A` 6%      | Legacy status-card fill and ring; unused by current states           |
-| `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6`         | `#E9E9FB` / `#444AA0`         | "Reading receipt…" pill                                              |
+| `accentContainer` / `onAccentContainer`      | `#2A2C50` / `#B7BBF6`         | `#E9E9FB` / `#444AA0`         | Processing thumbnail; Purple tags use the same pair                  |
 | `accentShimmer`                              | `#E4E5FD`                     | `#9CA1E6`                     | Shimmer highlight on "Reading receipt…"                              |
-| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717`         | `#A34D16` / `#FFEADC`         | "Not processed" pill, attention count badge                          |
+| `attention` / `attentionContainer`           | `#ED9658` / `#3F2717`         | `#A34D16` / `#FFEADC`         | Attention thumbnail and count badge                                  |
 | `danger` / `dangerRing`                      | `#C52B2D` / `#A21F22`         | `#BE2323` / `#9A1A1B`         | Destructive button fill and its edge ring                            |
 | `dangerPressed`                              | `#B01E22`                     | `#A21A1B`                     | Destructive button fill while pressed                                |
 | `onDanger`                                   | `#FFFFFF`                     | `#FFFFFF`                     | Label and icon on the destructive button                             |
@@ -54,11 +54,29 @@ Contrast measured from the opaque sRGB token pairs (dark / light):
 
 Filter text and counts use `textSecondary`. The primary hue follows Bram’s blue-lavender body (approximately 234° HSV), darkened for white text rather than shifted toward red-violet. Primary and Scan use white `onButtonPrimary` in both themes: 6.32:1 on the base, at least 5.52:1 across the entire unpressed gradient, and at least 6.94:1 when pressed. Black reaches only 3.81:1 even at the brightest gradient point, failing the 4.5:1 normal-text requirement. Edge highlights are outside the content inset. Disabled actions retain the existing 40% opacity and are exempt from active-control contrast requirements.
 
+## Display tag colours
+
+`TagColor` owns these opaque light/dark container/content pairs. Categories may use all nine; upload processing uses Purple and failure uses Orange. These are display metadata colours, independent of `ButtonColor`. The label and mandatory icon share the foreground. No tag is identified by colour alone.
+
+| Colour | Light container | Light content | Dark container | Dark content | Contrast light / dark |
+| ------ | --------------- | ------------- | -------------- | ------------ | --------------------- |
+| Red    | `#FDE9EA`       | `#98313E`     | `#42252F`      | `#F2A2AE`    | 6.34 / 6.87           |
+| Orange | `#FFF0E1`       | `#92501E`     | `#442E21`      | `#F0B17D`    | 5.55 / 6.81           |
+| Yellow | `#F8F1CE`       | `#705711`     | `#3D3521`      | `#E9CF76`    | 6.03 / 7.89           |
+| Green  | `#E4F2E9`       | `#2F6846`     | `#23382F`      | `#91CFAB`    | 5.70 / 6.98           |
+| Blue   | `#E5EFFD`       | `#2E5F98`     | `#24334B`      | `#9EBFF1`    | 5.64 / 6.77           |
+| Purple | `#E9E9FB`       | `#444AA0`     | `#2A2C50`      | `#B7BBF6`    | 6.41 / 7.27           |
+| Pink   | `#F9E8F2`       | `#8B3964`     | `#42283B`      | `#E7A2C7`    | 6.23 / 6.50           |
+| Grey   | `#EDEBF2`       | `#615C73`     | `#31303E`      | `#C3BFD3`    | 5.41 / 7.22           |
+| Brown  | `#F1E8E0`       | `#75503A`     | `#3D2F2A`      | `#D8B49C`    | 5.85 / 6.67           |
+
+Ratios use the sRGB relative-luminance formula. Every base pair exceeds 4.5:1. Processing text uses the shared motion-aware shimmer with a subtle 4% blend toward its container; reduced motion uses the base content colour. Icons do not animate.
+
 ## Typography
 
 Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
 
-Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, pills and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
+Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, tags and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
 
 | Style      | Size / line height | Weight | Tracking | Use                                                                                          |
 | ---------- | ------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
@@ -71,7 +89,7 @@ Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and bi
 | `body`     | 15 / 22            | 400    | 0        | Error line above the confirmation buttons                                                    |
 | `meta`     | 13 / 18            | 400    | 0        | Dates, sub-lines                                                                             |
 | `section`  | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
-| `label`    | 12 / 16            | 500    | 0        | Pills, badges                                                                                |
+| `label`    | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
 
 Sheet header: store name 18/24 SemiBold −0.015em; price 15/20 Medium with the date in 15/20 Regular `textTertiary`.
 
@@ -79,37 +97,39 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 
 ## Shape
 
-| Token        | Radius | Use                                                            |
-| ------------ | ------ | -------------------------------------------------------------- |
-| `thumb`      | 8      | Receipt thumbnails in rows                                     |
-| `button`     | 20     | Primary and secondary buttons (not fully round)                |
-| `card`       | 20     | Grouped list cards, detail card, photo frame                   |
-| `fab`        | 24     | Scan button                                                    |
-| `pill`       | 50%    | Status pills, count badge, filter segments, round icon buttons |
-| `statusCard` | 32     | Legacy status-card shape; unused by current states             |
-| `sheet`      | 28     | Floating bottom sheet (all four corners)                       |
+| Token        | Radius | Use                                                |
+| ------------ | ------ | -------------------------------------------------- |
+| `thumb`      | 8      | Receipt thumbnails in rows                         |
+| `button`     | 20     | Primary and secondary buttons (not fully round)    |
+| `card`       | 20     | Grouped list cards, detail card, photo frame       |
+| `fab`        | 24     | Scan button                                        |
+| `tag`        | 4      | Display-only category and upload-state tags        |
+| `pill`       | 50%    | Count badge, filter segments, round icon buttons   |
+| `statusCard` | 32     | Legacy status-card shape; unused by current states |
+| `sheet`      | 28     | Floating bottom sheet (all four corners)           |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
 ## Spacing and layout
 
 - 4dp grid.
-- `screenMargin` = 16: edges of cards, the filter and the FAB.
+- `screenMargin` = 16: edges of cards and the filter. Scan uses its separate 24dp end margin.
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
-- Detail list row: height 47, label left, value right.
+- Detail list row: min height 47, label left, value right. Category values use the shared tag.
+- Tag: `tagHeight` = 24 minimum, `tagHorizontal` = 8, `tagVertical` = 4, `tagIcon` = 14, `tagIconGap` = 5. Standard rows use `tagMaxWidth` = 160; stacked layouts allow the available width and wrap long labels. All sizes remain theme tokens.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
 - Status illustrations: no receipts, empty Needs attention and load error use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
 - Loading: `loadingIcon` = 24dp for initial receipt loading; retry reuses `buttonIcon` = 18dp. Both use `iconStroke` = 2dp.
-- Bottom: FAB sits 28dp above the navigation bar inset, 16dp from the right.
+- Bottom: FAB sits 28dp above the navigation bar inset and 24dp from the end edge (`fabMarginEnd`), 8dp farther inward than the receipt cards.
 
 ## Elevation and shadow
 
 Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highlight on cards; light mode on a faint ring plus a soft shadow.
 
-**Button treatment** (numbered finish × independent colour): shared native `GohoButtonSurface.kt`, with existing 20dp action / 24dp Scan corners and round 44dp icon-only controls. Colour chooses the base/pressed pair and content independently of the finish: Purple uses deep-periwinkle and white, Red uses red and white, Grey uses the theme’s neutral face and `textPrimary`. Variant 1 applies the glossy finish; variant 2 applies the frosted/rimmed finish. Existing primary/Scan, destructive and secondary actions use 1/Purple, 1/Red and 2/Grey respectively. The variant 1 face runs from white 6% over the fill at the top, through the fill at 45%, to black 14% over the fill at the bottom. Pressed colours use the same finish. No bright shine crosses the label.
+**Button treatment** (numbered finish × independent colour): shared native `ButtonSurface.kt`, with existing 20dp action / 24dp Scan corners and round 44dp icon-only controls. Colour chooses the base/pressed pair and content independently of the finish: Purple uses deep-periwinkle and white, Red uses red and white, Grey uses the theme’s neutral face and `textPrimary`. Variant 1 applies the glossy finish; variant 2 applies the frosted/rimmed finish. Existing primary/Scan, destructive and secondary actions use 1/Purple, 1/Red and 2/Grey respectively. The variant 1 face runs from white 6% over the fill at the top, through the fill at 45%, to black 14% over the fill at the bottom. Pressed colours use the same finish. No bright shine crosses the label.
 
 For variant 1 and light variant 2, the 1dp outer rim runs from white 85% (light) / 62% (dark) at the top to the variant's edge colour at 45%. A second 1dp inset reflection at 1.5dp fades from white 32% (primary), 14%/16% (danger light/dark), or the secondary rim to transparent halfway down, then the lower shade. Primary lower rim is `#353B70`; danger retains its red edge.
 

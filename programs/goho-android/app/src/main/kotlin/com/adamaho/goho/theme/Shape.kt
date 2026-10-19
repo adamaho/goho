@@ -13,6 +13,7 @@ object GohoShapes {
     val thumb = RoundedCornerShape(8.dp)
     val card = RoundedCornerShape(20.dp)
     val fab = RoundedCornerShape(24.dp)
+    val tag = RoundedCornerShape(4.dp)
     val pill = RoundedCornerShape(percent = 50)
 }
 

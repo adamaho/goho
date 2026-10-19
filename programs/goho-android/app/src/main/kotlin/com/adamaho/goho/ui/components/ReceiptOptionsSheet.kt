@@ -214,7 +214,7 @@ internal fun ReceiptOptionsSheet(
                             )
                             Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
                         }
-                        GohoActionButton(
+                        ActionButton(
                             stringResource(
                                 if (deleting) R.string.receipt_deleting else R.string.receipt_delete
                             ),
@@ -243,15 +243,15 @@ internal fun ReceiptOptionsSheet(
                             },
                             enabled = !deleting,
                             variant = 1,
-                            color = GohoButtonColor.Red,
+                            color = ButtonColor.Red,
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         )
                         Spacer(Modifier.height(GohoSpacing.buttonGap))
-                        GohoActionButton(
+                        ActionButton(
                             stringResource(R.string.receipt_cancel),
                             ::dismiss,
                             variant = 2,
-                            color = GohoButtonColor.Grey,
+                            color = ButtonColor.Grey,
                             enabled = !deleting,
                             modifier = Modifier.focusRequester(focus),
                         )

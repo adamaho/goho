@@ -38,7 +38,7 @@ internal fun ReceiptItemsCard(
             ) {
                 Text(
                     item?.name.orEmpty(),
-                    Modifier.weight(1f).gohoSkeleton(fraction = 0.7f),
+                    Modifier.weight(1f).skeleton(fraction = 0.7f),
                     style = GohoTheme.type.listRow,
                     color = c.textPrimary,
                     maxLines = if (largeText) Int.MAX_VALUE else 2,
@@ -47,7 +47,7 @@ internal fun ReceiptItemsCard(
                 val amount = receiptAmount(item?.amount, locale)
                 Text(
                     receiptMoneyText(amount, currencyCode, locale),
-                    modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
+                    modifier = Modifier.skeleton(GohoSpacing.skeletonWidth),
                     style = GohoTheme.type.listValue,
                     color = if (amount == "—") c.textTertiary else c.textPrimary,
                     maxLines = 1,
@@ -73,13 +73,13 @@ internal fun ReceiptItemsCard(
         ) {
             Text(
                 stringResource(R.string.receipt_total),
-                Modifier.weight(1f).gohoSkeleton(fraction = 0.7f),
+                Modifier.weight(1f).skeleton(fraction = 0.7f),
                 style = GohoTheme.type.itemTotalLabel,
                 color = c.textPrimary,
             )
             Text(
                 receiptMoneyText(total, currencyCode, locale),
-                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonWidth),
+                modifier = Modifier.skeleton(GohoSpacing.skeletonWidth),
                 style = GohoTheme.type.itemTotalValue,
                 color = c.textPrimary,
             )

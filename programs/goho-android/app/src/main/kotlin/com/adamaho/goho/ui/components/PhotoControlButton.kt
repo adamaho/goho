@@ -19,7 +19,7 @@ internal fun PhotoControlButton(
 ) {
     // The photo well stays dark in both app themes; use the same variant 2 dark finish.
     GohoTheme(darkTheme = true) {
-        GohoIconButton(
+        IconButton(
             contentDescription = stringResource(R.string.receipt_photo_close),
             onClick = onClick,
             modifier = modifier,
