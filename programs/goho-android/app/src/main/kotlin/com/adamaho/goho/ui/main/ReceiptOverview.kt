@@ -123,7 +123,14 @@ fun ReceiptOverview(
     val currentLoadImage by rememberUpdatedState(loadReceiptImage)
     val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }
     val recovery = updateTransition(state.error, label = "Receipt recovery")
-    Box(modifier.fillMaxSize().background(GohoTheme.colors.background).safeDrawingPadding()) {
+    // This screen has no text input. Ignore an outgoing launcher keyboard's insets so
+    // Scan stays anchored to the window during cold start, before the IME finishes hiding.
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(GohoTheme.colors.background)
+            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+    ) {
         Column(Modifier.fillMaxSize()) {
             ReceiptListHeader(
                 entries.size,
