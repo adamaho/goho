@@ -4,6 +4,10 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Cold-start Scan placement (October 18, 2026)
+
+`cold-start-loading-light.png` and `cold-start-loading-dark.png` are unedited Pixel 9 API 36 emulator captures (1080×2424px), with real dev-server reads temporarily delayed to expose initial loading. Scan remains at the bottom right while skeletons are visible. A cold launch from launcher search with the keyboard open reproduced the previous lift; frame captures after the fix keep Scan at the bottom before skeletons appear, during loading and after receipts arrive. The receipt screen uses system-bar and display-cutout insets without reserving outgoing keyboard space. The same position was checked in the error state. These are the current cold-start layout references.
+
 ## Shared icon buttons (October 17, 2026)
 
 `icon-buttons-light.png` and `icon-buttons-dark.png` are unedited native Goho Dev captures from the Pixel 9 API 36 emulator (1080×2424px). They show the receipt-detail Back and More options controls using variant 2/Grey through `GohoIconButton`, with the shared action-button surface, round 44dp layout and 20dp icons. The top bar renders above the scroll body’s fade, preserving the soft shadow without a horizontal cutoff. Dark variant 2 now joins the face directly to the border, without the inset dark ring seen in older captures. These supersede icon-button styling in older captures. Labels and overflow navigation were manually checked; Back returns to the list. Photo close delegates to the same component under the dark theme, retaining its visual-opacity callback and accessible target; that viewer flow was not exercised in this capture session.
