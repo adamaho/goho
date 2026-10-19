@@ -21,6 +21,7 @@ import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -258,11 +259,9 @@ fun ReceiptDetailScreen(
         ReceiptOptions(
             entry = entry,
             locale = locale,
-            today = LocalDate.now(zone),
+            now = Instant.now(),
             zone = zone,
-            thumbnail = {
-                ReceiptThumbnail(image, ReceiptListStatus.Processed, sheetHeader = true)
-            },
+            thumbnail = { ReceiptThumbnail(image, ReceiptListStatus.Processed) },
             onDelete = { deleteReceipt(entry) },
             onDismiss = { optionsOpen = false },
             onDeleted = {

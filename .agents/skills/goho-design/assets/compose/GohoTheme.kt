@@ -297,10 +297,6 @@ object GohoSpacing {
     val sheetGrabberWidth = 36.dp
     val sheetGrabberHeight = 4.dp
     val sheetHeaderTop = 18.dp
-    val sheetHeaderGap = 14.dp
-    val sheetSummaryLineGap = 3.dp
-    val sheetThumbWidth = 56.dp
-    val sheetThumbHeight = 68.dp
     val sheetContentTop = 18.dp
     val sheetMenuTop = 6.dp
     val sheetActionHeight = 56.dp

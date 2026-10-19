@@ -843,64 +843,8 @@ fun SheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier
     }
 }
 
-// ---------- Receipt options sheet header ----------
-
-/**
- * The row header shared by the options sheet and the delete confirmation (screens.md section 5).
- * Identical in both states; only the content below it changes.
- */
-@Composable
-fun ReceiptSheetHeader(
-    store: String?,              // null -> "Unknown receipt"
-    price: String?,              // from formatMoney; null when not processed or missing
-    pricePrefix: String,         // "$" or "US$"
-    foreign: Boolean,
-    dateLabel: String,           // "Sun, Sep 27, 2026" or "Today, 8:14 AM"
-    notProcessed: Boolean,
-    modifier: Modifier = Modifier,
-    photo: @Composable BoxScope.() -> Unit, // the receipt image, ContentScale.Crop
-) {
-    val c = GohoTheme.colors
-    val t = GohoTheme.type
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(
-            Modifier
-                .size(56.dp, 68.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.surfaceMuted)
-                .border(1.dp, c.outline, RoundedCornerShape(10.dp)),
-            content = photo,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                store ?: "Unknown receipt",
-                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.015).em),
-                color = c.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { heading() },
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (notProcessed) {
-                    ReceiptUploadTag(processing = false)
-                } else if (price != null) {
-                    Text(
-                        buildAnnotatedString {
-                            withStyle(SpanStyle(color = if (foreign) c.textTertiary else c.textPrimary)) { append(pricePrefix) }
-                            withStyle(SpanStyle(color = c.textPrimary)) { append(price) }
-                        },
-                        style = t.listValue,
-                    )
-                }
-                Text(dateLabel, style = t.listRow, color = c.textTertiary, maxLines = 1)
-            }
-        }
-    }
-}
+// Receipt options headers now reuse the native list presentation from ReceiptSummary.kt.
+// See ReceiptOptions.kt and ReceiptOptionsSheet.kt for the canonical shared-header wiring.
 
 /** Error line above confirmation buttons; the approved sheet omits the question heading. */
 @Composable

@@ -4,6 +4,19 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Shared list and bottom-sheet receipt summary (October 19, 2026)
+
+The bottom-sheet header now uses the same `ReceiptSummary` as list rows: 40×48dp thumbnail, merchant/date on the left, amount with currency code and category/upload tag on the right. Menu and confirmation retain one mounted summary; the sheet adds no receipt tap action.
+
+These unedited native Goho Dev captures use the local dev server on the Pixel 9 API 36 emulator (1080×2424px, 420dpi). Menu, confirmation, cancellation and opening from Details were checked without deleting any receipts.
+
+- `receipt-summary-sheet-light.png`, `receipt-summary-sheet-dark.png`: Matching receipt presentation in the list and options-sheet header.
+- `receipt-summary-confirm-light.png`, `receipt-summary-confirm-dark.png`: The same summary stays visible in confirmation.
+- `receipt-summary-details-sheet-dark.png`: Details opens the same category-tag header.
+- `receipt-summary-large-text-dark.png`: The shared stacked layout at 320×640dp and 2× font scale (840×1680px), with the amount, date, icon and category visible.
+
+These supersede the larger, separate header in older sheet captures (including `receipt-tag-failed-sheet-dark.png`); older images remain references for their other named states. Canonical Compose sources are `ReceiptSummary.kt`, `ReceiptOptions.kt` and `ReceiptOptionsSheet.kt`.
+
 ## Shared category and upload tags (October 19, 2026)
 
 These unedited native Goho Dev screenshots come from the Pixel 9 API 36 emulator (1080×2424px at 420dpi, except the compact captures below). The regular app rendered temporary, read-only sample API responses for the nine colours and upload states; no records were created or changed. The normal dev-server receipts were also checked. No separate preview activity, Android tests or test harness was added.

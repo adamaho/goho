@@ -120,12 +120,15 @@ While an upload is in progress, keep the existing behavior; if the button needs 
 
 One Sheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed row. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
 
-**Receipt header** (identical in both states; it never moves or changes)
+**Receipt header** (the shared list-row content, retained in both states)
 
-- A row, 18dp below the grabber, 20dp side padding, 14dp gap, vertically centered.
-- Photo: 56×68, 10dp corners, the receipt photo cropped to fill (the same image as the list thumbnail and details photo), 1dp `outline` border.
-- Store name: 18/24 SemiBold, −1.5%, `textPrimary`, one line with ellipsis. Not processed: "Unknown receipt" (or the merchant if one was read).
-- 3dp below: the price in 15/20 Medium, proportional figures, two decimals (currency symbol with no trailing code), then two spaces and the full date ("Sun, Sep 27, 2026") in 15/20 Regular `textTertiary`. Not processed: the Orange warning-icon "Not processed" tag, an 8dp gap, then the date or time ("Today, 8:14 AM").
+- Reuse `ReceiptSummary` rather than a separate sheet-header layout. The list wrapper supplies gestures and row padding; the sheet header is display-only.
+- Place it 18dp below the grabber with 20dp side padding. The content uses the list's 12dp thumbnail gap, 5dp line gap and standard typography.
+- Thumbnail: the same 40×48dp photo or receipt placeholder with 8dp corners and a 1dp outline.
+- First line: merchant on the left, amount and smaller currency code on the right (`rowTitle`, 16/22 Medium; code 12/16). Second line: the shared date/time formatting on the left (`meta`, 13/18), category or upload-status tag below the amount on the right.
+- Use the same icon, colour, label wrapping and 160dp tag maximum as the list. Blank categories render no tag. Unknown categories retain the neutral tag.
+- At narrow widths or font scale ≥1.3, use the same stacked layout as the list: merchant, right-aligned amount/tag, then date. The sheet can grow and scroll.
+- Keep the summary mounted through menu, confirmation, deleting and failure states, whether opened from the list or Details.
 
 **Menu state** (traditional list items)
 

@@ -91,9 +91,9 @@ Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and bi
 | `section`  | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
 | `label`    | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
 
-Sheet header: store name 18/24 SemiBold −0.015em; price 15/20 Medium with the date in 15/20 Regular `textTertiary`.
+Sheet headers reuse the receipt-list typography: merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and category/upload tag `label` 12/16 Medium. They use the same 40×48dp thumbnail, 12dp thumbnail gap and 5dp line gap; there are no separate sheet-summary typography or thumbnail tokens.
 
-Currency codes follow the symbol and amount, baseline aligned in `textTertiary`: `heroCurrencyCode` is 20/26sp SemiBold, zero tracking, beside the 44sp display amount; `currencyCode` is 12/16sp Medium, zero tracking, beside receipt-list totals only. All other amounts keep the symbol without repeating the code. Example: “$46.78 CAD”.
+Currency codes follow the symbol and amount, baseline aligned in `textTertiary`: `heroCurrencyCode` is 20/26sp SemiBold, zero tracking, beside the 44sp display amount; `currencyCode` is 12/16sp Medium, zero tracking, beside receipt-list and shared sheet-header totals. All other amounts keep the symbol without repeating the code. Example: “$46.78 CAD”.
 
 ## Shape
 

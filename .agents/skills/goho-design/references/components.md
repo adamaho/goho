@@ -117,11 +117,14 @@ ReceiptUploadTag(processing = true)
 - Tags grow for font scaling and wrap long names. On standard receipt rows cap the tag at 160dp so the date has room. At narrow widths or font scale ≥1.3, stack merchant, right-aligned amount/tag, then date. Do not truncate category names or create another tap target.
 - Categories: copy the server name into the list model, trim surrounding whitespace and capitalise its first character for display. Matching is case-insensitive and uses explicit whole names, not substring guesses. Names without a mapping use Grey with the tag icon; blank categories render no tag. No category editor, persisted colour/icon fields, category filtering or generated category guesses are introduced.
 - Default category mapping: Health / Health and fitness / Medical → Red heart-pulse; Meals / Dining / Restaurants / Prepared foods → Orange utensils; Entertainment → Yellow ticket; Groceries / Grocery / Produce / Dairy / Seafood → Green shopping-basket; Transport / Transportation / Travel → Blue bus-front; Shopping / General merchandise → Purple shopping-bag; Personal care / Beauty → Pink sparkles; Home / Home & garden / Household → Brown house. Other and unknown names use Grey tag.
+- Receipt options reuse `ReceiptSummary`, the same presentation as the list row: merchant/date on the left, amount/category tag on the right, and the same 40×48dp thumbnail. It stays in the shared header during delete confirmation, whether opened from the list or Details. Blank categories render no tag; long labels wrap as they do in the list.
 - `ReceiptUploadTag` uses Purple + scan-line for “Reading receipt…” and Orange + triangle-alert for “Not processed”. Keep the existing reduced-motion-aware text shimmer while processing; its highlight blends 4% toward the container so every palette remains readable. Icons remain still. The failed-upload sheet uses the same tag. Scan preview's existing uploading/submitted/failure copy uses `Tag` with the corresponding scan or warning icon; Ready has no tag.
 - Skeleton loading masks the same tag element, clearing placeholder semantics. The tag still has an icon parameter while loading; no separate skeleton layout.
 - Nine theme-aware colour pairs live in `TagColor`, separate from the three action-button colours. See `tokens.md`. Icon masters, Android resource mapping and licence are in `assets/icons/tags/README.md`.
 
 ## ReceiptRow
+
+`ReceiptSummary` owns the shared content, date formatting, amount and tags for list rows and the bottom-sheet header. The list wrapper owns tap/hold feedback and card padding; the sheet keeps the same content display-only and mounted above its changing actions. Canonical references: `assets/compose/ReceiptSummary.kt`, `ReceiptOptions.kt` and `ReceiptOptionsSheet.kt`.
 
 Row inside a card: `thumbnail | column(line 1, line 2)`.
 
