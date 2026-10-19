@@ -13,6 +13,7 @@ import {
 import { Array, Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
+import * as CategoryRepository from "#src/categories/repository.ts";
 import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase, ReceiptItemIdFromDatabase } from "#src/schema.ts";
 
@@ -112,7 +113,8 @@ type ReceiptCandidate = Omit<Receipt, "items"> & {
 };
 
 /**
- * Reads receipts and inserts each receipt with all its items.
+ * Reads receipts and inserts each receipt with all its items. A saved category
+ * name resolves to a shared category in the same transaction.
  *
  * @category layers
  * @since 0.1.0
@@ -121,6 +123,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
+    const categories = yield* CategoryRepository.Service;
 
     const lockReceipt = SqlSchema.findOneOption({
       Request: ReceiptId,
@@ -159,25 +162,31 @@ export const layer = Layer.effect(
       Request: ReceiptId,
       Result: ReceiptRow,
       execute: (receiptId) => sql`
-        SELECT id, store_name, receipt_date::text, category,
-          subtotal::text, tax::text, total::text, currency
-        FROM receipts WHERE id = ${receiptId}
+        SELECT r.id, r.store_name, r.receipt_date::text, c.name AS category,
+          r.subtotal::text, r.tax::text, r.total::text, r.currency
+        FROM receipts r JOIN categories c ON c.id = r.category_id
+        WHERE r.id = ${receiptId}
       `,
     });
 
-    const updateReceiptRow = SqlSchema.findOneOption({
+    const updateReceiptRow = SqlSchema.void({
       Request: Schema.Struct({
         receiptId: ReceiptId,
         // Encoding keeps only these editable columns, so no other field can reach the SET list.
         changes: Schema.Struct({
           storeName: Schema.optionalKey(Schema.String),
           receiptDate: Schema.optionalKey(CalendarDate),
-          category: Schema.optionalKey(Schema.String),
-        }).pipe(Schema.encodeKeys({ storeName: "store_name", receiptDate: "receipt_date" })),
+          categoryId: Schema.optionalKey(CategoryRepository.CategoryId),
+        }).pipe(
+          Schema.encodeKeys({
+            storeName: "store_name",
+            receiptDate: "receipt_date",
+            categoryId: "category_id",
+          }),
+        ),
       }),
-      Result: IdRow,
       execute: ({ receiptId, changes }) => sql`
-        UPDATE receipts SET ${sql.update(changes)} WHERE id = ${receiptId} RETURNING id
+        UPDATE receipts SET ${sql.update(changes)} WHERE id = ${receiptId}
       `,
     });
 
@@ -205,7 +214,7 @@ export const layer = Layer.effect(
       Request: Schema.Struct({
         storeName: Schema.String,
         receiptDate: CalendarDate,
-        category: Schema.String,
+        categoryId: CategoryRepository.CategoryId,
         subtotal: DecimalString,
         tax: DecimalString,
         total: DecimalString,
@@ -214,9 +223,9 @@ export const layer = Layer.effect(
       Result: IdRow,
       execute: (receipt) => sql`
         INSERT INTO receipts (
-          store_name, receipt_date, category, subtotal, tax, total, currency
+          store_name, receipt_date, category_id, subtotal, tax, total, currency
         ) VALUES (
-          ${receipt.storeName}, ${receipt.receiptDate}, ${receipt.category},
+          ${receipt.storeName}, ${receipt.receiptDate}, ${receipt.categoryId},
           ${receipt.subtotal}, ${receipt.tax}, ${receipt.total}, ${receipt.currency}
         ) RETURNING id
       `,
@@ -231,11 +240,12 @@ export const layer = Layer.effect(
       Request: Schema.Void,
       Result: ReceiptListRow,
       execute: () => sql`
-        SELECT r.id, r.store_name, r.receipt_date::text, r.category,
+        SELECT r.id, r.store_name, r.receipt_date::text, c.name AS category,
           r.subtotal::text, r.tax::text, r.total::text, r.currency,
           i.id AS item_id, i.position AS item_position, i.name AS item_name,
           i.amount::text AS item_amount
         FROM receipts r
+        JOIN categories c ON c.id = r.category_id
         LEFT JOIN receipt_items i ON i.receipt_id = r.id
         ORDER BY r.receipt_date DESC, r.created_at DESC, r.id, i.position
       `,
@@ -268,7 +278,8 @@ export const layer = Layer.effect(
       function* (receipt: CreateReceiptRequest) {
         return yield* sql.withTransaction(
           Effect.gen(function* () {
-            const { id } = yield* insertReceiptRow(receipt);
+            const category = yield* categories.findOrCreate(receipt.category);
+            const { id } = yield* insertReceiptRow({ ...receipt, categoryId: category.id });
             yield* insertItemRows(
               Array.map(receipt.items, (item, position) => ({
                 receipt_id: id,
@@ -328,13 +339,19 @@ export const layer = Layer.effect(
       (receiptId: ReceiptId, changes: PatchReceiptRequest) =>
         sql.withTransaction(
           Effect.gen(function* () {
+            const { category, ...fields } = changes;
             const hasChanges =
-              changes.storeName !== undefined ||
-              changes.receiptDate !== undefined ||
-              changes.category !== undefined;
+              fields.storeName !== undefined ||
+              fields.receiptDate !== undefined ||
+              category !== undefined;
             if (hasChanges) {
-              const updated = yield* updateReceiptRow({ receiptId, changes });
-              if (Option.isNone(updated)) return Option.none();
+              // Locking first returns a missing receipt before its category can be created.
+              if (Option.isNone(yield* lockReceipt(receiptId))) return Option.none();
+              const categoryChange =
+                category === undefined
+                  ? {}
+                  : { categoryId: (yield* categories.findOrCreate(category)).id };
+              yield* updateReceiptRow({ receiptId, changes: { ...fields, ...categoryChange } });
             }
             return yield* readReceipt(receiptId);
           }),

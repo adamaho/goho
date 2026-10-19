@@ -77,8 +77,10 @@ HTTP 500 with `{"_tag":"InternalServerError"}`.
 `POST /receipts` creates a receipt and its ordered items atomically from the
 JSON body shown in Swagger. Every successful call saves a new receipt.
 
-Names are trimmed and decimal strings normalized (`11.00` becomes `11`). The
-complete receipt is returned under `data`. Each returned item has a
+Names are trimmed and decimal strings normalized (`11.00` becomes `11`).
+Categories are saved and returned in lowercase, so `Groceries` and `groceries`
+are the same category; an unfamiliar name adds a new one. The complete receipt
+is returned under `data`. Each returned item has a
 server-generated `id`, a decimal string like receipt IDs, and its zero-based
 `position` in the receipt.
 
@@ -96,7 +98,8 @@ receipt using its `id` and a JSON body containing only `name`. It returns HTTP
 200 with only the saved item (`id`, `position`, `name`, and `amount`) under
 `data`; fetch the receipt to see the rest of it.
 
-Names and categories are trimmed and must stay nonempty; dates must be real
+Names and categories are trimmed and must stay nonempty, and categories are
+saved in lowercase as on creation; dates must be real
 `YYYY-MM-DD` dates. Amounts, currency, item positions, the item lineup, the
 upload record, the original photo, and stored extraction data do not change.
 Repeating a correction with the same values succeeds, and later corrections win.
