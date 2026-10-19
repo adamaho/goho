@@ -109,7 +109,7 @@ private fun FilterSegment(
         // The visible tab is compact; its surrounding space remains tappable.
         Box(
             modifier
-                .gohoPress { progress }
+                .pressFeedback { progress }
                 .selectable(
                     selected,
                     interactionSource = interaction,

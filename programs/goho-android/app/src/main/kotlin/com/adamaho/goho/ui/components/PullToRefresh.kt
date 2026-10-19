@@ -1,5 +1,4 @@
-// Production reference; adapt the R import to the target app.
-package com.goho.ui.components
+package com.adamaho.goho.ui.components
 
 import android.os.SystemClock
 import androidx.compose.animation.core.*
@@ -23,7 +22,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import com.adamaho.goho.R
-import com.goho.ui.theme.*
+import com.adamaho.goho.theme.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -32,7 +31,7 @@ import kotlinx.coroutines.delay
 /** Uses the platform nested-scroll gesture with Goho's own indicator and accessibility action. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun GohoPullToRefresh(
+internal fun PullToRefresh(
     refreshing: Boolean,
     failed: Boolean,
     enabled: Boolean,

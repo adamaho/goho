@@ -23,7 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.adamaho.goho.theme.*
-import com.adamaho.goho.ui.components.gohoSkeleton
+import com.adamaho.goho.ui.components.skeleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
@@ -89,7 +89,6 @@ internal fun ReceiptThumbnail(
     receiptId: String?,
     status: ReceiptListStatus,
     thumbnails: ReceiptThumbnails,
-    sheetHeader: Boolean = false,
 ) {
     var visible by remember { mutableStateOf(false) }
     val bitmap by
@@ -99,7 +98,6 @@ internal fun ReceiptThumbnail(
     ReceiptThumbnail(
         image = bitmap?.asImageBitmap(),
         status = status,
-        sheetHeader = sheetHeader,
         modifier = Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty },
     )
 }
@@ -109,11 +107,10 @@ internal fun ReceiptThumbnail(
 internal fun ReceiptThumbnail(
     image: ImageBitmap?,
     status: ReceiptListStatus,
-    sheetHeader: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val c = GohoTheme.colors
-    val shape = if (sheetHeader) GohoShapes.sheetThumb else GohoShapes.thumb
+    val shape = GohoShapes.thumb
     val background =
         when (status) {
             ReceiptListStatus.Processed -> c.surfaceMuted
@@ -122,12 +119,9 @@ internal fun ReceiptThumbnail(
         }
     Box(
         modifier
-            .size(
-                if (sheetHeader) GohoSpacing.sheetThumbWidth else GohoSpacing.thumbWidth,
-                if (sheetHeader) GohoSpacing.sheetThumbHeight else GohoSpacing.thumbHeight,
-            )
+            .size(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)
             .clip(shape)
-            .gohoSkeleton(block = true)
+            .skeleton(block = true)
             .background(background)
             .border(GohoSpacing.hairline, c.outline, shape),
         contentAlignment = Alignment.Center,

@@ -3,6 +3,9 @@
 // Bram status content, shared skeletons and delayed retry icons follow the current screen specs.
 package com.goho.ui.components // TODO: match the app's package
 
+import com.adamaho.goho.ui.components.ReceiptCategoryTag
+import com.adamaho.goho.ui.components.ReceiptUploadTag
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.snap
 import androidx.compose.ui.draw.dropShadow
@@ -143,12 +146,12 @@ fun pressProgress(interactionSource: MutableInteractionSource): State<Float> {
             pressed -> GohoMotion.pressIn
             else -> GohoMotion.pressOut
         },
-        label = "gohoPress",
+        label = "pressFeedback",
     )
 }
 
 /** The Goho press: scale to 97% and move down 1dp. Never a sunken state. */
-fun Modifier.gohoPressTransform(progress: () -> Float): Modifier = graphicsLayer {
+fun Modifier.pressTransform(progress: () -> Float): Modifier = graphicsLayer {
     val p = progress()
     val scale = 1f - GohoMotion.PRESS_SCALE * p
     scaleX = scale
@@ -185,7 +188,7 @@ fun rememberShimmerBrush(base: Color, highlight: Color): Brush {
 // ---------- Receipt loading ----------
 
 // Drive this helper from actual pending work; each attempt restarts the delay.
-// Initial list/detail loading uses GohoSkeletonScope and gohoSkeleton (GohoSkeleton.kt).
+// Initial list/detail loading uses SkeletonScope and skeleton (Skeleton.kt).
 // Keep the real layout and mask its existing elements; expose one loading description on the region.
 // Retry uses the 18dp icon inside its disabled button; the outgoing recovery flag is not loading.
 @Composable
@@ -201,7 +204,7 @@ internal fun rememberLoadingVisible(loading: Boolean): Boolean {
 }
 
 @Composable
-fun GohoLoadingIcon(
+fun LoadingIcon(
     modifier: Modifier = Modifier,
     description: String? = null,
     color: Color = GohoTheme.colors.textSecondary,
@@ -245,14 +248,14 @@ fun GohoLoadingIcon(
 // ---------- Buttons ----------
 
 @Composable
-private fun GohoButtonBase(
+private fun ButtonBase(
     onClick: () -> Unit,
     modifier: Modifier,
     enabled: Boolean,
     minHeight: Dp,
     shape: RoundedCornerShape,
     @IntRange(from = 1, to = 2) variant: Int = 1,
-    color: GohoButtonColor = GohoButtonColor.Purple,
+    color: ButtonColor = ButtonColor.Purple,
     contentPadding: PaddingValues,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -261,9 +264,9 @@ private fun GohoButtonBase(
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     Row(
         modifier = modifier
-            .gohoPressTransform { if (enabled) progress else 0f }
+            .pressTransform { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .gohoButtonSurface(GohoTheme.colors, shape, p, variant, color)
+            .buttonSurface(GohoTheme.colors, shape, p, variant, color)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -280,9 +283,9 @@ private fun GohoButtonBase(
 }
 
 @Composable
-fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier = Modifier) {
+fun ScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
-    GohoButtonBase(
+    ButtonBase(
         onClick = onClick,
         modifier = modifier.semantics { contentDescription = "Scan receipt" },
         enabled = true,
@@ -297,12 +300,12 @@ fun GohoScanFab(onClick: () -> Unit, scanIcon: ImageVector, modifier: Modifier =
 
 
 @Composable
-fun GohoActionButton(
+fun ActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     @IntRange(from = 1, to = 2) variant: Int = 1,
-    color: GohoButtonColor = GohoButtonColor.Purple,
+    color: ButtonColor = ButtonColor.Purple,
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
     reserveSpaceFor: List<String> = emptyList(),
@@ -312,7 +315,7 @@ fun GohoActionButton(
     val secondary = variant == 2
     val contentColor = c.buttonPalette(color).content
     val style = if (secondary) GohoTheme.type.buttonSecondary else GohoTheme.type.button
-    GohoButtonBase(
+    ButtonBase(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().then(
             if (loading) Modifier.semantics {
@@ -335,7 +338,7 @@ fun GohoActionButton(
             }
             Text(text, style = style, color = contentColor, textAlign = TextAlign.Center,
                 modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier)
-            if (loading) GohoLoadingIcon(
+            if (loading) LoadingIcon(
                 modifier = Modifier.size(GohoSpacing.buttonIcon),
                 color = contentColor,
             )
@@ -343,44 +346,13 @@ fun GohoActionButton(
     }
 }
 
-// Shared icon-only actions live in GohoIconButton.kt.
+// Shared icon-only actions live in IconButton.kt.
 
-// ---------- Pills and badges ----------
-
-enum class PillTone { Accent, Attention }
-
-@Composable
-fun GohoStatusPill(
-    text: String,
-    tone: PillTone,
-    modifier: Modifier = Modifier,
-    shimmer: Boolean = false,
-) {
-    val c = GohoTheme.colors
-    val (bg, fg) = when (tone) {
-        PillTone.Accent -> c.accentContainer to c.onAccentContainer
-        PillTone.Attention -> c.attentionContainer to c.attention
-    }
-    Row(
-        modifier
-            .height(22.dp)
-            .clip(GohoShapes.pill)
-            .background(bg)
-            .padding(horizontal = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        val style = GohoTheme.type.label
-        if (shimmer) {
-            Text(text, style = style.copy(brush = rememberShimmerBrush(fg, c.accentShimmer)))
-        } else {
-            Text(text, style = style, color = fg)
-        }
-    }
-}
+// ---------- Tags and badges ----------
+// Tags now delegate to the canonical Tag / ReceiptTags reference files.
 
 @Composable
-fun GohoCountBadge(count: Int, modifier: Modifier = Modifier) {
+fun CountBadge(count: Int, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     Box(
         modifier
@@ -399,7 +371,7 @@ fun GohoCountBadge(count: Int, modifier: Modifier = Modifier) {
 data class FilterOption(val label: String, val count: Int, val isAttention: Boolean = false)
 
 @Composable
-fun GohoSegmentedFilter(
+fun SegmentedFilter(
     options: List<FilterOption>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
@@ -450,7 +422,7 @@ fun GohoSegmentedFilter(
             ) {
                 Text(option.label, style = labelStyle, color = fg)
                 if (option.isAttention) {
-                    if (option.count > 0) GohoCountBadge(option.count)
+                    if (option.count > 0) CountBadge(option.count)
                 } else {
                     Text("${option.count}", style = labelStyle, color = c.textSecondary)
                 }
@@ -469,7 +441,7 @@ sealed interface ReceiptRowState {
 }
 
 @Composable
-fun GohoAmountText(amount: String?, foreignPrefix: String?, modifier: Modifier = Modifier) {
+fun AmountText(amount: String?, foreignPrefix: String?, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val style = GohoTheme.type.rowTitle
     if (amount == null) {
@@ -518,6 +490,7 @@ fun ReceiptRow(
     onClick: (() -> Unit)?, // Processed: open details. NotProcessed: open the options sheet. Processing: null.
     onLongClick: (() -> Unit)? = null, // open the options sheet; ignored for Processing rows
     modifier: Modifier = Modifier,
+    category: String? = null,
     thumbnail: @Composable () -> Unit,
 ) {
     val c = GohoTheme.colors
@@ -575,8 +548,8 @@ fun ReceiptRow(
                 )
                 Spacer(Modifier.size(12.dp))
                 when (state) {
-                    is ReceiptRowState.Processed -> GohoAmountText(state.amount, state.foreignPrefix)
-                    ReceiptRowState.NotProcessed -> GohoAmountText(null, null)
+                    is ReceiptRowState.Processed -> AmountText(state.amount, state.foreignPrefix)
+                    ReceiptRowState.NotProcessed -> AmountText(null, null)
                     ReceiptRowState.Processing -> Box(
                         Modifier
                             .size(52.dp, 12.dp)
@@ -588,9 +561,9 @@ fun ReceiptRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(dateLabel, style = t.meta, color = c.textTertiary, modifier = Modifier.weight(1f))
                 when (state) {
-                    ReceiptRowState.Processing -> GohoStatusPill("Reading receipt…", PillTone.Accent, shimmer = true)
-                    ReceiptRowState.NotProcessed -> GohoStatusPill("Not processed", PillTone.Attention)
-                    is ReceiptRowState.Processed -> Unit
+                    ReceiptRowState.Processing -> ReceiptUploadTag(processing = true)
+                    ReceiptRowState.NotProcessed -> ReceiptUploadTag(processing = false)
+                    is ReceiptRowState.Processed -> if (!category.isNullOrBlank()) ReceiptCategoryTag(category, Modifier.widthIn(max = GohoSpacing.tagMaxWidth))
                 }
             }
         }
@@ -598,7 +571,7 @@ fun ReceiptRow(
 }
 
 @Composable
-fun GohoSectionLabel(text: String, modifier: Modifier = Modifier) {
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = GohoTheme.type.section,
@@ -612,7 +585,7 @@ fun GohoSectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun GohoCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun Card(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val c = GohoTheme.colors
     val edge = if (c.isDark) {
         Modifier.clip(GohoShapes.card).background(c.surface).topHighlight(Color.White.copy(alpha = 0.03f))
@@ -633,7 +606,7 @@ fun GohoCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() 
 }
 
 @Composable
-fun GohoRowDivider(start: Dp = GohoSpacing.dividerStart) {
+fun RowDivider(start: Dp = GohoSpacing.dividerStart) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -664,7 +637,7 @@ fun formatMoney(amount: BigDecimal?, locale: Locale = Locale.getDefault()): Stri
 // ---------- Detail screen pieces ----------
 
 @Composable
-fun GohoDetailRow(
+fun DetailRow(
     label: String,
     value: String?, // null shows "—"
     modifier: Modifier = Modifier,
@@ -687,7 +660,7 @@ fun GohoDetailRow(
 data class ReceiptItemUi(val name: String, val amount: String?) // amount from formatMoney, no symbol
 
 @Composable
-fun GohoItemsCard(
+fun ItemsCard(
     items: List<ReceiptItemUi>,
     total: String?,           // from formatMoney
     totalPrefix: String,      // "$" for home currency, "US$" etc. for foreign
@@ -696,7 +669,7 @@ fun GohoItemsCard(
 ) {
     val c = GohoTheme.colors
     val t = GohoTheme.type
-    GohoCard(modifier) {
+    Card(modifier) {
         Column(Modifier.padding(horizontal = GohoSpacing.cardPadding)) {
             items.forEachIndexed { index, item ->
                 Row(
@@ -748,7 +721,7 @@ fun GohoItemsCard(
 }
 
 @Composable
-fun GohoPhotoFrame(
+fun PhotoFrame(
     height: Dp,
     modifier: Modifier = Modifier,
     onOpen: (() -> Unit)? = null, // only a loaded details photo opens the viewer
@@ -759,7 +732,7 @@ fun GohoPhotoFrame(
     val progress by pressProgress(interaction)
     Box(
         modifier.fillMaxWidth().height(height)
-            .gohoPressTransform { progress }
+            .pressTransform { progress }
             .then(if (onOpen != null) Modifier.clickable(
                 interactionSource = interaction, indication = null, role = Role.Button,
                 onClickLabel = "View receipt photo", onClick = onOpen,
@@ -773,7 +746,7 @@ fun GohoPhotoFrame(
 
 /** Close button for the photo viewer. Same look in both themes. */
 @Composable
-fun GohoPhotoControlButton(
+fun PhotoControlButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
@@ -782,7 +755,7 @@ fun GohoPhotoControlButton(
     opacity: () -> Float = { 1f },
 ) {
     GohoTheme(darkTheme = true) {
-        GohoIconButton(contentDescription, onClick, modifier, opacity = opacity) {
+        IconButton(contentDescription, onClick, modifier, opacity = opacity) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(iconSize))
         }
     }
@@ -794,7 +767,7 @@ fun GohoPhotoControlButton(
 //   with scale and offset held in Animatable so springs and the double-tap animation share state.
 // - Swipe to close at fit: detectVerticalDragGestures, mapping drag distance to translationY,
 //   scale (min 0.86 at 300dp) and background alpha (down to 0.55).
-// - Controls: pass visual opacity to GohoPhotoControlButton while preserving its TalkBack node, driven by the
+// - Controls: pass visual opacity to PhotoControlButton while preserving its TalkBack node, driven by the
 //   same flag that shows and hides system bars via WindowInsetsControllerCompat.
 
 // ---------- Sheet ----------
@@ -805,7 +778,7 @@ fun GohoPhotoControlButton(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GohoSheet(
+fun Sheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     dismissible: Boolean = true, // false while a delete is in progress
@@ -851,7 +824,7 @@ fun GohoSheet(
 
 /** Traditional list item in a sheet; destructive tone, for example "Delete receipt". */
 @Composable
-fun GohoSheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun SheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -870,68 +843,12 @@ fun GohoSheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modi
     }
 }
 
-// ---------- Receipt options sheet header ----------
-
-/**
- * The row header shared by the options sheet and the delete confirmation (screens.md section 5).
- * Identical in both states; only the content below it changes.
- */
-@Composable
-fun GohoReceiptSheetHeader(
-    store: String?,              // null -> "Unknown receipt"
-    price: String?,              // from formatMoney; null when not processed or missing
-    pricePrefix: String,         // "$" or "US$"
-    foreign: Boolean,
-    dateLabel: String,           // "Sun, Sep 27, 2026" or "Today, 8:14 AM"
-    notProcessed: Boolean,
-    modifier: Modifier = Modifier,
-    photo: @Composable BoxScope.() -> Unit, // the receipt image, ContentScale.Crop
-) {
-    val c = GohoTheme.colors
-    val t = GohoTheme.type
-    Row(
-        modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(
-            Modifier
-                .size(56.dp, 68.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(c.surfaceMuted)
-                .border(1.dp, c.outline, RoundedCornerShape(10.dp)),
-            content = photo,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                store ?: "Unknown receipt",
-                style = t.rowTitle.copy(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.015).em),
-                color = c.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { heading() },
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (notProcessed) {
-                    GohoStatusPill("Not processed", PillTone.Attention)
-                } else if (price != null) {
-                    Text(
-                        buildAnnotatedString {
-                            withStyle(SpanStyle(color = if (foreign) c.textTertiary else c.textPrimary)) { append(pricePrefix) }
-                            withStyle(SpanStyle(color = c.textPrimary)) { append(price) }
-                        },
-                        style = t.listValue,
-                    )
-                }
-                Text(dateLabel, style = t.listRow, color = c.textTertiary, maxLines = 1)
-            }
-        }
-    }
-}
+// Receipt options headers now reuse the native list presentation from ReceiptSummary.kt.
+// See ReceiptOptions.kt and ReceiptOptionsSheet.kt for the canonical shared-header wiring.
 
 /** Error line above confirmation buttons; the approved sheet omits the question heading. */
 @Composable
-fun GohoDeleteError(modifier: Modifier = Modifier) {
+fun DeleteError(modifier: Modifier = Modifier) {
     Text(
         "Couldn’t delete this receipt. Try again.",
         style = GohoTheme.type.body,
@@ -952,7 +869,7 @@ fun GohoDeleteError(modifier: Modifier = Modifier) {
  * ReceiptOverview owns the success crossfade and passes animateEntrance = false on the incoming status content.
  */
 @Composable
-fun GohoStatusContent(
+fun StatusContent(
     title: String,
     text: String,
     modifier: Modifier = Modifier,

@@ -32,7 +32,7 @@ internal fun rememberLoadingVisible(loading: Boolean): Boolean {
 }
 
 @Composable
-fun GohoLoadingIcon(
+fun LoadingIcon(
     modifier: Modifier = Modifier,
     description: String? = null,
     color: Color = GohoTheme.colors.textSecondary,

@@ -58,7 +58,7 @@ fun pressProgress(interaction: MutableInteractionSource): State<Float> {
     )
 }
 
-fun Modifier.gohoPress(progress: () -> Float): Modifier = graphicsLayer {
+fun Modifier.pressFeedback(progress: () -> Float): Modifier = graphicsLayer {
     val p = progress()
     scaleX = 1f - GohoMotion.PRESS_SCALE * p
     scaleY = scaleX

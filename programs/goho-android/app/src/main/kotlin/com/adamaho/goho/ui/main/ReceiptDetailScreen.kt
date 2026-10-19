@@ -15,11 +15,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.zIndex
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -108,11 +110,11 @@ fun ReceiptDetailScreen(
                     color = c.textSecondary,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
-                GohoActionButton(
+                ActionButton(
                     stringResource(R.string.receipt_detail_retry),
                     { reloadKey++ },
                     variant = 2,
-                    color = GohoButtonColor.Grey,
+                    color = ButtonColor.Grey,
                 )
             }
         } else {
@@ -136,19 +138,15 @@ fun ReceiptDetailScreen(
                 if (saved == null) ""
                 else saved.storeName.ifBlank { stringResource(R.string.receipt_unknown) }
             val rows = buildList {
-                add(stringResource(R.string.receipt_merchant) to AnnotatedString(merchant))
-                add(stringResource(R.string.receipt_date) to AnnotatedString(shortDate))
+                add(R.string.receipt_merchant to AnnotatedString(merchant))
+                add(R.string.receipt_date to AnnotatedString(shortDate))
                 if (loading || !saved?.category.isNullOrBlank())
-                    add(
-                        stringResource(R.string.receipt_category) to
-                            AnnotatedString(saved?.category.orEmpty())
-                    )
-                add(stringResource(R.string.receipt_subtotal) to subtotal)
-                add(stringResource(R.string.receipt_tax) to tax)
-                if (saved?.items?.isEmpty() == true)
-                    add(stringResource(R.string.receipt_total) to total)
+                    add(R.string.receipt_category to AnnotatedString(saved?.category.orEmpty()))
+                add(R.string.receipt_subtotal to subtotal)
+                add(R.string.receipt_tax to tax)
+                if (saved?.items?.isEmpty() == true) add(R.string.receipt_total to total)
             }
-            GohoSkeletonScope(loading) {
+            SkeletonScope(loading) {
                 LazyColumn(
                     Modifier.fillMaxSize()
                         .headerFade(c.background)
@@ -172,8 +170,9 @@ fun ReceiptDetailScreen(
                                 style = GohoTheme.type.rowTitle,
                                 color = c.textSecondary,
                                 modifier =
-                                    Modifier.gohoSkeleton(GohoSpacing.skeletonTitleWidth)
-                                        .semantics { heading() },
+                                    Modifier.skeleton(GohoSpacing.skeletonTitleWidth).semantics {
+                                        heading()
+                                    },
                             )
                             Text(
                                 receiptMoneyText(
@@ -183,13 +182,13 @@ fun ReceiptDetailScreen(
                                     GohoTheme.type.heroCurrencyCode,
                                     showCurrencyCode = true,
                                 ),
-                                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonHeroWidth),
+                                modifier = Modifier.skeleton(GohoSpacing.skeletonHeroWidth),
                                 style = GohoTheme.type.display,
                                 color = c.textPrimary,
                             )
                             Text(
                                 fullDate,
-                                modifier = Modifier.gohoSkeleton(GohoSpacing.skeletonDateWidth),
+                                modifier = Modifier.skeleton(GohoSpacing.skeletonDateWidth),
                                 style = GohoTheme.type.meta,
                                 color = c.textTertiary,
                             )
@@ -221,7 +220,30 @@ fun ReceiptDetailScreen(
                         ReceiptCard {
                             rows.forEachIndexed { index, (label, value) ->
                                 if (index > 0) ReceiptDetailDivider()
-                                ReceiptDetailRow(label, value, stacked)
+                                ReceiptDetailRow(stringResource(label), stacked) {
+                                    if (label == R.string.receipt_category) {
+                                        ReceiptCategoryTag(
+                                            value.text,
+                                            Modifier.skeleton(
+                                                GohoSpacing.skeletonWidth,
+                                                block = true,
+                                            ),
+                                        )
+                                    } else {
+                                        Text(
+                                            value,
+                                            modifier =
+                                                Modifier.skeleton(
+                                                    GohoSpacing.skeletonTitleWidth,
+                                                    alignEnd = !stacked,
+                                                ),
+                                            style = GohoTheme.type.listValue,
+                                            color = c.textPrimary,
+                                            textAlign =
+                                                if (stacked) TextAlign.Start else TextAlign.End,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -237,11 +259,9 @@ fun ReceiptDetailScreen(
         ReceiptOptions(
             entry = entry,
             locale = locale,
-            today = LocalDate.now(zone),
+            now = Instant.now(),
             zone = zone,
-            thumbnail = {
-                ReceiptThumbnail(image, ReceiptListStatus.Processed, sheetHeader = true)
-            },
+            thumbnail = { ReceiptThumbnail(image, ReceiptListStatus.Processed) },
             onDelete = { deleteReceipt(entry) },
             onDismiss = { optionsOpen = false },
             onDeleted = {
@@ -267,7 +287,7 @@ private fun DetailSectionHeading(text: String) {
                     top = GohoSpacing.sectionTop,
                     bottom = GohoSpacing.sectionLabelBottom,
                 )
-                .gohoSkeleton(GohoSpacing.skeletonWidth)
+                .skeleton(GohoSpacing.skeletonWidth)
                 .semantics { heading() },
     )
 }

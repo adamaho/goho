@@ -18,12 +18,12 @@ import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
 @Composable
-fun GohoActionButton(
+fun ActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     @IntRange(from = 1, to = 2) variant: Int = 1,
-    color: GohoButtonColor = GohoButtonColor.Purple,
+    color: ButtonColor = ButtonColor.Purple,
     enabled: Boolean = true,
     icon: (@Composable () -> Unit)? = null,
     reserveSpaceFor: List<String> = emptyList(),
@@ -37,9 +37,9 @@ fun GohoActionButton(
     Row(
         modifier
             .fillMaxWidth()
-            .gohoPress { if (enabled) progress else 0f }
+            .pressFeedback { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .gohoButtonSurface(c, GohoShapes.button, p, variant, color)
+            .buttonSurface(c, GohoShapes.button, p, variant, color)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -81,7 +81,7 @@ fun GohoActionButton(
                 modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier,
             )
             if (loading)
-                GohoLoadingIcon(
+                LoadingIcon(
                     modifier = Modifier.size(GohoSpacing.buttonIcon),
                     color = contentColor,
                 )

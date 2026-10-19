@@ -22,12 +22,12 @@ import com.adamaho.goho.theme.GohoColors
 import com.adamaho.goho.theme.GohoSpacing
 
 /** Variant 1 is glossy; variant 2 uses the frosted/rimmed finish. Colour is independent. */
-internal fun Modifier.gohoButtonSurface(
+internal fun Modifier.buttonSurface(
     colors: GohoColors,
     shape: RoundedCornerShape,
     progress: Float,
     @IntRange(from = 1, to = 2) variant: Int = 1,
-    color: GohoButtonColor = GohoButtonColor.Purple,
+    color: ButtonColor = ButtonColor.Purple,
 ): Modifier {
     require(variant == 1 || variant == 2) { "Button variant must be 1 or 2" }
     val p = progress.coerceIn(0f, 1f)

@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.style.TextOverflow
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import kotlinx.coroutines.CancellationException
@@ -39,9 +38,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReceiptOptionsSheet(
-    merchant: String,
-    metadata: @Composable () -> Unit,
-    thumbnail: @Composable () -> Unit,
+    header: @Composable () -> Unit,
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
@@ -100,27 +97,12 @@ internal fun ReceiptOptionsSheet(
                     .clip(GohoShapes.pill)
                     .background(c.grabber)
             )
-            Row(
+            Box(
                 Modifier.fillMaxWidth()
                     .padding(horizontal = GohoSpacing.sheetPadding)
-                    .padding(top = GohoSpacing.sheetHeaderTop),
-                horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sheetHeaderGap),
-                verticalAlignment = Alignment.CenterVertically,
+                    .padding(top = GohoSpacing.sheetHeaderTop)
             ) {
-                thumbnail()
-                Column(
-                    Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(GohoSpacing.sheetSummaryLineGap),
-                ) {
-                    Text(
-                        merchant,
-                        style = GohoTheme.type.sheetMerchant,
-                        color = c.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    metadata()
-                }
+                header()
             }
             Spacer(Modifier.height(GohoSpacing.sheetContentTop))
             AnimatedContent(
@@ -214,7 +196,7 @@ internal fun ReceiptOptionsSheet(
                             )
                             Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
                         }
-                        GohoActionButton(
+                        ActionButton(
                             stringResource(
                                 if (deleting) R.string.receipt_deleting else R.string.receipt_delete
                             ),
@@ -243,15 +225,15 @@ internal fun ReceiptOptionsSheet(
                             },
                             enabled = !deleting,
                             variant = 1,
-                            color = GohoButtonColor.Red,
+                            color = ButtonColor.Red,
                             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         )
                         Spacer(Modifier.height(GohoSpacing.buttonGap))
-                        GohoActionButton(
+                        ActionButton(
                             stringResource(R.string.receipt_cancel),
                             ::dismiss,
                             variant = 2,
-                            color = GohoButtonColor.Grey,
+                            color = ButtonColor.Grey,
                             enabled = !deleting,
                             modifier = Modifier.focusRequester(focus),
                         )

@@ -16,12 +16,12 @@ import com.adamaho.goho.theme.*
 
 /** Icon-only action sharing the same finishes, colours and press feedback as labelled buttons. */
 @Composable
-fun GohoIconButton(
+fun IconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     @IntRange(from = 1, to = 2) variant: Int = 2,
-    color: GohoButtonColor = GohoButtonColor.Grey,
+    color: ButtonColor = ButtonColor.Grey,
     enabled: Boolean = true,
     opacity: () -> Float = { 1f },
     icon: @Composable () -> Unit,
@@ -47,8 +47,8 @@ fun GohoIconButton(
         Box(
             Modifier.fillMaxSize()
                 .graphicsLayer { alpha = opacity().coerceIn(0f, 1f) * if (enabled) 1f else 0.4f }
-                .gohoPress { if (enabled) progress else 0f }
-                .gohoButtonSurface(colors, GohoShapes.pill, p, variant, color)
+                .pressFeedback { if (enabled) progress else 0f }
+                .buttonSurface(colors, GohoShapes.pill, p, variant, color)
                 .clearAndSetSemantics {},
             contentAlignment = Alignment.Center,
         ) {

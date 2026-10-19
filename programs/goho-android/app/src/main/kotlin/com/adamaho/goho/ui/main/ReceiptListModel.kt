@@ -29,6 +29,7 @@ data class ReceiptListEntry(
     val currency: String?,
     val status: ReceiptListStatus,
     val uploadId: java.util.UUID? = null,
+    val category: String? = null,
 )
 
 enum class ReceiptDatePeriod {
@@ -64,6 +65,7 @@ fun receiptListEntries(
             total = receipt.total,
             currency = receipt.currency,
             status = ReceiptListStatus.Processed,
+            category = receipt.category.takeIf { it.isNotBlank() },
         )
     }
     val unfinished =

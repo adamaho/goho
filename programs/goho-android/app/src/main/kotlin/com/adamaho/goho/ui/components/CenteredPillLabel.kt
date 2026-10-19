@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -19,7 +20,7 @@ import kotlin.math.roundToInt
 
 /** Center the visible glyphs, rather than the font's asymmetric ascent/descent space. */
 @Composable
-internal fun CenteredPillLabel(text: String, style: TextStyle, color: Color) {
+internal fun CenteredPillLabel(text: String, style: TextStyle, color: Color, maxLines: Int = 1) {
     val typeface =
         LocalFontFamilyResolver.current
             .resolve(
@@ -42,12 +43,13 @@ internal fun CenteredPillLabel(text: String, style: TextStyle, color: Color) {
                     .getTextBounds(text, 0, text.length, bounds)
             }
         }
-    Layout(content = { Text(text, style = style, color = color, maxLines = 1) }) {
+    Layout(content = { Text(text, style = style, color = color, maxLines = maxLines) }) {
         measurables,
         constraints ->
         val label = measurables.single().measure(constraints)
         layout(label.width, label.height) {
-            val inkCenter = label[FirstBaseline] + (bounds.top + bounds.bottom) / 2f
+            val inkCenter =
+                (label[FirstBaseline] + label[LastBaseline] + bounds.top + bounds.bottom) / 2f
             label.placeRelative(0, (label.height / 2f - inkCenter).roundToInt())
         }
     }
