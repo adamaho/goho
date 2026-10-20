@@ -32,7 +32,7 @@ import com.squareup.moshi.JsonClass
  *
  * @param id The category's roster number.
  * @param name Trimmed lowercase category name.
- * @param icon Stable icon key for showing the category.
+ * @param icon Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.
  * @param color Stable colour key for showing the category.
  */
 
@@ -47,9 +47,9 @@ data class Category (
     @Json(name = "name")
     val name: kotlin.String,
 
-    /* Stable icon key for showing the category. */
+    /* Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know. */
     @Json(name = "icon")
-    val icon: Category.Icon,
+    val icon: kotlin.String,
 
     /* Stable colour key for showing the category. */
     @Json(name = "color")
@@ -57,23 +57,6 @@ data class Category (
 
 ) {
 
-    /**
-     * Stable icon key for showing the category.
-     *
-     * Values: groceries,meals,shopping,home,personal_care,health,transport,entertainment,other
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Icon(val value: kotlin.String) {
-        @Json(name = "groceries") groceries("groceries"),
-        @Json(name = "meals") meals("meals"),
-        @Json(name = "shopping") shopping("shopping"),
-        @Json(name = "home") home("home"),
-        @Json(name = "personal_care") personal_care("personal_care"),
-        @Json(name = "health") health("health"),
-        @Json(name = "transport") transport("transport"),
-        @Json(name = "entertainment") entertainment("entertainment"),
-        @Json(name = "other") other("other");
-    }
     /**
      * Stable colour key for showing the category.
      *

@@ -46,7 +46,6 @@ import * as Http from "#src/http.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
-import * as Reclassification from "#src/receipts/reclassification.ts";
 import * as Repository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
 
@@ -301,8 +300,12 @@ it.effect("applies migrations from empty and does not reapply completed migratio
     expect(
       yield* sql`INSERT INTO categories (name) VALUES ('snacks') RETURNING icon, color`,
     ).toEqual([{ icon: "other", color: "grey" }]);
-    // Category names are unique, nonempty, trimmed and lowercase, metadata uses known
-    // keys, and each item keeps one category.
+    // Any icon identifier is stored as given.
+    expect(
+      yield* sql`INSERT INTO categories (name, icon) VALUES ('candy', 'lollipop') RETURNING icon`,
+    ).toEqual([{ icon: "lollipop" }]);
+    // Category names are unique, nonempty, trimmed and lowercase, icons are required,
+    // colours use known keys, and each item keeps one category.
     yield* sql`
       INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
       VALUES ('Example Store', '2026-10-01', 1, 0, 1)
@@ -314,12 +317,11 @@ it.effect("applies migrations from empty and does not reapply completed migratio
     `;
     for (const statement of [
       sql`INSERT INTO categories (name) VALUES ('groceries')`,
-      sql`INSERT INTO categories (name) VALUES ('Candy')`,
+      sql`INSERT INTO categories (name) VALUES ('Chips')`,
       sql`INSERT INTO categories (name) VALUES (' ')`,
-      sql`INSERT INTO categories (name) VALUES ('candy ')`,
-      sql`INSERT INTO categories (name, icon) VALUES ('candy', 'candy')`,
-      sql`INSERT INTO categories (name, color) VALUES ('candy', 'Grey')`,
-      sql`INSERT INTO categories (name, icon) VALUES ('candy', NULL)`,
+      sql`INSERT INTO categories (name) VALUES ('chips ')`,
+      sql`INSERT INTO categories (name, color) VALUES ('chips', 'Grey')`,
+      sql`INSERT INTO categories (name, icon) VALUES ('chips', NULL)`,
       sql`
         INSERT INTO receipt_items (receipt_id, position, name, amount)
         SELECT id, 1, 'Pears', 1 FROM receipts
@@ -1745,6 +1747,11 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
     expect(yield* client.receipts.get({ params: { receiptId } })).toEqual({ data: saved });
     expect(yield* client.receipts.list()).toEqual({ data: [saved, otherBefore] });
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(before[2]);
+    // An icon outside the app's bundled set comes back as stored.
+    yield* sql`UPDATE categories SET icon = 'mdi:popcorn' WHERE name = 'snacks'`;
+    const popcorn = { ...snacks, icon: "mdi:popcorn" };
+    const { data: reread } = yield* client.receipts.get({ params: { receiptId } });
+    expect([reread.categories[0], reread.items[0].category]).toEqual([popcorn, popcorn]);
     // History stores the trimmed values against the patched receipt and items.
     expect(yield* history).toEqual([
       {
@@ -2468,142 +2475,4 @@ it.effect("deletes edit history with its receipt or item and keeps other history
       },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
-);
-
-const ReclassificationLive = Transaction.layer.pipe(Layer.provideMerge(DatabaseLive));
-
-it.effect("previews and applies item reclassification, saving nothing for invalid receipts", () =>
-  Effect.gen(function* () {
-    const repo = yield* Repository.Service;
-    const sql = yield* SqlClient.SqlClient;
-    const insert = (storeName: string) =>
-      repo.insert({ ...receiptInput, storeName }).pipe(Effect.flatMap(itemIds));
-    // Listed newest first, so outcomes come back in reverse order.
-    const [incomplete] = yield* insert("Incomplete Store");
-    const [uncatalogued, other] = yield* insert("Uncatalogued Store");
-    const [apples, adjustment] = yield* insert("Valid Store");
-    const [duplicate] = yield* insert("Duplicate Store");
-    const [foreign] = yield* insert("Foreign Store");
-    const [first, second] = yield* insert("Unsaved Store");
-    const outputs = {
-      // Unique but missing the second item.
-      "Incomplete Store": [{ id: incomplete, category: "shopping" }],
-      "Uncatalogued Store": [
-        { id: uncatalogued, category: "shopping" },
-        { id: other, category: "candy" },
-      ],
-      "Valid Store": [
-        { id: apples, category: "groceries" },
-        { id: adjustment, category: "shopping" },
-      ],
-      "Duplicate Store": [
-        { id: duplicate, category: "shopping" },
-        { id: duplicate, category: "shopping" },
-      ],
-      "Foreign Store": [
-        { id: foreign, category: "shopping" },
-        { id: apples, category: "shopping" },
-      ],
-      "Unsaved Store": [
-        { id: first, category: "shopping" },
-        { id: second, category: "household" },
-      ],
-    };
-    const prompts = yield* Ref.make<ReadonlyArray<string>>([]);
-    const reclassify = (apply: boolean) =>
-      Reclassification.run({ apply }).pipe(
-        Effect.provideService(Ai.Service, {
-          generateObject: (options) =>
-            Effect.gen(function* () {
-              const prompt = JSON.stringify(options.prompt);
-              yield* Ref.update(prompts, (values) => [...values, prompt]);
-              const [, items] = Object.entries(outputs).find(([store]) => prompt.includes(store))!;
-              return yield* generateObject({ items })(options);
-            }),
-        }),
-      );
-    const snapshot = Effect.all([
-      sql`SELECT * FROM receipts ORDER BY id`,
-      sql`SELECT * FROM receipt_items ORDER BY id`,
-      sql`SELECT * FROM categories ORDER BY id`,
-      historyRows,
-    ]);
-    const before = yield* snapshot;
-    const receipts = yield* repo.list;
-    const outcome = (index: number) => ({
-      receiptId: receipts[index]!.id,
-      storeName: receipts[index]!.storeName,
-    });
-    const failed = (index: number, error: string) => ({
-      ...outcome(index),
-      status: "failed",
-      error: expect.stringContaining(error),
-    });
-    const expected = [
-      {
-        ...outcome(0),
-        status: "classified",
-        changes: [
-          { itemId: first, itemName: "Apples", from: "groceries", to: "shopping" },
-          { itemId: second, itemName: "Adjustment", from: "groceries", to: "household" },
-        ],
-      },
-      failed(1, "AiError"),
-      failed(
-        2,
-        "InvalidAssignments: Expected one assignment for each of 2 items; received 2 for 1",
-      ),
-      {
-        ...outcome(3),
-        status: "classified",
-        changes: [
-          { itemId: adjustment, itemName: "Adjustment", from: "groceries", to: "shopping" },
-        ],
-      },
-      // A category outside the catalog fails the constrained model output.
-      failed(4, "AiError"),
-      failed(
-        5,
-        "InvalidAssignments: Expected one assignment for each of 2 items; received 1 for 1",
-      ),
-    ];
-
-    // The preview proposes changes and writes nothing.
-    expect(yield* reclassify(false)).toEqual(expected);
-    expect(yield* snapshot).toEqual(before);
-    // Each request carries the item names, merchant, and current catalog.
-    expect((yield* Ref.get(prompts))[3]).toContain("Valid Store");
-    expect((yield* Ref.get(prompts))[3]).toContain("Adjustment");
-    expect((yield* Ref.get(prompts))[3]).toContain("household");
-
-    // A receipt whose save fails keeps all its items as they were.
-    yield* sql`
-      ALTER TABLE receipt_item_history
-        ADD CONSTRAINT reject_household CHECK (after_value <> 'household')
-    `;
-    // Everything except the valid receipt and its changed item.
-    const untouched = Effect.all([
-      sql`SELECT * FROM receipts WHERE id <> ${receipts[3]!.id} ORDER BY id`,
-      sql`SELECT * FROM receipt_items WHERE id <> ${adjustment!} ORDER BY id`,
-      sql`SELECT * FROM categories ORDER BY id`,
-    ]);
-    const untouchedBefore = yield* untouched;
-    expect(yield* reclassify(true)).toEqual([failed(0, "PersistenceError"), ...expected.slice(1)]);
-    // Only the valid receipt's item category changed, with item history.
-    expect(yield* untouched).toEqual(untouchedBefore);
-    expect(Option.getOrThrow(yield* repo.findById(receipts[3]!.id)).items[1]).toEqual({
-      ...receipts[3]!.items[1],
-      category: yield* categoryNamed("shopping"),
-    });
-    expect(yield* history).toEqual([
-      {
-        operation: 1,
-        receipt_id: receipts[3]!.id,
-        item_id: adjustment,
-        field: "category",
-        before_value: "groceries",
-        after_value: "shopping",
-      },
-    ]);
-  }).pipe(Effect.provide(ReclassificationLive)),
 );

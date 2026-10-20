@@ -946,18 +946,8 @@
           },
           "icon": {
             "type": "string",
-            "enum": [
-              "groceries",
-              "meals",
-              "shopping",
-              "home",
-              "personal_care",
-              "health",
-              "transport",
-              "entertainment",
-              "other"
-            ],
-            "description": "Stable icon key for showing the category."
+            "description": "Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.",
+            "examples": ["groceries"]
           },
           "color": {
             "type": "string",

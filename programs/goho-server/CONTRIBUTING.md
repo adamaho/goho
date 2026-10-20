@@ -92,9 +92,10 @@ references it; a referenced category cannot be deleted. A receipt has no categor
 of its own: the API derives its `categories` from its items, each once in item
 order. Items are written with a `category` name and read with the category object.
 
-- `icon` and `color` are stable keys for the app's bundled tag icons and colour
-  palette, enforced by database constraints. New categories default to `other`
-  and `grey`.
+- `icon` is a required free-form icon identifier; the server does not limit it to
+  the app's bundled icons, so clients decide how to show unfamiliar ones. `color`
+  is a stable key from the app's colour palette, enforced by a database
+  constraint. New categories default to `other` and `grey`.
 - Migration 0013 seeds the canonical catalog on fresh databases: groceries,
   dining, shopping, household, personal care, health, gas, and charity, each with
   its preset icon and colour.
@@ -115,34 +116,13 @@ order. Items are written with a `category` name and read with the category objec
   space-padded legacy values from direct SQL, and linked
   each receipt without firing update triggers, so timestamps stayed and no
   history was added.
-- Migration 0013 consolidated known variant names into the canonical catalog,
-  keeping unrelated names. An existing canonical category keeps its ID; otherwise
-  the oldest variant is renamed to the canonical name and keeps its ID. Each item
-  inherited its receipt's consolidated category, then receipts lost their
-  reference. Without firing update triggers, records kept their timestamps and no
-  history was added.
-
-### Reclassifying item categories
-
-Items migrated from receipt categories share their receipt's category. The
-one-off reclassification command asks the configured AI model to assign each
-saved item an existing category from its name, amount, and merchant:
-
-```bash
-DATABASE_URL=... OPENAI_API_KEY=... OPENAI_MODEL=... \
-  pnpm --filter @goho/goho-server categories:reclassify
-```
-
-- It reads no `.env` file, so the target database and model must be set
-  explicitly.
-- By default it previews: it prints each receipt's proposed changes as JSON and
-  saves nothing. Add `--apply` after the script name to save them.
-- Applying saves each receipt's category changes atomically through normal item
-  updates, so they record item history. Names, amounts, and extraction payloads
-  stay untouched.
-- A receipt whose model output does not assign every item exactly one existing
-  category, or whose save fails, saves nothing and is reported as failed. The
-  command continues with other receipts and exits nonzero when any failed.
+- Migration 0013 classified existing data deterministically, without AI. A fixed
+  list of approved variant names maps into the canonical catalog, and unrelated
+  names are kept. An existing canonical category keeps its ID; otherwise the
+  oldest variant is renamed to the canonical name and keeps its ID. Each item
+  inherited its receipt's mapped category, then receipts lost their reference.
+  Without firing update triggers, records kept their timestamps and no history
+  was added. Later corrections use item PATCH.
 
 ### Uploads and transactions
 

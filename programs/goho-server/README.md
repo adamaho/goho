@@ -83,7 +83,9 @@ lowercase, so `Groceries` and `groceries` are the same category; an unfamiliar
 name adds a new one with the generic `other` icon and `grey` colour. The complete
 receipt is returned under `data`. Each returned item has a server-generated `id`,
 a decimal string like receipt IDs, its zero-based `position` in the receipt, and
-its `category` object (`id`, `name`, `icon`, and `color`). A receipt has no
+its `category` object (`id`, `name`, `icon`, and `color`). `icon` is a free-form
+identifier string, so clients should fall back for ones they don't know; `color`
+is one of the fixed palette keys. A receipt has no
 category of its own: its `categories` lists each distinct item category once, in
 item order.
 

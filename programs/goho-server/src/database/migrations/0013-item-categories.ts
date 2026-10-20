@@ -1,7 +1,8 @@
 import { Effect } from "effect";
 import { SqlClient } from "effect/sql";
 
-// Canonical catalog with display metadata; keys match the app's bundled tag icons and colours.
+// Canonical catalog with display metadata: icon identifiers for the app's bundled tag
+// icons and keys from its colour palette.
 const presets = [
   { name: "groceries", icon: "groceries", color: "green" },
   { name: "dining", icon: "meals", color: "orange" },
@@ -46,10 +47,7 @@ export default Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   yield* sql`
     ALTER TABLE categories
-      ADD COLUMN icon text NOT NULL DEFAULT 'other' CHECK (icon IN (
-        'groceries', 'meals', 'shopping', 'home', 'personal_care', 'health', 'transport',
-        'entertainment', 'other'
-      )),
+      ADD COLUMN icon text NOT NULL DEFAULT 'other',
       ADD COLUMN color text NOT NULL DEFAULT 'grey' CHECK (color IN (
         'green', 'orange', 'purple', 'brown', 'pink', 'red', 'blue', 'yellow', 'grey'
       ))

@@ -283,17 +283,11 @@ export const Category = Schema.Struct({
     description: "Trimmed lowercase category name.",
     examples: ["groceries"],
   }),
-  icon: Schema.Literals([
-    "groceries",
-    "meals",
-    "shopping",
-    "home",
-    "personal_care",
-    "health",
-    "transport",
-    "entertainment",
-    "other",
-  ]).annotate({ description: "Stable icon key for showing the category." }),
+  icon: Schema.String.annotate({
+    description:
+      "Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.",
+    examples: ["groceries"],
+  }),
   color: Schema.Literals([
     "green",
     "orange",
