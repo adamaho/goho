@@ -1,7 +1,8 @@
 import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Postgres } from "@goho/core";
+import { Ai, Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
+import { ReceiptId } from "@goho/goho-api/receipts";
 import {
   Config,
   Context,
@@ -17,8 +18,10 @@ import {
   Schema,
 } from "effect";
 import { SqlClient } from "effect/sql";
+import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
+import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import { FileId } from "#src/file-storage.ts";
@@ -27,6 +30,9 @@ import * as QueueConstants from "#src/queues/constants.ts";
 import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
+import * as Worker from "#src/receipt-uploads/worker.ts";
+import * as ReceiptRepository from "#src/receipts/repository.ts";
+import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const DatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
@@ -330,4 +336,171 @@ it.effect("deletes a failed upload even when its photo is already missing", () =
     yield* uploads.delete(created.id);
     expect(yield* repo.findById(created.id)).toEqual(Option.none());
   }).pipe(Effect.provide(MissingPhotoLive)),
+);
+
+const QueueRow = Schema.Struct({
+  state: Schema.String,
+  attempts: Schema.Int,
+  acquired_by: Schema.NullOr(Schema.String),
+  last_failure: Schema.NullOr(Schema.String),
+});
+
+it.effect("fails an upload whose worker crashed during the final attempt", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const uploads = yield* ReceiptUploads.Service;
+    const repo = yield* ReceiptUploadRepository.Service;
+    const handlerCalls = yield* Ref.make<ReadonlyArray<string>>([]);
+    const recordCall = (name: string) =>
+      Ref.update(handlerCalls, (calls) => [...calls, name]).pipe(
+        Effect.andThen(Effect.die(`Unexpected ${name} call`)),
+      );
+    const created = yield* uploads.create({
+      name: "receipt.png",
+      contentType: "image/png",
+      bytes: new Uint8Array([1]),
+    });
+    // Seeds the state a process killed during attempt 3 leaves behind, without
+    // killing one: the upload is processing and the dead worker's lock expired.
+    yield* repo.markProcessing(created.id);
+    yield* sql`
+      UPDATE ${sql(QueueConstants.tableName)}
+      SET attempts = ${ReceiptUploadQueue.maxAttempts},
+        acquired_by = '00000000-0000-4000-8000-000000000000',
+        acquired_at = NOW() - INTERVAL '3 minutes'
+      WHERE queue_name = ${ReceiptUploadQueue.name} AND id = ${created.id}
+    `;
+    const readQueue = sql`
+      SELECT state, attempts, acquired_by, last_failure
+      FROM ${sql(QueueConstants.tableName)}
+      WHERE queue_name = ${ReceiptUploadQueue.name} AND id = ${created.id}
+    `.pipe(Effect.flatMap(Schema.decodeUnknownEffect(Schema.Tuple([QueueRow]))));
+
+    yield* Layer.build(
+      Worker.layer.pipe(
+        Layer.provide([
+          Layer.succeed(Ai.Service, { generateObject: () => recordCall("Ai.generateObject") }),
+          Layer.succeed(CategoryRepository.Service, {
+            listNames: recordCall("CategoryRepository.listNames"),
+            findOrCreate: () => recordCall("CategoryRepository.findOrCreate"),
+          }),
+          Layer.succeed(FileStorage.Service, {
+            put: () => recordCall("FileStorage.put"),
+            get: () => recordCall("FileStorage.get"),
+            delete: () => recordCall("FileStorage.delete"),
+          }),
+          Layer.succeed(ReceiptRepository.Service, {
+            delete: () => recordCall("ReceiptRepository.delete"),
+            findById: () => recordCall("ReceiptRepository.findById"),
+            insert: () => recordCall("ReceiptRepository.insert"),
+            list: recordCall("ReceiptRepository.list"),
+            update: () => recordCall("ReceiptRepository.update"),
+            updateItem: () => recordCall("ReceiptRepository.updateItem"),
+          }),
+        ]),
+      ),
+    );
+    // Each tick runs the queue sweep and recovery schedules; lock expiry is
+    // measured by the database clock, so the seeded lock is already stale.
+    const settle = <A, E, R>(read: Effect.Effect<A, E, R>, done: (value: A) => boolean) =>
+      TestClock.adjust("30 seconds").pipe(
+        Effect.andThen(read),
+        Effect.repeat({ until: done, times: 10 }),
+      );
+    const [queue] = yield* settle(readQueue, ([row]) => row.state === "failed");
+    const upload = yield* settle(repo.findById(created.id), (found) =>
+      Option.exists(found, (value) => value.status !== "processing"),
+    );
+
+    expect(yield* Ref.get(handlerCalls)).toEqual([]);
+    expect(queue).toEqual({
+      state: "failed",
+      attempts: ReceiptUploadQueue.maxAttempts,
+      acquired_by: null,
+      last_failure: "Lock expired after final attempt",
+    });
+    expect(Option.map(upload, ({ status, failureCode }) => ({ status, failureCode }))).toEqual(
+      Option.some({ status: "failed", failureCode: "internal_error" }),
+    );
+    yield* uploads.delete(created.id);
+    expect(yield* repo.findById(created.id)).toEqual(Option.none());
+  }).pipe(
+    Effect.provide([
+      ReceiptUploadsLive,
+      QueueLive,
+      RepositoryLive,
+      Transaction.layer.pipe(Layer.provide(DatabaseLive)),
+    ]),
+  ),
+);
+
+it.effect("fails only unfinished uploads whose receipt upload job failed", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const queue = yield* ReceiptUploadQueue.Service;
+    const repo = yield* ReceiptUploadRepository.Service;
+    const create = Effect.gen(function* () {
+      const { uploadId } = yield* makeJob;
+      yield* repo.createQueued({
+        id: uploadId,
+        fileId: FileId.make("drive-file"),
+        fileName: "receipt.png",
+        contentType: "image/png",
+      });
+      yield* queue.offer({ uploadId });
+      return uploadId;
+    });
+    const queued = yield* create;
+    const processing = yield* create;
+    const active = yield* create;
+    const succeeded = yield* create;
+    const failed = yield* create;
+    const otherQueue = yield* create;
+    yield* repo.markProcessing(processing);
+    yield* repo.markProcessing(active);
+    yield* repo.markProcessing(succeeded);
+    const [receipt] = yield* sql`
+      INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total, currency)
+      VALUES ('Example Store', '2026-09-20', 10, 1, 11, 'CAD')
+      RETURNING id::text AS id
+    `.pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(Schema.Tuple([Schema.Struct({ id: ReceiptId })]))),
+    );
+    yield* repo.markSucceeded(succeeded, receipt.id, { version: 2, payload: parsedReceipt });
+    yield* repo.markFailed(failed, "storage_failed");
+    yield* sql`
+      UPDATE ${sql(QueueConstants.tableName)} SET state = 'failed'
+      WHERE queue_name = ${ReceiptUploadQueue.name}
+      AND id IN ${sql.in([queued, processing, succeeded, failed])}
+    `;
+    yield* sql`
+      INSERT INTO ${sql(QueueConstants.tableName)}
+        (id, queue_name, element, state, attempts, visible_at, created_at, updated_at)
+      VALUES (${otherQueue}, 'other-queue', '{}', 'failed', 3, NOW(), NOW(), NOW())
+    `;
+    const before = yield* repo.list;
+
+    const recovered = yield* repo.markAbandonedFailed;
+
+    const after = yield* repo.list;
+    const isRecovered = ({ id }: { readonly id: ReceiptUploadId }) =>
+      id === queued || id === processing;
+    const byId = (a: { readonly id: string }, b: { readonly id: string }) =>
+      a.id.localeCompare(b.id);
+    expect([...recovered].sort(byId)).toEqual(after.filter(isRecovered).sort(byId));
+    expect(
+      Object.fromEntries(after.map(({ id, status, failureCode }) => [id, { status, failureCode }])),
+    ).toEqual({
+      [queued]: { status: "failed", failureCode: "internal_error" },
+      [processing]: { status: "failed", failureCode: "internal_error" },
+      [active]: { status: "processing", failureCode: null },
+      [succeeded]: { status: "succeeded", failureCode: null },
+      [failed]: { status: "failed", failureCode: "storage_failed" },
+      [otherQueue]: { status: "queued", failureCode: null },
+    });
+    expect(after.filter((upload) => !isRecovered(upload))).toEqual(
+      before.filter((upload) => !isRecovered(upload)),
+    );
+    expect(yield* repo.markAbandonedFailed).toEqual([]);
+  }).pipe(Effect.provide([QueueLive, RepositoryLive])),
 );

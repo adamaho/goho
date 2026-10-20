@@ -21,6 +21,14 @@ export const ReceiptUploadJob = Schema.Struct({ uploadId: ReceiptUploadId });
 export interface ReceiptUploadJob extends Schema.Schema.Type<typeof ReceiptUploadJob> {}
 
 /**
+ * Persisted queue name shared by the queue and upload recovery.
+ *
+ * @category constants
+ * @since 0.1.0
+ */
+export const name = "receipt-uploads";
+
+/**
  * Number of processing attempts before an upload reaches a terminal failure.
  *
  * @category constants
@@ -37,7 +45,7 @@ export const maxAttempts = 3;
 export class Service extends Context.Service<Service>()("@goho/goho-server/ReceiptUploadQueue", {
   make: Effect.gen(function* () {
     const queue = yield* PersistedQueue.make({
-      name: "receipt-uploads",
+      name,
       schema: ReceiptUploadJob,
       maxAttempts,
       retrySchedule: Schedule.exponential("1 second"),

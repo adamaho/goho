@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { type CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
-import { Effect, Fiber, Layer, Ref, Result } from "effect";
+import { Effect, Fiber, Layer, Queue, Ref, Result } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
@@ -11,6 +11,7 @@ import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import { FileId } from "#src/file-storage.ts";
 import type { ReceiptExtraction, ReceiptUpload } from "#src/receipt-uploads/model.ts";
+import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
@@ -38,6 +39,7 @@ const dependencies = (options: {
   readonly markProcessing?: ReceiptUploadRepository.Interface["markProcessing"];
   readonly markSucceeded?: ReceiptUploadRepository.Interface["markSucceeded"];
   readonly markFailed?: ReceiptUploadRepository.Interface["markFailed"];
+  readonly markAbandonedFailed?: ReceiptUploadRepository.Interface["markAbandonedFailed"];
 }) =>
   Layer.mergeAll(
     options.transaction === undefined
@@ -81,6 +83,7 @@ const dependencies = (options: {
       markFailed:
         options.markFailed ??
         ((_, failureCode) => Effect.succeed({ ...upload, status: "failed", failureCode })),
+      markAbandonedFailed: options.markAbandonedFailed ?? Effect.succeed([]),
     }),
   );
 
@@ -288,4 +291,40 @@ it.effect("discards a redelivered job after its upload has been deleted", () =>
       }),
     ),
   ),
+);
+
+it.effect("keeps recovering abandoned uploads after a failed pass while the queue waits", () =>
+  Effect.gen(function* () {
+    const passes = yield* Queue.unbounded<number>();
+    const count = yield* Ref.make(0);
+    yield* Layer.build(
+      Worker.layer.pipe(
+        Layer.provide([
+          dependencies({
+            markAbandonedFailed: Ref.updateAndGet(count, (pass) => pass + 1).pipe(
+              Effect.tap((pass) => Queue.offer(passes, pass)),
+              Effect.flatMap((pass) =>
+                pass === 1
+                  ? Effect.fail(
+                      new ReceiptUploadRepository.PersistenceError({
+                        operation: "markAbandonedFailed",
+                        cause: "database unavailable",
+                      }),
+                    )
+                  : Effect.succeed([]),
+              ),
+            ),
+          }),
+          Layer.succeed(ReceiptUploadQueue.Service, {
+            offer: () => Effect.die("Unexpected queue.offer call"),
+            take: () => Effect.never,
+          }),
+        ]),
+      ),
+    );
+
+    expect(yield* Queue.take(passes)).toBe(1);
+    yield* TestClock.adjust("30 seconds");
+    expect(yield* Queue.take(passes)).toBe(2);
+  }),
 );

@@ -54,6 +54,9 @@ A valid UUID with no matching upload returns HTTP 404. Malformed IDs return HTTP
 `DELETE /receipt-uploads/:uploadId` permanently removes a failed upload and its
 original photo. It returns HTTP 204 with no response body. Failed uploads have
 `status: "failed"` and a failure code after the worker exhausts its three attempts.
+If a worker crash abandons the final attempt, the upload fails with
+`internal_error` within about three minutes after a worker runs again, while the
+database is available.
 
 Queued, processing, and succeeded uploads return HTTP 409 with
 `{"_tag":"Conflict"}`. To remove a successful scan and its photo, delete its
