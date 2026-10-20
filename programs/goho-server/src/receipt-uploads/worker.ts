@@ -125,10 +125,37 @@ const run = Effect.gen(function* () {
 );
 
 /**
- * Runs the receipt upload consumer for the lifetime of the application scope.
- * Forking lets layer acquisition finish; closing the scope interrupts the worker.
+ * Fails uploads whose queue job failed without the worker recording it, such as
+ * after a crash during the final attempt. Runs at startup, then every 30 seconds.
+ */
+const recover = ReceiptUploadRepository.Service.pipe(
+  Effect.flatMap((uploads) => uploads.markAbandonedFailed),
+  Effect.tap((failed) =>
+    failed.length === 0
+      ? Effect.void
+      : Effect.logWarning("Failed receipt uploads abandoned by the queue", {
+          uploadIds: failed.map((upload) => upload.id),
+        }),
+  ),
+  Effect.catchTag("GohoServer.ReceiptUploadRepository.PersistenceError", (error) =>
+    Effect.logError("Receipt upload recovery pass failed", error),
+  ),
+  Effect.repeat(Schedule.spaced("30 seconds")),
+);
+
+/**
+ * Runs the receipt upload consumer and recovery pass for the lifetime of the
+ * application scope. Forking lets layer acquisition finish; closing the scope
+ * interrupts both.
  *
  * @category layers
  * @since 0.1.0
  */
-export const layer = Layer.effectDiscard(Effect.forkScoped(run));
+export const layer = Layer.effectDiscard(
+  Effect.gen(function* () {
+    // The queue requirement builds its layer, and so creates the table recovery
+    // reads, before either fiber starts.
+    yield* Effect.forkScoped(recover);
+    yield* Effect.forkScoped(run);
+  }),
+);

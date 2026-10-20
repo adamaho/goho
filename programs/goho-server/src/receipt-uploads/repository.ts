@@ -8,9 +8,11 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import { FileId } from "#src/file-storage.ts";
+import * as QueueConstants from "#src/queues/constants.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
 
 import { QueuedReceiptUpload, type ReceiptExtraction, ReceiptUpload } from "./model.ts";
+import * as ReceiptUploadQueue from "./queue.ts";
 
 /**
  * Unexpected failure while validating or persisting an upload.
@@ -94,6 +96,12 @@ export interface Interface {
     uploadId: ReceiptUploadId,
     failureCode: ReceiptUploadFailureCode,
   ) => Effect.Effect<ReceiptUpload, TransitionError>;
+  /**
+   * Marks queued or processing uploads failed with `internal_error` when their
+   * queue job has already failed, and returns the uploads it changed. Requires
+   * the queue table, which the queue layer creates.
+   */
+  readonly markAbandonedFailed: Effect.Effect<ReadonlyArray<ReceiptUpload>, PersistenceError>;
 }
 
 /**
@@ -231,6 +239,21 @@ export const layer = Layer.effect(
       `,
     });
 
+    const updateAbandonedToFailed = SqlSchema.findAll({
+      Request: Schema.Void,
+      Result: ReceiptUploadRow,
+      execute: () => sql`
+        UPDATE receipt_uploads
+        SET status = 'failed', failure_code = 'internal_error'
+        WHERE status IN ('queued', 'processing')
+        AND id::text IN (
+          SELECT id FROM ${sql(QueueConstants.tableName)}
+          WHERE queue_name = ${ReceiptUploadQueue.name} AND state = 'failed'
+        )
+        RETURNING ${columns}
+      `,
+    });
+
     const findById = Effect.fn("@goho/ReceiptUploadRepository.findById")(
       (uploadId: ReceiptUploadId) => selectById(uploadId).pipe(Effect.map(Option.map(fromRow))),
       persistenceError("findById"),
@@ -310,12 +333,21 @@ export const layer = Layer.effect(
         transition("markFailed", uploadId, "failed", updateToFailed({ uploadId, failureCode })),
     );
 
+    // The queue does not redeliver failed jobs, so their unfinished uploads need
+    // reconciling. The status guard leaves uploads a running worker already finished.
+    const markAbandonedFailed = updateAbandonedToFailed(undefined).pipe(
+      Effect.map((rows) => rows.map(fromRow)),
+      persistenceError("markAbandonedFailed"),
+      Effect.withSpan("@goho/ReceiptUploadRepository.markAbandonedFailed"),
+    );
+
     return Service.of({
       createQueued,
       deleteFailed,
       findById,
       findByReceiptId,
       list,
+      markAbandonedFailed,
       markFailed,
       markProcessing,
       markSucceeded,

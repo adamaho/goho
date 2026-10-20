@@ -135,6 +135,21 @@ caller's transaction, the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction. That
 status change is what stops redelivered jobs from creating duplicate receipts.
 
+A job can fail in the `receipt-uploads` queue without the worker recording it on
+the upload:
+
+- If the process crashes during the final attempt, Effect's queue fails the job
+  once its lock expires after two minutes. It checks every 30 seconds while a
+  worker takes jobs.
+- If every final `markFailed` write fails, the queue fails the job as soon as the
+  handler exits.
+
+A graceful shutdown releases the attempt for redelivery instead. The worker's
+recovery pass runs at startup and every 30 seconds. It marks queued or
+processing uploads whose job failed as `failed` with `internal_error`, so they
+can be deleted. Pending or active jobs, succeeded uploads and existing failure
+codes stay unchanged. A failed pass is logged and retried at the next interval.
+
 ### Record timestamps
 
 `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
