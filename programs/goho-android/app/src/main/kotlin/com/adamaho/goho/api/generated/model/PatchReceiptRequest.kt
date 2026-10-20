@@ -32,7 +32,6 @@ import com.squareup.moshi.JsonClass
  *
  * @param storeName Store or merchant named on the receipt.
  * @param receiptDate Date the purchase hit the ice.
- * @param category Receipt category in the lineup.
  */
 
 
@@ -44,11 +43,7 @@ data class PatchReceiptRequest (
 
     /* Date the purchase hit the ice. */
     @Json(name = "receiptDate")
-    val receiptDate: kotlin.String? = null,
-
-    /* Receipt category in the lineup. */
-    @Json(name = "category")
-    val category: kotlin.String? = null
+    val receiptDate: kotlin.String? = null
 
 ) {
 

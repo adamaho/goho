@@ -53,9 +53,8 @@ const makeUploadId = Crypto.Crypto.use((crypto) => crypto.randomUUIDv4()).pipe(
 const createReceipt = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql`
-    WITH category AS (INSERT INTO categories (name) VALUES ('groceries') RETURNING id)
-    INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total, currency)
-    SELECT 'Example Store', '2026-09-20', id, 10, 1, 11, 'CAD' FROM category
+    INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total, currency)
+    VALUES ('Example Store', '2026-09-20', 10, 1, 11, 'CAD')
     RETURNING id::text AS id
   `;
   return ReceiptId.make(String(rows[0]!.id));

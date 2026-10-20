@@ -78,25 +78,29 @@ HTTP 500 with `{"_tag":"InternalServerError"}`.
 JSON body shown in Swagger. Every successful call saves a new receipt.
 
 Names are trimmed and decimal strings normalized (`11.00` becomes `11`).
-Categories are saved and returned in lowercase, so `Groceries` and `groceries`
-are the same category; an unfamiliar name adds a new one. The complete receipt
-is returned under `data`. Each returned item has a
-server-generated `id`, a decimal string like receipt IDs, and its zero-based
-`position` in the receipt.
+Every item names its own `category`. Categories are saved and returned in
+lowercase, so `Groceries` and `groceries` are the same category; an unfamiliar
+name adds a new one with the generic `other` icon and `grey` colour. The complete
+receipt is returned under `data`. Each returned item has a server-generated `id`,
+a decimal string like receipt IDs, its zero-based `position` in the receipt, and
+its `category` object (`id`, `name`, `icon`, and `color`). A receipt has no
+category of its own: its `categories` lists each distinct item category once, in
+item order.
 
 Invalid payloads return HTTP 400 with an empty body; validation or persistence
 failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 ### Correct a receipt
 
-`PATCH /receipts/:receiptId` corrects one or more of `storeName`, `receiptDate`,
-and `category`. Omitted fields keep their values. It returns HTTP 200 with the
-complete saved receipt under `data`.
+`PATCH /receipts/:receiptId` corrects `storeName`, `receiptDate`, or both.
+Omitted fields keep their values. It returns HTTP 200 with the complete saved
+receipt under `data`.
 
-`PATCH /receipts/:receiptId/items/:itemId` renames an existing item on that
-receipt using its `id` and a JSON body containing only `name`. It returns HTTP
-200 with only the saved item (`id`, `position`, `name`, and `amount`) under
-`data`; fetch the receipt to see the rest of it.
+`PATCH /receipts/:receiptId/items/:itemId` corrects the `name`, `category`, or
+both of an existing item on that receipt, using its `id`. It returns HTTP 200
+with only the saved item (`id`, `position`, `name`, `amount`, and `category`)
+under `data`; fetch the receipt to see the rest of it, including its updated
+`categories`.
 
 Names and categories are trimmed and must stay nonempty, and categories are
 saved in lowercase as on creation; dates must be real

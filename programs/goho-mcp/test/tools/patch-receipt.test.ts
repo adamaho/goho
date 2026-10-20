@@ -10,7 +10,6 @@ import { ErrorResult, ReceiptResult, startMcpClient } from "#test/support/mcp-cl
 const corrections = {
   storeName: "Corner Store",
   receiptDate: "2026-09-14",
-  category: "Household",
 };
 
 const ServerLive = HttpServer.serve(
@@ -23,9 +22,9 @@ const ServerLive = HttpServer.serve(
       return HttpServerResponse.jsonUnsafe({ data: { ...receipt, ...corrections } });
     }
     if (request.url === "/receipts/43") {
-      expect(yield* request.json).toEqual({ category: "Household" });
+      expect(yield* request.json).toEqual({ receiptDate: "2026-09-14" });
       return HttpServerResponse.jsonUnsafe({
-        data: { ...receipt, id: "43", category: "Household" },
+        data: { ...receipt, id: "43", receiptDate: "2026-09-14" },
       });
     }
     if (request.url === "/receipts/999") {
@@ -46,7 +45,7 @@ it.effect("patches receipt details through MCP and returns the complete receipt"
     const patched = yield* Schema.decodeUnknownEffect(ReceiptResult)(
       yield* client.call(2, "patch_receipt", {
         receipt_id: "42",
-        changes: { ...corrections, storeName: "  Corner Store  ", category: " Household " },
+        changes: { ...corrections, storeName: "  Corner Store  " },
       }),
     );
     expect(patched.isError).toBe(false);
@@ -55,12 +54,12 @@ it.effect("patches receipt details through MCP and returns the complete receipt"
     const partial = yield* Schema.decodeUnknownEffect(ReceiptResult)(
       yield* client.call(3, "patch_receipt", {
         receipt_id: "43",
-        changes: { category: "Household" },
+        changes: { receiptDate: "2026-09-14" },
       }),
     );
     expect(partial.isError).toBe(false);
     expect(partial.structuredContent).toEqual({
-      receipt: { ...receipt, id: "43", category: "Household" },
+      receipt: { ...receipt, id: "43", receiptDate: "2026-09-14" },
     });
   }).pipe(Effect.provide([ServerLive, NodeServices.layer])),
 );
@@ -79,7 +78,7 @@ it.effect("reports missing receipts, rejected corrections, and server failures t
       const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
         yield* client.call(index + 2, "patch_receipt", {
           receipt_id: testCase.receipt_id,
-          changes: { category: "Household" },
+          changes: { storeName: "Corner Store" },
         }),
       );
       expect(failed.isError).toBe(true);
@@ -91,7 +90,7 @@ it.effect("reports missing receipts, rejected corrections, and server failures t
 it.effect("rejects invalid receipt patches before contacting the API", () =>
   Effect.gen(function* () {
     const client = yield* startMcpClient("http://127.0.0.1:1");
-    const valid = { receipt_id: "42", changes: { category: "Household" } };
+    const valid = { receipt_id: "42", changes: { storeName: "Corner Store" } };
     const invalidInputs = [
       { ...valid, receipt_id: "0" },
       { ...valid, receipt_id: 42 },
@@ -100,11 +99,12 @@ it.effect("rejects invalid receipt patches before contacting the API", () =>
       { ...valid, changes: {} },
       { ...valid, changes: null },
       { ...valid, changes: { storeName: "  " } },
-      { ...valid, changes: { category: "  " } },
-      { ...valid, changes: { category: null } },
+      { ...valid, changes: { storeName: null } },
       { ...valid, changes: { receiptDate: "2026-02-30" } },
       { ...valid, changes: { total: "100" } },
-      { ...valid, changes: { category: "Household", total: "100" } },
+      { ...valid, changes: { storeName: "Corner Store", total: "100" } },
+      // Categories belong to items now.
+      { ...valid, changes: { category: "Household" } },
       { ...valid, changes: { currency: "CAD" } },
       { ...valid, changes: { items: [] } },
       { ...valid, changes: { store_name: "Corner Store" } },
@@ -127,7 +127,7 @@ it.effect("reports an unavailable API when patching a receipt", () =>
     const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
       yield* client.call(2, "patch_receipt", {
         receipt_id: "42",
-        changes: { category: "Household" },
+        changes: { storeName: "Corner Store" },
       }),
     );
     expect(failed.isError).toBe(true);

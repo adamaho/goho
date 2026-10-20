@@ -23,6 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.Category
 import com.adamaho.goho.api.generated.model.ReceiptItem
 
 import com.squareup.moshi.Json
@@ -34,11 +35,11 @@ import com.squareup.moshi.JsonClass
  * @param id The receipt's roster number, kept the same on a replay.
  * @param storeName Store or merchant named on the receipt.
  * @param receiptDate Date the purchase hit the ice.
- * @param category Receipt category in the lineup.
  * @param subtotal Amount before tax.
  * @param tax Tax amount.
  * @param total Final receipt total.
  * @param currency Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.
+ * @param categories Each distinct item category once, in order of first appearance.
  * @param items Items lined up by ascending position.
  */
 
@@ -57,10 +58,6 @@ data class Receipt (
     @Json(name = "receiptDate")
     val receiptDate: kotlin.String,
 
-    /* Receipt category in the lineup. */
-    @Json(name = "category")
-    val category: kotlin.String,
-
     /* Amount before tax. */
     @Json(name = "subtotal")
     val subtotal: kotlin.String,
@@ -76,6 +73,10 @@ data class Receipt (
     /* Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry. */
     @Json(name = "currency")
     val currency: kotlin.String,
+
+    /* Each distinct item category once, in order of first appearance. */
+    @Json(name = "categories")
+    val categories: kotlin.collections.List<Category>,
 
     /* Items lined up by ascending position. */
     @Json(name = "items")

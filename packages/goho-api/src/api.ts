@@ -255,7 +255,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Create a receipt")
           .annotate(
             OpenApi.Description,
-            "Creates the receipt and items in one clean play. Every call saves a new receipt.",
+            "Creates the receipt and items in one clean play, adding any unfamiliar item category to the roster. Every call saves a new receipt.",
           ),
       )
       .add(
@@ -280,7 +280,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Correct receipt details")
           .annotate(
             OpenApi.Description,
-            "Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.",
+            "Updates the supplied store name or receipt date and returns the complete receipt. Amounts, currency, and items stay on the bench.",
           ),
       )
       .add(
@@ -291,7 +291,7 @@ export const api = HttpApi.make("goho-server")
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
-                "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved.",
+                "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
             }),
             HttpApiError.NotFound.annotate({
               description: "That receipt has no item wearing this number, bud.",
@@ -302,10 +302,10 @@ export const api = HttpApi.make("goho-server")
           ],
         })
           .annotate(HttpApi.PayloadParseOptions, strictPayload)
-          .annotate(OpenApi.Summary, "Rename a receipt item")
+          .annotate(OpenApi.Summary, "Correct a receipt item")
           .annotate(
             OpenApi.Description,
-            "Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.",
+            "Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.",
           ),
       ),
   );

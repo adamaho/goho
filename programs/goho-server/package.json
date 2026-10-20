@@ -19,6 +19,7 @@
     "openapi:check": "node scripts/openapi.ts --check",
     "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts",
     "db:seed": "node scripts/seed.ts",
+    "categories:reclassify": "node scripts/reclassify-categories.ts",
     "test:integration": "vitest run --project integration",
     "image": "node scripts/build-image.ts",
     "deploy": "node scripts/deploy.ts"

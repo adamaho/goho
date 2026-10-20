@@ -21,7 +21,7 @@ interface ReceiptsApi {
     /**
      * POST receipts
      * Create a receipt
-     * Creates the receipt and items in one clean play. Every call saves a new receipt.
+     * Creates the receipt and items in one clean play, adding any unfamiliar item category to the roster. Every call saves a new receipt.
      * Responses:
      *  - 200: Success
      *  - 400: The payload is a bad pass; the response body stays empty.
@@ -94,7 +94,7 @@ interface ReceiptsApi {
     /**
      * PATCH receipts/{receiptId}
      * Correct receipt details
-     * Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.
+     * Updates the supplied store name or receipt date and returns the complete receipt. Amounts, currency, and items stay on the bench.
      * Responses:
      *  - 200: Success
      *  - 400: The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.
@@ -110,11 +110,11 @@ interface ReceiptsApi {
 
     /**
      * PATCH receipts/{receiptId}/items/{itemId}
-     * Rename a receipt item
-     * Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.
+     * Correct a receipt item
+     * Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.
      * Responses:
      *  - 200: Success
-     *  - 400: The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved.
+     *  - 400: The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.
      *  - 404: That receipt has no item wearing this number, bud.
      *  - 500: The server could not save this correction; nothing changed.
      *

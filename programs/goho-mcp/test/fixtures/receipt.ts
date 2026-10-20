@@ -1,3 +1,5 @@
+const groceries = { id: "3", name: "groceries", icon: "groceries", color: "green" };
+
 /**
  * A saved receipt used by MCP tests.
  *
@@ -8,12 +10,12 @@ export const receipt = {
   id: "42",
   storeName: "North Star Market",
   receiptDate: "2026-09-10",
-  category: "Groceries",
   subtotal: "21.5",
   tax: "1.72",
   total: "23.22",
   currency: "USD",
-  items: [{ id: "7", position: 0, name: "Apples", amount: "4.5" }],
+  categories: [groceries],
+  items: [{ id: "7", position: 0, name: "Apples", amount: "4.5", category: groceries }],
 };
 
 /**
@@ -25,10 +27,9 @@ export const receipt = {
 export const createPayload = {
   storeName: "North Star Market",
   receiptDate: "2026-09-10",
-  category: "Groceries",
   subtotal: "21.5",
   tax: "1.72",
   total: "23.22",
   currency: "USD",
-  items: [{ name: "Apples", amount: "4.5" }],
+  items: [{ name: "Apples", amount: "4.5", category: "Groceries" }],
 };
