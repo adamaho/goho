@@ -106,7 +106,8 @@ order. Items are written with a `category` name and read with the category objec
 - Saving a receipt or item finds each category by name or creates it in the same
   transaction, so a failed or rolled-back save leaves no new category behind. A
   PATCH for a missing receipt or item creates nothing. Reusing a category does not
-  update it.
+  update it. A receipt save looks up each distinct incoming name once; case or
+  space variants are separate lookups that resolve to the same category.
 - Categories stay when their items are deleted or moved to another category.
 - Upload processing reads the current names before each AI request. The model's
   structured output only accepts those names, so it cannot invent a category; an

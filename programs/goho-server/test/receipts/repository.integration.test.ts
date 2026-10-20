@@ -598,17 +598,38 @@ it.effect("moves extraction results onto uploads and drops receipt source metada
 
 it.effect("finds one receipt with its distinct item categories and none for a missing ID", () =>
   Effect.gen(function* () {
-    const repo = yield* Repository.Service;
+    // Records each category lookup the receipt repository makes.
+    const categories = yield* CategoryRepository.Service;
+    const lookups = yield* Ref.make<ReadonlyArray<string>>([]);
+    const repo = yield* Repository.Service.pipe(
+      Effect.provide(
+        Repository.layer.pipe(
+          Layer.provide(
+            Layer.succeed(CategoryRepository.Service, {
+              ...categories,
+              findOrCreate: (name) =>
+                Ref.update(lookups, (names) => [...names, name]).pipe(
+                  Effect.andThen(categories.findOrCreate(name)),
+                ),
+            }),
+          ),
+        ),
+      ),
+    );
     const receiptId = yield* repo.insert({
       ...receiptInput,
       items: [
         { name: "Milk", amount: "4.00", category: "Groceries" },
         { name: "Shirt", amount: "8.00", category: "shopping" },
         { name: "Apples", amount: "0.25", category: " groceries " },
+        { name: "Bread", amount: "3.00", category: "Groceries" },
+        { name: "Socks", amount: "5.00", category: "shopping" },
       ],
     });
-    const [milk, shirt, apples] = yield* itemIds(receiptId);
-    expect(new Set([milk, shirt, apples]).size).toBe(3);
+    // Repeated names are looked up once; a spelling variant still resolves in SQL.
+    expect(yield* Ref.get(lookups)).toEqual(["Groceries", "shopping", " groceries "]);
+    const [milk, shirt, apples, bread, socks] = yield* itemIds(receiptId);
+    expect(new Set([milk, shirt, apples, bread, socks]).size).toBe(5);
     const groceries = yield* categoryNamed("groceries");
     const shopping = yield* categoryNamed("shopping");
     const saved = yield* repo.findById(receiptId);
@@ -626,6 +647,8 @@ it.effect("finds one receipt with its distinct item categories and none for a mi
           { id: milk, position: 0, name: "Milk", amount: "4.00", category: groceries },
           { id: shirt, position: 1, name: "Shirt", amount: "8.00", category: shopping },
           { id: apples, position: 2, name: "Apples", amount: "0.25", category: groceries },
+          { id: bread, position: 3, name: "Bread", amount: "3.00", category: groceries },
+          { id: socks, position: 4, name: "Socks", amount: "5.00", category: shopping },
         ],
       }),
     );
@@ -633,6 +656,13 @@ it.effect("finds one receipt with its distinct item categories and none for a mi
     expect(Object.keys(Option.getOrThrow(saved))).not.toContain("category");
     expect((yield* repo.list)[0]).toEqual(Option.getOrThrow(saved));
     expect(yield* repo.findById(ReceiptId.make("999"))).toEqual(Option.none());
+
+    // The next receipt looks its categories up again.
+    const next = yield* repo.insert(withCategory("Groceries"));
+    expect(yield* Ref.get(lookups)).toEqual(["Groceries", "shopping", " groceries ", "Groceries"]);
+    expect(
+      Option.getOrThrow(yield* repo.findById(next)).items.map(({ category }) => category),
+    ).toEqual([groceries, groceries]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

@@ -307,16 +307,24 @@ export const layer = Layer.effect(
         return yield* sql.withTransaction(
           Effect.gen(function* () {
             const { id } = yield* insertReceiptRow(receipt);
+            // Items resolve one at a time, so each distinct incoming name is looked up
+            // once per insert. Case or space variants still resolve through the database.
+            const categoryIds = new Map<string, CategoryId>();
             const rows = yield* Effect.forEach(receipt.items, (item, position) =>
-              categories.findOrCreate(item.category).pipe(
-                Effect.map((category) => ({
+              Effect.gen(function* () {
+                let categoryId = categoryIds.get(item.category);
+                if (categoryId === undefined) {
+                  categoryId = (yield* categories.findOrCreate(item.category)).id;
+                  categoryIds.set(item.category, categoryId);
+                }
+                return {
                   receipt_id: id,
                   position,
                   name: item.name,
                   amount: item.amount,
-                  category_id: category.id,
-                })),
-              ),
+                  category_id: categoryId,
+                };
+              }),
             );
             yield* insertItemRows(rows);
             return id;
