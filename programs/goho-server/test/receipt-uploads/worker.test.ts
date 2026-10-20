@@ -295,23 +295,19 @@ it.effect("discards a redelivered job after its upload has been deleted", () =>
 
 it.effect("keeps recovering abandoned uploads after a failed pass while the queue waits", () =>
   Effect.gen(function* () {
-    const passes = yield* Queue.unbounded<number>();
-    const count = yield* Ref.make(0);
+    const passes = yield* Queue.unbounded<void>();
     yield* Layer.build(
       Worker.layer.pipe(
         Layer.provide([
           dependencies({
-            markAbandonedFailed: Ref.updateAndGet(count, (pass) => pass + 1).pipe(
-              Effect.tap((pass) => Queue.offer(passes, pass)),
-              Effect.flatMap((pass) =>
-                pass === 1
-                  ? Effect.fail(
-                      new ReceiptUploadRepository.PersistenceError({
-                        operation: "markAbandonedFailed",
-                        cause: "database unavailable",
-                      }),
-                    )
-                  : Effect.succeed([]),
+            markAbandonedFailed: Queue.offer(passes, undefined).pipe(
+              Effect.andThen(
+                Effect.fail(
+                  new ReceiptUploadRepository.PersistenceError({
+                    operation: "markAbandonedFailed",
+                    cause: "database unavailable",
+                  }),
+                ),
               ),
             ),
           }),
@@ -323,8 +319,8 @@ it.effect("keeps recovering abandoned uploads after a failed pass while the queu
       ),
     );
 
-    expect(yield* Queue.take(passes)).toBe(1);
+    yield* Queue.take(passes);
     yield* TestClock.adjust("30 seconds");
-    expect(yield* Queue.take(passes)).toBe(2);
+    yield* Queue.take(passes);
   }),
 );

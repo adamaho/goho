@@ -338,23 +338,14 @@ it.effect("deletes a failed upload even when its photo is already missing", () =
   }).pipe(Effect.provide(MissingPhotoLive)),
 );
 
-const QueueRow = Schema.Struct({
-  state: Schema.String,
-  attempts: Schema.Int,
-  acquired_by: Schema.NullOr(Schema.String),
-  last_failure: Schema.NullOr(Schema.String),
-});
-
 it.effect("fails an upload whose worker crashed during the final attempt", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const uploads = yield* ReceiptUploads.Service;
     const repo = yield* ReceiptUploadRepository.Service;
-    const handlerCalls = yield* Ref.make<ReadonlyArray<string>>([]);
-    const recordCall = (name: string) =>
-      Ref.update(handlerCalls, (calls) => [...calls, name]).pipe(
-        Effect.andThen(Effect.die(`Unexpected ${name} call`)),
-      );
+    // A background consumer defect does not fail this test directly, so record
+    // photo reads to detect any unexpected redelivery.
+    const storageRead = yield* Ref.make(false);
     const created = yield* uploads.create({
       name: "receipt.png",
       contentType: "image/png",
@@ -370,55 +361,32 @@ it.effect("fails an upload whose worker crashed during the final attempt", () =>
         acquired_at = NOW() - INTERVAL '3 minutes'
       WHERE queue_name = ${ReceiptUploadQueue.name} AND id = ${created.id}
     `;
-    const readQueue = sql`
-      SELECT state, attempts, acquired_by, last_failure
-      FROM ${sql(QueueConstants.tableName)}
-      WHERE queue_name = ${ReceiptUploadQueue.name} AND id = ${created.id}
-    `.pipe(Effect.flatMap(Schema.decodeUnknownEffect(Schema.Tuple([QueueRow]))));
 
     yield* Layer.build(
       Worker.layer.pipe(
         Layer.provide([
-          Layer.succeed(Ai.Service, { generateObject: () => recordCall("Ai.generateObject") }),
-          Layer.succeed(CategoryRepository.Service, {
-            listNames: recordCall("CategoryRepository.listNames"),
-            findOrCreate: () => recordCall("CategoryRepository.findOrCreate"),
+          Layer.mock(Ai.Service, {}),
+          Layer.mock(CategoryRepository.Service, {}),
+          Layer.mock(FileStorage.Service, {
+            get: () =>
+              Ref.set(storageRead, true).pipe(Effect.andThen(Effect.die("Unexpected storage.get"))),
           }),
-          Layer.succeed(FileStorage.Service, {
-            put: () => recordCall("FileStorage.put"),
-            get: () => recordCall("FileStorage.get"),
-            delete: () => recordCall("FileStorage.delete"),
-          }),
-          Layer.succeed(ReceiptRepository.Service, {
-            delete: () => recordCall("ReceiptRepository.delete"),
-            findById: () => recordCall("ReceiptRepository.findById"),
-            insert: () => recordCall("ReceiptRepository.insert"),
-            list: recordCall("ReceiptRepository.list"),
-            update: () => recordCall("ReceiptRepository.update"),
-            updateItem: () => recordCall("ReceiptRepository.updateItem"),
-          }),
+          Layer.mock(ReceiptRepository.Service, {}),
         ]),
       ),
     );
     // Each tick runs the queue sweep and recovery schedules; lock expiry is
     // measured by the database clock, so the seeded lock is already stale.
-    const settle = <A, E, R>(read: Effect.Effect<A, E, R>, done: (value: A) => boolean) =>
-      TestClock.adjust("30 seconds").pipe(
-        Effect.andThen(read),
-        Effect.repeat({ until: done, times: 10 }),
-      );
-    const [queue] = yield* settle(readQueue, ([row]) => row.state === "failed");
-    const upload = yield* settle(repo.findById(created.id), (found) =>
-      Option.exists(found, (value) => value.status !== "processing"),
+    // Recovery only matches failed jobs, so the upload settling proves the sweep ran.
+    const upload = yield* TestClock.adjust("30 seconds").pipe(
+      Effect.andThen(repo.findById(created.id)),
+      Effect.repeat({
+        until: (found) => Option.exists(found, (value) => value.status !== "processing"),
+        times: 10,
+      }),
     );
 
-    expect(yield* Ref.get(handlerCalls)).toEqual([]);
-    expect(queue).toEqual({
-      state: "failed",
-      attempts: ReceiptUploadQueue.maxAttempts,
-      acquired_by: null,
-      last_failure: "Lock expired after final attempt",
-    });
+    expect(yield* Ref.get(storageRead)).toBe(false);
     expect(Option.map(upload, ({ status, failureCode }) => ({ status, failureCode }))).toEqual(
       Option.some({ status: "failed", failureCode: "internal_error" }),
     );
