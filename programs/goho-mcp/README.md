@@ -99,21 +99,22 @@ while the client is connected and reserves stdout for protocol messages.
   `list_receipts` to inspect its items.
 - `create_receipt` saves supplied receipt details and items. Each call saves a
   new receipt. Ask your client to create a fictional receipt
-  for Example Store on 2026-09-13 in the Groceries category, with USD
-  subtotal $10.25, tax $0.75, total $11.00, and one Apple item for $10.25.
+  for Example Store on 2026-09-13, with USD subtotal $10.25, tax $0.75,
+  total $11.00, and one Apple item for $10.25 in the Groceries category.
   Then call `get_receipt` with the returned ID.
 - `delete_receipt` takes a positive integer `receipt_id` and permanently
   removes that receipt, its items, and any scanned image. It returns the deleted
   ID. Try it on the receipt you just created, then confirm `get_receipt` reports
   it as not found.
 - `patch_receipt` takes a string `receipt_id` and a `changes` object containing
-  at least one of `storeName`, `receiptDate` (YYYY-MM-DD), or `category`. For
-  example: `{"receipt_id":"42","changes":{"category":"Household"}}`.
+  at least one of `storeName` or `receiptDate` (YYYY-MM-DD). For example:
+  `{"receipt_id":"42","changes":{"storeName":"Corner Store"}}`.
   It returns the complete saved receipt. Omitted fields stay unchanged;
   amounts, currency, and items cannot be patched.
 - `patch_receipt_item` takes string `receipt_id` and `item_id` values and a
-  `changes` object with a nonblank `name`. Use an item ID returned by
-  `get_receipt` or `list_receipts`, for example:
-  `{"receipt_id":"42","item_id":"7","changes":{"name":"Granny Smith apples"}}`.
-  It returns the saved item with its ID, position, name, and amount.
-  Only the name changes. Both patch tools trim names and reject unsupported fields.
+  `changes` object with a nonblank `name`, `category`, or both. Use an item ID
+  returned by `get_receipt` or `list_receipts`, for example:
+  `{"receipt_id":"42","item_id":"7","changes":{"category":"Household"}}`.
+  It returns the saved item with its ID, position, name, amount, and category.
+  Categories are saved in lowercase, and an unfamiliar name adds a new one.
+  Both patch tools trim values and reject unsupported fields.

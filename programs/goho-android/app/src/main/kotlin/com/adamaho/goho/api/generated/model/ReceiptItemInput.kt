@@ -32,6 +32,7 @@ import com.squareup.moshi.JsonClass
  *
  * @param name Item name on the receipt.
  * @param amount Item amount; negative adjustments can suit up too.
+ * @param category Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  */
 
 
@@ -43,7 +44,11 @@ data class ReceiptItemInput (
 
     /* Item amount; negative adjustments can suit up too. */
     @Json(name = "amount")
-    val amount: kotlin.String
+    val amount: kotlin.String,
+
+    /* Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
+    @Json(name = "category")
+    val category: kotlin.String
 
 ) {
 

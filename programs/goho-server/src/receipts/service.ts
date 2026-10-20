@@ -35,7 +35,6 @@ const normalizeDecimal = (value: DecimalString) =>
 const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest => ({
   storeName: receipt.storeName,
   receiptDate: receipt.receiptDate,
-  category: receipt.category,
   subtotal: normalizeDecimal(receipt.subtotal),
   tax: normalizeDecimal(receipt.tax),
   total: normalizeDecimal(receipt.total),
@@ -43,6 +42,7 @@ const normalizeReceipt = (receipt: CreateReceiptRequest): CreateReceiptRequest =
   items: Array.map(receipt.items, (item) => ({
     name: item.name,
     amount: normalizeDecimal(item.amount),
+    category: item.category,
   })),
 });
 
@@ -61,8 +61,8 @@ export class Service extends Context.Service<
       changes: PatchReceiptRequest,
     ) => Effect.Effect<Receipt, HttpApiError.NotFound | HttpApiError.InternalServerError>;
     /**
-     * Renames an existing item and returns only that item; fails with NotFound
-     * when the receipt has no item with that ID.
+     * Saves the supplied item fields and returns only that item; fails with
+     * NotFound when the receipt has no item with that ID.
      */
     readonly patchItem: (
       receiptId: ReceiptId,

@@ -3,7 +3,6 @@
 // Bram status content, shared skeletons and delayed retry icons follow the current screen specs.
 package com.goho.ui.components // TODO: match the app's package
 
-import com.adamaho.goho.ui.components.ReceiptCategoryTag
 import com.adamaho.goho.ui.components.ReceiptUploadTag
 
 import androidx.compose.animation.core.Animatable
@@ -490,7 +489,6 @@ fun ReceiptRow(
     onClick: (() -> Unit)?, // Processed: open details. NotProcessed: open the options sheet. Processing: null.
     onLongClick: (() -> Unit)? = null, // open the options sheet; ignored for Processing rows
     modifier: Modifier = Modifier,
-    category: String? = null,
     thumbnail: @Composable () -> Unit,
 ) {
     val c = GohoTheme.colors
@@ -563,7 +561,7 @@ fun ReceiptRow(
                 when (state) {
                     ReceiptRowState.Processing -> ReceiptUploadTag(processing = true)
                     ReceiptRowState.NotProcessed -> ReceiptUploadTag(processing = false)
-                    is ReceiptRowState.Processed -> if (!category.isNullOrBlank()) ReceiptCategoryTag(category, Modifier.widthIn(max = GohoSpacing.tagMaxWidth))
+                    is ReceiptRowState.Processed -> Unit // category display is temporarily hidden
                 }
             }
         }

@@ -3,7 +3,12 @@ import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Ai, Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
-import { CreateReceiptRequest, ReceiptId, ReceiptItemId } from "@goho/goho-api/receipts";
+import {
+  CreateReceiptRequest,
+  type PatchReceiptItemRequest,
+  ReceiptId,
+  ReceiptItemId,
+} from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
 import {
   Config,
@@ -34,6 +39,7 @@ import defaultReceiptCurrencyMigration from "#src/database/migrations/0008-defau
 import recordTimestampsMigration from "#src/database/migrations/0009-record-timestamps.ts";
 import receiptItemIdsMigration from "#src/database/migrations/0010-receipt-item-ids.ts";
 import receiptHistoryMigration from "#src/database/migrations/0011-receipt-history.ts";
+import receiptCategoriesMigration from "#src/database/migrations/0012-receipt-categories.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
@@ -43,21 +49,50 @@ import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as Repository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
 
-import { parsedReceipt, receipt } from "./fixtures.ts";
+import { generateObject, parsedReceipt, receipt } from "./fixtures.ts";
 
 const receiptInput = CreateReceiptRequest.make({
   storeName: "Example Store",
   receiptDate: "2024-09-01",
-  category: "Groceries",
   subtotal: "10.250",
   tax: "7.5e-1",
   total: "11.00",
   currency: "CAD",
   items: [
-    { name: "Apples", amount: "12.00" },
-    { name: "Adjustment", amount: "-1.0" },
+    { name: "Apples", amount: "12.00", category: "Groceries" },
+    { name: "Adjustment", amount: "-1.0", category: "Groceries" },
   ],
 });
+
+// The sample receipt with every item in the named category.
+const withCategory = (category: string): CreateReceiptRequest => {
+  const [first, ...rest] = receiptInput.items;
+  return {
+    ...receiptInput,
+    items: [{ ...first, category }, ...rest.map((item) => ({ ...item, category }))],
+  };
+};
+
+// Seeded catalog, alphabetically.
+const seededNames = [
+  "charity",
+  "dining",
+  "gas",
+  "groceries",
+  "health",
+  "household",
+  "personal care",
+  "shopping",
+];
+
+const categoryNamed = (name: string) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const [category] = yield* sql`
+      SELECT id::text, name, icon, color FROM categories WHERE name = ${name}
+    `;
+    return category;
+  });
 
 const RepositoriesLive = Repository.layer.pipe(Layer.provideMerge(CategoryRepository.layer));
 
@@ -141,6 +176,10 @@ const expectItemIdentitySchema = Effect.gen(function* () {
       ORDER BY conname
     `,
   ).toEqual([
+    {
+      conname: "receipt_items_category_id_fkey",
+      definition: "FOREIGN KEY (category_id) REFERENCES categories(id)",
+    },
     { conname: "receipt_items_pkey", definition: "PRIMARY KEY (id)" },
     {
       conname: "receipt_items_receipt_id_fkey",
@@ -152,6 +191,21 @@ const expectItemIdentitySchema = Effect.gen(function* () {
     },
   ]);
 });
+
+const migrationsThroughReceiptCategories = {
+  "0001_receipts": receiptsMigration,
+  "0002_create_receipt": createReceiptMigration,
+  "0003_bigint_receipt_ids": bigintReceiptIdsMigration,
+  "0004_receipt_uploads": receiptUploadsMigration,
+  "0005_receipt_upload_file_id": receiptUploadFileIdMigration,
+  "0006_drop_receipt_idempotency": dropReceiptIdempotencyMigration,
+  "0007_move_extraction_to_uploads": moveExtractionToUploadsMigration,
+  "0008_default_receipt_currency": defaultReceiptCurrencyMigration,
+  "0009_record_timestamps": recordTimestampsMigration,
+  "0010_receipt_item_ids": receiptItemIdsMigration,
+  "0011_receipt_history": receiptHistoryMigration,
+  "0012_receipt_categories": receiptCategoriesMigration,
+};
 
 // Combines receipt and item history in edit order and numbers random operation IDs by
 // first appearance so expectations can show grouping. Rows from one statement share
@@ -193,6 +247,15 @@ const receiptRowsWithoutCategory = Effect.gen(function* () {
   `;
 });
 
+// Item rows for upgrade snapshots; migration 0013 adds the category column.
+const itemRowsWithoutCategory = Effect.gen(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  return yield* sql`
+    SELECT id, receipt_id, position, name, amount, created_at, updated_at
+    FROM receipt_items ORDER BY id
+  `;
+});
+
 // Raw rows from both history tables, for unchanged-state snapshots.
 const historyRows = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
@@ -220,38 +283,67 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "receipt_item_ids" },
       { name: "receipt_history" },
       { name: "receipt_categories" },
+      { name: "item_categories" },
     ]);
-    // Category names are unique, nonempty, trimmed and lowercase; each receipt keeps one.
-    yield* sql`INSERT INTO categories (name) VALUES ('groceries')`;
+    // The canonical catalog is seeded with its display metadata.
+    expect(yield* sql`SELECT name, icon, color FROM categories ORDER BY id`).toEqual([
+      { name: "groceries", icon: "groceries", color: "green" },
+      { name: "dining", icon: "meals", color: "orange" },
+      { name: "shopping", icon: "shopping", color: "purple" },
+      { name: "household", icon: "home", color: "brown" },
+      { name: "personal care", icon: "personal_care", color: "pink" },
+      { name: "health", icon: "health", color: "red" },
+      { name: "gas", icon: "transport", color: "blue" },
+      { name: "charity", icon: "other", color: "grey" },
+    ]);
+    // New names get the generic metadata.
+    expect(
+      yield* sql`INSERT INTO categories (name) VALUES ('snacks') RETURNING icon, color`,
+    ).toEqual([{ icon: "other", color: "grey" }]);
+    // Any icon identifier is stored as given.
+    expect(
+      yield* sql`INSERT INTO categories (name, icon) VALUES ('candy', 'lollipop') RETURNING icon`,
+    ).toEqual([{ icon: "lollipop" }]);
+    // Category names are unique, nonempty, trimmed and lowercase, icons are required,
+    // colours use known keys, and each item keeps one category.
     yield* sql`
-      INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total)
-      SELECT 'Example Store', '2026-10-01', id, 1, 0, 1 FROM categories
+      INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
+      VALUES ('Example Store', '2026-10-01', 1, 0, 1)
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount, category_id)
+      SELECT receipts.id, 0, 'Apples', 1, categories.id
+      FROM receipts, categories WHERE categories.name = 'groceries'
     `;
     for (const statement of [
       sql`INSERT INTO categories (name) VALUES ('groceries')`,
-      sql`INSERT INTO categories (name) VALUES ('Snacks')`,
+      sql`INSERT INTO categories (name) VALUES ('Chips')`,
       sql`INSERT INTO categories (name) VALUES (' ')`,
-      sql`INSERT INTO categories (name) VALUES ('snacks ')`,
+      sql`INSERT INTO categories (name) VALUES ('chips ')`,
+      sql`INSERT INTO categories (name, color) VALUES ('chips', 'Grey')`,
+      sql`INSERT INTO categories (name, icon) VALUES ('chips', NULL)`,
       sql`
-        INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
-        VALUES ('Example Store', '2026-10-01', 1, 0, 1)
+        INSERT INTO receipt_items (receipt_id, position, name, amount)
+        SELECT id, 1, 'Pears', 1 FROM receipts
       `,
       sql`
-        INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total)
-        VALUES ('Example Store', '2026-10-01', 9999, 1, 0, 1)
+        INSERT INTO receipt_items (receipt_id, position, name, amount, category_id)
+        SELECT id, 1, 'Pears', 1, 9999 FROM receipts
       `,
-      sql`UPDATE receipts SET category_id = NULL`,
-      sql`DELETE FROM categories`,
+      sql`UPDATE receipt_items SET category_id = NULL`,
+      sql`DELETE FROM categories WHERE name = 'groceries'`,
     ]) {
       expect(Result.isFailure(yield* Effect.result(statement))).toBe(true);
     }
-    expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 1 }]);
+    expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 1 }]);
     expect(
       yield* sql`
         SELECT indexdef FROM pg_indexes
-        WHERE schemaname = current_schema() AND indexname = 'receipts_category_id_idx'
+        WHERE schemaname = current_schema() AND indexname = 'receipt_items_category_id_idx'
       `,
-    ).toEqual([{ indexdef: expect.stringMatching(/\.receipts USING btree \(category_id\)$/) }]);
+    ).toEqual([
+      { indexdef: expect.stringMatching(/\.receipt_items USING btree \(category_id\)$/) },
+    ]);
     // Both history tables require their references and are removed with them.
     expect(
       yield* sql`
@@ -342,8 +434,8 @@ it.effect("migrates populated UUID receipts to BIGINT identities without losing 
     ).toEqual([{ data_type: "bigint" }]);
     expect(
       yield* sql`
-        INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total, currency)
-        SELECT 'New Store', '2026-09-02', id, 20, 2, 22, 'CAD' FROM categories
+        INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total, currency)
+        VALUES ('New Store', '2026-09-02', 20, 2, 22, 'CAD')
         RETURNING id::text AS id
       `,
     ).toEqual([{ id: "2" }]);
@@ -384,8 +476,8 @@ it.effect("backfills missing currency to CAD and preserves explicit currencies a
     ]);
     expect(
       yield* sql`
-      INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total)
-      SELECT 'Default Store', '2026-09-03', id, 5, 1, 6 FROM categories
+      INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
+      VALUES ('Default Store', '2026-09-03', 5, 1, 6)
       RETURNING currency
     `,
     ).toEqual([{ currency: "CAD" }]);
@@ -489,7 +581,6 @@ it.effect("moves extraction results onto uploads and drops receipt source metada
       { column_name: "created_at" },
       { column_name: "id" },
       { column_name: "updated_at" },
-      { column_name: "category_id" },
     ]);
   }).pipe(
     Effect.provide(
@@ -505,29 +596,73 @@ it.effect("moves extraction results onto uploads and drops receipt source metada
   ),
 );
 
-it.effect("finds one receipt and returns none for a missing ID", () =>
+it.effect("finds one receipt with its distinct item categories and none for a missing ID", () =>
   Effect.gen(function* () {
-    const repo = yield* Repository.Service;
-    const receiptId = yield* repo.insert(receiptInput);
-    const [first, second] = yield* itemIds(receiptId);
-    expect(first).not.toBe(second);
-    expect(yield* repo.findById(receiptId)).toEqual(
+    // Records each category lookup the receipt repository makes.
+    const categories = yield* CategoryRepository.Service;
+    const lookups = yield* Ref.make<ReadonlyArray<string>>([]);
+    const repo = yield* Repository.Service.pipe(
+      Effect.provide(
+        Repository.layer.pipe(
+          Layer.provide(
+            Layer.succeed(CategoryRepository.Service, {
+              ...categories,
+              findOrCreate: (name) =>
+                Ref.update(lookups, (names) => [...names, name]).pipe(
+                  Effect.andThen(categories.findOrCreate(name)),
+                ),
+            }),
+          ),
+        ),
+      ),
+    );
+    const receiptId = yield* repo.insert({
+      ...receiptInput,
+      items: [
+        { name: "Milk", amount: "4.00", category: "Groceries" },
+        { name: "Shirt", amount: "8.00", category: "shopping" },
+        { name: "Apples", amount: "0.25", category: " groceries " },
+        { name: "Bread", amount: "3.00", category: "Groceries" },
+        { name: "Socks", amount: "5.00", category: "shopping" },
+      ],
+    });
+    // Repeated names are looked up once; a spelling variant still resolves in SQL.
+    expect(yield* Ref.get(lookups)).toEqual(["Groceries", "shopping", " groceries "]);
+    const [milk, shirt, apples, bread, socks] = yield* itemIds(receiptId);
+    expect(new Set([milk, shirt, apples, bread, socks]).size).toBe(5);
+    const groceries = yield* categoryNamed("groceries");
+    const shopping = yield* categoryNamed("shopping");
+    const saved = yield* repo.findById(receiptId);
+    expect(saved).toEqual(
       Option.some({
         id: receiptId,
         storeName: "Example Store",
         receiptDate: "2024-09-01",
-        category: "groceries",
         subtotal: "10.250",
         tax: "0.75",
         total: "11.00",
         currency: "CAD",
+        categories: [groceries, shopping],
         items: [
-          { id: first, position: 0, name: "Apples", amount: "12.00" },
-          { id: second, position: 1, name: "Adjustment", amount: "-1.0" },
+          { id: milk, position: 0, name: "Milk", amount: "4.00", category: groceries },
+          { id: shirt, position: 1, name: "Shirt", amount: "8.00", category: shopping },
+          { id: apples, position: 2, name: "Apples", amount: "0.25", category: groceries },
+          { id: bread, position: 3, name: "Bread", amount: "3.00", category: groceries },
+          { id: socks, position: 4, name: "Socks", amount: "5.00", category: shopping },
         ],
       }),
     );
+    // Receipts have no category of their own.
+    expect(Object.keys(Option.getOrThrow(saved))).not.toContain("category");
+    expect((yield* repo.list)[0]).toEqual(Option.getOrThrow(saved));
     expect(yield* repo.findById(ReceiptId.make("999"))).toEqual(Option.none());
+
+    // The next receipt looks its categories up again.
+    const next = yield* repo.insert(withCategory("Groceries"));
+    expect(yield* Ref.get(lookups)).toEqual(["Groceries", "shopping", " groceries ", "Groceries"]);
+    expect(
+      Option.getOrThrow(yield* repo.findById(next)).items.map(({ category }) => category),
+    ).toEqual([groceries, groceries]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -565,15 +700,13 @@ it.effect("persists repeated items and exact decimal amounts", () =>
     const receiptId = yield* repo.insert(receipt);
     expect(
       yield* sql`
-        SELECT r.store_name, r.receipt_date::text, c.name AS category,
-          r.subtotal, r.tax, r.total, r.currency
-        FROM receipts r JOIN categories c ON c.id = r.category_id WHERE r.id = ${receiptId}
+        SELECT store_name, receipt_date::text, subtotal, tax, total, currency
+        FROM receipts WHERE id = ${receiptId}
       `,
     ).toEqual([
       {
         store_name: "Example Store",
         receipt_date: "2026-09-01",
-        category: "groceries",
         subtotal: "10.25",
         tax: "0.75",
         total: "11",
@@ -582,13 +715,14 @@ it.effect("persists repeated items and exact decimal amounts", () =>
     ]);
     expect(
       yield* sql`
-        SELECT position, name, amount FROM receipt_items
-        WHERE receipt_id = ${receiptId} ORDER BY position
+        SELECT i.position, i.name, i.amount, c.name AS category
+        FROM receipt_items i JOIN categories c ON c.id = i.category_id
+        WHERE i.receipt_id = ${receiptId} ORDER BY i.position
       `,
     ).toEqual([
-      { position: 0, name: "Apples", amount: "0.3333333333333333" },
-      { position: 1, name: "Apples", amount: "0.3333333333333333" },
-      { position: 2, name: "Adjustment", amount: "-1" },
+      { position: 0, name: "Apples", amount: "0.3333333333333333", category: "groceries" },
+      { position: 1, name: "Apples", amount: "0.3333333333333333", category: "groceries" },
+      { position: 2, name: "Adjustment", amount: "-1", category: "groceries" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -610,13 +744,14 @@ it.effect("rolls back the receipt when an item insert fails", () =>
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
     yield* sql`ALTER TABLE receipt_items ADD CONSTRAINT reject_adjustments CHECK (name <> 'Adjustment')`;
-    const result = yield* repo.insert(receipt).pipe(Effect.result);
+    const catalog = yield* sql`SELECT * FROM categories ORDER BY id`;
+    const result = yield* repo.insert(withCategory("Snacks")).pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe(
       "GohoServer.ReceiptRepository.PersistenceError",
     );
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
-    expect(yield* sql`SELECT * FROM categories`).toEqual([]);
+    expect(yield* sql`SELECT * FROM categories ORDER BY id`).toEqual(catalog);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -629,58 +764,63 @@ it.effect("joins the caller's transaction and rolls back with it", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
+    const catalog = yield* sql`SELECT * FROM categories ORDER BY id`;
     const result = yield* sql
-      .withTransaction(repo.insert(receipt).pipe(Effect.andThen(new LaterStepFailed())))
+      .withTransaction(
+        repo.insert(withCategory("Snacks")).pipe(Effect.andThen(new LaterStepFailed())),
+      )
       .pipe(Effect.result);
     expect(Result.isFailure(result) && result.failure._tag).toBe("GohoServer.Test.LaterStepFailed");
     expect(yield* sql`SELECT count(*)::int AS count FROM receipts`).toEqual([{ count: 0 }]);
     expect(yield* sql`SELECT count(*)::int AS count FROM receipt_items`).toEqual([{ count: 0 }]);
-    expect(yield* sql`SELECT * FROM categories`).toEqual([]);
+    expect(yield* sql`SELECT * FROM categories ORDER BY id`).toEqual(catalog);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("reuses one lowercase category per name and keeps categories without receipts", () =>
+it.effect("reuses one lowercase category per name and keeps categories without items", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const categories = yield* CategoryRepository.Service;
     const sql = yield* SqlClient.SqlClient;
     const catalog = sql`SELECT * FROM categories ORDER BY id`;
-    expect(yield* categories.listNames).toEqual([]);
+    expect(yield* categories.listNames).toEqual(seededNames);
+    const seeded = yield* catalog;
     const first = yield* repo.insert(receiptInput);
-    const created = yield* catalog;
-    yield* repo.insert({ ...receiptInput, category: "GROCERIES" });
-    // Reuse is a lookup: the category row, including its timestamps, stays as created.
-    expect(yield* catalog).toEqual(created);
-    // Finding returns the stored record with its canonical name.
-    expect([yield* categories.findOrCreate("  GroCeries ")]).toEqual(
-      created.map(({ id, name }) => ({ id, name })),
+    yield* repo.insert(withCategory("GROCERIES"));
+    // Reuse is a lookup: the category row, including its timestamps, stays as seeded.
+    expect(yield* catalog).toEqual(seeded);
+    // Finding returns the stored record with its canonical name and metadata.
+    expect(yield* categories.findOrCreate("  GroCeries ")).toEqual(
+      yield* categoryNamed("groceries"),
     );
 
     // Distinct words stay separate; concurrent saves of one new name share a category.
     yield* Effect.all(
-      ["Snacks", "snacks", "Grocery"].map((category) => repo.insert({ ...receiptInput, category })),
+      ["Snacks", "snacks", "Grocery"].map((category) => repo.insert(withCategory(category))),
       { concurrency: "unbounded" },
     );
-    expect(yield* categories.listNames).toEqual(["groceries", "grocery", "snacks"]);
-    expect((yield* repo.list).map(({ category }) => category).sort()).toEqual([
-      "groceries",
-      "groceries",
-      "grocery",
-      "snacks",
-      "snacks",
-    ]);
+    expect(yield* categories.listNames).toEqual([...seededNames, "grocery", "snacks"].sort());
+    expect(
+      (yield* repo.list).flatMap(({ categories }) => categories.map(({ name }) => name)).sort(),
+    ).toEqual(["groceries", "groceries", "grocery", "snacks", "snacks"]);
 
-    // Creating returns the same record shape, with the name trimmed and lowercased.
-    const household = yield* categories.findOrCreate(" HouseHold ");
-    expect(household.name).toBe("household");
-    expect(yield* sql`SELECT id, name FROM categories WHERE id = ${household.id}`).toEqual([
-      household,
-    ]);
-    yield* repo.update(first, { category: "Household" });
+    // Creating returns the same record shape, trimmed and lowercased with generic metadata.
+    const petFood = yield* categories.findOrCreate(" Pet Food ");
+    expect(petFood).toEqual({
+      id: expect.any(String),
+      name: "pet food",
+      icon: "other",
+      color: "grey",
+    });
+    expect(yield* categoryNamed("pet food")).toEqual(petFood);
+    const [apples] = yield* itemIds(first);
+    yield* repo.updateItem(first, apples!, { category: "Pet food" });
     for (const { id } of yield* repo.list) yield* repo.delete(id);
-    expect(yield* categories.findOrCreate("household")).toEqual(household);
-    expect(yield* categories.listNames).toEqual(["groceries", "grocery", "household", "snacks"]);
-    expect((yield* catalog)[0]).toEqual(created[0]);
+    expect(yield* categories.findOrCreate("pet food")).toEqual(petFood);
+    expect(yield* categories.listNames).toEqual(
+      [...seededNames, "grocery", "pet food", "snacks"].sort(),
+    );
+    expect((yield* catalog).slice(0, seeded.length)).toEqual(seeded);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -738,12 +878,12 @@ it.effect("rolls back all receipt data when photo deletion fails, then completes
     const sql = yield* SqlClient.SqlClient;
     const receiptId = yield* insertScannedReceipt;
     const [firstItem] = yield* itemIds(receiptId);
-    yield* repo.update(receiptId, { category: "Snacks" });
-    yield* repo.updateItem(receiptId, firstItem!, { name: "Pears" });
+    yield* repo.update(receiptId, { storeName: "Corner Store" });
+    yield* repo.updateItem(receiptId, firstItem!, { name: "Pears", category: "Snacks" });
     const before = yield* repo.findById(receiptId);
     const uploadsBefore = yield* sql`SELECT * FROM receipt_uploads`;
     const historyBefore = yield* historyRows;
-    expect(historyBefore.map((rows) => rows.length)).toEqual([1, 1]);
+    expect(historyBefore.map((rows) => rows.length)).toEqual([1, 2]);
     let failCleanup = true;
     const service = yield* Receipts.Service.pipe(
       Effect.provide(
@@ -938,14 +1078,14 @@ it.effect("gives populated items unique BIGINT IDs without changing their data o
       { id: ids[1], name: "Pears" },
     ]);
 
-    const [inserted] = yield* sql<{ id: string }>`
-      INSERT INTO receipt_items (receipt_id, position, name, amount)
-      VALUES (2, 1, 'Pears', 1) RETURNING id::text
+    const insertItem = (position: number, name: string) => sql<{ id: string }>`
+      INSERT INTO receipt_items (receipt_id, position, name, amount, category_id)
+      SELECT 2, ${position}, ${name}, 1, id FROM categories WHERE name = 'groceries'
+      RETURNING id::text
     `;
+    const [inserted] = yield* insertItem(1, "Pears");
     expect(ids.every((id) => BigInt(inserted!.id) > BigInt(id))).toBe(true);
-    const duplicate = yield* sql`
-      INSERT INTO receipt_items (receipt_id, position, name, amount) VALUES (2, 0, 'Again', 1)
-    `.pipe(Effect.result);
+    const duplicate = yield* insertItem(0, "Again").pipe(Effect.result);
     expect(Result.isFailure(duplicate)).toBe(true);
     yield* sql`DELETE FROM receipts WHERE id = 2`;
     expect(yield* sql`SELECT DISTINCT receipt_id::text FROM receipt_items`).toEqual([
@@ -995,6 +1135,7 @@ it.effect("keeps item IDs through renames and direct position changes", () =>
     const sql = yield* SqlClient.SqlClient;
     const receiptId = yield* repo.insert(receiptInput);
     const [apples, adjustment] = yield* itemIds(receiptId);
+    const groceries = yield* categoryNamed("groceries");
     yield* repo.updateItem(receiptId, apples!, { name: "Pears" });
     expect(yield* itemIds(receiptId)).toEqual([apples, adjustment]);
 
@@ -1005,10 +1146,16 @@ it.effect("keeps item IDs through renames and direct position changes", () =>
     const renamed = yield* repo.updateItem(receiptId, apples!, { name: "Granny Smith apples" });
     // The returned item reports its current position, not the one it was created in.
     expect(renamed).toEqual(
-      Option.some({ id: apples, position: 1, name: "Granny Smith apples", amount: "12.00" }),
+      Option.some({
+        id: apples,
+        position: 1,
+        name: "Granny Smith apples",
+        amount: "12.00",
+        category: groceries,
+      }),
     );
     expect(Option.getOrThrow(yield* repo.findById(receiptId)).items).toEqual([
-      { id: adjustment, position: 0, name: "Adjustment", amount: "-1.0" },
+      { id: adjustment, position: 0, name: "Adjustment", amount: "-1.0", category: groceries },
       Option.getOrThrow(renamed),
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
@@ -1024,12 +1171,23 @@ const UploadProcessingLive = Layer.mergeAll(
   }),
 ).pipe(Layer.provideMerge(DatabaseLive));
 
-it.effect("processes uploads with current category guidance and keeps their evidence", () =>
+it.effect("processes uploads into current catalog categories and keeps their evidence", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const uploads = yield* ReceiptUploadRepository.Service;
+    const sql = yield* SqlClient.SqlClient;
     const prompts = yield* Ref.make<ReadonlyArray<string>>([]);
-    const processUpload = (uploadId: ReceiptUploadId, category: string) =>
+    const extracted = (categories: ReadonlyArray<string>) => ({
+      ...parsedReceipt,
+      transaction: {
+        ...parsedReceipt.transaction,
+        items: parsedReceipt.transaction.items.map((item, index) => ({
+          ...item,
+          category: categories[index],
+        })),
+      },
+    });
+    const processUpload = (uploadId: ReceiptUploadId, output: unknown) =>
       Effect.gen(function* () {
         yield* uploads.createQueued({
           id: uploadId,
@@ -1037,54 +1195,83 @@ it.effect("processes uploads with current category guidance and keeps their evid
           fileName: "receipt.png",
           contentType: "image/png",
         });
-        yield* Worker.process({ uploadId }, { id: uploadId, attempts: 1 }).pipe(
+        yield* Worker.process({ uploadId }, { id: uploadId, attempts: 3 }).pipe(
           Effect.provideService(Ai.Service, {
-            generateObject: ({ prompt, schema }) =>
-              Ref.update(prompts, (values) => [...values, JSON.stringify(prompt)]).pipe(
-                Effect.andThen(
-                  Schema.decodeUnknownEffect(schema)({
-                    ...parsedReceipt,
-                    transaction: { ...parsedReceipt.transaction, category },
-                  }),
-                ),
-                Effect.orDie,
+            generateObject: (options) =>
+              Ref.update(prompts, (values) => [...values, JSON.stringify(options.prompt)]).pipe(
+                Effect.andThen(generateObject(output)(options)),
               ),
           }),
+          Effect.ignore,
         );
-        const upload = Option.getOrThrow(yield* uploads.findById(uploadId));
-        expect(upload.status).toBe("succeeded");
-        return Option.getOrThrow(Option.fromNullishOr(upload.receiptId));
+        return Option.getOrThrow(yield* uploads.findById(uploadId));
       });
+    const mixed = extracted(["groceries", "groceries", "shopping"]);
     const uploadId = ReceiptUploadId.make("7d89d8f7-6f0c-4df2-a2a9-94771638ac99");
-    const receiptId = yield* processUpload(uploadId, "Groceries");
+    const upload = yield* processUpload(uploadId, mixed);
+    expect(upload.status).toBe("succeeded");
+    const receiptId = Option.getOrThrow(Option.fromNullishOr(upload.receiptId));
     const saved = Option.getOrThrow(yield* repo.findById(receiptId));
-    expect(saved.category).toBe("groceries");
-    // A later upload sees the category the earlier one saved, and may still add one.
-    const laterId = ReceiptUploadId.make("8e0ae9f8-7a1d-4ef3-b3ba-a5882749bd00");
-    const later = yield* processUpload(laterId, "Household");
-    expect(Option.getOrThrow(yield* repo.findById(later)).category).toBe("household");
-    expect((yield* Ref.get(prompts))[1]).toContain(
-      JSON.stringify('Existing categories, as a JSON array: ["groceries"]'),
-    );
+    const [groceries, shopping] = [
+      yield* categoryNamed("groceries"),
+      yield* categoryNamed("shopping"),
+    ];
+    expect(saved.categories).toEqual([groceries, shopping]);
     const ids = yield* itemIds(receiptId);
     expect(new Set(ids).size).toBe(3);
-    expect(saved.items.map(({ id, position, name }) => ({ id, position, name }))).toEqual([
-      { id: ids[0], position: 0, name: "Apples" },
-      { id: ids[1], position: 1, name: "Apples" },
-      { id: ids[2], position: 2, name: "Adjustment" },
+    expect(
+      saved.items.map(({ id, position, name, category }) => ({ id, position, name, category })),
+    ).toEqual([
+      { id: ids[0], position: 0, name: "Apples", category: groceries },
+      { id: ids[1], position: 1, name: "Apples", category: groceries },
+      { id: ids[2], position: 2, name: "Adjustment", category: shopping },
     ]);
 
-    const sql = yield* SqlClient.SqlClient;
+    // A manually added category is offered to, and accepted from, the next extraction.
+    yield* repo.updateItem(receiptId, ids[2]!, { category: "Snacks" });
+    const later = yield* processUpload(
+      ReceiptUploadId.make("8e0ae9f8-7a1d-4ef3-b3ba-a5882749bd00"),
+      extracted(["snacks", "snacks", "snacks"]),
+    );
+    expect(later.status).toBe("succeeded");
+    const laterReceipt = Option.getOrThrow(
+      yield* repo.findById(Option.getOrThrow(Option.fromNullishOr(later.receiptId))),
+    );
+    expect(laterReceipt.categories).toEqual([yield* categoryNamed("snacks")]);
+    expect((yield* Ref.get(prompts))[1]).toContain(
+      JSON.stringify(
+        `Allowed item categories, as a JSON array: ${JSON.stringify([...seededNames, "snacks"].sort())}`,
+      ),
+    );
+
+    // A category outside the catalog fails the upload and creates nothing.
+    const before = yield* Effect.all([
+      sql`SELECT * FROM categories ORDER BY id`,
+      sql`SELECT count(*)::int AS count FROM receipts`,
+    ]);
+    const invalid = yield* processUpload(
+      ReceiptUploadId.make("9f1bf009-8b2e-4f04-84cb-b6993859ce11"),
+      extracted(["groceries", "candy", "groceries"]),
+    );
+    expect([invalid.status, invalid.failureCode]).toEqual(["failed", "processing_failed"]);
+    expect(
+      yield* Effect.all([
+        sql`SELECT * FROM categories ORDER BY id`,
+        sql`SELECT count(*)::int AS count FROM receipts`,
+      ]),
+    ).toEqual(before);
+
     const extraction = sql`
       SELECT extraction_version, extracted_payload FROM receipt_uploads WHERE id = ${uploadId}
     `;
     const evidence = yield* extraction;
-    // The original extraction keeps the category as the model returned it.
-    expect(evidence).toEqual([{ extraction_version: 1, extracted_payload: parsedReceipt }]);
+    // The original extraction keeps the categories as the model returned them.
+    expect(evidence).toEqual([{ extraction_version: 2, extracted_payload: mixed }]);
     yield* repo.updateItem(receiptId, ids[0]!, { name: "Granny Smith apples" });
     yield* repo.update(receiptId, { storeName: "Corner Store" });
     expect(yield* extraction).toEqual(evidence);
     expect((yield* history).map(({ field, after_value }) => ({ field, after_value }))).toEqual([
+      { field: "category", after_value: "snacks" },
       { field: "item_name", after_value: "Granny Smith apples" },
       { field: "store_name", after_value: "Corner Store" },
     ]);
@@ -1099,14 +1286,16 @@ it.effect(
       yield* sql.withTransaction(
         Effect.gen(function* () {
           yield* sql`SET LOCAL TIME ZONE 'America/Toronto'`;
+          // Leaves only a category created in this transaction.
+          yield* sql`DELETE FROM categories`;
           yield* sql`INSERT INTO categories (name) VALUES ('groceries')`;
           yield* sql`
-        INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total)
-        SELECT 'Example Store', '2011-10-26', id, 10, 1, 11 FROM categories
+        INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
+        VALUES ('Example Store', '2011-10-26', 10, 1, 11)
       `;
           yield* sql`
-        INSERT INTO receipt_items (receipt_id, position, name, amount)
-        SELECT id, 0, 'Apples', 11 FROM receipts
+        INSERT INTO receipt_items (receipt_id, position, name, amount, category_id)
+        SELECT receipts.id, 0, 'Apples', 11, categories.id FROM receipts, categories
       `;
           yield* sql`
         INSERT INTO receipt_uploads (id, file_id, file_name, content_type, status)
@@ -1139,22 +1328,22 @@ it.effect(
 it.effect("touches only affected parents for item inserts, edits, moves and deletes", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    yield* sql`INSERT INTO categories (name) VALUES ('groceries')`;
     yield* sql`
-      INSERT INTO receipts (store_name, receipt_date, category_id, subtotal, tax, total)
+      INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total)
       VALUES
-        ('First Store', '2026-10-11', (SELECT id FROM categories), 10, 1, 11),
-        ('Second Store', '2026-10-11', (SELECT id FROM categories), 10, 1, 11),
-        ('Unrelated Store', '2026-10-11', (SELECT id FROM categories), 10, 1, 11)
+        ('First Store', '2026-10-11', 10, 1, 11),
+        ('Second Store', '2026-10-11', 10, 1, 11),
+        ('Unrelated Store', '2026-10-11', 10, 1, 11)
+    `;
+    const insertApples = sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount, category_id)
+      SELECT 1, 0, 'Apples', 11, id FROM categories WHERE name = 'groceries'
     `;
     const snapshot = sql<{ id: number; created_at: string; updated_at: string }>`
       SELECT id::int, created_at::text, updated_at::text FROM receipts ORDER BY id
     `;
     const changes = [
-      {
-        affected: [1],
-        run: sql`INSERT INTO receipt_items (receipt_id, position, name, amount) VALUES (1, 0, 'Apples', 11)`,
-      },
+      { affected: [1], run: insertApples },
       { affected: [1], run: sql`UPDATE receipt_items SET name = 'Pears', amount = 12` },
       { affected: [1, 2], run: sql`UPDATE receipt_items SET receipt_id = 2` },
       { affected: [2], run: sql`DELETE FROM receipt_items` },
@@ -1177,7 +1366,7 @@ it.effect("touches only affected parents for item inserts, edits, moves and dele
       }
     }
 
-    yield* sql`INSERT INTO receipt_items (receipt_id, position, name, amount) VALUES (1, 0, 'Apples', 11)`;
+    yield* insertApples;
     const parentsBefore = yield* snapshot;
     const itemsBefore = yield* sql`SELECT * FROM receipt_items`;
     const rolledBack = yield* sql
@@ -1231,18 +1420,13 @@ it.effect(
       const itemsBefore = yield* itemTimes(receiptId);
 
       let expected = original;
-      // Saved categories come back as their lowercase shared names.
-      for (const [changes, savedChanges] of [
-        [{ receiptDate: "2024-09-02" }, {}],
-        [
-          { storeName: "Corner Store", category: "Snacks" },
-          { storeName: "Corner Store", category: "snacks" },
-        ],
-        [{ storeName: "Main Street Market" }, {}],
-        [{ category: "HouseHold" }, { category: "household" }],
-      ] as const) {
+      for (const changes of [
+        { receiptDate: "2024-09-02" },
+        { storeName: "Corner Store", receiptDate: "2024-09-03" },
+        { storeName: "Main Street Market" },
+      ]) {
         const before = yield* receiptTimes(receiptId);
-        expected = { ...expected, ...changes, ...savedChanges };
+        expected = { ...expected, ...changes };
         const saved = yield* repo.update(receiptId, changes);
         expect(saved).toEqual(Option.some(expected));
         expect(yield* repo.findById(receiptId)).toEqual(saved);
@@ -1257,8 +1441,7 @@ it.effect(
       expect(expected).toEqual({
         ...original,
         storeName: "Main Street Market",
-        receiptDate: "2024-09-02",
-        category: "household",
+        receiptDate: "2024-09-03",
       });
       expect(yield* itemTimes(receiptId)).toEqual(itemsBefore);
       expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(uploadsBefore);
@@ -1266,7 +1449,7 @@ it.effect(
     }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("renames one item by ID and touches only that item and its receipt", () =>
+it.effect("corrects one item by ID and touches only that item and its receipt", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
     const sql = yield* SqlClient.SqlClient;
@@ -1279,23 +1462,45 @@ it.effect("renames one item by ID and touches only that item and its receipt", (
     const uploadsBefore = yield* sql`SELECT * FROM receipt_uploads`;
     const parentBefore = yield* receiptTimes(receiptId);
     const itemsBefore = yield* itemTimes(receiptId);
+    const [first, second] = original.items;
+    const correct = (changes: PatchReceiptItemRequest) =>
+      repo.updateItem(receiptId, second!.id, changes).pipe(Effect.map(Option.getOrThrow));
 
-    const saved = yield* repo.updateItem(receiptId, original.items[1]!.id, { name: "Coupon" });
-    expect(saved).toEqual(Option.some({ ...original.items[1]!, name: "Coupon" }));
+    // Each correction returns the saved item, and the receipt's categories follow its items.
+    const coupon = yield* correct({ name: "Coupon" });
+    expect(coupon).toEqual({ ...second, name: "Coupon" });
+    const snacks = yield* correct({ category: " Snacks " });
+    expect(snacks).toEqual({ ...coupon, category: yield* categoryNamed("snacks") });
+    expect(Option.getOrThrow(yield* repo.findById(receiptId)).categories).toEqual([
+      first.category,
+      snacks.category,
+    ]);
+    const chips = yield* correct({ name: "Chips", category: "Household" });
+    expect(chips).toEqual({
+      ...second,
+      name: "Chips",
+      category: yield* categoryNamed("household"),
+    });
     const expected = {
       ...original,
-      items: [original.items[0], Option.getOrThrow(saved)],
+      categories: [first.category, chips.category],
+      items: [first, chips],
     };
     expect(yield* repo.findById(receiptId)).toEqual(Option.some(expected));
     expect((yield* repo.list).find((entry) => entry.id === receiptId)).toEqual(expected);
+    // Moving the last item out of a category drops it from the receipt; the category stays.
+    yield* repo.updateItem(receiptId, first.id, { category: "household" });
+    expect(Option.getOrThrow(yield* repo.findById(receiptId)).categories).toEqual([chips.category]);
+    expect(yield* categoryNamed("groceries")).toEqual(first.category);
 
     const parentAfter = yield* receiptTimes(receiptId);
     expect(parentAfter.created_at).toBe(parentBefore.created_at);
     expect(parentAfter.updated_at).not.toBe(parentBefore.updated_at);
     const itemsAfter = yield* itemTimes(receiptId);
-    expect(itemsAfter[0]).toEqual(itemsBefore[0]);
-    expect(itemsAfter[1]!.created_at).toBe(itemsBefore[1]!.created_at);
-    expect(itemsAfter[1]!.updated_at).not.toBe(itemsBefore[1]!.updated_at);
+    for (const index of [0, 1]) {
+      expect(itemsAfter[index]!.created_at).toBe(itemsBefore[index]!.created_at);
+      expect(itemsAfter[index]!.updated_at).not.toBe(itemsBefore[index]!.updated_at);
+    }
 
     expect(yield* repo.findById(other)).toEqual(otherBefore);
     expect(yield* receiptTimes(other)).toEqual(otherTimes);
@@ -1310,12 +1515,10 @@ it.effect("accepts same-value corrections and records them as updates", () =>
     const receiptId = yield* repo.insert(receiptInput);
     const original = Option.getOrThrow(yield* repo.findById(receiptId));
     const receiptBefore = yield* receiptTimes(receiptId);
-    // A case-only category change resolves to the same category.
     expect(
       yield* repo.update(receiptId, {
         storeName: original.storeName,
         receiptDate: original.receiptDate,
-        category: original.category.toUpperCase(),
       }),
     ).toEqual(Option.some(original));
     const receiptAfter = yield* receiptTimes(receiptId);
@@ -1323,8 +1526,12 @@ it.effect("accepts same-value corrections and records them as updates", () =>
     expect(receiptAfter.updated_at).not.toBe(receiptBefore.updated_at);
 
     const itemsBefore = yield* itemTimes(receiptId);
+    // A case-only category change resolves to the same category.
     expect(
-      yield* repo.updateItem(receiptId, original.items[0].id, { name: original.items[0].name }),
+      yield* repo.updateItem(receiptId, original.items[0].id, {
+        name: original.items[0].name,
+        category: original.items[0].category.name.toUpperCase(),
+      }),
     ).toEqual(Option.some(original.items[0]));
     expect(yield* repo.findById(receiptId)).toEqual(Option.some(original));
     const itemsAfter = yield* itemTimes(receiptId);
@@ -1349,17 +1556,18 @@ it.effect("returns none for missing receipts and item IDs without changing other
     ]);
     const before = yield* snapshot;
 
-    // A missing receipt does not leave its new category behind.
-    expect(
-      yield* repo.update(ReceiptId.make("999"), { storeName: "Corner Store", category: "Snacks" }),
-    ).toEqual(Option.none());
-    expect(yield* repo.updateItem(ReceiptId.make("999"), singleItem!, { name: "Pears" })).toEqual(
+    expect(yield* repo.update(ReceiptId.make("999"), { storeName: "Corner Store" })).toEqual(
+      Option.none(),
+    );
+    // A missing receipt or item does not leave its new category behind.
+    const changes = { name: "Pears", category: "Snacks" };
+    expect(yield* repo.updateItem(ReceiptId.make("999"), singleItem!, changes)).toEqual(
       Option.none(),
     );
     // A real item ID under the wrong parent stays out of reach.
-    expect(yield* repo.updateItem(single, otherItem!, { name: "Pears" })).toEqual(Option.none());
+    expect(yield* repo.updateItem(single, otherItem!, changes)).toEqual(Option.none());
     expect(
-      yield* repo.updateItem(single, ReceiptItemId.make("9223372036854775807"), { name: "Pears" }),
+      yield* repo.updateItem(single, ReceiptItemId.make("9223372036854775807"), changes),
     ).toEqual(Option.none());
     expect(yield* snapshot).toEqual(before);
     expect(Option.getOrThrow(yield* repo.findById(double)).items[1]!.name).toBe("Adjustment");
@@ -1384,14 +1592,10 @@ it.effect("rolls back failed corrections, including their timestamps", () =>
     const before = yield* snapshot;
 
     for (const attempt of [
+      Effect.asVoid(repo.update(receiptId, { receiptDate: "2024-09-02", storeName: "Rejected" })),
       Effect.asVoid(
-        repo.update(receiptId, {
-          receiptDate: "2024-09-02",
-          storeName: "Rejected",
-          category: "Snacks",
-        }),
+        repo.updateItem(receiptId, firstItem!, { name: "Rejected", category: "Snacks" }),
       ),
-      Effect.asVoid(repo.updateItem(receiptId, firstItem!, { name: "Rejected" })),
     ]) {
       const result = yield* Effect.result(attempt);
       expect(Result.isFailure(result) && result.failure._tag).toBe(
@@ -1418,9 +1622,11 @@ it.effect("joins the caller's transaction for corrections and rolls back with it
     const result = yield* sql
       .withTransaction(
         repo
-          .update(receiptId, { storeName: "Corner Store", category: "Snacks" })
+          .update(receiptId, { storeName: "Corner Store" })
           .pipe(
-            Effect.andThen(repo.updateItem(receiptId, firstItem!, { name: "Pears" })),
+            Effect.andThen(
+              repo.updateItem(receiptId, firstItem!, { name: "Pears", category: "Snacks" }),
+            ),
             Effect.andThen(new LaterStepFailed()),
           ),
       )
@@ -1480,11 +1686,14 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
     const client = yield* Client.make("");
     const { data: original } = yield* client.receipts.get({ params: { receiptId } });
     const [first, second] = original.items.map(({ id }) => id);
-    // Created, fetched, and listed receipts all return the lowercase shared name.
+    // Created, fetched, and listed receipts all return the shared lowercase categories.
     const { data: otherBefore } = yield* client.receipts.create({
-      payload: { ...receiptInput, category: "Household" },
+      payload: withCategory("Household"),
     });
-    expect([original.category, otherBefore.category]).toEqual(["groceries", "household"]);
+    expect([original.categories, otherBefore.categories]).toEqual([
+      [yield* categoryNamed("groceries")],
+      [yield* categoryNamed("household")],
+    ]);
     const otherItem = otherBefore.items[0].id;
     const snapshot = Effect.all([
       sql`SELECT * FROM receipts ORDER BY id`,
@@ -1499,8 +1708,12 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
       [`/receipts/${receiptId}`, { storeName: "Corner Store", total: "1" }],
       [`/receipts/${receiptId}`, { receiptDate: "2024-02-30" }],
       [`/receipts/${receiptId}`, {}],
+      // Receipts no longer have a category of their own.
+      [`/receipts/${receiptId}`, { storeName: "Corner Store", category: "Snacks" }],
       [`/receipts/${receiptId}/items/${first}`, { name: "Pears", amount: "1" }],
       [`/receipts/${receiptId}/items/${first}`, { name: " " }],
+      [`/receipts/${receiptId}/items/${first}`, {}],
+      [`/receipts/${receiptId}/items/${first}`, { name: "Pears", category: " " }],
       [`/receipts/${receiptId}/items/0${first}`, { name: "Pears" }],
       // Positions are not a fallback lookup.
       [`/receipts/${receiptId}/items/0`, { name: "Pears" }],
@@ -1510,9 +1723,9 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
       expect(response.status, `${url} ${JSON.stringify(payload)}`).toBe(400);
     }
     for (const [url, payload] of [
-      ["/receipts/999", { category: "Snacks" }],
-      [`/receipts/999/items/${first}`, { name: "Pears" }],
-      [`/receipts/${receiptId}/items/${otherItem}`, { name: "Pears" }],
+      ["/receipts/999", { storeName: "Corner Store" }],
+      [`/receipts/999/items/${first}`, { name: "Pears", category: "Snacks" }],
+      [`/receipts/${receiptId}/items/${otherItem}`, { category: "Snacks" }],
       [`/receipts/${receiptId}/items/9223372036854775807`, { name: "Pears" }],
     ] as const) {
       const response = yield* HttpClient.patch(url, { body: yield* HttpBody.json(payload) });
@@ -1522,57 +1735,55 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
 
     // The typed client encodes already-trimmed values, so wire trimming uses raw requests.
     const corrected = yield* HttpClient.patch(`/receipts/${receiptId}`, {
-      body: yield* HttpBody.json({
-        storeName: "  Corner Store  ",
-        receiptDate: "2024-09-02",
-        category: " Snacks ",
-      }),
+      body: yield* HttpBody.json({ storeName: "  Corner Store  ", receiptDate: "2024-09-02" }),
     });
     expect(corrected.status).toBe(200);
     expect(yield* corrected.json).toEqual({
-      data: {
-        ...original,
-        storeName: "Corner Store",
-        receiptDate: "2024-09-02",
-        category: "snacks",
-      },
+      data: { ...original, storeName: "Corner Store", receiptDate: "2024-09-02" },
     });
     const trimmedItem = yield* HttpClient.patch(`/receipts/${receiptId}/items/${first}`, {
-      body: yield* HttpBody.json({ name: " Pears " }),
+      body: yield* HttpBody.json({ name: " Pears ", category: " Snacks " }),
     });
     expect(trimmedItem.status).toBe(200);
+    const snacks = yield* categoryNamed("snacks");
+    expect(snacks).toEqual({
+      id: expect.any(String),
+      name: "snacks",
+      icon: "other",
+      color: "grey",
+    });
     // Exactly the saved item comes back, with no receipt fields alongside it.
     expect(yield* trimmedItem.json).toStrictEqual({
-      data: { id: first, position: 0, name: "Pears", amount: "12.00" },
+      data: { id: first, position: 0, name: "Pears", amount: "12.00", category: snacks },
     });
+    const groceries = original.categories[0];
     const renamed = yield* client.receipts.patchItem({
       params: { receiptId, itemId: second! },
       payload: { name: "Coupon" },
     });
-    expect(renamed).toEqual({ data: { id: second, position: 1, name: "Coupon", amount: "-1.0" } });
+    expect(renamed).toEqual({
+      data: { id: second, position: 1, name: "Coupon", amount: "-1.0", category: groceries },
+    });
     const saved = {
       ...original,
       storeName: "Corner Store",
       receiptDate: "2024-09-02",
-      category: "snacks",
+      categories: [snacks, groceries],
       items: [
-        { id: first, position: 0, name: "Pears", amount: "12.00" },
-        { id: second, position: 1, name: "Coupon", amount: "-1.0" },
+        { id: first, position: 0, name: "Pears", amount: "12.00", category: snacks },
+        { id: second, position: 1, name: "Coupon", amount: "-1.0", category: groceries },
       ],
     };
     expect(yield* client.receipts.get({ params: { receiptId } })).toEqual({ data: saved });
     expect(yield* client.receipts.list()).toEqual({ data: [saved, otherBefore] });
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(before[2]);
+    // An icon outside the app's bundled set comes back as stored.
+    yield* sql`UPDATE categories SET icon = 'mdi:popcorn' WHERE name = 'snacks'`;
+    const popcorn = { ...snacks, icon: "mdi:popcorn" };
+    const { data: reread } = yield* client.receipts.get({ params: { receiptId } });
+    expect([reread.categories[0], reread.items[0].category]).toEqual([popcorn, popcorn]);
     // History stores the trimmed values against the patched receipt and items.
     expect(yield* history).toEqual([
-      {
-        operation: 1,
-        receipt_id: receiptId,
-        item_id: null,
-        field: "category",
-        before_value: "groceries",
-        after_value: "snacks",
-      },
       {
         operation: 1,
         receipt_id: receiptId,
@@ -1588,6 +1799,14 @@ it.effect("saves HTTP corrections that GET and list return, and rejects bad ones
         field: "store_name",
         before_value: "Example Store",
         after_value: "Corner Store",
+      },
+      {
+        operation: 2,
+        receipt_id: receiptId,
+        item_id: first,
+        field: "category",
+        before_value: "groceries",
+        after_value: "snacks",
       },
       {
         operation: 2,
@@ -1638,7 +1857,7 @@ it.effect("adds edit history to populated databases without baselines or changed
     `;
     const snapshot = Effect.all([
       receiptRowsWithoutCategory,
-      sql`SELECT * FROM receipt_items ORDER BY id`,
+      itemRowsWithoutCategory,
       sql`SELECT * FROM receipt_uploads`,
     ]);
     const before = yield* snapshot;
@@ -1648,6 +1867,7 @@ it.effect("adds edit history to populated databases without baselines or changed
     expect(yield* sql`SELECT name FROM goho_migrations WHERE migration_id > 10`).toEqual([
       { name: "receipt_history" },
       { name: "receipt_categories" },
+      { name: "item_categories" },
     ]);
     expect(yield* snapshot).toEqual(before);
     expect(yield* history).toEqual([]);
@@ -1749,7 +1969,10 @@ it.effect(
         },
       ]);
 
-      yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
+      yield* PgMigrator.run({
+        loader: PgMigrator.fromRecord(migrationsThroughReceiptCategories),
+        table: "goho_migrations",
+      }).pipe(Effect.provide(NodeServices.layer));
 
       // No receipt was edited: data, timestamps, extraction and history stay as they were.
       expect(yield* snapshot).toEqual(before);
@@ -1769,12 +1992,11 @@ it.effect(
         { id: "4", name: "groceries" },
       ]);
 
-      const repo = yield* Effect.provide(Repository.Service, RepositoriesLive);
-      expect(Option.getOrThrow(yield* repo.findById(ReceiptId.make("1"))).category).toBe(
-        "groceries",
-      );
       // Moving the last receipt out of a category records names and keeps the category.
-      yield* repo.update(ReceiptId.make("3"), { category: "Groceries" });
+      yield* sql`
+        UPDATE receipts SET category_id = (SELECT id FROM categories WHERE name = 'groceries')
+        WHERE id = 3
+      `;
       expect((yield* history).slice(1)).toEqual([
         {
           operation: 2,
@@ -1786,7 +2008,6 @@ it.effect(
         },
       ]);
       expect(yield* sql`SELECT count(*)::int AS count FROM categories`).toEqual([{ count: 2 }]);
-      expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([]);
     }).pipe(
       Effect.provide(
         migratedDatabase({
@@ -1806,6 +2027,164 @@ it.effect(
     ),
 );
 
+// Existing names and the category each consolidates into.
+const consolidated = {
+  groceries: "groceries",
+  grocery: "groceries",
+  dairy: "groceries",
+  "grocery and personal care": "groceries",
+  produce: "groceries",
+  seafood: "groceries",
+  "prepared foods": "dining",
+  coffee: "dining",
+  "indian food": "dining",
+  "baby supplies": "shopping",
+  "general merchandise": "shopping",
+  household: "household",
+  "personal care": "personal care",
+  "health and fitness": "health",
+  fuel: "gas",
+  "charitable donation": "charity",
+  books: "books",
+};
+
+it.effect("moves populated categories onto items and consolidates them without changing data", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO categories ${sql.insert(
+        Object.keys(consolidated).map((name) => ({
+          name,
+          created_at: "2026-10-01T12:00:00Z",
+          updated_at: "2026-10-02T12:00:00Z",
+        })),
+      )}
+    `;
+    // Each receipt is named after its category; seafood is left unused.
+    yield* sql`
+      INSERT INTO receipts (
+        store_name, receipt_date, category_id, subtotal, tax, total, created_at, updated_at
+      )
+      SELECT name, '2026-10-03', id, 1, 0, 1, '2026-10-03T12:00:00Z', '2026-10-04T12:00:00Z'
+      FROM categories WHERE name <> 'seafood' ORDER BY id
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount, created_at, updated_at)
+      SELECT id, 0, 'Item', 1, '2026-10-03T12:00:00Z', '2026-10-05T12:00:00Z'
+      FROM receipts ORDER BY id
+    `;
+    yield* sql`
+      INSERT INTO receipt_items (receipt_id, position, name, amount)
+      SELECT id, 1, 'Second item', 1 FROM receipts WHERE store_name = 'groceries'
+    `;
+    yield* sql`
+      INSERT INTO receipt_uploads (
+        id, file_id, file_name, content_type, status, receipt_id,
+        extraction_version, extracted_payload, created_at, updated_at
+      ) VALUES (
+        '7d89d8f7-6f0c-4df2-a2a9-94771638ac99', 'stored-photo', 'receipt.png', 'image/png',
+        'succeeded', 1, 1, '{"transaction":{"category":"Groceries"}}'::jsonb,
+        '2026-10-01T11:59:00Z', '2026-10-01T12:00:00Z'
+      )
+    `;
+    // History recorded before the upgrade, including a receipt category change.
+    yield* sql`
+      UPDATE receipts SET category_id = (SELECT id FROM categories WHERE name = 'coffee')
+      WHERE store_name = 'grocery'
+    `;
+    yield* sql`UPDATE receipt_items SET name = 'Renamed' WHERE position = 1`;
+    const categoryTimes = sql`SELECT id, created_at, updated_at FROM categories ORDER BY id`;
+    const snapshot = Effect.all([
+      receiptRowsWithoutCategory,
+      itemRowsWithoutCategory,
+      sql`SELECT * FROM receipt_uploads`,
+      historyRows,
+    ]);
+    const before = yield* snapshot;
+    const timesBefore = yield* categoryTimes;
+    const idsBefore = new Map(
+      (yield* sql<{ id: string; name: string }>`SELECT id::text, name FROM categories`).map(
+        ({ id, name }) => [name, id],
+      ),
+    );
+    expect((yield* history).map(({ field, after_value }) => ({ field, after_value }))).toEqual([
+      { field: "category", after_value: "coffee" },
+      { field: "item_name", after_value: "Renamed" },
+    ]);
+
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
+
+    // Nothing was edited: data, timestamps, extraction and history stay as they were.
+    expect(yield* snapshot).toEqual(before);
+    // An existing canonical name, or else its oldest alias, keeps its ID and timestamps.
+    expect(
+      yield* sql`SELECT id::text, name, icon, color FROM categories ORDER BY categories.id`,
+    ).toEqual([
+      { id: idsBefore.get("groceries"), name: "groceries", icon: "groceries", color: "green" },
+      { id: idsBefore.get("prepared foods"), name: "dining", icon: "meals", color: "orange" },
+      { id: idsBefore.get("baby supplies"), name: "shopping", icon: "shopping", color: "purple" },
+      { id: idsBefore.get("household"), name: "household", icon: "home", color: "brown" },
+      {
+        id: idsBefore.get("personal care"),
+        name: "personal care",
+        icon: "personal_care",
+        color: "pink",
+      },
+      { id: idsBefore.get("health and fitness"), name: "health", icon: "health", color: "red" },
+      { id: idsBefore.get("fuel"), name: "gas", icon: "transport", color: "blue" },
+      { id: idsBefore.get("charitable donation"), name: "charity", icon: "other", color: "grey" },
+      { id: idsBefore.get("books"), name: "books", icon: "other", color: "grey" },
+    ]);
+    const timesAfter = yield* categoryTimes;
+    expect(timesBefore.filter(({ id }) => timesAfter.some((row) => row.id === id))).toEqual(
+      timesAfter,
+    );
+    // Every item inherits its receipt's consolidated category.
+    expect(
+      yield* sql`
+        SELECT r.store_name, c.name AS category
+        FROM receipt_items i JOIN receipts r ON r.id = i.receipt_id
+        JOIN categories c ON c.id = i.category_id ORDER BY i.id
+      `,
+    ).toEqual([
+      ...Object.entries(consolidated)
+        .filter(([name]) => name !== "seafood")
+        .map(([store_name, category]) => ({
+          store_name,
+          category: store_name === "grocery" ? "dining" : category,
+        })),
+      { store_name: "groceries", category: "groceries" },
+    ]);
+
+    // Later category edits record item history by name and touch the item and its receipt.
+    const repo = yield* Effect.provide(Repository.Service, RepositoriesLive);
+    const [books] = yield* sql<{ receipt_id: string; id: string }>`
+      SELECT i.receipt_id::text, i.id::text FROM receipt_items i
+      JOIN receipts r ON r.id = i.receipt_id WHERE r.store_name = 'books'
+    `;
+    const receiptId = ReceiptId.make(books!.receipt_id);
+    const receiptBefore = yield* receiptTimes(receiptId);
+    const itemBefore = yield* itemTimes(receiptId);
+    yield* repo.updateItem(receiptId, ReceiptItemId.make(books!.id), { category: "Shopping" });
+    expect((yield* receiptTimes(receiptId)).updated_at).not.toBe(receiptBefore.updated_at);
+    expect((yield* itemTimes(receiptId))[0]!.updated_at).not.toBe(itemBefore[0]!.updated_at);
+    const [receiptHistory, itemHistory] = yield* historyRows;
+    expect(receiptHistory).toEqual(before[3][0]);
+    expect(itemHistory.slice(0, -1)).toEqual(before[3][1]);
+    expect((yield* history).slice(2)).toEqual([
+      {
+        operation: 3,
+        receipt_id: books!.receipt_id,
+        item_id: books!.id,
+        field: "category",
+        before_value: "books",
+        after_value: "shopping",
+      },
+    ]);
+    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([]);
+  }).pipe(Effect.provide(migratedDatabase(migrationsThroughReceiptCategories))),
+);
+
 it.effect("records each changed receipt field and item rename, grouped per row update", () =>
   Effect.gen(function* () {
     const repo = yield* Repository.Service;
@@ -1816,14 +2195,9 @@ it.effect("records each changed receipt field and item rename, grouped per row u
     const [apples] = yield* itemIds(receiptId);
     expect(yield* history).toEqual([]);
 
-    yield* repo.update(receiptId, {
-      storeName: "Corner Store",
-      receiptDate: "2024-09-02",
-      category: "Snacks",
-    });
+    yield* repo.update(receiptId, { storeName: "Corner Store", receiptDate: "2024-09-02" });
     const receiptEdit = { operation: 1, receipt_id: receiptId, item_id: null };
     expect(yield* history).toEqual([
-      { ...receiptEdit, field: "category", before_value: "groceries", after_value: "snacks" },
       {
         ...receiptEdit,
         field: "receipt_date",
@@ -1847,13 +2221,18 @@ it.effect("records each changed receipt field and item rename, grouped per row u
 
     const receiptBefore = yield* receiptTimes(receiptId);
     yield* repo.updateItem(receiptId, apples!, { name: "Pears" });
-    yield* repo.updateItem(receiptId, apples!, { name: "Granny Smith apples" });
+    yield* repo.updateItem(receiptId, apples!, { name: "Granny Smith apples", category: "Snacks" });
+    yield* repo.updateItem(receiptId, apples!, { category: "Household" });
     // The item edits touched the parent receipt without adding receipt history.
     expect((yield* receiptTimes(receiptId)).updated_at).not.toBe(receiptBefore.updated_at);
-    const itemEdit = { receipt_id: receiptId, item_id: apples, field: "item_name" };
-    expect((yield* history).slice(3)).toEqual([
-      { ...itemEdit, operation: 2, before_value: "Apples", after_value: "Pears" },
-      { ...itemEdit, operation: 3, before_value: "Pears", after_value: "Granny Smith apples" },
+    const itemEdit = { receipt_id: receiptId, item_id: apples };
+    const categoryEdit = { ...itemEdit, field: "category" };
+    const nameEdit = { ...itemEdit, field: "item_name" };
+    expect((yield* history).slice(2)).toEqual([
+      { ...nameEdit, operation: 2, before_value: "Apples", after_value: "Pears" },
+      { ...categoryEdit, operation: 3, before_value: "groceries", after_value: "snacks" },
+      { ...nameEdit, operation: 3, before_value: "Pears", after_value: "Granny Smith apples" },
+      { ...categoryEdit, operation: 4, before_value: "snacks", after_value: "household" },
     ]);
     expect(
       yield* sql`
@@ -1861,7 +2240,7 @@ it.effect("records each changed receipt field and item rename, grouped per row u
         FROM receipt_item_history history JOIN receipt_items item ON item.id = history.item_id
         ORDER BY history.id
       `,
-    ).toEqual([{ matches_update: false }, { matches_update: true }]);
+    ).toEqual([false, false, false, true].map((matches_update) => ({ matches_update })));
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -1873,38 +2252,45 @@ it.effect("records nothing for inserts, same values, omitted fields, or untracke
     const [apples] = yield* itemIds(receiptId);
     const original = Option.getOrThrow(yield* repo.findById(receiptId));
 
-    // A case-only category change keeps the same category, so it is not an edit.
     yield* repo.update(receiptId, {
       storeName: original.storeName,
       receiptDate: original.receiptDate,
-      category: original.category.toUpperCase(),
     });
     yield* repo.update(receiptId, {});
-    yield* repo.updateItem(receiptId, apples!, { name: "Apples" });
+    // A case-only category change keeps the same category, so it is not an edit.
+    yield* repo.updateItem(receiptId, apples!, {
+      name: "Apples",
+      category: original.items[0].category.name.toUpperCase(),
+    });
     yield* sql`UPDATE receipts SET store_name = store_name, receipt_date = '2024-09-01'::date`;
     yield* sql`UPDATE receipts SET created_at = '2000-01-01T00:00:00Z', updated_at = now()`;
     yield* sql`UPDATE receipts SET subtotal = 20, tax = 2, total = 22, currency = 'USD'`;
     yield* sql`UPDATE receipt_items SET amount = amount + 1, position = position + 10`;
-    yield* sql`UPDATE receipt_items SET updated_at = now(), name = name`;
+    yield* sql`UPDATE receipt_items SET updated_at = now(), name = name, category_id = category_id`;
     yield* sql`UPDATE receipt_uploads SET file_name = 'renamed.png'`;
     expect(yield* history).toEqual([]);
 
     // Only tracked columns whose values change are recorded from a mixed update.
-    yield* sql`UPDATE receipts SET store_name = 'Corner Store', category_id = category_id, total = 30`;
-    yield* repo.update(receiptId, { storeName: "Corner Store", category: "Snacks" });
-    yield* sql`UPDATE receipt_items SET name = 'Pears', amount = 5 WHERE id = ${apples!}`;
-    const edit = { receipt_id: receiptId, item_id: null };
+    yield* sql`UPDATE receipts SET store_name = 'Corner Store', total = 30`;
+    yield* repo.update(receiptId, { storeName: "Corner Store" });
+    yield* repo.updateItem(receiptId, apples!, { name: "Apples", category: "Snacks" });
+    yield* sql`
+      UPDATE receipt_items SET name = 'Pears', amount = 5, category_id = category_id
+      WHERE id = ${apples!}
+    `;
     expect(yield* history).toEqual([
       {
-        ...edit,
         operation: 1,
+        receipt_id: receiptId,
+        item_id: null,
         field: "store_name",
         before_value: "Example Store",
         after_value: "Corner Store",
       },
       {
-        ...edit,
         operation: 2,
+        receipt_id: receiptId,
+        item_id: apples,
         field: "category",
         before_value: "groceries",
         after_value: "snacks",
@@ -1928,11 +2314,11 @@ it.effect("records direct SQL edits per row update in any session date style and
     const first = yield* repo.insert(receiptInput);
     const second = yield* repo.insert(receiptInput);
     const [apples, adjustment] = yield* itemIds(first);
-    yield* sql`INSERT INTO categories (name) VALUES ('snacks'), ('household')`;
+    yield* sql`INSERT INTO categories (name) VALUES ('snacks')`;
     // History records the referenced names when a category reference changes.
     const setCategory = (name: string) => sql`
-      UPDATE receipts SET category_id = (SELECT id FROM categories WHERE name = ${name})
-      WHERE id = ${first}
+      UPDATE receipt_items SET category_id = (SELECT id FROM categories WHERE name = ${name})
+      WHERE id = ${apples!}
     `;
 
     yield* sql.withTransaction(
@@ -1952,7 +2338,7 @@ it.effect("records direct SQL edits per row update in any session date style and
 
     const dateEdit = { item_id: null, field: "receipt_date" };
     const dates = { before_value: "2024-09-01", after_value: "2024-09-02" };
-    const categoryEdit = { receipt_id: first, item_id: null, field: "category" };
+    const categoryEdit = { receipt_id: first, item_id: apples, field: "category" };
     const itemEdit = { receipt_id: first, field: "item_name" };
     expect(yield* history).toEqual([
       { operation: 1, receipt_id: first, ...dateEdit, ...dates },
@@ -2008,13 +2394,18 @@ it.effect("rolls back edits whose history cannot be recorded, including within s
     const persistenceError = "GohoServer.ReceiptRepository.PersistenceError";
     const attempts: ReadonlyArray<readonly [Effect.Effect<unknown, { _tag: string }>, string]> = [
       [
-        repo.update(receiptId, { receiptDate: "2024-09-02", category: "Unrecordable" }),
+        repo.update(receiptId, { receiptDate: "2024-09-02", storeName: "Unrecordable" }),
         persistenceError,
       ],
       [repo.updateItem(receiptId, apples!, { name: "Unrecordable" }), persistenceError],
+      // The category it would create rolls back too.
+      [
+        repo.updateItem(receiptId, apples!, { name: "Pears", category: "Unrecordable" }),
+        persistenceError,
+      ],
       [
         sql`
-          UPDATE receipts SET store_name = 'Unrecordable',
+          UPDATE receipt_items SET name = 'Unrecordable',
             category_id = (SELECT id FROM categories WHERE name = 'snacks')
         `,
         "SqlError",
@@ -2039,7 +2430,7 @@ it.effect("rolls back edits whose history cannot be recorded, including within s
           .pipe(Effect.result);
         expect(Result.isFailure(discarded)).toBe(true);
         const unrecordable = yield* repo
-          .update(receiptId, { category: "Unrecordable" })
+          .updateItem(receiptId, apples!, { category: "Unrecordable" })
           .pipe(Effect.result);
         expect(Result.isFailure(unrecordable)).toBe(true);
         yield* repo.updateItem(receiptId, apples!, { name: "Granny Smith apples" });
@@ -2064,8 +2455,11 @@ it.effect("rolls back edits whose history cannot be recorded, including within s
       },
     ]);
     const saved = Option.getOrThrow(yield* repo.findById(receiptId));
-    expect(saved).toMatchObject({ storeName: "Corner Store", category: "groceries" });
-    expect(saved.items[0]!.name).toBe("Granny Smith apples");
+    expect(saved.storeName).toBe("Corner Store");
+    expect(saved.items[0]).toMatchObject({
+      name: "Granny Smith apples",
+      category: { name: "groceries" },
+    });
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(before[2]);
     expect(yield* sql`SELECT * FROM categories ORDER BY id`).toEqual(before[3]);
   }).pipe(Effect.provide(DatabaseLive)),
@@ -2086,8 +2480,8 @@ it.effect("deletes edit history with its receipt or item and keeps other history
     ] as const) {
       yield* repo.updateItem(receiptId, itemId, { name: "Pears" });
     }
-    yield* repo.update(scanned, { category: "Snacks" });
-    yield* repo.update(retained, { category: "Household" });
+    yield* repo.updateItem(scanned, scannedItem!, { category: "Snacks" });
+    yield* repo.update(retained, { storeName: "Corner Store" });
 
     yield* sql`DELETE FROM receipt_items WHERE id = ${removed!}`;
     expect(yield* repo.delete(scanned)).toEqual(Option.some({ fileId: "stored-photo" }));
@@ -2105,9 +2499,9 @@ it.effect("deletes edit history with its receipt or item and keeps other history
         operation: 2,
         receipt_id: retained,
         item_id: null,
-        field: "category",
-        before_value: "groceries",
-        after_value: "household",
+        field: "store_name",
+        before_value: "Example Store",
+        after_value: "Corner Store",
       },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),

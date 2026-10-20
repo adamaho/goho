@@ -2,7 +2,7 @@ import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { type CreateReceiptRequest, ReceiptId } from "@goho/goho-api/receipts";
-import { Effect, Fiber, Layer, Ref, Result, Schema } from "effect";
+import { Effect, Fiber, Layer, Ref, Result } from "effect";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
@@ -14,7 +14,7 @@ import type { ReceiptExtraction, ReceiptUpload } from "#src/receipt-uploads/mode
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
-import { parsedReceipt } from "#test/receipts/fixtures.ts";
+import { generateObject, parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const upload: ReceiptUpload = {
   id: ReceiptUploadId.make("7d89d8f7-6f0c-4df2-a2a9-94771638ac99"),
@@ -44,7 +44,7 @@ const dependencies = (options: {
       ? Transaction.layerTest
       : Layer.succeed(Transaction.Service, { run: options.transaction }),
     Layer.succeed(CategoryRepository.Service, {
-      listNames: options.categoryNames ?? Effect.succeed([]),
+      listNames: options.categoryNames ?? Effect.succeed(["groceries", "household"]),
       findOrCreate: () => Effect.die("Unexpected category creation"),
     }),
     Layer.succeed(FileStorage.Service, {
@@ -55,11 +55,10 @@ const dependencies = (options: {
     Layer.succeed(Ai.Service, {
       generateObject:
         options.generateObject ??
-        (({ schema }) =>
-          Schema.decodeUnknownEffect(schema)({
-            ...parsedReceipt,
-            transaction: { ...parsedReceipt.transaction, currency: options.currency ?? "CAD" },
-          }).pipe(Effect.orDie)),
+        generateObject({
+          ...parsedReceipt,
+          transaction: { ...parsedReceipt.transaction, currency: options.currency ?? "CAD" },
+        }),
     }),
     Layer.succeed(ReceiptRepository.Service, {
       delete: () => Effect.die("Unexpected receipt deletion"),
@@ -110,7 +109,7 @@ it.effect("stores the resulting receipt ID after processing an upload", () =>
     expect((yield* Ref.get(receipts)).map((receipt) => receipt.currency)).toEqual(["USD"]);
     expect(yield* Ref.get(extractions)).toEqual([
       {
-        version: 1,
+        version: 2,
         payload: {
           ...parsedReceipt,
           transaction: { ...parsedReceipt.transaction, currency: "USD" },
@@ -125,10 +124,9 @@ it.effect("keeps the original upload date as extraction context when a job is re
     yield* TestClock.setTime(Date.parse("2030-01-01T00:00:00.000Z"));
     const prompts = yield* Ref.make<ReadonlyArray<string>>([]);
     const layer = dependencies({
-      generateObject: ({ prompt, schema }) =>
-        Ref.update(prompts, (values) => [...values, JSON.stringify(prompt)]).pipe(
-          Effect.andThen(Schema.decodeUnknownEffect(schema)(parsedReceipt)),
-          Effect.orDie,
+      generateObject: (options) =>
+        Ref.update(prompts, (values) => [...values, JSON.stringify(options.prompt)]).pipe(
+          Effect.andThen(generateObject(parsedReceipt)(options)),
         ),
     });
     yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 2 }).pipe(
@@ -143,59 +141,57 @@ it.effect("keeps the original upload date as extraction context when a job is re
 
 it.effect("offers current category names to extraction before the save transaction", () =>
   Effect.gen(function* () {
-    for (const [names, guidance] of [
-      [
-        ["groceries", "household"],
-        'Existing categories, as a JSON array: ["groceries","household"]',
-      ],
-      [[], "There are no existing categories yet."],
-    ] as const) {
-      const events = yield* Ref.make<ReadonlyArray<string>>([]);
-      const record = (event: string) => Ref.update(events, (values) => [...values, event]);
-      yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
-        Effect.provide(
-          dependencies({
-            categoryNames: record("categories").pipe(Effect.as(names)),
-            generateObject: ({ prompt, schema }) =>
-              record(JSON.stringify(prompt)).pipe(
-                Effect.andThen(Schema.decodeUnknownEffect(schema)(parsedReceipt)),
-                Effect.orDie,
-              ),
-            transaction: (self) => record("transaction").pipe(Effect.andThen(self)),
-          }),
-        ),
-      );
-      const [categories, prompt, transaction] = yield* Ref.get(events);
-      expect([categories, transaction]).toEqual(["categories", "transaction"]);
-      expect(prompt).toContain(JSON.stringify(guidance));
-    }
+    const events = yield* Ref.make<ReadonlyArray<string>>([]);
+    const record = (event: string) => Ref.update(events, (values) => [...values, event]);
+    yield* Worker.process({ uploadId: upload.id }, { id: upload.id, attempts: 1 }).pipe(
+      Effect.provide(
+        dependencies({
+          categoryNames: record("categories").pipe(Effect.as(["groceries", "household"])),
+          generateObject: (options) =>
+            record(JSON.stringify(options.prompt)).pipe(
+              Effect.andThen(generateObject(parsedReceipt)(options)),
+            ),
+          transaction: (self) => record("transaction").pipe(Effect.andThen(self)),
+        }),
+      ),
+    );
+    const [categories, prompt, transaction] = yield* Ref.get(events);
+    expect([categories, transaction]).toEqual(["categories", "transaction"]);
+    expect(prompt).toContain(
+      JSON.stringify('Allowed item categories, as a JSON array: ["groceries","household"]'),
+    );
   }),
 );
 
-it.effect("fails without calling AI when category names cannot be read", () =>
+it.effect("fails without calling AI when category names cannot be read or none exist", () =>
   Effect.gen(function* () {
-    const failures = yield* Ref.make<ReadonlyArray<string>>([]);
-    const result = yield* Worker.process(
-      { uploadId: upload.id },
-      { id: upload.id, attempts: 3 },
-    ).pipe(
-      Effect.provide(
-        dependencies({
-          categoryNames: Effect.fail(
-            new CategoryRepository.PersistenceError({ operation: "listNames", cause: "down" }),
-          ),
-          generateObject: () => Effect.die("Unexpected AI request"),
-          insertReceipt: () => Effect.die("Unexpected receipt creation"),
-          markFailed: (_, failureCode) =>
-            Ref.update(failures, (values) => [...values, failureCode]).pipe(
-              Effect.as({ ...upload, status: "failed", failureCode }),
-            ),
-        }),
+    for (const categoryNames of [
+      Effect.fail(
+        new CategoryRepository.PersistenceError({ operation: "listNames", cause: "down" }),
       ),
-      Effect.result,
-    );
-    expect(Result.isFailure(result) && result.failure.failureCode).toBe("internal_error");
-    expect(yield* Ref.get(failures)).toEqual(["internal_error"]);
+      Effect.succeed([]),
+    ]) {
+      const failures = yield* Ref.make<ReadonlyArray<string>>([]);
+      const result = yield* Worker.process(
+        { uploadId: upload.id },
+        { id: upload.id, attempts: 3 },
+      ).pipe(
+        Effect.provide(
+          dependencies({
+            categoryNames,
+            generateObject: () => Effect.die("Unexpected AI request"),
+            insertReceipt: () => Effect.die("Unexpected receipt creation"),
+            markFailed: (_, failureCode) =>
+              Ref.update(failures, (values) => [...values, failureCode]).pipe(
+                Effect.as({ ...upload, status: "failed", failureCode }),
+              ),
+          }),
+        ),
+        Effect.result,
+      );
+      expect(Result.isFailure(result) && result.failure.failureCode).toBe("internal_error");
+      expect(yield* Ref.get(failures)).toEqual(["internal_error"]);
+    }
   }),
 );
 

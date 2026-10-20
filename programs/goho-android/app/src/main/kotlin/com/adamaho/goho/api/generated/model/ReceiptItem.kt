@@ -23,6 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.Category
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -34,6 +35,7 @@ import com.squareup.moshi.JsonClass
  * @param position Zero-based spot in the receipt lineup.
  * @param name Item name on the receipt.
  * @param amount Item amount; negative adjustments can suit up too.
+ * @param category The item's category.
  */
 
 
@@ -53,7 +55,11 @@ data class ReceiptItem (
 
     /* Item amount; negative adjustments can suit up too. */
     @Json(name = "amount")
-    val amount: kotlin.String
+    val amount: kotlin.String,
+
+    /* The item's category. */
+    @Json(name = "category")
+    val category: Category
 
 ) {
 

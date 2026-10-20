@@ -33,7 +33,6 @@ import com.squareup.moshi.JsonClass
  *
  * @param storeName Store or merchant named on the receipt.
  * @param receiptDate Date the purchase hit the ice.
- * @param category Receipt category in the lineup.
  * @param subtotal Amount before tax.
  * @param tax Tax amount.
  * @param total Final receipt total.
@@ -51,10 +50,6 @@ data class CreateReceiptRequest (
     /* Date the purchase hit the ice. */
     @Json(name = "receiptDate")
     val receiptDate: kotlin.String,
-
-    /* Receipt category in the lineup. */
-    @Json(name = "category")
-    val category: kotlin.String,
 
     /* Amount before tax. */
     @Json(name = "subtotal")

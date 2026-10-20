@@ -13,17 +13,19 @@ import java.util.UUID
 
 private val previewTime = Instant.parse("2026-09-30T12:00:00Z")
 
+private val shopping = Category("1", "shopping", "shopping", Category.Color.purple)
+
 private fun receipt(id: String, merchant: String, date: String, total: String, currency: String) =
     Receipt(
         id,
         merchant,
         date,
-        "Shopping",
         total,
         "0",
         total,
         currency,
-        listOf(ReceiptItem(id, 0, "Purchase", total)),
+        listOf(shopping),
+        listOf(ReceiptItem(id, 0, "Purchase", total, shopping)),
     )
 
 private fun upload(id: Int, status: ReceiptUploadsList200ResponseDataInner.Status, time: String) =

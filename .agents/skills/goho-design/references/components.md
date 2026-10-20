@@ -107,7 +107,6 @@ Tag(
     icon = painterResource(R.drawable.ic_tag_groceries), // required Painter; no default
     color = TagColor.Green,
 )
-ReceiptCategoryTag(category = receipt.category)
 ReceiptUploadTag(processing = true)
 ```
 
@@ -115,9 +114,9 @@ ReceiptUploadTag(processing = true)
 - Rectangular `GohoShapes.tag` with 4dp corners, minimum height 24dp, 8dp horizontal / 4dp vertical padding, 14dp leading outline icon, 5dp gap. No border, shadow, gloss or ripple. `label` typography is 12/16sp Medium with proportional figures; optically centre the glyphs and icon together.
 - Label and icon use the palette content colour. The icon is decorative for accessibility; the visible label conveys the category or state, including without colour. Merge tag semantics, and retain the parent row's merged receipt announcement.
 - Tags grow for font scaling and wrap long names. On standard receipt rows cap the tag at 160dp so the date has room. At narrow widths or font scale ≥1.3, stack merchant, right-aligned amount/tag, then date. Do not truncate category names or create another tap target.
-- Categories: copy the server name into the list model, trim surrounding whitespace and capitalise its first character for display. Matching is case-insensitive and uses explicit whole names, not substring guesses. Names without a mapping use Grey with the tag icon; blank categories render no tag. No category editor, persisted colour/icon fields, category filtering or generated category guesses are introduced.
-- Default category mapping: Health / Health and fitness / Medical → Red heart-pulse; Meals / Dining / Restaurants / Prepared foods → Orange utensils; Entertainment → Yellow ticket; Groceries / Grocery / Produce / Dairy / Seafood → Green shopping-basket; Transport / Transportation / Travel → Blue bus-front; Shopping / General merchandise → Purple shopping-bag; Personal care / Beauty → Pink sparkles; Home / Home & garden / Household → Brown house. Other and unknown names use Grey tag.
-- Receipt options reuse `ReceiptSummary`, the same presentation as the list row: merchant/date on the left, amount/category tag on the right, and the same 40×48dp thumbnail. It stays in the shared header during delete confirmation, whether opened from the list or Details. Blank categories render no tag; long labels wrap as they do in the list.
+- Historical, while category display is temporarily hidden and `ReceiptCategoryTag` is removed. Categories: copy the server name into the list model, trim surrounding whitespace and capitalise its first character for display. Matching is case-insensitive and uses explicit whole names, not substring guesses. Names without a mapping use Grey with the tag icon; blank categories render no tag. No category editor, persisted colour/icon fields, category filtering or generated category guesses are introduced.
+- Historical default category mapping: Health / Health and fitness / Medical → Red heart-pulse; Meals / Dining / Restaurants / Prepared foods → Orange utensils; Entertainment → Yellow ticket; Groceries / Grocery / Produce / Dairy / Seafood → Green shopping-basket; Transport / Transportation / Travel → Blue bus-front; Shopping / General merchandise → Purple shopping-bag; Personal care / Beauty → Pink sparkles; Home / Home & garden / Household → Brown house. Other and unknown names use Grey tag.
+- Receipt options reuse `ReceiptSummary`, the same presentation as the list row: merchant/date on the left, amount/upload tag on the right, and the same 40×48dp thumbnail. It stays in the shared header during delete confirmation, whether opened from the list or Details. Long labels wrap as they do in the list.
 - `ReceiptUploadTag` uses Purple + scan-line for “Reading receipt…” and Orange + triangle-alert for “Not processed”. Keep the existing reduced-motion-aware text shimmer while processing; its highlight blends 4% toward the container so every palette remains readable. Icons remain still. The failed-upload sheet uses the same tag. Scan preview's existing uploading/submitted/failure copy uses `Tag` with the corresponding scan or warning icon; Ready has no tag.
 - Skeleton loading masks the same tag element, clearing placeholder semantics. The tag still has an icon parameter while loading; no separate skeleton layout.
 - Nine theme-aware colour pairs live in `TagColor`, separate from the three action-button colours. See `tokens.md`. Icon masters, Android resource mapping and licence are in `assets/icons/tags/README.md`.
@@ -129,14 +128,14 @@ ReceiptUploadTag(processing = true)
 Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 - Line 1: merchant (`rowTitle`, `textPrimary`, single line, ellipsis) … trailing amount (`rowTitle`, proportional figures).
-- Line 2 (5dp below): date (`meta`, `textTertiary`) … right-aligned category or upload-state tag beneath the price.
+- Line 2 (5dp below): date (`meta`, `textTertiary`) … right-aligned upload-state tag beneath the price (category tags are temporarily hidden).
 - States:
-  - **Processed:** amount in `textPrimary`. The symbol and number use `textPrimary`; the trailing currency code is smaller (12sp) in `textTertiary`. Show the category tag when present. Tappable, including the tag area; opens details.
+  - **Processed:** amount in `textPrimary`. The symbol and number use `textPrimary`; the trailing currency code is smaller (12sp) in `textTertiary`. No tag while category display is hidden. Tappable; opens details.
   - **Processing:** merchant "New receipt", date "Just now", trailing amount replaced by a 52×12 fully round shimmering skeleton, Purple scan-icon tag "Reading receipt…". Not tappable.
   - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, Orange warning-icon tag "Not processed". Tappable; opens the receipt options sheet (it has no details screen).
 - Pressed receipt rows retain their normal surface fill with no highlight. Holds use the scale feedback below; cards clip their rows to the card's corners.
 - Press and hold (Processed and Not processed rows; Processing rows ignore it): once it's clear the press is a hold (after about 150ms), ease to scale 0.98. Keep the normal surface fill throughout; no pressed highlight. When the long-press fires (the system long-press timeout, about 400–500ms): `HapticFeedbackType.LongPress`, the row springs back to scale 1, and the receipt options sheet opens. Releasing before the timeout is a normal tap. Implement with `Modifier.combinedClickable(onClick, onLongClick, onLongClickLabel = "Receipt options")` so TalkBack offers the action.
-- Each row has merged semantics including its category label when present, for example "Cedar Hardware, US$23.21, Thursday September 24, Home" or "Unknown receipt, not processed, today 8:14 AM".
+- Each row has merged semantics, for example "Cedar Hardware, US$23.21, Thursday September 24" or "Unknown receipt, not processed, today 8:14 AM".
 
 ## ReceiptCard (section)
 
@@ -146,7 +145,6 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 ## DetailList
 
 - Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 500, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
-- The Category value uses `ReceiptCategoryTag`, right-aligned in the value column or beneath its label in the stacked layout. Other values retain their existing typography.
 - A value that wasn't read shows "—" in `textTertiary`. Allow rows to grow for wrapped values; stack labels above values on narrow screens or with larger text.
 
 ## ItemsCard

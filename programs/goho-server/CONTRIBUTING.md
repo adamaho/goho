@@ -62,9 +62,10 @@ operations.
 
 ### Receipts and items
 
-- `receipts` holds only receipt data: store, receipt date, required category
-  reference, subtotal, tax, total, and currency.
-- `receipt_items` stores each item's name and amount, linked to its receipt.
+- `receipts` holds only receipt data: store, receipt date, subtotal, tax, total,
+  and currency.
+- `receipt_items` stores each item's name, amount, and required category
+  reference, linked to its receipt.
 - Purchase dates use `date`. Amounts use `numeric` without two-decimal rounding.
   Decimal strings keep the finite values the parser supplies; they cannot recover
   precision already lost upstream.
@@ -74,6 +75,8 @@ operations.
   code and reject null or missing values. Extraction keeps the receipt's currency,
   or uses CAD when nothing on the receipt suggests another. Extraction version 1
   records this required field. See [receipt creation](./README.md#create-a-receipt).
+- Extraction version 2 moved the category from the transaction to each item.
+  Uploads processed earlier keep their version 1 payloads as recorded.
 
 Each item has a database-generated `bigint` identity `id` as its primary key. It
 stays with the item through renames and position changes. `position` is the
@@ -84,23 +87,43 @@ their timestamps kept their values.
 ### Categories
 
 `categories` is one shared catalog of names, with a generated `bigint` identity
-`id`. Each receipt's required `category_id` references it; a referenced
-category cannot be deleted. The API still reads and writes a `category` string.
+`id` and display metadata. Each item's required, indexed `category_id`
+references it; a referenced category cannot be deleted. A receipt has no category
+of its own: the API derives its `categories` from its items, each once in item
+order. Items are written with a `category` name and read with the category object.
+
+- `icon` is a required free-form icon identifier; the server does not limit it to
+  the app's bundled icons, so clients decide how to show unfamiliar ones. `color`
+  is a stable key from the app's colour palette, enforced by a database
+  constraint. New categories default to `other` and `grey`.
+- Migration 0013 seeds the canonical catalog on fresh databases: groceries,
+  dining, shopping, household, personal care, health, gas, and charity, each with
+  its preset icon and colour.
 
 - Names are stored as PostgreSQL's `lower(btrim(name))`. Database constraints
   keep them unique, nonempty, trimmed, and lowercase. Case variants share one
   category; different words such as `grocery` and `groceries` stay separate.
-- Saving a receipt finds its category by name or creates it in the same
+- Saving a receipt or item finds each category by name or creates it in the same
   transaction, so a failed or rolled-back save leaves no new category behind. A
-  PATCH for a missing receipt creates nothing. Reusing a category does not update it.
-- Categories stay when their receipts are deleted or moved to another category.
-- Upload processing reads the current names before each AI request and offers
-  them as suggestions; the model may return a new name. The stored extraction
-  keeps the category as the model returned it.
+  PATCH for a missing receipt or item creates nothing. Reusing a category does not
+  update it. A receipt save looks up each distinct incoming name once; case or
+  space variants are separate lookups that resolve to the same category.
+- Categories stay when their items are deleted or moved to another category.
+- Upload processing reads the current names before each AI request. The model's
+  structured output only accepts those names, so it cannot invent a category; an
+  empty catalog or any other name fails the upload. The stored extraction keeps
+  the categories as the model returned them.
 - Migration 0012 built the catalog from existing receipt categories, trimming
   space-padded legacy values from direct SQL, and linked
   each receipt without firing update triggers, so timestamps stayed and no
   history was added.
+- Migration 0013 classified existing data deterministically, without AI. A fixed
+  list of approved variant names maps into the canonical catalog, and unrelated
+  names are kept. An existing canonical category keeps its ID; otherwise the
+  oldest variant is renamed to the canonical name and keeps its ID. Each item
+  inherited its receipt's mapped category, then receipts lost their reference.
+  Without firing update triggers, records kept their timestamps and no history
+  was added. Later corrections use item PATCH.
 
 ### Uploads and transactions
 
@@ -139,7 +162,7 @@ history yet.
 | Table                  | Records                                  | Required references (all `ON DELETE CASCADE`)             |
 | ---------------------- | ---------------------------------------- | --------------------------------------------------------- |
 | `receipt_history`      | `store_name`, `receipt_date`, `category` | `receipt_id`                                              |
-| `receipt_item_history` | `item_name`                              | `receipt_id` (the item's receipt at edit time), `item_id` |
+| `receipt_item_history` | `item_name`, `category`                  | `receipt_id` (the item's receipt at edit time), `item_id` |
 
 - Update triggers write one row per field whose value actually changes. Each row
   stores the field, its before and after values, an operation ID, and an
@@ -149,6 +172,8 @@ history yet.
 - Dates are stored as ISO `YYYY-MM-DD` text whatever the session's DateStyle.
 - A category change is a change of `category_id`, recorded with the old and new
   category names. Rows recorded before migration 0012 keep their original case.
+- Since migration 0013, category changes are item edits. Earlier receipt
+  `category` rows remain readable, and receipts record no new ones.
 - Inserts, same-value writes, parent timestamp updates from item changes, and
   other columns record nothing.
 - Migration 0011 adds no baseline for existing rows, so history starts with the
