@@ -9,16 +9,17 @@ const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 const runView = (receiptId: string, baseUrl: string) =>
   runCommand(baseUrl, ["receipts", "view", receiptId]);
 
+const groceries = { id: "3", name: "groceries", icon: "groceries", color: "green" };
 const receipt = {
   id: "42",
   storeName: "Example Store",
   receiptDate: "2026-09-01",
-  category: "Groceries",
   subtotal: "10.25",
   tax: "0.75",
   total: "11",
   currency: "CAD",
-  items: [{ id: "7", position: 0, name: "Apples", amount: "11" }],
+  categories: [groceries],
+  items: [{ id: "7", position: 0, name: "Apples", amount: "11", category: groceries }],
 };
 
 describe("receipts list", () => {

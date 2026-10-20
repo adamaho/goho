@@ -10,14 +10,14 @@ import { Tool } from "effect/ai";
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
 /**
- * Exposes item name corrections with strict API-compatible validation.
+ * Exposes item name and category corrections with strict API-compatible validation.
  *
  * @category tools
  * @since 0.1.0
  */
 export const tool = Tool.make("patch_receipt_item", {
   description:
-    "Rename one item on a saved Goho receipt. Use receipt_id and the item's item_id from get_receipt or list_receipts, and supply the new name in changes. Returns the saved item; its amount and position stay unchanged.",
+    "Correct one item on a saved Goho receipt. Use receipt_id and the item's item_id from get_receipt or list_receipts, and supply a new name, category, or both in changes. Categories are saved in lowercase, and an unfamiliar name adds a new category. Returns the saved item; its amount and position stay unchanged.",
   parameters: Schema.Struct({
     receipt_id: ReceiptId,
     item_id: ReceiptItemId,
@@ -35,7 +35,7 @@ export const tool = Tool.make("patch_receipt_item", {
   .annotate(Tool.OpenWorld, false);
 
 /**
- * Applies item name corrections and returns the saved item.
+ * Applies item corrections and returns the saved item.
  *
  * @category tools
  * @since 0.1.0

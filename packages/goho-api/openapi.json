@@ -514,7 +514,7 @@
             }
           }
         },
-        "description": "Creates the receipt and items in one clean play. Every call saves a new receipt.",
+        "description": "Creates the receipt and items in one clean play, adding any unfamiliar item category to the roster. Every call saves a new receipt.",
         "summary": "Create a receipt",
         "requestBody": {
           "content": {
@@ -683,7 +683,7 @@
             }
           }
         },
-        "description": "Updates the supplied store name, receipt date, or category and returns the complete receipt. Amounts, currency, and items stay on the bench.",
+        "description": "Updates the supplied store name or receipt date and returns the complete receipt. Amounts, currency, and items stay on the bench.",
         "summary": "Correct receipt details",
         "requestBody": {
           "content": {
@@ -799,7 +799,7 @@
             }
           },
           "400": {
-            "description": "The correction is a bad pass: missing or blank name, unsupported fields, or a malformed ID. Nothing is saved."
+            "description": "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved."
           },
           "404": {
             "description": "That receipt has no item wearing this number, bud.",
@@ -822,8 +822,8 @@
             }
           }
         },
-        "description": "Renames one existing item and returns just that saved item. Its amount, position, and the rest of the lineup stay put.",
-        "summary": "Rename a receipt item",
+        "description": "Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.",
+        "summary": "Correct a receipt item",
         "requestBody": {
           "content": {
             "application/json": {
@@ -896,9 +896,19 @@
                 "examples": ["10.25"]
               }
             ]
+          },
+          "category": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "description": "The item's category."
+              }
+            ]
           }
         },
-        "required": ["id", "position", "name", "amount"],
+        "required": ["id", "position", "name", "amount", "category"],
         "additionalProperties": false,
         "description": "A saved receipt line item in its original slot.",
         "examples": [
@@ -906,9 +916,72 @@
             "id": "7",
             "position": 0,
             "name": "Apples",
-            "amount": "10.25"
+            "amount": "10.25",
+            "category": {
+              "id": "3",
+              "name": "groceries",
+              "icon": "groceries",
+              "color": "green"
+            }
           }
         ]
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CategoryId"
+              },
+              {
+                "description": "The category's roster number."
+              }
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Trimmed lowercase category name.",
+            "examples": ["groceries"]
+          },
+          "icon": {
+            "type": "string",
+            "enum": [
+              "groceries",
+              "meals",
+              "shopping",
+              "home",
+              "personal_care",
+              "health",
+              "transport",
+              "entertainment",
+              "other"
+            ],
+            "description": "Stable icon key for showing the category."
+          },
+          "color": {
+            "type": "string",
+            "enum": ["green", "orange", "purple", "brown", "pink", "red", "blue", "yellow", "grey"],
+            "description": "Stable colour key for showing the category."
+          }
+        },
+        "required": ["id", "name", "icon", "color"],
+        "additionalProperties": false,
+        "description": "A category on the shared roster. New names suit up with the `other` icon and `grey` colour.",
+        "examples": [
+          {
+            "id": "3",
+            "name": "groceries",
+            "icon": "groceries",
+            "color": "green"
+          }
+        ]
+      },
+      "CategoryId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The category's positive number on the roster.",
+        "examples": ["3"]
       },
       "DecimalString": {
         "type": "string",
@@ -935,14 +1008,22 @@
             "type": "string",
             "description": "Item name on the receipt.",
             "examples": ["Apples"]
+          },
+          "category": {
+            "type": "string",
+            "description": "Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.",
+            "examples": ["Groceries"]
           }
         },
-        "required": ["name"],
         "additionalProperties": false,
-        "description": "A new name for an existing line item; it is trimmed and stays nonempty.",
+        "minProperties": 1,
+        "description": "Line item details to correct. Send a name, a category, or both; left-out fields stay put, and values are trimmed and stay nonempty.",
         "examples": [
           {
             "name": "Granny Smith apples"
+          },
+          {
+            "category": "Groceries"
           }
         ]
       },
@@ -973,11 +1054,6 @@
                 "description": "Date the purchase hit the ice."
               }
             ]
-          },
-          "category": {
-            "type": "string",
-            "description": "Receipt category in the lineup.",
-            "examples": ["Groceries"]
           },
           "subtotal": {
             "allOf": [
@@ -1018,6 +1094,19 @@
             "description": "Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.",
             "examples": ["CAD", "USD"]
           },
+          "categories": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Category"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            },
+            "description": "Each distinct item category once, in order of first appearance."
+          },
           "items": {
             "type": "array",
             "prefixItems": [
@@ -1036,11 +1125,11 @@
           "id",
           "storeName",
           "receiptDate",
-          "category",
           "subtotal",
           "tax",
           "total",
           "currency",
+          "categories",
           "items"
         ],
         "additionalProperties": false,
@@ -1050,17 +1139,30 @@
             "id": "42",
             "storeName": "Example Store",
             "receiptDate": "2026-09-13",
-            "category": "Groceries",
             "subtotal": "10.25",
             "tax": "0.75",
             "total": "11",
             "currency": "USD",
+            "categories": [
+              {
+                "id": "3",
+                "name": "groceries",
+                "icon": "groceries",
+                "color": "green"
+              }
+            ],
             "items": [
               {
                 "id": "7",
                 "position": 0,
                 "name": "Apples",
-                "amount": "10.25"
+                "amount": "10.25",
+                "category": {
+                  "id": "3",
+                  "name": "groceries",
+                  "icon": "groceries",
+                  "color": "green"
+                }
               }
             ]
           }
@@ -1089,11 +1191,6 @@
                 "description": "Date the purchase hit the ice."
               }
             ]
-          },
-          "category": {
-            "type": "string",
-            "description": "Receipt category in the lineup.",
-            "examples": ["Groceries"]
           }
         },
         "additionalProperties": false,
@@ -1104,8 +1201,7 @@
             "receiptDate": "2026-09-14"
           },
           {
-            "storeName": "Corner Store",
-            "category": "Snacks"
+            "storeName": "Corner Store"
           }
         ]
       },
@@ -1126,11 +1222,6 @@
                 "description": "Date the purchase hit the ice."
               }
             ]
-          },
-          "category": {
-            "type": "string",
-            "description": "Receipt category in the lineup.",
-            "examples": ["Groceries"]
           },
           "subtotal": {
             "allOf": [
@@ -1185,23 +1276,13 @@
             "description": "Line items in receipt order."
           }
         },
-        "required": [
-          "storeName",
-          "receiptDate",
-          "category",
-          "subtotal",
-          "tax",
-          "total",
-          "currency",
-          "items"
-        ],
+        "required": ["storeName", "receiptDate", "subtotal", "tax", "total", "currency", "items"],
         "additionalProperties": false,
         "description": "The full receipt lineup, bud. Names are trimmed and stay nonempty; amounts are not rounded, converted, or checked against the totals.",
         "examples": [
           {
             "storeName": "Example Store",
             "receiptDate": "2026-09-13",
-            "category": "Groceries",
             "subtotal": "10.25",
             "tax": "0.75",
             "total": "11.00",
@@ -1209,7 +1290,8 @@
             "items": [
               {
                 "name": "Apples",
-                "amount": "10.25"
+                "amount": "10.25",
+                "category": "Groceries"
               }
             ]
           }
@@ -1233,15 +1315,21 @@
                 "examples": ["10.25"]
               }
             ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.",
+            "examples": ["Groceries"]
           }
         },
-        "required": ["name", "amount"],
+        "required": ["name", "amount", "category"],
         "additionalProperties": false,
         "description": "One receipt line item; repeat names are fair game.",
         "examples": [
           {
             "name": "Apples",
-            "amount": "10.25"
+            "amount": "10.25",
+            "category": "Groceries"
           }
         ]
       },

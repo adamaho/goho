@@ -28,9 +28,10 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 /**
- * A new name for an existing line item; it is trimmed and stays nonempty.
+ * Line item details to correct. Send a name, a category, or both; left-out fields stay put, and values are trimmed and stay nonempty.
  *
  * @param name Item name on the receipt.
+ * @param category Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  */
 
 
@@ -38,7 +39,11 @@ data class PatchReceiptItemRequest (
 
     /* Item name on the receipt. */
     @Json(name = "name")
-    val name: kotlin.String
+    val name: kotlin.String? = null,
+
+    /* Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
+    @Json(name = "category")
+    val category: kotlin.String? = null
 
 ) {
 

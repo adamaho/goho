@@ -11,6 +11,7 @@ const item = {
   position: 0,
   name: "Granny Smith apples",
   amount: "4.5",
+  category: { id: "9", name: "snacks", icon: "other", color: "grey" },
 };
 
 const ItemResult = Schema.Struct({
@@ -22,9 +23,9 @@ const ServerLive = HttpServer.serve(
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     expect(request.method).toBe("PATCH");
-    expect(yield* request.json).toEqual({ name: item.name });
 
     if (request.url === `/receipts/42/items/${item.id}`) {
+      expect(yield* request.json).toEqual({ name: item.name, category: "Snacks" });
       return HttpServerResponse.jsonUnsafe({ data: item });
     }
     if (request.url === "/receipts/999/items/7" || request.url === "/receipts/42/items/999") {
@@ -37,7 +38,7 @@ const ServerLive = HttpServer.serve(
   }),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
 
-it.effect("renames a receipt item through MCP without rounding its ID", () =>
+it.effect("corrects a receipt item through MCP without rounding its ID", () =>
   Effect.gen(function* () {
     const server = yield* HttpServer.HttpServer;
     const client = yield* startMcpClient(HttpServer.formatAddress(server.address));
@@ -46,7 +47,7 @@ it.effect("renames a receipt item through MCP without rounding its ID", () =>
       yield* client.call(2, "patch_receipt_item", {
         receipt_id: "42",
         item_id: item.id,
-        changes: { name: `  ${item.name}  ` },
+        changes: { name: `  ${item.name}  `, category: " Snacks " },
       }),
     );
     expect(patched.isError).toBe(false);
@@ -99,6 +100,8 @@ it.effect("rejects invalid item patches before contacting the API", () =>
       { ...valid, changes: null },
       { ...valid, changes: { name: "  " } },
       { ...valid, changes: { name: null } },
+      { ...valid, changes: { category: "  " } },
+      { ...valid, changes: { name: item.name, category: null } },
       { ...valid, changes: { name: item.name, amount: "10" } },
       { ...valid, changes: { name: item.name, position: 1 } },
       { ...valid, changes: { name: item.name, id: "8" } },

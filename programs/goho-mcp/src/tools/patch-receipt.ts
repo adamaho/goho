@@ -12,7 +12,7 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
  */
 export const tool = Tool.make("patch_receipt", {
   description:
-    "Correct a saved Goho receipt's store name, receipt date, or category. Supply at least one field in changes; omitted fields stay unchanged. Amounts, currency, and items cannot be changed with this tool.",
+    "Correct a saved Goho receipt's store name or receipt date. Supply at least one field in changes; omitted fields stay unchanged. Amounts, currency, and items cannot be changed with this tool; use patch_receipt_item for item names and categories.",
   parameters: Schema.Struct({ receipt_id: ReceiptId, changes: PatchReceiptRequest }),
   success: Schema.Struct({ receipt: Receipt }),
   failure: Schema.String,

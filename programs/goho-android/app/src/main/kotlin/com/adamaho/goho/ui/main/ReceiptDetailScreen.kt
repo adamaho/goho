@@ -140,8 +140,6 @@ fun ReceiptDetailScreen(
             val rows = buildList {
                 add(R.string.receipt_merchant to AnnotatedString(merchant))
                 add(R.string.receipt_date to AnnotatedString(shortDate))
-                if (loading || !saved?.category.isNullOrBlank())
-                    add(R.string.receipt_category to AnnotatedString(saved?.category.orEmpty()))
                 add(R.string.receipt_subtotal to subtotal)
                 add(R.string.receipt_tax to tax)
                 if (saved?.items?.isEmpty() == true) add(R.string.receipt_total to total)
@@ -221,28 +219,17 @@ fun ReceiptDetailScreen(
                             rows.forEachIndexed { index, (label, value) ->
                                 if (index > 0) ReceiptDetailDivider()
                                 ReceiptDetailRow(stringResource(label), stacked) {
-                                    if (label == R.string.receipt_category) {
-                                        ReceiptCategoryTag(
-                                            value.text,
+                                    Text(
+                                        value,
+                                        modifier =
                                             Modifier.skeleton(
-                                                GohoSpacing.skeletonWidth,
-                                                block = true,
+                                                GohoSpacing.skeletonTitleWidth,
+                                                alignEnd = !stacked,
                                             ),
-                                        )
-                                    } else {
-                                        Text(
-                                            value,
-                                            modifier =
-                                                Modifier.skeleton(
-                                                    GohoSpacing.skeletonTitleWidth,
-                                                    alignEnd = !stacked,
-                                                ),
-                                            style = GohoTheme.type.listValue,
-                                            color = c.textPrimary,
-                                            textAlign =
-                                                if (stacked) TextAlign.Start else TextAlign.End,
-                                        )
-                                    }
+                                        style = GohoTheme.type.listValue,
+                                        color = c.textPrimary,
+                                        textAlign = if (stacked) TextAlign.Start else TextAlign.End,
+                                    )
                                 }
                             }
                         }

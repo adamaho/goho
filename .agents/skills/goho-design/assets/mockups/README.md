@@ -4,6 +4,8 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+Category display is temporarily hidden while its UX is reconsidered. Captures that show category tags or a Details category row are historical; upload status tags remain current.
+
 ## Shared list and bottom-sheet receipt summary (October 19, 2026)
 
 The bottom-sheet header now uses the same `ReceiptSummary` as list rows: 40×48dp thumbnail, merchant/date on the left, amount with currency code and category/upload tag on the right. Menu and confirmation retain one mounted summary; the sheet adds no receipt tap action.
@@ -17,7 +19,7 @@ These unedited native Goho Dev captures use the local dev server on the Pixel 9 
 
 These supersede the larger, separate header in older sheet captures (including `receipt-tag-failed-sheet-dark.png`); older images remain references for their other named states. Canonical Compose sources are `ReceiptSummary.kt`, `ReceiptOptions.kt` and `ReceiptOptionsSheet.kt`.
 
-## Shared category and upload tags (October 19, 2026)
+## Shared category and upload tags (October 19, 2026, category display historical)
 
 These unedited native Goho Dev screenshots come from the Pixel 9 API 36 emulator (1080×2424px at 420dpi, except the compact captures below). The regular app rendered temporary, read-only sample API responses for the nine colours and upload states; no records were created or changed. The normal dev-server receipts were also checked. No separate preview activity, Android tests or test harness was added.
 
@@ -30,7 +32,7 @@ These unedited native Goho Dev screenshots come from the Pixel 9 API 36 emulator
 
 `Tag` is a display-only primitive requiring a Painter, label and one of nine `TagColor` values. Category and receipt-upload wrappers supply their existing labels and icon/colour mappings. See `references/components.md`, `references/tokens.md`, the mirrored Compose sources and `assets/icons/tags/README.md` for the API, measurements, palette and Lucide attribution. Scan preview's existing upload status copy also uses the component; that capture/upload interaction was not exercised in this screenshot session.
 
-Manual checks covered both palettes, all category colours, long/unknown and blank categories, tag-area navigation, failed-row options, narrow/large-text layout, static reduced-motion tags and initial skeleton loading. Android build, lint and Kotlin formatting passed. Older captures remain references for their named interactions or artwork; this section is the current tag reference.
+Manual checks covered both palettes, all category colours, long/unknown and blank categories, tag-area navigation, failed-row options, narrow/large-text layout, static reduced-motion tags and initial skeleton loading. Android build, lint and Kotlin formatting passed. Older captures remain references for their named interactions or artwork; this section is the current upload-tag reference, and its category tags are historical.
 
 ## Scan horizontal inset (October 18, 2026)
 

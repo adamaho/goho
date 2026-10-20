@@ -165,7 +165,6 @@ private fun ReceiptEntryTag(entry: ReceiptListEntry?, modifier: Modifier = Modif
             )
         entry.status != ReceiptListStatus.Processed ->
             ReceiptUploadTag(entry.status == ReceiptListStatus.Processing, modifier)
-        !entry.category.isNullOrBlank() -> ReceiptCategoryTag(entry.category, modifier)
     }
 }
 

@@ -69,12 +69,6 @@ const ReceiptFields = {
     }),
   ),
   receiptDate: CalendarDate.annotateKey({ description: "Date the purchase hit the ice." }),
-  category: Name.pipe(
-    Schema.annotateEncoded({
-      description: "Receipt category in the lineup.",
-      examples: ["Groceries"],
-    }),
-  ),
   subtotal: DecimalString.annotateKey({ description: "Amount before tax.", examples: ["10.25"] }),
   tax: DecimalString.annotateKey({ description: "Tax amount.", examples: ["0.75"] }),
   total: DecimalString.annotateKey({ description: "Final receipt total.", examples: ["11"] }),
@@ -96,10 +90,17 @@ const ReceiptItemInput = Schema.Struct({
     description: "Item amount; negative adjustments can suit up too.",
     examples: ["10.25"],
   }),
+  category: Name.pipe(
+    Schema.annotateEncoded({
+      description:
+        "Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.",
+      examples: ["Groceries"],
+    }),
+  ),
 }).annotate({
   identifier: "ReceiptItemInput",
   description: "One receipt line item; repeat names are fair game.",
-  examples: [{ name: "Apples", amount: "10.25" }],
+  examples: [{ name: "Apples", amount: "10.25", category: "Groceries" }],
 });
 
 /**
@@ -121,12 +122,11 @@ export const CreateReceiptRequest = Schema.Struct({
     {
       storeName: "Example Store",
       receiptDate: "2026-09-13",
-      category: "Groceries",
       subtotal: "10.25",
       tax: "0.75",
       total: "11.00",
       currency: "USD",
-      items: [{ name: "Apples", amount: "10.25" }],
+      items: [{ name: "Apples", amount: "10.25", category: "Groceries" }],
     },
   ],
 });
@@ -171,14 +171,13 @@ export type ReceiptId = typeof ReceiptId.Type;
 export const PatchReceiptRequest = Schema.Struct({
   storeName: Schema.optionalKey(ReceiptFields.storeName),
   receiptDate: Schema.optionalKey(ReceiptFields.receiptDate),
-  category: Schema.optionalKey(ReceiptFields.category),
 })
   .check(Schema.isMinProperties(1))
   .annotate({
     identifier: "PatchReceiptRequest",
     description:
       "Receipt details to correct, bud. Send at least one field; left-out fields stay put, and names are trimmed and stay nonempty.",
-    examples: [{ receiptDate: "2026-09-14" }, { storeName: "Corner Store", category: "Snacks" }],
+    examples: [{ receiptDate: "2026-09-14" }, { storeName: "Corner Store" }],
   });
 
 /**
@@ -190,21 +189,26 @@ export const PatchReceiptRequest = Schema.Struct({
 export interface PatchReceiptRequest extends Schema.Schema.Type<typeof PatchReceiptRequest> {}
 
 /**
- * Item name correction. The HTTP contract rejects unsupported properties.
+ * Item name and category corrections. Only supplied fields change; at least one
+ * is required. The HTTP contract also rejects unsupported properties.
  *
  * @category models
  * @since 0.1.0
  */
 export const PatchReceiptItemRequest = Schema.Struct({
-  name: ReceiptItemInput.fields.name,
-}).annotate({
-  identifier: "PatchReceiptItemRequest",
-  description: "A new name for an existing line item; it is trimmed and stays nonempty.",
-  examples: [{ name: "Granny Smith apples" }],
-});
+  name: Schema.optionalKey(ReceiptItemInput.fields.name),
+  category: Schema.optionalKey(ReceiptItemInput.fields.category),
+})
+  .check(Schema.isMinProperties(1))
+  .annotate({
+    identifier: "PatchReceiptItemRequest",
+    description:
+      "Line item details to correct. Send a name, a category, or both; left-out fields stay put, and values are trimmed and stay nonempty.",
+    examples: [{ name: "Granny Smith apples" }, { category: "Groceries" }],
+  });
 
 /**
- * Decoded item name correction.
+ * Decoded item corrections.
  *
  * @category models
  * @since 0.1.0
@@ -246,7 +250,85 @@ export const ReceiptItemId = Schema.String.check(
 export type ReceiptItemId = typeof ReceiptItemId.Type;
 
 /**
- * Saved receipt line item, returned within a receipt or alone after a rename.
+ * Persisted category identity, kept as decimal text like other IDs.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const CategoryId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u))
+  .annotate({
+    identifier: "CategoryId",
+    description: "The category's positive number on the roster.",
+    examples: ["3"],
+  })
+  .pipe(Schema.brand("CategoryId"));
+
+/**
+ * Decoded persisted category identity.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export type CategoryId = typeof CategoryId.Type;
+
+/**
+ * Shared category with its display metadata.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const Category = Schema.Struct({
+  id: CategoryId.annotateKey({ description: "The category's roster number." }),
+  name: Schema.String.annotate({
+    description: "Trimmed lowercase category name.",
+    examples: ["groceries"],
+  }),
+  icon: Schema.Literals([
+    "groceries",
+    "meals",
+    "shopping",
+    "home",
+    "personal_care",
+    "health",
+    "transport",
+    "entertainment",
+    "other",
+  ]).annotate({ description: "Stable icon key for showing the category." }),
+  color: Schema.Literals([
+    "green",
+    "orange",
+    "purple",
+    "brown",
+    "pink",
+    "red",
+    "blue",
+    "yellow",
+    "grey",
+  ]).annotate({ description: "Stable colour key for showing the category." }),
+}).annotate({
+  identifier: "Category",
+  description:
+    "A category on the shared roster. New names suit up with the `other` icon and `grey` colour.",
+  examples: [{ id: CategoryId.make("3"), name: "groceries", icon: "groceries", color: "green" }],
+});
+
+/**
+ * Decoded category.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface Category extends Schema.Schema.Type<typeof Category> {}
+
+const groceries = Category.make({
+  id: CategoryId.make("3"),
+  name: "groceries",
+  icon: "groceries",
+  color: "green",
+});
+
+/**
+ * Saved receipt line item, returned within a receipt or alone after a correction.
  *
  * @category models
  * @since 0.1.0
@@ -259,11 +341,21 @@ export const ReceiptItem = Schema.Struct({
     description: "Zero-based spot in the receipt lineup.",
     examples: [0],
   }),
-  ...ReceiptItemInput.fields,
+  name: ReceiptItemInput.fields.name,
+  amount: ReceiptItemInput.fields.amount,
+  category: Category.annotateKey({ description: "The item's category." }),
 }).annotate({
   identifier: "ReceiptItem",
   description: "A saved receipt line item in its original slot.",
-  examples: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
+  examples: [
+    {
+      id: ReceiptItemId.make("7"),
+      position: 0,
+      name: "Apples",
+      amount: "10.25",
+      category: groceries,
+    },
+  ],
 });
 
 /**
@@ -285,6 +377,9 @@ export const Receipt = Schema.Struct({
     description: "The receipt's roster number, kept the same on a replay.",
   }),
   ...ReceiptFields,
+  categories: Schema.NonEmptyArray(Category).annotate({
+    description: "Each distinct item category once, in order of first appearance.",
+  }),
   items: Schema.NonEmptyArray(ReceiptItem).annotate({
     description: "Items lined up by ascending position.",
   }),
@@ -297,12 +392,20 @@ export const Receipt = Schema.Struct({
       id: ReceiptId.make("42"),
       storeName: "Example Store",
       receiptDate: "2026-09-13",
-      category: "Groceries",
       subtotal: "10.25",
       tax: "0.75",
       total: "11",
       currency: "USD",
-      items: [{ id: ReceiptItemId.make("7"), position: 0, name: "Apples", amount: "10.25" }],
+      categories: [groceries],
+      items: [
+        {
+          id: ReceiptItemId.make("7"),
+          position: 0,
+          name: "Apples",
+          amount: "10.25",
+          category: groceries,
+        },
+      ],
     },
   ],
 });

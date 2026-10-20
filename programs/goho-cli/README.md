@@ -54,10 +54,10 @@ that does not exist exits nonzero; a missing receipt prints a specific message.
 ## Patch a receipt
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts patch 42 --store-name "Corner Store" --receipt-date 2026-10-17 --category "Groceries"
+pnpm --filter @goho/goho-cli start receipts patch 42 --store-name "Corner Store" --receipt-date 2026-10-17
 ```
 
-Supply at least one of `--store-name`, `--receipt-date`, or `--category`. Only
+Supply at least one of `--store-name` or `--receipt-date`. Only
 supplied fields change. Names are trimmed and must be nonblank; dates must be
 real calendar dates in `YYYY-MM-DD` format. The command prints the complete saved
 receipt as JSON. Amounts, currency, and items cannot be changed with this command.
@@ -65,13 +65,14 @@ receipt as JSON. Amounts, currency, and items cannot be changed with this comman
 ## Patch a receipt item
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts patch-item 42 7 --name "Granny Smith apples"
+pnpm --filter @goho/goho-cli start receipts patch-item 42 7 --name "Granny Smith apples" --category "Groceries"
 ```
 
 Use the receipt ID and the item's persisted `id` from `receipts view` or
-`receipts list`, not its `position`. The required `--name` is trimmed and must be
-nonblank. The command prints the saved item as JSON; its ID, amount, and position
-stay unchanged.
+`receipts list`, not its `position`. Supply `--name`, `--category`, or both; values
+are trimmed and must be nonblank. Categories are saved in lowercase, and an
+unfamiliar name adds a new category. The command prints the saved item as JSON;
+its ID, amount, and position stay unchanged.
 
 Both patch commands reject invalid arguments before sending a request and exit
 nonzero for rejected corrections, missing resources, or server failures.

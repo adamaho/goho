@@ -2,6 +2,8 @@ import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import {
+  Category,
+  CategoryId,
   CreateReceiptRequest,
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,
@@ -25,21 +27,29 @@ import * as Receipts from "#src/receipts/service.ts";
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",
   receiptDate: "2024-09-01",
-  category: "Groceries",
   subtotal: "10.25",
   tax: "0.75",
   total: "11",
   currency: "CAD",
-  items: [{ name: "Apples", amount: "11" }],
+  items: [{ name: "Apples", amount: "11", category: "Groceries" }],
+});
+
+const groceries = Category.make({
+  id: CategoryId.make("1"),
+  name: "groceries",
+  icon: "groceries",
+  color: "green",
 });
 
 const receipt = Receipt.make({
   ...createPayload,
   id: ReceiptId.make("42"),
+  categories: [groceries],
   items: Array.map(createPayload.items, (item, position) => ({
     ...item,
     id: ReceiptItemId.make(String(position + 7)),
     position,
+    category: groceries,
   })),
 });
 const itemId = receipt.items[0].id;
@@ -122,13 +132,18 @@ it.effect("normalizes decimal strings before inserting a receipt", () => {
         subtotal: "10.250",
         tax: "7.5e-1",
         total: "11.00",
-        items: [{ name: "Apples", amount: "12.00" }],
+        items: [{ name: "Apples", amount: "12.00", category: "Groceries" }],
       }),
     });
     expect(
       inserted.map(({ subtotal, tax, total, items }) => ({ subtotal, tax, total, items })),
     ).toEqual([
-      { subtotal: "10.25", tax: "0.75", total: "11", items: [{ name: "Apples", amount: "12" }] },
+      {
+        subtotal: "10.25",
+        tax: "0.75",
+        total: "11",
+        items: [{ name: "Apples", amount: "12", category: "Groceries" }],
+      },
     ]);
   }).pipe(
     Effect.provide(
@@ -297,26 +312,11 @@ it.effect("rejects missing, null, and malformed currency at the HTTP boundary", 
 it.effect("rejects invalid receipt data at the HTTP boundary", () =>
   Effect.gen(function* () {
     for (const payload of [
-      {
-        storeName: "Example Store",
-        receiptDate: "2024-02-30",
-        category: "Groceries",
-        subtotal: "10.25",
-        tax: "0.75",
-        total: "11",
-        currency: "CAD",
-        items: [{ name: "Apples", amount: "11" }],
-      },
-      {
-        storeName: "Example Store",
-        receiptDate: "2024-09-01",
-        category: "Groceries",
-        subtotal: "10.25",
-        tax: "0.75",
-        total: "11",
-        currency: "CAD",
-        items: [],
-      },
+      { ...createPayload, receiptDate: "2024-02-30" },
+      { ...createPayload, items: [] },
+      // Every item needs its own nonblank category.
+      { ...createPayload, items: [{ name: "Apples", amount: "11" }] },
+      { ...createPayload, items: [{ name: "Apples", amount: "11", category: " " }] },
     ]) {
       const body = yield* HttpBody.json(payload);
       const response = yield* HttpClient.post("/receipts", { body });
@@ -509,6 +509,13 @@ it.effect("returns the documented status for missing, non-failed, and unavailabl
   }),
 );
 
+const snacks = Category.make({
+  id: CategoryId.make("9"),
+  name: "snacks",
+  icon: "other",
+  color: "grey",
+});
+
 const recordUpdates = () => {
   const updates: Array<{ receiptId: ReceiptId; changes: PatchReceiptRequest }> = [];
   const itemUpdates: Array<{
@@ -525,7 +532,12 @@ const recordUpdates = () => {
     updateItem: (receiptId, itemId, changes) =>
       Effect.sync(() => {
         itemUpdates.push({ receiptId, itemId, changes });
-        return Option.some({ ...receipt.items[0], id: itemId, ...changes });
+        return Option.some({
+          ...receipt.items[0],
+          id: itemId,
+          name: changes.name ?? receipt.items[0].name,
+          category: changes.category === undefined ? groceries : snacks,
+        });
       }),
   };
   return { updates, itemUpdates, repository };
@@ -538,8 +550,7 @@ it.effect("corrects receipt fields through the generated client and returns the 
     for (const payload of [
       { receiptDate: "2024-09-02" },
       { storeName: "Corner Store" },
-      { category: "Snacks" },
-      { storeName: "Corner Store", receiptDate: "2024-09-02", category: "Snacks" },
+      { storeName: "Corner Store", receiptDate: "2024-09-02" },
     ]) {
       expect(yield* client.receipts.patch({ params: { receiptId: receipt.id }, payload })).toEqual({
         data: { ...receipt, ...payload },
@@ -548,11 +559,7 @@ it.effect("corrects receipt fields through the generated client and returns the 
     expect(recorded.updates).toEqual([
       { receiptId: receipt.id, changes: { receiptDate: "2024-09-02" } },
       { receiptId: receipt.id, changes: { storeName: "Corner Store" } },
-      { receiptId: receipt.id, changes: { category: "Snacks" } },
-      {
-        receiptId: receipt.id,
-        changes: { storeName: "Corner Store", receiptDate: "2024-09-02", category: "Snacks" },
-      },
+      { receiptId: receipt.id, changes: { storeName: "Corner Store", receiptDate: "2024-09-02" } },
     ]);
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
@@ -561,42 +568,56 @@ it.effect("trims corrected names and passes only supplied fields to the reposito
   const recorded = recordUpdates();
   return Effect.gen(function* () {
     const response = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
-      body: yield* HttpBody.json({ storeName: "  Corner Store ", category: "\tSnacks\n" }),
+      body: yield* HttpBody.json({ storeName: "  Corner Store ", receiptDate: "2024-09-02" }),
     });
     expect(response.status).toBe(200);
     expect(yield* response.json).toEqual({
-      data: { ...receipt, storeName: "Corner Store", category: "Snacks" },
+      data: { ...receipt, storeName: "Corner Store", receiptDate: "2024-09-02" },
     });
     expect(recorded.updates).toEqual([
-      { receiptId: receipt.id, changes: { storeName: "Corner Store", category: "Snacks" } },
+      { receiptId: receipt.id, changes: { storeName: "Corner Store", receiptDate: "2024-09-02" } },
     ]);
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
 
-it.effect("renames an item by ID through the generated client and returns only the item", () => {
+it.effect("corrects an item by ID through the generated client and returns only the item", () => {
   const recorded = recordUpdates();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
-    expect(
-      yield* client.receipts.patchItem({
-        params: { receiptId: receipt.id, itemId },
-        payload: { name: "Pears" },
-      }),
-    ).toEqual({ data: { ...receipt.items[0], name: "Pears" } });
+    for (const [payload, saved] of [
+      [{ name: "Pears" }, { name: "Pears" }],
+      [{ category: "Snacks" }, { category: snacks }],
+      [
+        { name: "Pears", category: "Snacks" },
+        { name: "Pears", category: snacks },
+      ],
+    ] as const) {
+      expect(
+        yield* client.receipts.patchItem({ params: { receiptId: receipt.id, itemId }, payload }),
+      ).toEqual({ data: { ...receipt.items[0], ...saved } });
+    }
     // The largest PostgreSQL bigint stays exact text end to end.
     const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/9223372036854775807`, {
-      body: yield* HttpBody.json({ name: "  Granny Smith apples  " }),
+      body: yield* HttpBody.json({ name: "  Granny Smith apples  ", category: " Snacks " }),
     });
     expect(response.status).toBe(200);
     expect(yield* response.json).toStrictEqual({
-      data: { id: "9223372036854775807", position: 0, name: "Granny Smith apples", amount: "11" },
+      data: {
+        id: "9223372036854775807",
+        position: 0,
+        name: "Granny Smith apples",
+        amount: "11",
+        category: snacks,
+      },
     });
     expect(recorded.itemUpdates).toEqual([
       { receiptId: receipt.id, itemId, changes: { name: "Pears" } },
+      { receiptId: receipt.id, itemId, changes: { category: "Snacks" } },
+      { receiptId: receipt.id, itemId, changes: { name: "Pears", category: "Snacks" } },
       {
         receiptId: receipt.id,
         itemId: "9223372036854775807",
-        changes: { name: "Granny Smith apples" },
+        changes: { name: "Granny Smith apples", category: "Snacks" },
       },
     ]);
   }).pipe(Effect.provide(testLayer(recorded.repository)));
@@ -618,14 +639,13 @@ it.effect("rejects empty, unsupported, mixed, null, and invalid receipt correcti
       { updatedAt: "2026-09-20T00:00:00.000Z" },
       { storeName: "Corner Store", total: "12" },
       { receiptDate: "2024-09-02", currency: "USD" },
-      { category: "Snacks", items: [] },
+      // Categories belong to items now.
+      { category: "Snacks" },
+      { storeName: "Corner Store", category: "Snacks" },
       { storeName: null },
       { receiptDate: null },
-      { category: null },
-      { storeName: "Corner Store", category: null },
       { storeName: "" },
       { storeName: "   " },
-      { category: " " },
       { storeName: 42 },
       { receiptDate: "2024-02-30" },
       { receiptDate: "2024/09/02" },
@@ -667,6 +687,9 @@ it.effect(
         { name: "" },
         { name: "   " },
         { name: 42 },
+        { category: null },
+        { category: " " },
+        { name: "Pears", category: "" },
         { amount: "1" },
         { name: "Pears", amount: "1" },
         { name: "Pears", position: 1 },

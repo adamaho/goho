@@ -56,7 +56,7 @@ Filter text and counts use `textSecondary`. The primary hue follows Bram’s blu
 
 ## Display tag colours
 
-`TagColor` owns these opaque light/dark container/content pairs. Categories may use all nine; upload processing uses Purple and failure uses Orange. These are display metadata colours, independent of `ButtonColor`. The label and mandatory icon share the foreground. No tag is identified by colour alone.
+`TagColor` owns these opaque light/dark container/content pairs. Categories may use all nine when category display returns (it is temporarily hidden); upload processing uses Purple and failure uses Orange. These are display metadata colours, independent of `ButtonColor`. The label and mandatory icon share the foreground. No tag is identified by colour alone.
 
 | Colour | Light container | Light content | Dark container | Dark content | Contrast light / dark |
 | ------ | --------------- | ------------- | -------------- | ------------ | --------------------- |
@@ -91,7 +91,7 @@ Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and bi
 | `section`  | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
 | `label`    | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
 
-Sheet headers reuse the receipt-list typography: merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and category/upload tag `label` 12/16 Medium. They use the same 40×48dp thumbnail, 12dp thumbnail gap and 5dp line gap; there are no separate sheet-summary typography or thumbnail tokens.
+Sheet headers reuse the receipt-list typography: merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and upload tag `label` 12/16 Medium. They use the same 40×48dp thumbnail, 12dp thumbnail gap and 5dp line gap; there are no separate sheet-summary typography or thumbnail tokens.
 
 Currency codes follow the symbol and amount, baseline aligned in `textTertiary`: `heroCurrencyCode` is 20/26sp SemiBold, zero tracking, beside the 44sp display amount; `currencyCode` is 12/16sp Medium, zero tracking, beside receipt-list and shared sheet-header totals. All other amounts keep the symbol without repeating the code. Example: “$46.78 CAD”.
 
@@ -117,7 +117,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
-- Detail list row: min height 47, label left, value right. Category values use the shared tag.
+- Detail list row: min height 47, label left, value right.
 - Tag: `tagHeight` = 24 minimum, `tagHorizontal` = 8, `tagVertical` = 4, `tagIcon` = 14, `tagIconGap` = 5. Standard rows use `tagMaxWidth` = 160; stacked layouts allow the available width and wrap long labels. All sizes remain theme tokens.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
