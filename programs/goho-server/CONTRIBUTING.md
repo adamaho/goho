@@ -86,11 +86,12 @@ their timestamps kept their values.
 
 ### Categories
 
-`categories` is one shared catalog of names, with a generated `bigint` identity
-`id` and display metadata. Each item's required, indexed `category_id`
-references it; a referenced category cannot be deleted. A receipt has no category
-of its own: the API derives its `categories` from its items, each once in item
-order. Items are written with a `category` name and read with the category object.
+`categories` is one shared catalog of names for receipt items and books, with a
+generated `bigint` identity `id` and display metadata. Each item's and book's
+required, indexed `category_id` references it; a referenced category cannot be
+deleted. A receipt has no category of its own: the API derives its `categories`
+from its items, each once in item order. Items and books are written with a
+`category` name and read with the category object.
 
 - `kinds` is a nonempty `category_kind[]` (`receipt`, `book`) listing the domains
   a category applies to. A database constraint keeps each kind once, in enum
@@ -112,15 +113,15 @@ order. Items are written with a `category` name and read with the category objec
 - Names are stored as PostgreSQL's `lower(btrim(name))`. Database constraints
   keep them unique, nonempty, trimmed, and lowercase. Case variants share one
   category; different words such as `grocery` and `groceries` stay separate.
-- Saving a receipt or item finds each category by name or creates it in the same
-  transaction, so a failed or rolled-back save leaves no new category behind. A
-  PATCH for a missing receipt or item creates nothing. Reusing a category that
-  already has the saving domain's kind does not update it. Reusing one of another
-  kind keeps its ID and adds the kind with a guarded update, so concurrent saves
-  of different kinds both keep theirs. A receipt save looks up each distinct
-  incoming name once; case or space variants are separate lookups that resolve to
-  the same category.
-- Categories stay when their items are deleted or moved to another category.
+- Saving a receipt, item, or book finds each category by name or creates it in
+  the same transaction, so a failed or rolled-back save leaves no new category
+  behind. A PATCH for a missing receipt, item, or book creates nothing. Reusing a
+  category that already has the saving domain's kind does not update it. Reusing
+  one from the other domain keeps its ID and adds the kind with a guarded update,
+  so concurrent receipt and book saves both keep theirs. A receipt save looks up
+  each distinct incoming name once; case or space variants are separate lookups
+  that resolve to the same category.
+- Categories stay when their items or books are deleted or moved to another category.
 - Upload processing reads the current receipt category names before each AI
   request. The model's structured output only accepts those names, so it cannot
   invent a category; an empty catalog or any other name fails the upload. The
@@ -136,6 +137,35 @@ order. Items are written with a `category` name and read with the category objec
   inherited its receipt's mapped category, then receipts lost their reference.
   Without firing update triggers, records kept their timestamps and no history
   was added. Later corrections use item PATCH.
+
+### Books
+
+`books` is one shared list of unique books with a generated `bigint` identity
+`id`, the `title` and `author` as entered, a required `category_id`, and a
+nullable `reading_level` set only by hand.
+
+- Identity is the title and author compared by `book_identity_text`: lowercase,
+  whitespace runs collapsed to one space, then trimmed. What counts as whitespace
+  follows PostgreSQL's locale, so some Unicode spaces, such as an internal
+  non-breaking space, can stay distinct. Generated `title_key` and
+  `author_key` columns store it under the `books_identity_key` unique constraint,
+  which enforces uniqueness for concurrent saves. Search uses the same function
+  and `strpos`, so punctuation and LIKE wildcards match literally.
+- Creating a book looks up its identity first and returns an existing book
+  without touching it or the catalog. Otherwise the category lookup and insert
+  share one transaction, which is a savepoint inside a caller's transaction;
+  when a concurrent save inserts the identity first, the insert does nothing,
+  that transaction rolls back any category change, and the committed book is
+  returned. Create, update, get and list all read through one private book
+  selection, so they return the same record.
+- A PATCH locks the book before resolving its category. Taking another book's
+  identity violates `books_identity_key`, which maps to `BookConflict` (HTTP 409)
+  and rolls back the whole correction, including a new category. Changing only
+  the case or spacing of a book's own title or author is allowed.
+- Books are listed by `created_at` then `id`, newest first, so corrections and
+  duplicate creates do not reorder them.
+- `hasImage` is `false` until book cover uploads arrive. There is no book edit
+  history.
 
 ### Uploads and transactions
 
@@ -164,7 +194,7 @@ codes stay unchanged. A failed pass is logged and retried at the next interval.
 
 ### Record timestamps
 
-`categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
+`books`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
 `created_at` and `updated_at` columns. They use `timestamptz`, which stores an absolute instant
 whatever the session time zone.
 

@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { Category, CategoryId } from "./categories.ts";
+import { BigintId, maxId } from "./ids.ts";
 
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
   description: "Nonempty text with the extra whitespace scraped off the boards.",
@@ -140,18 +141,6 @@ export const CreateReceiptRequest = Schema.Struct({
  * @since 0.1.0
  */
 export interface CreateReceiptRequest extends Schema.Schema.Type<typeof CreateReceiptRequest> {}
-
-const maxId = 9_223_372_036_854_775_807n;
-
-const BigintId = Schema.String.check(
-  // Abort on a bad format so `BigInt` never sees non-digits, even with `errors: "all"`.
-  Schema.isPattern(/^[1-9]\d{0,18}$/u).abort(),
-  Schema.makeFilter((value) => BigInt(value) <= maxId, {
-    expected: `an ID no greater than ${maxId}`,
-    // JSON Schema has no numeric bound for strings; the description states the range.
-    toJsonSchema: () => ({}),
-  }),
-);
 
 /**
  * Persisted receipt identity: canonical positive decimal text within
