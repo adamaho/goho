@@ -6,7 +6,10 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
+import com.adamaho.goho.api.generated.model.BooksGet200Response
+import com.adamaho.goho.api.generated.model.BooksList200Response
 import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.CreateBookRequest
 
@@ -25,5 +28,36 @@ interface BooksApi {
      */
     @POST("books")
     suspend fun booksCreate(@Body createBookRequest: CreateBookRequest): Response<BooksCreate200Response>
+
+    /**
+     * GET books/{bookId}
+     * Get a book
+     * 
+     * Responses:
+     *  - 200: Success
+     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 404: No book is wearing that number, bud.
+     *  - 500: The server could not retrieve this book.
+     *
+     * @param bookId 
+     * @return [BooksGet200Response]
+     */
+    @GET("books/{bookId}")
+    suspend fun booksGet(@Path("bookId") bookId: kotlin.String): Response<BooksGet200Response>
+
+    /**
+     * GET books
+     * List books
+     * Pulls saved books off the bench, newest first. Add &#x60;search&#x60; to find title or author matches for autocomplete.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The query is a bad pass, such as `search` sent more than once; the response body stays empty.
+     *  - 500: The server could not pull the books off the bench.
+     *
+     * @param search  (optional)
+     * @return [BooksList200Response]
+     */
+    @GET("books")
+    suspend fun booksList(@Query("search") search: kotlin.String? = null): Response<BooksList200Response>
 
 }

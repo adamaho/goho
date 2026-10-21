@@ -67,7 +67,7 @@ const testLayer = (repository: Partial<BookRepository.Interface> = {}) => {
   return { calls, layer };
 };
 
-it.effect("passes trimmed, validated books to the repository", () => {
+it.effect("passes trimmed, validated books and searches to the repository", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
@@ -88,6 +88,8 @@ it.effect("passes trimmed, validated books to the repository", () => {
         readingLevel: null,
       },
     });
+    expect(yield* client.books.list({ query: {} })).toEqual({ data: [book] });
+    yield* client.books.list({ query: { search: " 100%_cotton? " } });
     expect(calls).toEqual([
       ["findOrCreate", { title: "The Hobbit", author: "J. R. R. Tolkien", category: "Fiction" }],
       [
@@ -99,11 +101,14 @@ it.effect("passes trimmed, validated books to the repository", () => {
           readingLevel: null,
         },
       ],
+      // An omitted search lists everything; given text passes through untouched.
+      ["list", ""],
+      ["list", " 100%_cotton? "],
     ]);
   }).pipe(Effect.provide(layer));
 });
 
-it.effect("rejects missing, blank, null, and unsupported book input", () => {
+it.effect("rejects missing, blank, null, unsupported, and malformed book input", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
     const valid = { title: "The Hobbit", author: "J. R. R. Tolkien", category: "Fiction" };
@@ -129,13 +134,49 @@ it.effect("rejects missing, blank, null, and unsupported book input", () => {
       expect(response.status, JSON.stringify(payload)).toBe(400);
       expect(yield* response.text).toBe("");
     }
+    for (const id of ["0", "-1", "01", "1.0", "abc", "9223372036854775808"]) {
+      for (const [route, request] of [["get", HttpClient.get(`/books/${id}`)]] as const) {
+        expect((yield* request).status, `${route} ${id}`).toBe(400);
+      }
+    }
+    // A search sent twice decodes as a list, not text.
+    const repeated = yield* HttpClient.get("/books?search=hobbit&search=tolkien");
+    expect(repeated.status).toBe(400);
+    expect(yield* repeated.text).toBe("");
     expect(calls).toEqual([]);
   }).pipe(Effect.provide(layer));
 });
 
+const getBook = HttpClient.get(`/books/${book.id}`);
+
+interface ErrorCase {
+  readonly repository: Partial<BookRepository.Interface>;
+  readonly request: typeof getBook;
+  readonly status: number;
+  readonly tag: string;
+}
+
+it.effect("returns domain errors with their declared statuses", () =>
+  Effect.gen(function* () {
+    const notFound = { status: 404, tag: "BookNotFound" };
+    const cases: ReadonlyArray<ErrorCase> = [
+      { repository: { findById: () => Effect.succeedNone }, request: getBook, ...notFound },
+    ];
+    for (const { repository, request, status, tag } of cases) {
+      yield* Effect.gen(function* () {
+        const response = yield* request;
+        expect(response.status).toBe(status);
+        expect(yield* response.json).toEqual({ _tag: tag });
+      }).pipe(Effect.provide(testLayer(repository).layer));
+    }
+  }),
+);
+
 it.effect("returns HTTP 500 without exposing book persistence details", () => {
   const { layer } = testLayer({
     findOrCreate: () => Effect.fail(persistenceError("findOrCreate")),
+    findById: () => Effect.fail(persistenceError("findById")),
+    list: () => Effect.fail(persistenceError("list")),
   });
   return Effect.gen(function* () {
     const body = yield* HttpBody.json({
@@ -143,7 +184,11 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
       author: "J. R. R. Tolkien",
       category: "Fiction",
     });
-    for (const request of [HttpClient.post("/books", { body })]) {
+    for (const request of [
+      HttpClient.post("/books", { body }),
+      HttpClient.get("/books"),
+      HttpClient.get(`/books/${book.id}`),
+    ]) {
       const response = yield* request;
       expect(response.status).toBe(500);
       const text = yield* response.text;

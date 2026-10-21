@@ -69,9 +69,10 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
 const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
   Effect.gen(function* () {
     const books = yield* Books.Service;
-    return handlers.handle("create", ({ payload }) =>
-      books.create(payload).pipe(Effect.map(withData)),
-    );
+    return handlers
+      .handle("list", ({ query }) => books.list(query.search).pipe(Effect.map(withData)))
+      .handle("get", ({ params }) => books.get(params.bookId).pipe(Effect.map(withData)))
+      .handle("create", ({ payload }) => books.create(payload).pipe(Effect.map(withData)));
   }),
 );
 
