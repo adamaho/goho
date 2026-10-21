@@ -99,7 +99,7 @@ Reference: `assets/compose/Skeleton.kt`; production: `ui/components/Skeleton.kt`
 
 ## Tag
 
-Canonical references: `assets/compose/Tag.kt`, `TagColor.kt`, `ReceiptTags.kt` and `CenteredPillLabel.kt` mirror the native implementation. The older combined `Components.kt` delegates receipt tags to those components.
+Canonical references: `assets/compose/Tag.kt`, `TagColor.kt`, `ReceiptTags.kt` and `CenteredPillLabel.kt` mirror the existing native tag and upload-state implementation. The older combined `Components.kt` delegates receipt tags to those components. The shared `Tag` also has an icon-only overload with required `icon`, `color` and `contentDescription`, plus optional `modifier`. Both forms use the same surface, palette and corners. `CategoryIcon.kt` maps server metadata into that overload, and `ReceiptItemsCard.kt` shows the native details layout. List/sheet category ranking and `TagCount` remain approved specifications below, not implemented snapshots.
 
 ```kotlin
 Tag(
@@ -110,13 +110,12 @@ Tag(
 ReceiptUploadTag(processing = true)
 ```
 
-- API: `label: String`, required `icon: Painter`, `color: TagColor`, optional `modifier` and `shimmer: Boolean = false`. No click handler, selection state, label-only or icon-only variant. A tag is display metadata; the surrounding receipt retains its tap and hold actions.
+- API: `label: String`, required `icon: Painter`, `color: TagColor`, optional `modifier` and `shimmer: Boolean = false`. No click handler or selection state. The only other tag shapes are `TagCount` and `CategoryIcon` under “Category tags” below. A tag is display metadata; the surrounding receipt retains its tap and hold actions.
 - Rectangular `GohoShapes.tag` with 4dp corners, minimum height 24dp, 8dp horizontal / 4dp vertical padding, 14dp leading outline icon, 5dp gap. No border, shadow, gloss or ripple. `label` typography is 12/16sp Medium with proportional figures; optically centre the glyphs and icon together.
 - Label and icon use the palette content colour. The icon is decorative for accessibility; the visible label conveys the category or state, including without colour. Merge tag semantics, and retain the parent row's merged receipt announcement.
 - Tags grow for font scaling and wrap long names. On standard receipt rows cap the tag at 160dp so the date has room. At narrow widths or font scale ≥1.3, stack merchant, right-aligned amount/tag, then date. Do not truncate category names or create another tap target.
-- Historical, while category display is temporarily hidden and `ReceiptCategoryTag` is removed. Categories: copy the server name into the list model, trim surrounding whitespace and capitalise its first character for display. Matching is case-insensitive and uses explicit whole names, not substring guesses. Names without a mapping use Grey with the tag icon; blank categories render no tag. No category editor, persisted colour/icon fields, category filtering or generated category guesses are introduced.
-- Historical default category mapping: Health / Health and fitness / Medical → Red heart-pulse; Meals / Dining / Restaurants / Prepared foods → Orange utensils; Entertainment → Yellow ticket; Groceries / Grocery / Produce / Dairy / Seafood → Green shopping-basket; Transport / Transportation / Travel → Blue bus-front; Shopping / General merchandise → Purple shopping-bag; Personal care / Beauty → Pink sparkles; Home / Home & garden / Household → Brown house. Other and unknown names use Grey tag.
-- Receipt options reuse `ReceiptSummary`, the same presentation as the list row: merchant/date on the left, amount/upload tag on the right, and the same 40×48dp thumbnail. It stays in the shared header during delete confirmation, whether opened from the list or Details. Long labels wrap as they do in the list.
+- Category display (approved October 21, 2026) is specified under “Category tags” below. Copy the server name into the list model, trim surrounding whitespace and capitalise its first character for display (“personal care” → “Personal care”).
+- Receipt options reuse `ReceiptSummary`, the same presentation as the list row: merchant/date on the left, amount and category or upload tags on the right, and the same 40×48dp thumbnail. It stays in the shared header during delete confirmation, whether opened from the list or Details. Long labels wrap as they do in the list.
 - `ReceiptUploadTag` uses Purple + scan-line for “Reading receipt…” and Orange + triangle-alert for “Not processed”. Keep the existing reduced-motion-aware text shimmer while processing; its highlight blends 4% toward the container so every palette remains readable. Icons remain still. The failed-upload sheet uses the same tag. Scan preview's existing uploading/submitted/failure copy uses `Tag` with the corresponding scan or warning icon; Ready has no tag.
 - Skeleton loading masks the same tag element, clearing placeholder semantics. The tag still has an icon parameter while loading; no separate skeleton layout.
 - Nine theme-aware colour pairs live in `TagColor`, separate from the three action-button colours. See `tokens.md`. Icon masters, Android resource mapping and licence are in `assets/icons/tags/README.md`.
@@ -128,9 +127,9 @@ ReceiptUploadTag(processing = true)
 Row inside a card: `thumbnail | column(line 1, line 2)`.
 
 - Line 1: merchant (`rowTitle`, `textPrimary`, single line, ellipsis) … trailing amount (`rowTitle`, proportional figures).
-- Line 2 (5dp below): date (`meta`, `textTertiary`) … right-aligned upload-state tag beneath the price (category tags are temporarily hidden).
+- Line 2 (5dp below): date (`meta`, `textTertiary`) … right-aligned tags beneath the price: the upload-state tag, or for processed receipts the top-spend category `Tag` and optional `TagCount` (see Category tags).
 - States:
-  - **Processed:** amount in `textPrimary`. The symbol and number use `textPrimary`; the trailing currency code is smaller (12sp) in `textTertiary`. No tag while category display is hidden. Tappable; opens details.
+  - **Processed:** amount in `textPrimary`. The symbol and number use `textPrimary`; the trailing currency code is smaller (12sp) in `textTertiary`. Top-spend category `Tag`, plus `TagCount` when there are more categories. Tappable; opens details.
   - **Processing:** merchant "New receipt", date "Just now", trailing amount replaced by a 52×12 fully round shimmering skeleton, Purple scan-icon tag "Reading receipt…". Not tappable.
   - **Not processed:** merchant "Unknown receipt", amount "—" in `textTertiary`, Orange warning-icon tag "Not processed". Tappable; opens the receipt options sheet (it has no details screen).
 - Pressed receipt rows retain their normal surface fill with no highlight. Holds use the scale feedback below; cards clip their rows to the card's corners.
@@ -142,6 +141,22 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 - Section label above: `section` style, `textTertiary`, inset 4dp inside the screen margin (20dp from the edge), 8dp below.
 - Card: `surface`, shape `card` 20, 4dp vertical padding. Edge treatment per theme (see Elevation in `tokens.md`). Rows separated by `divider` lines starting at 68dp.
 
+## Category tags
+
+Categories belong to receipt items. Each `Receipt` from the server has `categories` (each distinct item category once, in order of first appearance) and `items`, each with `amount` and a required `category` of `{ id, name, icon, color }`. Use those keys; do not guess categories from names.
+
+- **Icon:** map the server `icon` key to the bundled drawable `ic_tag_<key>`: `groceries`, `meals`, `shopping`, `home`, `personal_care`, `health`, `transport`, `entertainment` and `other`. Unknown keys use `ic_tag_other`.
+- **Colour:** map the server `color` key (`green`, `orange`, `purple`, `brown`, `pink`, `red`, `blue`, `yellow`, `grey`) to the matching `TagColor`. Unknown keys use Grey.
+- **Ranking:** sum item amounts per category id using exact decimal arithmetic (`BigDecimal`), including negative adjustments. The top category has the largest sum; break ties by order in `categories`. The current API requires item amounts; if a partial view cannot determine totals, retain `categories` order. Do not show categories for Processing or Not processed rows.
+
+**List row and sheet header** (`ReceiptSummary`): beneath the right-aligned amount, show the top category as a labelled `Tag`. If the receipt has N > 1 categories, follow it 4dp later with `TagCount(count = N - 1)`. The pair keeps the existing 160dp maximum and right alignment in standard rows; stacked layouts use the available width. Reserve room for the count and let the category label wrap. With no categories, omit both tags. The row’s merged description names every category in rank order, for example “Costco Wholesale, $124.24, Sunday October 18, Groceries and Household”.
+
+**`TagCount`:** a label-only neutral chip, “+N”. Grey `TagColor` container and content, `GohoShapes.tag` 4dp corners, minimum height 24dp, 6dp horizontal / 4dp vertical padding, `label` 12/16sp Medium, proportional figures, centred visible glyph bounds. Not tappable and hidden from accessibility, because the row description already lists the categories.
+
+**`CategoryIcon`:** the category wrapper around the shared icon-only `Tag`, for receipt-details item rows only. 24×24dp, `GohoShapes.tag` 4dp corners, category `TagColor` container, 14dp icon in its content colour, centred. The size stays fixed at larger font scales. Its content description is the category display name. The item row combines name, category and formatted amount into one localized accessibility announcement, such as “Organic Spinach, Groceries, $4.99”, without duplicate child announcements. Not tappable. Loading uses the same icon tag under the shared block skeleton mask, with placeholder semantics cleared.
+
+**Details items:** keep receipt order. Each item row becomes `CategoryIcon`, 12dp gap, name, 16dp gap, amount. Keep the name on one line, including at larger font sizes, and ellipsize overflow; its accessibility description retains the full name. Vertically center the category tag, item name and amount within the row at every font size; do not offset the icon from the top. The Total row keeps its existing layout without an icon. Do not group items by category or add a category breakdown card.
+
 ## DetailList
 
 - Card like above with 16dp horizontal padding. Rows 47 tall: label (`listRow`, `textSecondary`) left, value (`listRow` weight 500, `textPrimary`, proportional figures) right, dividers between rows. Read-only.
@@ -152,7 +167,7 @@ Row inside a card: `thumbnail | column(line 1, line 2)`.
 The receipt's line items, given the same card treatment as Details so they read as primary content.
 
 - Card like ReceiptCard: `surface`, shape `card` 20, theme edge treatment, 16dp horizontal padding, 2dp top padding.
-- Item row: padding 14 top and bottom, 16dp gap. Name on the left (`listRow` at weight 400, `textPrimary`, up to 2 lines then ellipsis, top aligned). Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, currency symbol without a trailing code, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
+- Item row: padding 14 top and bottom. Leading 24dp `CategoryIcon`, 12dp gap, then name, 16dp gap, then amount. Name (`listRow` at weight 400, `textPrimary`, one line with ellipsis at every font size). Vertically center the tag, name and amount. Line total on the right (`listValue`, `textPrimary`, proportional figures, no wrapping, currency symbol without a trailing code, always two decimals). Hairline `divider` between item rows, spanning the card's inner width.
 - Total row last: separated by a stronger 1dp rule (`textPrimary` at 10% in dark, 12% in light), padding 14 top / 16 bottom. "Total" in 15sp weight 600; amount in 17/22 weight 600, tracking −0.01em, proportional figures, with the currency symbol (no trailing code).
 - Each item amount and the card Total use the receipt currency symbol without repeating the code; the code appears once in the details hero.
 - If an item has no amount, show "—" in `textTertiary`.

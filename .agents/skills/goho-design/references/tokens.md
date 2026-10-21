@@ -56,7 +56,7 @@ Filter text and counts use `textSecondary`. The primary hue follows Bram’s blu
 
 ## Display tag colours
 
-`TagColor` owns these opaque light/dark container/content pairs. Categories may use all nine when category display returns (it is temporarily hidden); upload processing uses Purple and failure uses Orange. These are display metadata colours, independent of `ButtonColor`. The label and mandatory icon share the foreground. No tag is identified by colour alone.
+`TagColor` owns these opaque light/dark container/content pairs. Categories use all nine through the server `color` key; `TagCount` uses Grey; upload processing uses Purple and failure uses Orange. These are display metadata colours, independent of `ButtonColor`. A labelled tag’s text and mandatory icon share the foreground; `TagCount` uses the same Grey text colour, and `CategoryIcon` uses the category icon colour. No tag is identified by colour alone.
 
 | Colour | Light container | Light content | Dark container | Dark content | Contrast light / dark |
 | ------ | --------------- | ------------- | -------------- | ------------ | --------------------- |
@@ -118,6 +118,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
 - Detail list row: min height 47, label left, value right.
+- Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item name. Vertically center the tag, name and amount in the row, with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
 - Tag: `tagHeight` = 24 minimum, `tagHorizontal` = 8, `tagVertical` = 4, `tagIcon` = 14, `tagIconGap` = 5. Standard rows use `tagMaxWidth` = 160; stacked layouts allow the available width and wrap long labels. All sizes remain theme tokens.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
@@ -171,7 +172,7 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 
 ## Receipt item card
 
-- Item rows: 14dp vertical padding, 16dp gap, 15sp / 20sp name and amount; amount weight 500.
+- Item rows: 14dp vertical padding, fixed 24dp category icon, 12dp before the name, 16dp before the amount. Vertically center the tag, name and amount without a top inset. Name and amount use 15sp / 20sp; amount weight 500. Names stay on one line with ellipsis at every font size; icons retain their size.
 - Total: 15sp / 20sp weight 600 label and 17sp / 22sp weight 600 amount, −0.01em tracking.
 - Exactly two decimal places for every money amount, half-even rounding, locale grouping, proportional figures.
 

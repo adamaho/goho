@@ -4,7 +4,26 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
-Category display is temporarily hidden while its UX is reconsidered. Captures that show category tags or a Details category row are historical; upload status tags remain current.
+## Item category tags (October 21, 2026, approved design)
+
+Source: [October 21 design handoff](https://drive.google.com/file/d/1aQT3S_YkA33IDP4DyVlEgmCOm_nWXvIn/view). These are supplied design renders from the Goho brand canvas at 360dp width and 3×: list 1080×2340px, details 1080×3720px. They are approved design references, not emulator captures or evidence of an implemented feature. The [category component spec](../../references/components.md#category-tags) wins where they differ; retain the existing button finishes, filter styling and Scan safe-area placement. Details uses the item names from a real October 18 Costco receipt; categories and the other list rows are sample data.
+
+- `category-list-light.png`, `category-list-dark.png`: top-spend category tag plus a Grey “+N” count beneath the price; single-category receipts show one tag; Processing and Not processed rows keep their upload tags.
+- `category-details-light.png`, `category-details-dark.png`: items in receipt order with a 24dp icon-only category tag before each name, the Total row, then the Details card (Merchant, Date, Subtotal, Tax). No category breakdown card and no Category row.
+
+Older captures with one category tag per row, or a Category row in Details, are historical.
+
+## Receipt item category icons (native implementation)
+
+These unedited Goho Dev captures use the Pixel 9 API 36 emulator at 1080×2424px and 420dpi, except the large-text capture below. The app rendered temporary, read-only sample API responses for all nine category colours, an unknown icon key, a negative amount and a long item name. Real dev-server receipt items were also checked. No records were created or changed.
+
+- `category-items-native-light.png`, `category-items-native-dark.png`: 24dp icon-only tags before each item name, shared category palettes, right-aligned amounts and the existing Total row. Item names remain on one line and ellipsize when they exceed the available width. The name, amount and category tag share the row’s vertical center. Unknown icon keys use the Other tag icon.
+- `category-items-native-large-text-dark.png`: 320×640dp with 2× font scale (840×1680px), scrolled to the long item. The icon stays fixed at 24dp and vertically centered with the name and amount. Names stay on one line with an ellipsis, amounts remain visible and the page scrolls. Accessibility retains the full item name.
+- `category-items-native-loading-light.png`: The existing item rows and category icons under the shared skeleton scope. Accessibility exposes “Loading receipt…” and Back, without placeholder announcements.
+
+Each loaded item exposes one accessible announcement containing its name, category display name and formatted amount. Manual checks covered all nine colours in both themes, unknown icons, large text, scrolling and loading. Android build, lint, Kotlin formatting and `pnpm check` passed; no automated Android tests or test harnesses were added or run. The canonical native snapshots are `Tag.kt`, `CategoryIcon.kt`, `ReceiptItemsCard.kt` and `Spacing.kt` in `assets/compose/`.
+
+These captures implement the details item rows from the October 21 handoff. List/sheet category ranking and `TagCount` remain planned.
 
 ## Shared list and bottom-sheet receipt summary (October 19, 2026)
 
@@ -30,7 +49,7 @@ These unedited native Goho Dev screenshots come from the Pixel 9 API 36 emulator
 - `receipt-tags-large-text-dark.png`, `receipt-tags-long-large-text-dark.png`: 320×640dp, 2× font scale, animations disabled (840×1680px). Labels wrap, icons remain present and rows scroll. The amount and tag stay right-aligned in the stacked layout. Processing-tag pixels were unchanged across two captures with animations disabled.
 - `receipt-tags-loading-light.png`: Existing list rows and their tag elements under the shared skeleton scope, with real server reads temporarily delayed. Scan remains at the fixed bottom/end inset.
 
-`Tag` is a display-only primitive requiring a Painter, label and one of nine `TagColor` values. Category and receipt-upload wrappers supply their existing labels and icon/colour mappings. See `references/components.md`, `references/tokens.md`, the mirrored Compose sources and `assets/icons/tags/README.md` for the API, measurements, palette and Lucide attribution. Scan preview's existing upload status copy also uses the component; that capture/upload interaction was not exercised in this screenshot session.
+These captures use the labelled `Tag`: a display-only primitive requiring a Painter, label and one of nine `TagColor` values. The current API also provides an icon-only overload with a required content description. Category and receipt-upload wrappers supply their existing labels and icon/colour mappings. See `references/components.md`, `references/tokens.md`, the mirrored Compose sources and `assets/icons/tags/README.md` for the API, measurements, palette and Lucide attribution. Scan preview's existing upload status copy also uses the component; that capture/upload interaction was not exercised in this screenshot session.
 
 Manual checks covered both palettes, all category colours, long/unknown and blank categories, tag-area navigation, failed-row options, narrow/large-text layout, static reduced-motion tags and initial skeleton loading. Android build, lint and Kotlin formatting passed. Older captures remain references for their named interactions or artwork; this section is the current upload-tag reference, and its category tags are historical.
 
