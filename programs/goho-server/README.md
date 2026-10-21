@@ -180,3 +180,8 @@ returns one. Each has `status` (`queued`, `processing`, `succeeded`, or
 `failed`), the `bookId` after success, and a `failureCode` after failure:
 `storage_failed`, `processing_failed`, `book_creation_failed`, or
 `internal_error`.
+
+`DELETE /book-uploads/:uploadId` removes a failed upload and its image with HTTP 204. Other statuses return HTTP 409 with `{"_tag":"BookUploadConflict"}`; delete
+the book to remove its successful scans. Missing uploads return HTTP 404 with
+`{"_tag":"BookUploadNotFound"}`, and malformed UUIDs return HTTP 400. Storage or
+database failures return HTTP 500 with `{"_tag":"BookUploadsUnavailable"}`.

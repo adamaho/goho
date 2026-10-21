@@ -11,6 +11,7 @@ import {
 
 import {
   BookUpload,
+  BookUploadConflict,
   BookUploadId,
   BookUploadNotFound,
   BookUploadsUnavailable,
@@ -521,6 +522,27 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Returns the latest queue or processing status and the book ID after a clean finish.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/book-uploads/:uploadId", {
+          params: { uploadId: BookUploadId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
+            BookUploadNotFound,
+            BookUploadConflict,
+            BookUploadsUnavailable.annotate({
+              description: "The server could not delete this scan and its stored image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a failed book cover upload")
+          .annotate(
+            OpenApi.Description,
+            "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
           ),
       ),
   );

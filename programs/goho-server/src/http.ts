@@ -45,6 +45,7 @@ const BookUploadsLive = HttpApiBuilder.group(api, "bookUploads", (handlers) =>
     const uploads = yield* BookUploads.Service;
     const fileSystem = yield* FileSystem.FileSystem;
     return handlers
+      .handle("delete", ({ params }) => uploads.delete(params.uploadId))
       .handle("create", ({ payload }) =>
         Effect.gen(function* () {
           const bytes = yield* fileSystem

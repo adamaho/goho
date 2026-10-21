@@ -176,6 +176,9 @@ upload records its `book_id`, extraction version 1 and the validated
 `{ title, author, category }` JSON. Several uploads can succeed for one book,
 and each keeps its original file.
 
+- Deleting a failed upload removes only its row and file. Other states return
+  409; deleting the book removes its successful scans.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload

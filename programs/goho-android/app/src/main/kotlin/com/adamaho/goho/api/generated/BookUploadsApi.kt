@@ -6,6 +6,7 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BookUploadConflict
 import com.adamaho.goho.api.generated.model.BookUploadNotFound
 import com.adamaho.goho.api.generated.model.BookUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.BookUploadsGet200Response
@@ -30,6 +31,23 @@ interface BookUploadsApi {
     @Multipart
     @POST("book-uploads")
     suspend fun bookUploadsCreate(@Part file: MultipartBody.Part): Response<BookUploadsCreate202Response>
+
+    /**
+     * DELETE book-uploads/{uploadId}
+     * Delete a failed book cover upload
+     * Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.
+     * Responses:
+     *  - 204: <No Content>
+     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
+     *  - 404: No cover scan is wearing that number, bud.
+     *  - 409: Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.
+     *  - 500: The server could not delete this scan and its stored image.
+     *
+     * @param uploadId 
+     * @return [Unit]
+     */
+    @DELETE("book-uploads/{uploadId}")
+    suspend fun bookUploadsDelete(@Path("uploadId") uploadId: java.util.UUID): Response<Unit>
 
     /**
      * GET book-uploads/{uploadId}

@@ -1301,6 +1301,61 @@
         },
         "description": "Returns the latest queue or processing status and the book ID after a clean finish.",
         "summary": "Get book cover upload status"
+      },
+      "delete": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.delete",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover scan is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadNotFound"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadConflict"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this scan and its stored image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
+        "summary": "Delete a failed book cover upload"
       }
     }
   },
@@ -1317,6 +1372,17 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
+      "BookUploadConflict": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadConflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
       "BookUploadNotFound": {
         "type": "object",
         "properties": {
@@ -1327,6 +1393,13 @@
         },
         "required": ["_tag"],
         "additionalProperties": false
+      },
+      "BookUploadId": {
+        "type": "string",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+        "format": "uuid",
+        "description": "The cover scan's version 4 UUID; use it to check on this upload.",
+        "examples": ["3b5f0a8e-2c4d-4e8f-9a1b-6c7d8e9f0a1b"]
       },
       "BookUpload": {
         "type": "object",
@@ -1415,13 +1488,6 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
-      },
-      "BookUploadId": {
-        "type": "string",
-        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
-        "format": "uuid",
-        "description": "The cover scan's version 4 UUID; use it to check on this upload.",
-        "examples": ["3b5f0a8e-2c4d-4e8f-9a1b-6c7d8e9f0a1b"]
       },
       "BooksUnavailable": {
         "type": "object",
