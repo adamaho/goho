@@ -13,7 +13,7 @@ Configure these in the environment file before starting the server:
 | `GOHO_SERVER_HOST`       | Bind address. Defaults to `127.0.0.1`; the container image sets `0.0.0.0`. |
 | `GOHO_SERVER_PORT`       | Defaults to `3000`.                                                        |
 | `DATABASE_URL`           | Required PostgreSQL connection URL. The pool must connect at startup.      |
-| `GOHO_UPLOADS_DIRECTORY` | Required directory for durable original receipt files.                     |
+| `GOHO_UPLOADS_DIRECTORY` | Required directory for durable original receipt and book cover files.      |
 | `OPENAI_API_KEY`         | A nonempty local placeholder, or a real key for image extraction.          |
 | `OPENAI_MODEL`           | Model used for image extraction.                                           |
 
@@ -151,18 +151,51 @@ nullable `reading_level` set only by hand.
   and `strpos`, so punctuation and LIKE wildcards match literally.
 - Creating a book looks up its identity first and returns an existing book
   without touching it or the catalog. Otherwise the category lookup and insert
-  share a savepoint; when a concurrent save inserts the identity first, the insert
-  does nothing, the savepoint rolls back any category change, and the committed
-  book is returned. Create, update, get and list all read through one private
-  book selection, so they return the same record.
+  share one transaction, which is a savepoint inside a caller's transaction such
+  as an upload's; when a concurrent save inserts the identity first, the insert
+  does nothing, that transaction rolls back any category change, and the
+  committed book is returned. Create, update, get and list all read through one
+  private book selection, so they return the same record.
 - A PATCH locks the book before resolving its category. Taking another book's
   identity violates `books_identity_key`, which maps to `BookConflict` (HTTP 409)
   and rolls back the whole correction, including a new category. Changing only
   the case or spacing of a book's own title or author is allowed.
 - Books are listed by `created_at` then `id`, newest first, so corrections and
   duplicate creates do not reorder them.
-- `hasImage` is `false` until book cover uploads arrive. There is no book edit
-  history.
+- `hasImage` is whether one of the book's uploads is its cover. There is no book
+  edit history.
+- Deleting a book locks it, deletes its uploads and returns their file IDs, then
+  deletes the book; the service removes the files before committing. A direct
+  SQL delete of a book that still has uploads fails, so no stored file loses
+  its record.
+
+### Book uploads
+
+`book_uploads` tracks cover scans as `receipt_uploads` tracks receipts, with its
+own `book-uploads` queue and failure codes (`storage_failed`,
+`processing_failed`, `book_creation_failed`, `internal_error`). A succeeded
+upload records its `book_id`, extraction version 1 and the validated
+`{ title, author, category }` JSON. Several uploads can succeed for one book,
+and each keeps its original file.
+
+- Extraction asks only for the title, author and category, choosing from the
+  current `book` category names read before each attempt; it never sets a
+  reading level, and the model cannot add a category.
+- Saving uses the book's `findOrCreate`, so a scan of a saved identity reuses
+  the book unchanged, including its reading level and category, and a new book
+  has no reading level.
+- `is_cover` marks the upload whose file is the book's cover, unique per book.
+  `markSucceeded` locks the book, then sets `is_cover` only when the book has no
+  cover. Scans completing in any order never replace a cover; a book entered by
+  hand gets the first successful scan's.
+- The book save, cover choice and success status share one transaction, so a
+  status change that fails because the upload was already finished, failed or
+  deleted rolls back a new book and its category with it. File reads and AI
+  calls happen before that transaction.
+- A scan that succeeds after its book was deleted fails without changes; a
+  later attempt, if any, saves the book again.
+- Deleting a failed upload removes only its row and file. Other states return
+  409; deleting the book removes its successful scans.
 
 ### Uploads and transactions
 
@@ -174,7 +207,9 @@ caller's transaction, the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction. That
 status change is what stops redelivered jobs from creating duplicate receipts.
 
-A job can fail in the `receipt-uploads` queue without the worker recording it on
+Both upload queues share one persisted queue store on `goho_queues`, one
+cleanup fiber, three attempts and the retry schedule. A job can fail in its
+queue, `receipt-uploads` or `book-uploads`, without the worker recording it on
 the upload:
 
 - If the process crashes during the final attempt, Effect's queue fails the job
@@ -183,15 +218,21 @@ the upload:
 - If every final `markFailed` write fails, the queue fails the job as soon as the
   handler exits.
 
-A graceful shutdown releases the attempt for redelivery instead. The worker's
+A graceful shutdown releases the attempt for redelivery instead. Each worker's
 recovery pass runs at startup and every 30 seconds. It marks queued or
-processing uploads whose job failed as `failed` with `internal_error`, so they
-can be deleted. Pending or active jobs, succeeded uploads and existing failure
-codes stay unchanged. A failed pass is logged and retried at the next interval.
+processing uploads whose job failed in their own queue as `failed` with
+`internal_error`, so they can be deleted. Pending or active jobs, succeeded
+uploads and existing failure codes stay unchanged. A failed pass is logged and
+retried at the next interval.
+
+Stored files are not part of SQL transactions. Upload deletion and book or
+receipt deletion remove files before committing: a storage failure rolls the
+rows back for a retry, but files already removed stay removed, and a failed
+commit can leave rows whose files are gone until deletion is retried.
 
 ### Record timestamps
 
-`books`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
+`books`, `book_uploads`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
 `created_at` and `updated_at` columns. They use `timestamptz`, which stores an absolute instant
 whatever the session time zone.
 

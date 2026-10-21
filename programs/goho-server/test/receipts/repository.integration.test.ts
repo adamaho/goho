@@ -26,6 +26,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
@@ -299,6 +300,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "item_categories" },
       { name: "category_kinds" },
       { name: "books" },
+      { name: "book_uploads" },
     ]);
     // The canonical catalog is seeded with its display metadata.
     expect(yield* sql`SELECT name, icon, color FROM categories ORDER BY id`).toEqual([
@@ -1692,6 +1694,7 @@ const HttpDatabaseLive = HttpRouter.serve(
       ),
       unusedUploads,
       Layer.mock(Books.Service, {}),
+      Layer.mock(BookUploads.Service, {}),
     ]),
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));
@@ -1888,6 +1891,7 @@ it.effect("adds edit history to populated databases without baselines or changed
       { name: "item_categories" },
       { name: "category_kinds" },
       { name: "books" },
+      { name: "book_uploads" },
     ]);
     expect(yield* snapshot).toEqual(before);
     expect(yield* history).toEqual([]);
