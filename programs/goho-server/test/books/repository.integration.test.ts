@@ -187,14 +187,18 @@ it.effect("returns the committed book to a create that loses the race, without i
     const books = yield* BookRepository.Service;
     const sql = yield* SqlClient.SqlClient;
     const categoriesBefore = yield* catalogRows;
+    // The loser runs inside a caller's transaction, as a scan's save does, so its
+    // insert is a savepoint.
     const [winner, loser] = yield* behindOpenTransaction(
       books.findOrCreate(hobbit),
-      books.findOrCreate({
-        title: "the hobbit",
-        author: " J. R. R. TOLKIEN",
-        category: "Brand New Shelf",
-        readingLevel: "Grade 9",
-      }),
+      sql.withTransaction(
+        books.findOrCreate({
+          title: "the hobbit",
+          author: " J. R. R. TOLKIEN",
+          category: "Brand New Shelf",
+          readingLevel: "Grade 9",
+        }),
+      ),
       "INSERT INTO books",
     );
     expect(winner).toMatchObject({

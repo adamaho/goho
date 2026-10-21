@@ -145,7 +145,9 @@ from its items, each once in item order. Items and books are written with a
 nullable `reading_level` set only by hand.
 
 - Identity is the title and author compared by `book_identity_text`: lowercase,
-  whitespace runs collapsed to one space, then trimmed. Generated `title_key` and
+  whitespace runs collapsed to one space, then trimmed. What counts as whitespace
+  follows PostgreSQL's locale, so some Unicode spaces, such as an internal
+  non-breaking space, can stay distinct. Generated `title_key` and
   `author_key` columns store it under the `books_identity_key` unique constraint,
   which enforces uniqueness for concurrent saves. Search uses the same function
   and `strpos`, so punctuation and LIKE wildcards match literally.
