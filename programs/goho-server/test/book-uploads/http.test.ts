@@ -2,6 +2,7 @@ import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import {
   BookUpload,
+  BookUploadConflict,
   BookUploadId,
   BookUploadNotFound,
   BookUploadsUnavailable,
@@ -43,6 +44,10 @@ const testLayer = (uploads: Partial<BookUploads.Interface> = {}) => {
                 calls.push(["create", { ...input, bytes: [...input.bytes] }]);
                 return bookUpload;
               }),
+            delete: (uploadId) =>
+              Effect.sync(() => {
+                calls.push(["delete", uploadId]);
+              }),
             get: (uploadId) =>
               Effect.sync(() => {
                 calls.push(["get", uploadId]);
@@ -70,7 +75,7 @@ const coverForm = (file: File) => {
   return form;
 };
 
-it.effect("uploads, lists, and gets cover scans through the generated client", () => {
+it.effect("uploads, lists, gets, and deletes cover scans through the generated client", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
@@ -84,12 +89,16 @@ it.effect("uploads, lists, and gets cover scans through the generated client", (
     expect(yield* client.bookUploads.get({ params: { uploadId: bookUpload.id } })).toEqual({
       data: bookUpload,
     });
+    const deleted = yield* HttpClient.del(`/book-uploads/${bookUpload.id}`);
+    expect(deleted.status).toBe(204);
+    expect(yield* deleted.text).toBe("");
     const upload = { name: "cover.webp", contentType: "image/webp", bytes: [1, 2, 3] };
     expect(calls).toEqual([
       ["create", upload],
       ["create", upload],
       ["list"],
       ["get", bookUpload.id],
+      ["delete", bookUpload.id],
     ]);
   }).pipe(Effect.provide(layer));
 });
@@ -106,7 +115,10 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
       });
       expect(response.status, file.name).toBe(400);
     }
-    for (const request of [HttpClient.get("/book-uploads/not-a-uuid")]) {
+    for (const request of [
+      HttpClient.get("/book-uploads/not-a-uuid"),
+      HttpClient.del("/book-uploads/not-a-uuid"),
+    ]) {
       const response = yield* request;
       expect(response.status).toBe(400);
       expect(yield* response.text).toBe("");
@@ -145,6 +157,18 @@ it.effect("returns cover upload domain errors with their declared statuses", () 
         request: HttpClient.get(`/book-uploads/${bookUpload.id}`),
         status: 404,
         tag: "BookUploadNotFound",
+      },
+      {
+        uploads: { delete: () => Effect.fail(new BookUploadNotFound()) },
+        request: HttpClient.del(`/book-uploads/${bookUpload.id}`),
+        status: 404,
+        tag: "BookUploadNotFound",
+      },
+      {
+        uploads: { delete: () => Effect.fail(new BookUploadConflict()) },
+        request: HttpClient.del(`/book-uploads/${bookUpload.id}`),
+        status: 409,
+        tag: "BookUploadConflict",
       },
       {
         uploads: { create: () => Effect.fail(new BookUploadsUnavailable()) },

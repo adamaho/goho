@@ -1,5 +1,6 @@
 import {
   type BookUpload as PublicBookUpload,
+  BookUploadConflict,
   BookUploadContentType,
   BookUploadId,
   BookUploadNotFound,
@@ -57,6 +58,10 @@ const toPublic = (upload: BookUpload): PublicBookUpload => ({
  * @since 0.1.0
  */
 export interface Interface {
+  /** Deletes a failed upload and its stored file; other states fail with a conflict. */
+  readonly delete: (
+    uploadId: BookUploadId,
+  ) => Effect.Effect<void, BookUploadNotFound | BookUploadConflict | BookUploadsUnavailable>;
   readonly list: Effect.Effect<ReadonlyArray<PublicBookUpload>, BookUploadsUnavailable>;
   readonly create: (input: UploadInput) => Effect.Effect<PublicBookUpload, BookUploadsUnavailable>;
   readonly get: (
@@ -65,7 +70,7 @@ export interface Interface {
 }
 
 /**
- * Creates cover uploads and retrieves their durable status.
+ * Creates cover uploads, retrieves their durable status, and deletes failed ones.
  *
  * @category services
  * @since 0.1.0
@@ -88,6 +93,27 @@ export const layer = Layer.effect(
     const queue = yield* BookUploadQueue.Service;
     const transaction = yield* Transaction.Service;
     const crypto = yield* Crypto.Crypto;
+
+    const deletionFailed = unavailable("Book upload deletion failed");
+
+    const deleteUpload = Effect.fn("@goho/BookUploads.deleteUpload")(
+      (uploadId: BookUploadId) =>
+        transaction.run(
+          Effect.gen(function* () {
+            const fileId = yield* repository.deleteFailed(uploadId);
+            yield* storage.delete(fileId);
+          }),
+        ),
+      Effect.catchTags({
+        "GohoServer.BookUploadRepository.UploadNotFound": () =>
+          Effect.fail(new BookUploadNotFound()),
+        "GohoServer.BookUploadRepository.DeletionNotAllowed": () =>
+          Effect.fail(new BookUploadConflict()),
+        "GohoServer.BookUploadRepository.PersistenceError": deletionFailed,
+        "GohoServer.FileStorage.StorageError": deletionFailed,
+        "GohoServer.Database.TransactionError": deletionFailed,
+      }),
+    );
 
     const create = Effect.fn("@goho/BookUploads.create")(
       function* (input: UploadInput) {
@@ -155,6 +181,6 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/BookUploads.list"),
     );
 
-    return Service.of({ create, get, list });
+    return Service.of({ create, delete: deleteUpload, get, list });
   }),
 );

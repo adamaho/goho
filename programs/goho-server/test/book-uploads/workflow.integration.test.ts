@@ -1,6 +1,7 @@
 import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
+import type { BookUploadId } from "@goho/goho-api/book-uploads";
 import {
   Config,
   Context,
@@ -65,6 +66,16 @@ const TestLive = BookUploads.layer.pipe(
 );
 
 const image = (byte: number) => new Uint8Array([byte, byte, byte]);
+
+const upload = (byte: number) =>
+  BookUploads.Service.use((uploads) =>
+    uploads.create({ name: `cover-${byte}.png`, contentType: "image/png", bytes: image(byte) }),
+  );
+
+const fileOf = (uploadId: BookUploadId) =>
+  BookUploadRepository.Service.use((uploads) => uploads.findById(uploadId)).pipe(
+    Effect.map((found) => Option.getOrThrow(found).fileId),
+  );
 
 // The tag an effect fails with, or "succeeded".
 const failureTag = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
@@ -133,6 +144,24 @@ it.effect("enforces upload outcomes, one cover per book, and record timestamps",
       { count: 1 },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("deletes only a failed scan and its file", () =>
+  Effect.gen(function* () {
+    const uploads = yield* BookUploads.Service;
+    const repo = yield* BookUploadRepository.Service;
+    const failed = yield* upload(1);
+    const queued = yield* upload(2);
+    yield* repo.markFailed(failed.id, "storage_failed");
+    const files = yield* Effect.forEach([failed, queued], ({ id }) => fileOf(id));
+
+    expect(yield* failureTag(uploads.delete(queued.id))).toBe("BookUploadConflict");
+    yield* uploads.delete(failed.id);
+
+    expect(yield* repo.findById(failed.id)).toEqual(Option.none());
+    expect(yield* Effect.forEach(files, stored)).toEqual([Option.none(), Option.some(image(2))]);
+    expect(yield* failureTag(uploads.delete(failed.id))).toBe("BookUploadNotFound");
+  }).pipe(Effect.provide(TestLive)),
 );
 
 it.effect("removes the stored scan when its upload cannot be queued", () =>

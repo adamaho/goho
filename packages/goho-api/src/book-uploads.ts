@@ -136,6 +136,21 @@ export class BookUploadNotFound extends Schema.Error<BookUploadNotFound>("BookUp
 ) {}
 
 /**
+ * Only failed cover uploads can be deleted on their own.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookUploadConflict extends Schema.Error<BookUploadConflict>("BookUploadConflict")(
+  Schema.TaggedStruct("BookUploadConflict", {}).annotate({ identifier: "BookUploadConflict" }),
+  {
+    httpApiStatus: 409,
+    description:
+      "Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
+  },
+) {}
+
+/**
  * Cover uploads could not be stored, read, or deleted; details stay in the
  * server logs.
  *
