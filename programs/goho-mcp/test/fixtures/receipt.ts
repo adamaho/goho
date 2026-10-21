@@ -1,4 +1,10 @@
-const groceries = { id: "3", name: "groceries", icon: "groceries", color: "green" };
+const groceries = {
+  id: "3",
+  name: "groceries",
+  icon: "groceries",
+  color: "green",
+  kinds: ["receipt"],
+};
 
 /**
  * A saved receipt used by MCP tests.

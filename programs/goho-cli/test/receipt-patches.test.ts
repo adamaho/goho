@@ -4,8 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import { runCommand, withResponse } from "./cli.ts";
 
-const groceries = { id: "3", name: "groceries", icon: "groceries", color: "green" };
-const snacks = { id: "9", name: "snacks", icon: "other", color: "grey" };
+const groceries = {
+  id: "3",
+  name: "groceries",
+  icon: "groceries",
+  color: "green",
+  kinds: ["receipt"],
+};
+const snacks = { id: "9", name: "snacks", icon: "other", color: "grey", kinds: ["receipt"] };
 const item = {
   id: "9007199254740993",
   position: 0,

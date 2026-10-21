@@ -1,7 +1,6 @@
+import { Category, CategoryId } from "@goho/goho-api/categories";
 import {
   CalendarDate,
-  Category,
-  CategoryId,
   DecimalString,
   Receipt as ReceiptSchema,
   ReceiptId,
@@ -118,7 +117,7 @@ type ReceiptCandidate = Omit<Receipt, "categories" | "items"> & {
 
 // The category `c` as its API object; text IDs keep their precision in JSON.
 const categoryObject =
-  "jsonb_build_object('id', c.id::text, 'name', c.name, 'icon', c.icon, 'color', c.color)";
+  "jsonb_build_object('id', c.id::text, 'name', c.name, 'icon', c.icon, 'color', c.color, 'kinds', to_jsonb(c.kinds))";
 
 const receiptCategories = <Items extends ReadonlyArray<ReceiptItem>>(items: Items) =>
   pipe(
@@ -314,7 +313,7 @@ export const layer = Layer.effect(
               Effect.gen(function* () {
                 let categoryId = categoryIds.get(item.category);
                 if (categoryId === undefined) {
-                  categoryId = (yield* categories.findOrCreate(item.category)).id;
+                  categoryId = (yield* categories.findOrCreate(item.category, "receipt")).id;
                   categoryIds.set(item.category, categoryId);
                 }
                 return {
@@ -406,7 +405,7 @@ export const layer = Layer.effect(
             const categoryChange =
               category === undefined
                 ? {}
-                : { categoryId: (yield* categories.findOrCreate(category)).id };
+                : { categoryId: (yield* categories.findOrCreate(category, "receipt")).id };
             yield* updateItemRow({ itemId, changes: { ...fields, ...categoryChange } });
             return yield* findItemRow(itemId);
           }),

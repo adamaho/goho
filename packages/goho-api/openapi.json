@@ -936,7 +936,8 @@
               "id": "3",
               "name": "groceries",
               "icon": "groceries",
-              "color": "green"
+              "color": "green",
+              "kinds": ["receipt"]
             }
           }
         ]
@@ -968,9 +969,24 @@
             "type": "string",
             "enum": ["green", "orange", "purple", "brown", "pink", "red", "blue", "yellow", "grey"],
             "description": "Stable colour key for showing the category."
+          },
+          "kinds": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/CategoryKind"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/CategoryKind"
+            },
+            "uniqueItems": true,
+            "description": "Each lineup the category plays for, once. Using a category for receipts or books adds it here.",
+            "examples": [["receipt"], ["receipt", "book"]]
           }
         },
-        "required": ["id", "name", "icon", "color"],
+        "required": ["id", "name", "icon", "color", "kinds"],
         "additionalProperties": false,
         "description": "A category on the shared roster. New names suit up with the `other` icon and `grey` colour.",
         "examples": [
@@ -978,9 +994,15 @@
             "id": "3",
             "name": "groceries",
             "icon": "groceries",
-            "color": "green"
+            "color": "green",
+            "kinds": ["receipt"]
           }
         ]
+      },
+      "CategoryKind": {
+        "type": "string",
+        "enum": ["receipt", "book"],
+        "description": "Which lineup a category plays for: receipt items or books."
       },
       "CategoryId": {
         "type": "string",
@@ -1153,7 +1175,8 @@
                 "id": "3",
                 "name": "groceries",
                 "icon": "groceries",
-                "color": "green"
+                "color": "green",
+                "kinds": ["receipt"]
               }
             ],
             "items": [
@@ -1166,7 +1189,8 @@
                   "id": "3",
                   "name": "groceries",
                   "icon": "groceries",
-                  "color": "green"
+                  "color": "green",
+                  "kinds": ["receipt"]
                 }
               }
             ]

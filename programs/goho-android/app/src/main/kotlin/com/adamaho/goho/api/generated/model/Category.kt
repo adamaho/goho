@@ -23,6 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.CategoryKind
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -34,6 +35,7 @@ import com.squareup.moshi.JsonClass
  * @param name Trimmed lowercase category name.
  * @param icon Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.
  * @param color Stable colour key for showing the category.
+ * @param kinds Each lineup the category plays for, once. Using a category for receipts or books adds it here.
  */
 
 
@@ -53,7 +55,11 @@ data class Category (
 
     /* Stable colour key for showing the category. */
     @Json(name = "color")
-    val color: Category.Color
+    val color: Category.Color,
+
+    /* Each lineup the category plays for, once. Using a category for receipts or books adds it here. */
+    @Json(name = "kinds")
+    val kinds: kotlin.collections.Set<CategoryKind>
 
 ) {
 

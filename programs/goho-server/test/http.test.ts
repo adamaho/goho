@@ -1,9 +1,8 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { Category, CategoryId } from "@goho/goho-api/categories";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import {
-  Category,
-  CategoryId,
   CreateReceiptRequest,
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,
@@ -39,6 +38,7 @@ const groceries = Category.make({
   name: "groceries",
   icon: "groceries",
   color: "green",
+  kinds: ["receipt"],
 });
 
 const receipt = Receipt.make({
@@ -533,6 +533,7 @@ const snacks = Category.make({
   name: "snacks",
   icon: "other",
   color: "grey",
+  kinds: ["receipt", "book"],
 });
 
 const recordUpdates = () => {
