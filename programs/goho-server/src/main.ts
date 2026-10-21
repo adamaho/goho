@@ -10,6 +10,8 @@ import {
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 
+import * as BookRepository from "./books/repository.ts";
+import * as Books from "./books/service.ts";
 import * as CategoryRepository from "./categories/repository.ts";
 import * as Database from "./database/client.ts";
 import * as Transaction from "./database/transaction.ts";
@@ -27,6 +29,10 @@ const CategoryRepositoryLive = CategoryRepository.layer.pipe(Layer.provide(Datab
 
 const RepositoryLive = ReceiptRepository.layer.pipe(
   Layer.provide([CategoryRepositoryLive, Database.layer]),
+);
+
+const BooksLive = Books.layer.pipe(
+  Layer.provide(BookRepository.layer.pipe(Layer.provide([CategoryRepositoryLive, Database.layer]))),
 );
 
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
@@ -70,7 +76,7 @@ const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
 );
 
 const ServerLive = HttpRouter.serve(
-  Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive])),
+  Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive, BooksLive])),
 ).pipe(
   Layer.provide(
     NodeHttpServer.layerConfig(createServer, {
