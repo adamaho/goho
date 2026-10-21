@@ -2,7 +2,6 @@ import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { BookId, type CreateBookRequest } from "@goho/goho-api/books";
-import { CreateReceiptRequest } from "@goho/goho-api/receipts";
 import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
@@ -10,7 +9,6 @@ import { expect } from "vitest";
 import * as BookRepository from "#src/books/repository.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
-import * as ReceiptRepository from "#src/receipts/repository.ts";
 import { behindOpenTransaction } from "#test/helpers/locks.ts";
 
 const hobbit: CreateBookRequest = {
@@ -20,20 +18,7 @@ const hobbit: CreateBookRequest = {
   readingLevel: "Grade 4",
 };
 
-const receiptWith = (category: string) =>
-  CreateReceiptRequest.make({
-    storeName: "Book Store",
-    receiptDate: "2026-10-01",
-    subtotal: "5",
-    tax: "0",
-    total: "5",
-    currency: "CAD",
-    items: [{ name: "Novel", amount: "5", category }],
-  });
-
-const RepositoriesLive = Layer.mergeAll(BookRepository.layer, ReceiptRepository.layer).pipe(
-  Layer.provideMerge(CategoryRepository.layer),
-);
+const RepositoriesLive = BookRepository.layer.pipe(Layer.provideMerge(CategoryRepository.layer));
 
 // Each test owns a schema and pool, so concurrent saves use separate connections.
 const DatabaseLive = Layer.effectContext(
@@ -84,26 +69,9 @@ const tables = Effect.gen(function* () {
   return yield* Effect.all([sql`SELECT * FROM books ORDER BY id`, catalogRows]);
 });
 
-it.effect("enforces category kinds and book identity in the database", () =>
+it.effect("enforces book identity in the database", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const categories = yield* CategoryRepository.Service;
-    // Seeded receipt categories stay receipt-only; fiction and nonfiction are for books.
-    expect(yield* categories.listNamesForCategory("book")).toEqual(["fiction", "nonfiction"]);
-    expect(yield* categories.listNamesForCategory("receipt")).not.toContain("fiction");
-    // Direct SQL inserts default to receipt categories.
-    expect(
-      yield* sql`INSERT INTO categories (name) VALUES ('snacks') RETURNING to_jsonb(kinds) AS kinds`,
-    ).toEqual([{ kinds: ["receipt"] }]);
-    // Kinds are a nonempty set, stored once each in enum order.
-    for (const kinds of ["{}", "{receipt,receipt}", "{book,receipt}", "{receipt,NULL}", null]) {
-      const insert = sql`INSERT INTO categories (name, kinds) VALUES ('candy', ${kinds}::category_kind[])`;
-      expect(Result.isFailure(yield* Effect.result(insert)), String(kinds)).toBe(true);
-    }
-    expect(Result.isFailure(yield* Effect.result(sql`SELECT 'magazine'::category_kind`))).toBe(
-      true,
-    );
-
     const insertBook = (title: string, author: string, readingLevel: string | null = null) => sql`
       INSERT INTO books (title, author, category_id, reading_level)
       SELECT ${title}, ${author}, id, ${readingLevel} FROM categories WHERE name = 'fiction'
@@ -197,47 +165,6 @@ it.effect("returns the committed book to a create that loses the race, without i
     expect(yield* sql`SELECT count(*)::int AS count FROM books`).toEqual([{ count: 1 }]);
     // The loser's new category rolled back with its insert.
     expect(yield* catalogRows).toEqual(categoriesBefore);
-  }).pipe(Effect.provide(DatabaseLive)),
-);
-
-it.effect("shares categories across receipts and books, adding kinds and keeping IDs", () =>
-  Effect.gen(function* () {
-    const books = yield* BookRepository.Service;
-    const receipts = yield* ReceiptRepository.Service;
-    const categories = yield* CategoryRepository.Service;
-
-    const receiptId = yield* receipts.insert(receiptWith("Comics"));
-    const comics = yield* categoryNamed("comics");
-    expect(comics).toMatchObject({ kinds: ["receipt"] });
-    const book = yield* books.findOrCreate({ ...hobbit, category: " COMICS " });
-    const shared = { ...comics, kinds: ["receipt", "book"] };
-    expect(yield* categoryNamed("comics")).toEqual(shared);
-    // Both domains return the same category shape.
-    expect(book.category).toEqual(shared);
-    expect(Option.getOrThrow(yield* receipts.findById(receiptId)).items[0].category).toEqual(
-      shared,
-    );
-
-    // A book category used on a receipt also becomes a receipt category.
-    const fiction = yield* categoryNamed("fiction");
-    yield* receipts.insert(receiptWith("Fiction"));
-    expect(yield* categoryNamed("fiction")).toEqual({ ...fiction, kinds: ["receipt", "book"] });
-    expect(yield* categories.listNamesForCategory("book")).toEqual(["comics", "fiction", "nonfiction"]);
-    expect(yield* categories.listNamesForCategory("receipt")).toContain("comics");
-    expect(yield* categories.listNamesForCategory("receipt")).not.toContain("nonfiction");
-  }).pipe(Effect.provide(DatabaseLive)),
-);
-
-it.effect("keeps both kinds when receipt and book saves create one category concurrently", () =>
-  Effect.gen(function* () {
-    const categories = yield* CategoryRepository.Service;
-    const [created, reused] = yield* behindOpenTransaction(
-      categories.findOrCreate("Poetry", "receipt"),
-      categories.findOrCreate(" poetry ", "book"),
-      "INSERT INTO categories",
-    );
-    expect(reused).toEqual({ ...created, kinds: ["receipt", "book"] });
-    expect(yield* categoryNamed("poetry")).toEqual(reused);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

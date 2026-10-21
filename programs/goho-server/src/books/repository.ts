@@ -44,6 +44,7 @@ export interface Interface {
    * transaction the insert joins it as a savepoint.
    */
   readonly findOrCreate: (book: CreateBookRequest) => Effect.Effect<Book, PersistenceError>;
+  /** The saved book with this ID and its category; none when no book has it. */
   readonly findById: (bookId: BookId) => Effect.Effect<Option.Option<Book>, PersistenceError>;
   /**
    * Books newest first whose title or author contains `search` literally, ignoring
@@ -185,9 +186,6 @@ export const layer = Layer.effect(
         }),
       );
 
-    // Looking up first lets a duplicate return without touching the catalog. When a
-    // concurrent save commits the same identity after that lookup, the insert does
-    // nothing and a new statement sees the committed book.
     const findOrCreate = Effect.fn("@goho/BookRepository.findOrCreate")(
       function* (book: CreateBookRequest) {
         const identity = { title: book.title, author: book.author };
@@ -217,7 +215,6 @@ export const layer = Layer.effect(
       (bookId: BookId, changes: PatchBookRequest) =>
         sql.withTransaction(
           Effect.gen(function* () {
-            // Finding the book first keeps a missing one from leaving a new category behind.
             if (Option.isNone(yield* lockBook(bookId))) return Option.none();
             const { category, ...fields } = changes;
             const categoryChange =
