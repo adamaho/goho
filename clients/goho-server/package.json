@@ -8,6 +8,7 @@
     "#src/*": "./src/*"
   },
   "exports": {
+    "./book-uploads": "./src/book-uploads.ts",
     "./books": "./src/books.ts",
     "./categories": "./src/categories.ts",
     "./client": "./src/client.ts",

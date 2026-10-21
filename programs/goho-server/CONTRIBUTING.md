@@ -167,6 +167,15 @@ nullable `reading_level` set only by hand.
 - `hasImage` is `false` until book cover uploads arrive. There is no book edit
   history.
 
+### Book uploads
+
+`book_uploads` tracks cover scans as `receipt_uploads` tracks receipts, with its
+own `book-uploads` queue and failure codes (`storage_failed`,
+`processing_failed`, `book_creation_failed`, `internal_error`). A succeeded
+upload records its `book_id`, extraction version 1 and the validated
+`{ title, author, category }` JSON. Several uploads can succeed for one book,
+and each keeps its original file.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload
@@ -177,8 +186,9 @@ caller's transaction, the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction. That
 status change is what stops redelivered jobs from creating duplicate receipts.
 
-A job can fail in the `receipt-uploads` queue without the worker recording it on
-the upload:
+Both upload queues share one persisted queue store on `goho_queues`, one
+cleanup fiber, three attempts and the retry schedule. A job can fail in the
+`receipt-uploads` queue without the worker recording it on the upload:
 
 - If the process crashes during the final attempt, Effect's queue fails the job
   once its lock expires after two minutes. It checks every 30 seconds while a
@@ -194,7 +204,7 @@ codes stay unchanged. A failed pass is logged and retried at the next interval.
 
 ### Record timestamps
 
-`books`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
+`books`, `book_uploads`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
 `created_at` and `updated_at` columns. They use `timestamptz`, which stores an absolute instant
 whatever the session time zone.
 
