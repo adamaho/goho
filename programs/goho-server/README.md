@@ -1,7 +1,7 @@
 # @goho/goho-server
 
 Exposes receipt uploads, retrieval, creation, correction, deletion, a shared book
-list, health checks, and API documentation. The server implements the shared
+list with cover scans, health checks, and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
@@ -166,3 +166,11 @@ is a different book.
 Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
 HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
+
+### Book cover uploads
+
+`POST /book-uploads` accepts one multipart `file` containing a JPEG, PNG, or WebP
+cover image, with the same size limit as receipt uploads. It stores the original
+in `GOHO_UPLOADS_DIRECTORY`, queues processing, and returns HTTP 202 with the
+upload under `data`. Other file types return HTTP 400, and files over the limit
+return HTTP 413.

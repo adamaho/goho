@@ -9,6 +9,7 @@ import {
   OpenApi,
 } from "effect/http-api";
 
+import { BookUpload, BookUploadsUnavailable } from "./book-uploads.ts";
 import {
   Book,
   BookConflict,
@@ -32,7 +33,8 @@ import { DataResponse } from "./response.ts";
 
 // Payload schemas
 
-const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
+// Receipt and book cover uploads share one image upload policy.
+const ImageUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
   HttpApiSchema.asMultipart({
     maxParts: 1,
     maxFileSize: "20 megabytes",
@@ -94,7 +96,7 @@ export const api = HttpApi.make("goho-server")
       .annotate(OpenApi.Description, "Single-file receipt uploads and their processing status.")
       .add(
         HttpApiEndpoint.post("create", "/receipt-uploads", {
-          payload: ReceiptUploadPayload,
+          payload: ImageUploadPayload,
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
@@ -457,6 +459,28 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+          ),
+      ),
+    // Book uploads
+    HttpApiGroup.make("bookUploads")
+      .annotate(OpenApi.Description, "Single-file book cover scans and their processing status.")
+      .add(
+        HttpApiEndpoint.post("create", "/book-uploads", {
+          payload: ImageUploadPayload,
+          success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload is missing a supported cover image.",
+            }),
+            BookUploadsUnavailable.annotate({
+              description: "The server could not store or queue the cover image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Upload a book cover")
+          .annotate(
+            OpenApi.Description,
+            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
           ),
       ),
   );

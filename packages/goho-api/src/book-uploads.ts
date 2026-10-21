@@ -123,3 +123,22 @@ export const BookUpload = Schema.Struct({
  * @since 0.1.0
  */
 export interface BookUpload extends Schema.Schema.Type<typeof BookUpload> {}
+
+/**
+ * Cover uploads could not be stored, read, or deleted; details stay in the
+ * server logs.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookUploadsUnavailable extends Schema.Error<BookUploadsUnavailable>(
+  "BookUploadsUnavailable",
+)(
+  Schema.TaggedStruct("BookUploadsUnavailable", {}).annotate({
+    identifier: "BookUploadsUnavailable",
+  }),
+  {
+    httpApiStatus: 500,
+    description: "The server could not get to the cover scans; take another shot.",
+  },
+) {}
