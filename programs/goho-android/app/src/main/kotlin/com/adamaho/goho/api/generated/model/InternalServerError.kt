@@ -34,21 +34,21 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class BooksUnavailableEncoded (
+data class InternalServerError (
 
     @Json(name = "_tag")
-    val tag: BooksUnavailableEncoded.Tag
+    val tag: InternalServerError.Tag
 
 ) {
 
     /**
      * 
      *
-     * Values: BooksUnavailable
+     * Values: InternalServerError
      */
     @JsonClass(generateAdapter = false)
     enum class Tag(val value: kotlin.String) {
-        @Json(name = "BooksUnavailable") BooksUnavailable("BooksUnavailable");
+        @Json(name = "InternalServerError") InternalServerError("InternalServerError");
     }
 
 }

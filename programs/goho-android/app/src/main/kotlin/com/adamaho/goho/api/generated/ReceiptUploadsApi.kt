@@ -6,9 +6,9 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
-import com.adamaho.goho.api.generated.model.EffectHttpApiErrorConflictEncoded
-import com.adamaho.goho.api.generated.model.EffectHttpApiErrorInternalServerErrorEncoded
-import com.adamaho.goho.api.generated.model.EffectHttpApiErrorNotFoundEncoded
+import com.adamaho.goho.api.generated.model.Conflict
+import com.adamaho.goho.api.generated.model.InternalServerError
+import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200Response
 

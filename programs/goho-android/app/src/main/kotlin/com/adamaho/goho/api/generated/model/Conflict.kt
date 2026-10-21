@@ -34,21 +34,21 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class EffectHttpApiErrorInternalServerErrorEncoded (
+data class Conflict (
 
     @Json(name = "_tag")
-    val tag: EffectHttpApiErrorInternalServerErrorEncoded.Tag
+    val tag: Conflict.Tag
 
 ) {
 
     /**
      * 
      *
-     * Values: InternalServerError
+     * Values: Conflict
      */
     @JsonClass(generateAdapter = false)
     enum class Tag(val value: kotlin.String) {
-        @Json(name = "InternalServerError") InternalServerError("InternalServerError");
+        @Json(name = "Conflict") Conflict("Conflict");
     }
 
 }

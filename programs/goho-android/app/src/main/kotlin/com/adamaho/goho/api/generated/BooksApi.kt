@@ -7,7 +7,7 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
-import com.adamaho.goho.api.generated.model.BooksUnavailableEncoded
+import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.CreateBookRequest
 
 interface BooksApi {

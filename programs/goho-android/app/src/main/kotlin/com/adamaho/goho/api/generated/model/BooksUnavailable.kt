@@ -34,21 +34,21 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class EffectHttpApiErrorNotFoundEncoded (
+data class BooksUnavailable (
 
     @Json(name = "_tag")
-    val tag: EffectHttpApiErrorNotFoundEncoded.Tag
+    val tag: BooksUnavailable.Tag
 
 ) {
 
     /**
      * 
      *
-     * Values: NotFound
+     * Values: BooksUnavailable
      */
     @JsonClass(generateAdapter = false)
     enum class Tag(val value: kotlin.String) {
-        @Json(name = "NotFound") NotFound("NotFound");
+        @Json(name = "BooksUnavailable") BooksUnavailable("BooksUnavailable");
     }
 
 }

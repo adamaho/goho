@@ -129,7 +129,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -249,7 +249,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -288,7 +288,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -298,7 +298,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_ConflictEncoded"
+                  "$ref": "#/components/schemas/Conflict"
                 }
               }
             }
@@ -308,7 +308,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -421,7 +421,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -431,7 +431,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -474,7 +474,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -514,7 +514,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -575,7 +575,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -585,7 +585,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -620,7 +620,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -630,7 +630,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -679,7 +679,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -689,7 +689,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -752,7 +752,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -762,7 +762,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -821,7 +821,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_NotFoundEncoded"
+                  "$ref": "#/components/schemas/NotFound"
                 }
               }
             }
@@ -831,7 +831,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_InternalServerErrorEncoded"
+                  "$ref": "#/components/schemas/InternalServerError"
                 }
               }
             }
@@ -883,7 +883,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailableEncoded"
+                  "$ref": "#/components/schemas/BooksUnavailable"
                 }
               }
             }
@@ -906,7 +906,7 @@
   },
   "components": {
     "schemas": {
-      "BooksUnavailableEncoded": {
+      "BooksUnavailable": {
         "type": "object",
         "properties": {
           "_tag": {
@@ -1104,7 +1104,7 @@
           }
         ]
       },
-      "effect_HttpApiError_InternalServerErrorEncoded": {
+      "InternalServerError": {
         "type": "object",
         "properties": {
           "_tag": {
@@ -1115,7 +1115,7 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
-      "effect_HttpApiError_NotFoundEncoded": {
+      "NotFound": {
         "type": "object",
         "properties": {
           "_tag": {
@@ -1544,7 +1544,7 @@
           }
         ]
       },
-      "effect_HttpApiError_ConflictEncoded": {
+      "Conflict": {
         "type": "object",
         "properties": {
           "_tag": {

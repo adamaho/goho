@@ -15,7 +15,14 @@ const exportOpenApi = Effect.gen(function* () {
   const outputFile = yield* path.fromFileUrl(
     new URL("../../../packages/goho-api/openapi.json", import.meta.url),
   );
-  const generated = `${JSON.stringify(OpenApi.fromApi(api), null, 2)}\n`;
+  const spec = OpenApi.fromApi(api);
+  const unnamed = Object.keys(spec.components.schemas).filter((name) => name.endsWith("Encoded"));
+  if (unnamed.length > 0) {
+    return yield* new OpenApiCommandError({
+      message: `Name the encoded side of these schemas: ${unnamed.join(", ")}`,
+    });
+  }
+  const generated = `${JSON.stringify(spec, null, 2)}\n`;
   const { code: document, errors } = yield* Effect.tryPromise(() =>
     format("openapi.json", generated),
   ).pipe(
