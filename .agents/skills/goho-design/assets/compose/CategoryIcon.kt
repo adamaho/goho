@@ -23,8 +23,17 @@ internal fun CategoryIcon(category: Category?, modifier: Modifier = Modifier) {
             "entertainment" -> R.drawable.ic_tag_entertainment
             else -> R.drawable.ic_tag_other
         }
-    val color =
-        when (category?.color) {
+    Tag(
+        icon = painterResource(icon),
+        color = category.tagColor,
+        contentDescription = category?.displayName.orEmpty(),
+        modifier = modifier,
+    )
+}
+
+internal val Category?.tagColor: TagColor
+    get() =
+        when (this?.color) {
             Category.Color.green -> TagColor.Green
             Category.Color.orange -> TagColor.Orange
             Category.Color.purple -> TagColor.Purple
@@ -36,13 +45,6 @@ internal fun CategoryIcon(category: Category?, modifier: Modifier = Modifier) {
             Category.Color.grey,
             null -> TagColor.Grey
         }
-    Tag(
-        icon = painterResource(icon),
-        color = color,
-        contentDescription = category?.displayName.orEmpty(),
-        modifier = modifier,
-    )
-}
 
 internal val Category.displayName: String
     get() = name.trim().replaceFirstChar { it.titlecase(Locale.getDefault()) }

@@ -129,6 +129,7 @@ fun ReceiptDetailScreen(
                 date?.format(
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
                 ) ?: saved?.receiptDate.orEmpty().ifBlank { "—" }
+            val categories = remember(saved) { saved?.let(::receiptCategorySummaries) }
             val code = saved?.currency.orEmpty()
             val amount = receiptAmount(saved?.total, locale)
             val total = receiptMoneyText(amount, code, locale)
@@ -202,6 +203,10 @@ fun ReceiptDetailScreen(
                         }
                     }
                     if (loading || saved?.items?.isNotEmpty() == true) {
+                        item("categories") {
+                            DetailSectionHeading(stringResource(R.string.receipt_categories_title))
+                            CategoryBreakdown(categories, code, locale, stacked)
+                        }
                         item("items") {
                             DetailSectionHeading(stringResource(R.string.receipt_items_title))
                             ReceiptItemsCard(

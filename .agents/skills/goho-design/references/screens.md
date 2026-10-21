@@ -42,16 +42,22 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 
 **Photo** (uploaded receipts only; 20 below, `screenMargin` sides): PhotoFrame, 200 tall. Omit the whole section for receipts without an upload. Tap the loaded photo area to open the viewer; no separate expand button. Expose “View receipt photo” to accessibility. Loading and missing photos are not tappable.
 
-**Items** (24 below the photo; only when the receipt has line items):
+**Categories** (24 below the photo, or below the hero without an upload; only when the receipt has line items, including when every item shares one category):
+
+- Header inset to `textInset`: "Categories" (`section`, `textTertiary`). 8dp below it, the `CategoryBreakdown` card ([component spec](components.md#category-tags)).
+- One row per category, sorted by spend, using the same `CategoryIcon` as the item rows so the card is the legend for the item icons. A single-category receipt with a positive total shows one row with a full bar; refund and zero-total receipts retain category amounts but omit bars when they cannot represent a positive whole.
+- Approved mockups: [light](../assets/mockups/category-details-light.png) and [dark](../assets/mockups/category-details-dark.png) with two categories, and [single category](../assets/mockups/category-details-single-light.png). Native implementation captures and verification are in the [mockup guide](../assets/mockups/README.md#receipt-category-overview-native-implementation).
+
+**Items** (24 below the Categories card; only when the receipt has line items):
 
 - Header inset to `textInset`: "Items" (`section`, `textTertiary`), with no item count. 8dp below it, the ItemsCard.
-- Items appear in receipt order. Item names use one line with an ellipsis for overflow at every font size. Each item row starts with a 24dp icon-only `CategoryIcon` for its category, 12dp before the name; the Total row has no icon. Vertically center the tag, name and amount in the row. Do not group or reorder items by category, and do not add a category breakdown card. Mockups: `category-details-light.png`, `category-details-dark.png`. Native captures: [light](../assets/mockups/category-items-native-light.png) and [dark](../assets/mockups/category-items-native-dark.png); loading and large-text checks are documented in the [mockup guide](../assets/mockups/README.md#receipt-item-category-icons-native-implementation).
+- Items appear in receipt order. Item names use one line with an ellipsis for overflow at every font size. Each item row starts with a 24dp icon-only `CategoryIcon` for its category, 12dp before the name; the Total row has no icon. Vertically center the tag, name and amount in the row. Do not group or reorder items by category. Current native item-row captures (before the Categories card): [light](../assets/mockups/category-items-native-light.png) and [dark](../assets/mockups/category-items-native-dark.png); loading and large-text checks are documented in the [mockup guide](../assets/mockups/README.md#receipt-item-category-icons-native-implementation).
 
-**Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
+**Details** (24 below Items, or below the photo/hero when there are no items): section label "Details", then a read-only DetailList:
 
-- Merchant, Date ("Sep 24, 2026"), Subtotal and Tax. There is no Category row; categories are shown on each item. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
+- Merchant, Date ("Sep 24, 2026"), Subtotal and Tax. There is no Category row; categories are shown in the Categories card and on each item. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
 
-The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
+The screen scrolls; with items it is usually taller than one screen.
 
 No footer on this screen.
 

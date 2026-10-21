@@ -6,10 +6,11 @@ The current family icon sources and Android resources are documented in the [lau
 
 ## Item category tags (October 21, 2026, approved design)
 
-Source: [October 21 design handoff](https://drive.google.com/file/d/1aQT3S_YkA33IDP4DyVlEgmCOm_nWXvIn/view). These are supplied design renders from the Goho brand canvas at 360dp width and 3×: list 1080×2340px, details 1080×3720px. They are approved design references, not emulator captures or evidence of an implemented feature. The [category component spec](../../references/components.md#category-tags) wins where they differ; retain the existing button finishes, filter styling and Scan safe-area placement. Details uses the item names from a real October 18 Costco receipt; categories and the other list rows are sample data.
+Source: [revised October 21 design handoff](https://drive.google.com/file/d/1GwsbJY8IJscVyHC61ArY7nvbv-vit1Uo/view). These are supplied design renders from the Goho brand canvas at 360dp width and 3×: list 1080×2340px, multi-category details 1080×4290px, single-category details 1080×3171px. They are approved design references, not emulator captures or evidence of an implemented feature. The [category component spec](../../references/components.md#category-tags) wins where they differ; retain the existing button finishes, filter styling, Scan safe-area placement and one-line, vertically centered item names at every font size. Details uses the item names from a real October 18 Costco receipt; categories and the other list rows are sample data.
 
 - `category-list-light.png`, `category-list-dark.png`: top-spend category tag plus a Grey “+N” count beneath the price; single-category receipts show one tag; Processing and Not processed rows keep their upload tags.
-- `category-details-light.png`, `category-details-dark.png`: items in receipt order with a 24dp icon-only category tag before each name, the Total row, then the Details card (Merchant, Date, Subtotal, Tax). No category breakdown card and no Category row.
+- `category-details-light.png`, `category-details-dark.png`: Categories card (matching item icons, name, amount and share bar) between the photo and Items, then items in receipt order with a 24dp icon-only category tag before each name, the Total row and the Details card (Merchant, Date, Subtotal, Tax). No Category row.
+- `category-details-single-light.png`: a single-category receipt keeps the Categories card with one full bar, so it still names the category.
 
 Older captures with one category tag per row, or a Category row in Details, are historical.
 
@@ -23,7 +24,19 @@ These unedited Goho Dev captures use the Pixel 9 API 36 emulator at 1080×2424px
 
 Each loaded item exposes one accessible announcement containing its name, category display name and formatted amount. Manual checks covered all nine colours in both themes, unknown icons, large text, scrolling and loading. Android build, lint, Kotlin formatting and `pnpm check` passed; no automated Android tests or test harnesses were added or run. The canonical native snapshots are `Tag.kt`, `CategoryIcon.kt`, `ReceiptItemsCard.kt` and `Spacing.kt` in `assets/compose/`.
 
-These captures implement the details item rows from the October 21 handoff. List/sheet category ranking and `TagCount` remain planned.
+These captures show the implemented details item rows and predate the Categories card shown below. List/sheet category ranking and `TagCount` remain planned.
+
+## Receipt category overview (native implementation)
+
+These unedited Goho Dev captures use the Pixel 9 API 36 emulator at 1080×2424px and 420dpi, except the large-text capture. The app rendered temporary, read-only sample API responses; no records were created or changed. They show receipts without uploads, so Categories follows the hero directly. Uploaded receipts place the same card after the photo.
+
+- `category-breakdown-native-light.png`, `category-breakdown-native-dark.png`: two categories with their shared icon tags, exact item sums and static share bars, followed by the existing item rows. Groceries is $69.41 (59%) and Household is $48.98 (41%); receipt-level tax is excluded from the shares.
+- `category-breakdown-native-single-light.png`: one category keeps the card, its name and a full share bar.
+- `category-breakdown-native-large-dark.png`: 320×640dp at 2× font scale (840×1680px), scrolled to a long category name. Category names wrap above their amounts, bars stay below them, and icons remain 24dp. Item names still use one line with an ellipsis. An unknown icon uses the Other fallback.
+- `category-breakdown-native-loading-light.png`: the same category rows and bars use the shared delayed skeleton scope. Accessibility exposes only “Loading receipt…” and Back.
+- `category-breakdown-native-refund-dark.png`: signed category amounts remain visible; all share bars and percentages are omitted when a category total is negative.
+
+Manual checks covered light/dark, single and multiple categories, equal totals (including 0.1 + 0.2 tied with 0.3), zero totals, negative amounts, receipts without items, large text, scrolling and loading. Each category row exposes one non-interactive accessibility announcement; valid shares include a locale-formatted percentage. Receipts without items omit both Categories and Items. The canonical source snapshots are `CategoryBreakdown.kt`, `ReceiptCategorySummary.kt`, `CategoryIcon.kt` and `Spacing.kt` in `assets/compose/`.
 
 ## Shared list and bottom-sheet receipt summary (October 19, 2026)
 

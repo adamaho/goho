@@ -25,6 +25,9 @@
     <string name="receipt_image_description">Scanned receipt image</string>
     <string name="receipt_detail_load_failed">Could not load this receipt. Check your connection.</string>
     <string name="receipt_detail_retry">Retry</string>
+    <string name="receipt_categories_title">Categories</string>
+    <string name="receipt_category_amount_description">%1$s, %2$s</string>
+    <string name="receipt_category_share_description">%1$s, %2$s, %3$s</string>
     <string name="receipt_items_title">Items</string>
     <string name="receipt_items_empty">No items on this receipt.</string>
     <string name="receipt_subtotal">Subtotal</string>
