@@ -13,6 +13,8 @@ import * as BookRepository from "#src/books/repository.ts";
 import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
+import * as Transaction from "#src/database/transaction.ts";
+import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
@@ -153,14 +155,18 @@ it.effect("returns the committed book to a create that loses the race, without i
     const books = yield* BookRepository.Service;
     const sql = yield* SqlClient.SqlClient;
     const categoriesBefore = yield* catalogRows;
+    // The loser runs inside a caller's transaction, as a scan's save does, so its
+    // insert is a savepoint.
     const [winner, loser] = yield* behindOpenTransaction(
       books.findOrCreate(hobbit),
-      books.findOrCreate({
-        title: "the hobbit",
-        author: " J. R. R. TOLKIEN",
-        category: "Brand New Shelf",
-        readingLevel: "Grade 9",
-      }),
+      sql.withTransaction(
+        books.findOrCreate({
+          title: "the hobbit",
+          author: " J. R. R. TOLKIEN",
+          category: "Brand New Shelf",
+          readingLevel: "Grade 9",
+        }),
+      ),
       "INSERT INTO books",
     );
     expect(winner).toMatchObject({
@@ -279,18 +285,19 @@ it.effect("deletes a book and keeps its category", () =>
     const books = yield* BookRepository.Service;
     const { id: bookId } = yield* books.findOrCreate({ ...hobbit, category: "Fantasy" });
     const { id: retained } = yield* books.findOrCreate({ ...hobbit, title: "The Silmarillion" });
-    expect(yield* books.delete(bookId)).toBe(true);
-    expect(yield* books.delete(bookId)).toBe(false);
+    expect(yield* books.delete(bookId)).toEqual(Option.some([]));
+    expect(yield* books.delete(bookId)).toEqual(Option.none());
     expect(yield* books.findById(bookId)).toEqual(Option.none());
     expect((yield* books.list("")).map(({ id }) => id)).toEqual([retained]);
     expect(yield* categoryNamed("fantasy")).toMatchObject({ kinds: ["book"] });
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+// Books without scans have no files, so storage must stay untouched.
 const HttpDatabaseLive = HttpRouter.serve(
   Http.layer.pipe(
     Layer.provide([
-      Books.layer,
+      Books.layer.pipe(Layer.provide([Transaction.layer, Layer.mock(FileStorage.Service, {})])),
       Layer.mock(Receipts.Service, {}),
       Layer.mock(ReceiptUploads.Service, {}),
       Layer.mock(BookUploads.Service, {}),

@@ -34,12 +34,12 @@ interface BooksApi {
     /**
      * DELETE books/{bookId}
      * Delete a book
-     * Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.
+     * Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
      *  - 400: The book ID is malformed or out of range; the response body stays empty.
      *  - 404: No book is wearing that number, bud.
-     *  - 500: The server could not delete this book; nothing changed.
+     *  - 500: The server could not delete this book and its stored images; take another shot to finish the cleanup.
      *
      * @param bookId 
      * @return [Unit]

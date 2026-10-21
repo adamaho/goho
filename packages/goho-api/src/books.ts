@@ -133,7 +133,9 @@ export const Book = Schema.Struct({
   author: BookFields.author,
   category: Category.annotateKey({ description: "The book's category." }),
   readingLevel: BookFields.readingLevel,
-  hasImage: Schema.Boolean.annotate({ description: "Whether a cover image is on file." }),
+  hasImage: Schema.Boolean.annotate({
+    description: "Whether a cover image is on file; the first scan of a book without one adds it.",
+  }),
 }).annotate({
   identifier: "Book",
   description: "A saved book with its display spelling and category.",

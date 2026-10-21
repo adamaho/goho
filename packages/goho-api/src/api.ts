@@ -71,7 +71,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud.",
   )
   .add(
     // Health
@@ -352,7 +352,10 @@ export const api = HttpApi.make("goho-server")
       ),
     // Books
     HttpApiGroup.make("books")
-      .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .annotate(
+        OpenApi.Description,
+        "One shared roster of unique books, entered by hand or saved from cover scans.",
+      )
       .add(
         HttpApiEndpoint.get("list", "/books", {
           query: {
@@ -457,14 +460,15 @@ export const api = HttpApi.make("goho-server")
             }),
             BookNotFound,
             BooksUnavailable.annotate({
-              description: "The server could not delete this book; nothing changed.",
+              description:
+                "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "Delete a book")
           .annotate(
             OpenApi.Description,
-            "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+            "Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.",
           ),
       ),
     // Book uploads

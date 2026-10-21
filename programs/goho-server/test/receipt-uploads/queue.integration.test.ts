@@ -382,7 +382,6 @@ it.effect("fails an upload whose worker crashed during the final attempt", () =>
       Effect.andThen(repo.findById(created.id)),
       Effect.repeat({
         until: (found) => Option.exists(found, (value) => value.status !== "processing"),
-        times: 10,
       }),
     );
 

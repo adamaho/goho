@@ -13,6 +13,7 @@ import { HttpRouter } from "effect/http";
 import * as BookUploadQueue from "./book-uploads/queue.ts";
 import * as BookUploadRepository from "./book-uploads/repository.ts";
 import * as BookUploads from "./book-uploads/service.ts";
+import * as BookUploadWorker from "./book-uploads/worker.ts";
 import * as BookRepository from "./books/repository.ts";
 import * as Books from "./books/service.ts";
 import * as CategoryRepository from "./categories/repository.ts";
@@ -57,7 +58,9 @@ const FileStorageLive = Layer.unwrap(
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
 
-const BooksLive = Books.layer.pipe(Layer.provide(BookRepositoryLive));
+const BooksLive = Books.layer.pipe(
+  Layer.provide([BookRepositoryLive, FileStorageLive, TransactionLive]),
+);
 
 const BookUploadsLive = BookUploads.layer.pipe(
   Layer.provide([
@@ -65,6 +68,18 @@ const BookUploadsLive = BookUploads.layer.pipe(
     BookUploadRepositoryLive,
     FileStorageLive,
     NodeCrypto.layer,
+    TransactionLive,
+  ]),
+);
+
+const BookUploadWorkerLive = BookUploadWorker.layer.pipe(
+  Layer.provide([
+    Ai.layer,
+    BookRepositoryLive,
+    BookUploadQueueLive,
+    BookUploadRepositoryLive,
+    CategoryRepositoryLive,
+    FileStorageLive,
     TransactionLive,
   ]),
 );
@@ -108,4 +123,6 @@ const ServerLive = HttpRouter.serve(
     }),
   ),
 );
-Layer.launch(Layer.merge(ServerLive, ReceiptUploadWorkerLive)).pipe(NodeRuntime.runMain);
+Layer.launch(Layer.mergeAll(ServerLive, ReceiptUploadWorkerLive, BookUploadWorkerLive)).pipe(
+  NodeRuntime.runMain,
+);
