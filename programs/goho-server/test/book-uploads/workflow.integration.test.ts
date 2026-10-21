@@ -240,6 +240,8 @@ it.effect("saves a queued scan as a new book with its cover and extraction", () 
       readingLevel: null,
       hasImage: true,
     });
+    const cover = yield* books.getImage(bookId);
+    expect([new Uint8Array(cover.bytes), cover.contentType]).toEqual([image(1), "image/png"]);
     expect(
       yield* sql`SELECT is_cover, extraction_version, extracted_payload FROM book_uploads`,
     ).toEqual([{ is_cover: true, extraction_version: 1, extracted_payload: hobbit }]);
@@ -310,6 +312,7 @@ it.effect("reuses a saved book for duplicate scans and fills only a missing cove
 
     expect(yield* books.get(manual.id)).toEqual({ ...manual, hasImage: true });
     expect(yield* Effect.all([bookRows, catalogRows])).toEqual(before);
+    expect(new Uint8Array((yield* books.getImage(manual.id)).bytes)).toEqual(image(1));
     expect((yield* uploads.list).map(({ id, status, bookId }) => ({ id, status, bookId }))).toEqual(
       [
         { id: second.id, status: "succeeded", bookId: manual.id },
@@ -428,6 +431,7 @@ it.effect("deletes a book with every scan of it and keeps other uploads", () =>
     yield* books.delete(bookId);
 
     expect(yield* failureTag(books.get(bookId))).toBe("BookNotFound");
+    expect(yield* failureTag(books.getImage(bookId))).toBe("BookImageNotFound");
     expect(yield* failureTag(books.delete(bookId))).toBe("BookNotFound");
     expect(yield* Effect.forEach(files, stored)).toEqual([
       Option.none(),

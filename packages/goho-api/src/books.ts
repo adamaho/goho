@@ -180,6 +180,17 @@ export class BookNotFound extends Schema.Error<BookNotFound>("BookNotFound")(
 ) {}
 
 /**
+ * The book does not exist or has no cover image on file.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookImageNotFound extends Schema.Error<BookImageNotFound>("BookImageNotFound")(
+  Schema.TaggedStruct("BookImageNotFound", {}).annotate({ identifier: "BookImageNotFound" }),
+  { httpApiStatus: 404, description: "No cover is on file for that book number, bud." },
+) {}
+
+/**
  * A correction would give a book the title and author of another saved book.
  *
  * @category errors

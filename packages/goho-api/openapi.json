@@ -1142,6 +1142,69 @@
         "summary": "Delete a book"
       }
     },
+    "/books/{bookId}/image": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "books.getImage",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "cache-control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            }
+          },
+          "400": {
+            "description": "The book ID is malformed or out of range; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover is on file for that book number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookImageNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this cover image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.",
+        "summary": "Get a book cover image"
+      }
+    },
     "/book-uploads": {
       "post": {
         "tags": ["bookUploads"],
@@ -1495,6 +1558,17 @@
           "_tag": {
             "type": "string",
             "enum": ["BooksUnavailable"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookImageNotFound": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookImageNotFound"]
           }
         },
         "required": ["_tag"],

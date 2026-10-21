@@ -192,6 +192,7 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
     for (const id of ["0", "-1", "01", "1.0", "abc", "9223372036854775808"]) {
       for (const [route, request] of [
         ["get", HttpClient.get(`/books/${id}`)],
+        ["getImage", HttpClient.get(`/books/${id}/image`)],
         ["patch", HttpClient.patch(`/books/${id}`, { body: change })],
         ["delete", HttpClient.del(`/books/${id}`)],
       ] as const) {
@@ -207,6 +208,8 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
 });
 
 const getBook = HttpClient.get(`/books/${book.id}`);
+
+const getImage = HttpClient.get(`/books/${book.id}/image`);
 
 const deleteBook = HttpClient.del(`/books/${book.id}`);
 
@@ -234,6 +237,12 @@ it.effect("returns domain errors with their declared statuses", () =>
         ...notFound,
       },
       {
+        repository: { findCover: () => Effect.succeedNone },
+        request: getImage,
+        status: 404,
+        tag: "BookImageNotFound",
+      },
+      {
         repository: { update: () => Effect.fail(new BookConflict()) },
         request: patchTitle("Taken"),
         status: 409,
@@ -254,6 +263,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
   const { layer } = testLayer({
     findOrCreate: () => Effect.fail(persistenceError("findOrCreate")),
     findById: () => Effect.fail(persistenceError("findById")),
+    findCover: () => Effect.fail(persistenceError("findCover")),
     list: () => Effect.fail(persistenceError("list")),
     update: () => Effect.fail(persistenceError("update")),
     delete: () => Effect.fail(persistenceError("delete")),
@@ -268,6 +278,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
       HttpClient.post("/books", { body }),
       HttpClient.get("/books"),
       HttpClient.get(`/books/${book.id}`),
+      HttpClient.get(`/books/${book.id}/image`),
       HttpClient.patch(`/books/${book.id}`, { body }),
       HttpClient.del(`/books/${book.id}`),
     ]) {
@@ -277,6 +288,21 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
       expect(text).not.toContain("private database details");
       expect(JSON.parse(text)).toEqual({ _tag: "BooksUnavailable" });
     }
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("serves the cover with its MIME type and private cache policy", () => {
+  const { calls, layer } = testLayer();
+  return Effect.gen(function* () {
+    const response = yield* getImage;
+    expect(response.status).toBe(200);
+    expect(response.headers["content-type"]).toBe("image/webp");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(new Uint8Array(yield* response.arrayBuffer)).toEqual(new Uint8Array([4, 5, 6]));
+    expect(calls).toEqual([
+      ["findCover", book.id],
+      ["get", cover.fileId],
+    ]);
   }).pipe(Effect.provide(layer));
 });
 
@@ -295,10 +321,10 @@ it.effect("deletes every stored scan of a book, and hides storage failures", () 
     });
     const failing = testLayer(
       { delete: () => Effect.succeedSome(fileIds) },
-      { delete: () => Effect.fail(storageError) },
+      { get: () => Effect.fail(storageError), delete: () => Effect.fail(storageError) },
     );
     yield* Effect.gen(function* () {
-      for (const request of [deleteBook]) {
+      for (const request of [deleteBook, getImage]) {
         const response = yield* request;
         expect(response.status).toBe(500);
         const text = yield* response.text;
