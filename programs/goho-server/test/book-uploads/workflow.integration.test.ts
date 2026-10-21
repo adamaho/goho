@@ -1,11 +1,27 @@
 import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { Config, Context, Crypto, Effect, Layer, Redacted, Result } from "effect";
+import {
+  Config,
+  Context,
+  Crypto,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Redacted,
+  Ref,
+  Result,
+} from "effect";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
+import * as BookUploadQueue from "#src/book-uploads/queue.ts";
+import * as BookUploadRepository from "#src/book-uploads/repository.ts";
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as Migrations from "#src/database/migrations.ts";
+import * as Transaction from "#src/database/transaction.ts";
+import * as FileStorage from "#src/file-storage.ts";
 
 const DatabaseLive = Layer.effectContext(
   Effect.gen(function* () {
@@ -25,6 +41,42 @@ const DatabaseLive = Layer.effectContext(
     return services;
   }),
 ).pipe(Layer.provide(NodeCrypto.layer));
+
+// Real files in a directory removed with the test.
+const StorageLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "goho-book-uploads-test-" });
+    return FileStorage.layerFileSystem({ directory });
+  }),
+).pipe(Layer.provide(NodeServices.layer));
+
+const InfrastructureLive = Layer.mergeAll(
+  BookUploadRepository.layer,
+  BookUploadQueue.layer,
+  Transaction.layer,
+  StorageLive,
+  NodeCrypto.layer,
+);
+
+const TestLive = BookUploads.layer.pipe(
+  Layer.provideMerge(InfrastructureLive),
+  Layer.provideMerge(DatabaseLive),
+);
+
+const image = (byte: number) => new Uint8Array([byte, byte, byte]);
+
+// The tag an effect fails with, or "succeeded".
+const failureTag = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
+  Effect.result(effect).pipe(
+    Effect.map((result) => (Result.isFailure(result) ? result.failure._tag : "succeeded")),
+  );
+
+const stored = (fileId: FileStorage.FileId) =>
+  FileStorage.Service.use((storage) => storage.get(fileId)).pipe(
+    Effect.map((bytes) => Option.some(new Uint8Array(bytes))),
+    Effect.catchTag("GohoServer.FileStorage.StorageError", () => Effect.succeedNone),
+  );
 
 it.effect("enforces upload outcomes, one cover per book, and record timestamps", () =>
   Effect.gen(function* () {
@@ -81,4 +133,44 @@ it.effect("enforces upload outcomes, one cover per book, and record timestamps",
       { count: 1 },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+it.effect("removes the stored scan when its upload cannot be queued", () =>
+  Effect.gen(function* () {
+    const storage = yield* FileStorage.Service;
+    const repo = yield* BookUploadRepository.Service;
+    const put = yield* Ref.make<ReadonlyArray<FileStorage.FileId>>([]);
+    // Fresh, so this service uses the replacements instead of the memoized one from TestLive.
+    const uploads = yield* BookUploads.Service.pipe(
+      Effect.provide(
+        Layer.fresh(BookUploads.layer).pipe(
+          Layer.provide([
+            Layer.succeed(FileStorage.Service, {
+              ...storage,
+              put: (file) =>
+                storage
+                  .put(file)
+                  .pipe(Effect.tap((fileId) => Ref.update(put, (ids) => [...ids, fileId]))),
+            }),
+            Layer.succeed(BookUploadQueue.Service, {
+              offer: () => Effect.die("queue unavailable"),
+              take: () => Effect.die("Unexpected queue.take call"),
+            }),
+          ]),
+        ),
+      ),
+    );
+
+    const created = uploads.create({
+      name: "cover.png",
+      contentType: "image/png",
+      bytes: image(1),
+    });
+
+    expect(yield* failureTag(created)).toBe("BookUploadsUnavailable");
+    const fileIds = yield* Ref.get(put);
+    expect(fileIds).toHaveLength(1);
+    expect(yield* Effect.forEach(fileIds, stored)).toEqual([Option.none()]);
+    expect(yield* repo.list).toEqual([]);
+  }).pipe(Effect.provide(TestLive)),
 );

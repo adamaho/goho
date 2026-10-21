@@ -13,7 +13,7 @@ Configure these in the environment file before starting the server:
 | `GOHO_SERVER_HOST`       | Bind address. Defaults to `127.0.0.1`; the container image sets `0.0.0.0`. |
 | `GOHO_SERVER_PORT`       | Defaults to `3000`.                                                        |
 | `DATABASE_URL`           | Required PostgreSQL connection URL. The pool must connect at startup.      |
-| `GOHO_UPLOADS_DIRECTORY` | Required directory for durable original receipt files.                     |
+| `GOHO_UPLOADS_DIRECTORY` | Required directory for durable original receipt and book cover files.      |
 | `OPENAI_API_KEY`         | A nonempty local placeholder, or a real key for image extraction.          |
 | `OPENAI_MODEL`           | Model used for image extraction.                                           |
 

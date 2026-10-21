@@ -8,6 +8,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as BookRepository from "#src/books/repository.ts";
 import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
@@ -292,6 +293,7 @@ const HttpDatabaseLive = HttpRouter.serve(
       Books.layer,
       Layer.mock(Receipts.Service, {}),
       Layer.mock(ReceiptUploads.Service, {}),
+      Layer.mock(BookUploads.Service, {}),
     ]),
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));

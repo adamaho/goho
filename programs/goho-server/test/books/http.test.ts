@@ -13,6 +13,7 @@ import { Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as BookRepository from "#src/books/repository.ts";
 import * as Books from "#src/books/service.ts";
 import * as Http from "#src/http.ts";
@@ -67,6 +68,7 @@ const testLayer = (repository: Partial<BookRepository.Interface> = {}) => {
         ),
         Layer.mock(Receipts.Service, {}),
         Layer.mock(ReceiptUploads.Service, {}),
+        Layer.mock(BookUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));

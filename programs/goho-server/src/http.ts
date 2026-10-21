@@ -1,9 +1,11 @@
 import { api } from "@goho/goho-api/api";
+import { BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
 
+import * as BookUploads from "./book-uploads/service.ts";
 import * as Books from "./books/service.ts";
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
@@ -35,6 +37,32 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
       )
       .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))
       .handle("list", () => uploads.list.pipe(Effect.map(withData)));
+  }),
+);
+
+const BookUploadsLive = HttpApiBuilder.group(api, "bookUploads", (handlers) =>
+  Effect.gen(function* () {
+    const uploads = yield* BookUploads.Service;
+    const fileSystem = yield* FileSystem.FileSystem;
+    return handlers.handle("create", ({ payload }) =>
+      Effect.gen(function* () {
+        const bytes = yield* fileSystem
+          .readFile(payload.file.path)
+          .pipe(
+            Effect.catchCause((cause) =>
+              Effect.logError("Temporary book upload could not be read", cause).pipe(
+                Effect.andThen(Effect.fail(new BookUploadsUnavailable())),
+              ),
+            ),
+          );
+        const input = yield* Schema.decodeUnknownEffect(BookUploads.UploadInput)({
+          name: payload.file.name,
+          contentType: payload.file.contentType,
+          bytes,
+        }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
+        return yield* uploads.create(input).pipe(Effect.map(withData));
+      }),
+    );
   }),
 );
 
@@ -91,7 +119,7 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, HealthLive]),
+  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, BookUploadsLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),

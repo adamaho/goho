@@ -16,6 +16,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as Books from "#src/books/service.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
@@ -110,6 +111,7 @@ const testLayer = (
         ),
         receiptUploadsTest(receiptUploads),
         Layer.mock(Books.Service, {}),
+        Layer.mock(BookUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
@@ -379,6 +381,7 @@ it.effect(
               }),
               receiptUploadsTest(),
               Layer.mock(Books.Service, {}),
+              Layer.mock(BookUploads.Service, {}),
             ]),
           ),
         ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
