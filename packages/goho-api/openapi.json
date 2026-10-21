@@ -1200,6 +1200,107 @@
           },
           "required": true
         }
+      },
+      "get": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookUpload"
+                      }
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the cover scans off the bench.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every cover scan off the bench, newest first, with its current status.",
+        "summary": "List book cover uploads"
+      }
+    },
+    "/book-uploads/{uploadId}": {
+      "get": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.get",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BookUpload"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover scan is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this cover scan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the latest queue or processing status and the book ID after a clean finish.",
+        "summary": "Get book cover upload status"
       }
     }
   },
@@ -1211,6 +1312,17 @@
           "_tag": {
             "type": "string",
             "enum": ["BookUploadsUnavailable"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookUploadNotFound": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadNotFound"]
           }
         },
         "required": ["_tag"],

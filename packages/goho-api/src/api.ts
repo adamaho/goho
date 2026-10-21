@@ -9,7 +9,12 @@ import {
   OpenApi,
 } from "effect/http-api";
 
-import { BookUpload, BookUploadsUnavailable } from "./book-uploads.ts";
+import {
+  BookUpload,
+  BookUploadId,
+  BookUploadNotFound,
+  BookUploadsUnavailable,
+} from "./book-uploads.ts";
 import {
   Book,
   BookConflict,
@@ -481,6 +486,41 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("list", "/book-uploads", {
+          success: DataResponse(Schema.Array(BookUpload)),
+          error: [
+            BookUploadsUnavailable.annotate({
+              description: "The server could not pull the cover scans off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List book cover uploads")
+          .annotate(
+            OpenApi.Description,
+            "Pulls every cover scan off the bench, newest first, with its current status.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/book-uploads/:uploadId", {
+          params: { uploadId: BookUploadId },
+          success: DataResponse(BookUpload),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
+            BookUploadNotFound,
+            BookUploadsUnavailable.annotate({
+              description: "The server could not retrieve this cover scan.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get book cover upload status")
+          .annotate(
+            OpenApi.Description,
+            "Returns the latest queue or processing status and the book ID after a clean finish.",
           ),
       ),
   );

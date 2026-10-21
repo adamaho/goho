@@ -1,6 +1,11 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { BookUpload, BookUploadId, BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
+import {
+  BookUpload,
+  BookUploadId,
+  BookUploadNotFound,
+  BookUploadsUnavailable,
+} from "@goho/goho-api/book-uploads";
 import { BookId } from "@goho/goho-api/books";
 import * as Client from "@goho/goho-server-client/client";
 import { Effect, Layer } from "effect";
@@ -38,6 +43,15 @@ const testLayer = (uploads: Partial<BookUploads.Interface> = {}) => {
                 calls.push(["create", { ...input, bytes: [...input.bytes] }]);
                 return bookUpload;
               }),
+            get: (uploadId) =>
+              Effect.sync(() => {
+                calls.push(["get", uploadId]);
+                return bookUpload;
+              }),
+            list: Effect.sync(() => {
+              calls.push(["list"]);
+              return [bookUpload];
+            }),
             ...uploads,
           }),
         ),
@@ -56,7 +70,7 @@ const coverForm = (file: File) => {
   return form;
 };
 
-it.effect("uploads cover scans through the generated client", () => {
+it.effect("uploads, lists, and gets cover scans through the generated client", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
     const client = yield* Client.make("");
@@ -66,15 +80,21 @@ it.effect("uploads cover scans through the generated client", () => {
     expect(yield* client.bookUploads.create({ payload: form })).toEqual({ data: bookUpload });
     const accepted = yield* HttpClient.post("/book-uploads", { body: HttpBody.formData(form) });
     expect(accepted.status).toBe(202);
+    expect(yield* client.bookUploads.list()).toEqual({ data: [bookUpload] });
+    expect(yield* client.bookUploads.get({ params: { uploadId: bookUpload.id } })).toEqual({
+      data: bookUpload,
+    });
     const upload = { name: "cover.webp", contentType: "image/webp", bytes: [1, 2, 3] };
     expect(calls).toEqual([
       ["create", upload],
       ["create", upload],
+      ["list"],
+      ["get", bookUpload.id],
     ]);
   }).pipe(Effect.provide(layer));
 });
 
-it.effect("rejects unsupported cover uploads before the service", () => {
+it.effect("rejects unsupported and malformed cover uploads before the service", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
     for (const file of [
@@ -85,6 +105,11 @@ it.effect("rejects unsupported cover uploads before the service", () => {
         body: HttpBody.formData(coverForm(file)),
       });
       expect(response.status, file.name).toBe(400);
+    }
+    for (const request of [HttpClient.get("/book-uploads/not-a-uuid")]) {
+      const response = yield* request;
+      expect(response.status).toBe(400);
+      expect(yield* response.text).toBe("");
     }
     expect(calls).toEqual([]);
   }).pipe(Effect.provide(layer));
@@ -116,8 +141,20 @@ it.effect("returns cover upload domain errors with their declared statuses", () 
     const form = coverForm(new File([new Uint8Array([1])], "cover.png", { type: "image/png" }));
     const cases = [
       {
+        uploads: { get: () => Effect.fail(new BookUploadNotFound()) },
+        request: HttpClient.get(`/book-uploads/${bookUpload.id}`),
+        status: 404,
+        tag: "BookUploadNotFound",
+      },
+      {
         uploads: { create: () => Effect.fail(new BookUploadsUnavailable()) },
         request: HttpClient.post("/book-uploads", { body: HttpBody.formData(form) }),
+        status: 500,
+        tag: "BookUploadsUnavailable",
+      },
+      {
+        uploads: { list: Effect.fail(new BookUploadsUnavailable()) },
+        request: HttpClient.get("/book-uploads"),
         status: 500,
         tag: "BookUploadsUnavailable",
       },
