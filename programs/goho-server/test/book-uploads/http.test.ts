@@ -127,9 +127,9 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
   }).pipe(Effect.provide(layer));
 });
 
-// Real socket time, not virtual time: the server stops reading at the limit, and
-// the 413 arrives after about five seconds, when the stalled connection is reset.
-// Its own server keeps that reset connection away from other requests.
+// Uses the live clock because this waits on a real socket: the 413 takes several
+// seconds to arrive and the connection is then reset. Its own server keeps that
+// reset away from other requests.
 it.live(
   "rejects a cover over the shared 20 MiB upload limit before the service",
   () => {

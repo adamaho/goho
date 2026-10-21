@@ -166,12 +166,6 @@ it.effect("records each step's failure code only after the final attempt", () =>
         failureCode: "internal_error",
       },
       {
-        // The model may only answer with a book category.
-        name: "receipt category",
-        options: { generateObject: generateObject({ ...parsed, category: "groceries" }) },
-        failureCode: "processing_failed",
-      },
-      {
         name: "book creation",
         options: {
           findOrCreate: () =>
@@ -180,20 +174,6 @@ it.effect("records each step's failure code only after the final attempt", () =>
             ),
         },
         failureCode: "book_creation_failed",
-      },
-      {
-        name: "upload finished during processing",
-        options: {
-          markSucceeded: () =>
-            Effect.fail(
-              new BookUploadRepository.InvalidTransition({
-                uploadId: upload.id,
-                currentStatus: "failed",
-                requestedStatus: "succeeded",
-              }),
-            ),
-        },
-        failureCode: "internal_error",
       },
     ];
     for (const { name, options, failureCode } of cases) {

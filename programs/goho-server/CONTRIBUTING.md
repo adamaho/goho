@@ -192,8 +192,8 @@ and each keeps its original file.
   status change that fails because the upload was already finished, failed or
   deleted rolls back a new book and its category with it. File reads and AI
   calls happen before that transaction.
-- A scan that succeeds after its book was deleted fails without changes; its
-  retry saves the book again.
+- A scan that succeeds after its book was deleted fails without changes; a
+  later attempt, if any, saves the book again.
 - Deleting a failed upload removes only its row and file. Other states return
   409; deleting the book removes its successful scans.
 

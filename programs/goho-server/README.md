@@ -166,8 +166,8 @@ is a different book.
   `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
 - `DELETE /books/:bookId` removes the book with all its successful cover
   uploads, their original images, and extraction data, and returns HTTP 204. Its
-  category stays. As with receipts, a commit failure after image removal can
-  leave the book without some images until deletion is retried.
+  category stays. As with receipts, a storage or commit failure after some images
+  are removed can leave the book without them until deletion is retried.
 
 Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
