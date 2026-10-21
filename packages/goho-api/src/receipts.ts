@@ -2,25 +2,6 @@ import { Schema } from "effect";
 
 import { Category, CategoryId } from "./categories.ts";
 
-export {
-  /**
-   * Shared category with its display metadata and kinds, kept here for receipt
-   * consumers. It is defined in `@goho/goho-api/categories`.
-   *
-   * @category models
-   * @since 0.1.0
-   */
-  Category,
-  /**
-   * Persisted category identity, kept here for receipt consumers. It is defined
-   * in `@goho/goho-api/categories`.
-   *
-   * @category models
-   * @since 0.1.0
-   */
-  CategoryId,
-};
-
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
   description: "Nonempty text with the extra whitespace scraped off the boards.",
 });

@@ -68,7 +68,9 @@ export const process: (
 
     const bytes = yield* storage.get(upload.fileId).pipe(failAs("storage_failed"));
     // Read on every attempt so the model sees categories saved since the last one.
-    const categoryNames = yield* categories.listNames("receipt").pipe(failAs("internal_error"));
+    const categoryNames = yield* categories
+      .listNamesForCategory("receipt")
+      .pipe(failAs("internal_error"));
     // Items can only be classified into existing categories, so there must be one.
     if (!Array.isReadonlyArrayNonEmpty(categoryNames)) {
       return yield* new ProcessingError({

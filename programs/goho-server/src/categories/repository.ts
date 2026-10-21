@@ -21,7 +21,7 @@ export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
  */
 export interface Interface {
   /** Every stored category name of `kind`, alphabetically; empty when none exist. */
-  readonly listNames: (
+  readonly listNamesForCategory: (
     kind: CategoryKind,
   ) => Effect.Effect<ReadonlyArray<string>, PersistenceError>;
   /**
@@ -48,12 +48,6 @@ export class Service extends Context.Service<Service, Interface>()(
   "@goho/goho-server/CategoryRepository",
 ) {}
 
-// The category `c` as its API object; text IDs keep their precision in JSON.
-const categoryObject =
-  "jsonb_build_object('id', c.id::text, 'name', c.name, 'icon', c.icon, 'color', c.color, 'kinds', to_jsonb(c.kinds))";
-
-const CategoryRow = Schema.Struct({ category: Category });
-
 /**
  * Stores categories on the shared SQL client. Names are normalized in SQL with
  * `lower(btrim(...))`, matching the migration that built the catalog from receipts.
@@ -65,7 +59,8 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const category = sql.literal(categoryObject);
+    // The driver cannot decode the enum array, so kinds are read as text.
+    const category = sql.literal("id::text, name, icon, color, kinds::text[] AS kinds");
 
     const selectNames = SqlSchema.findAll({
       Request: CategoryKind,
@@ -77,64 +72,59 @@ export const layer = Layer.effect(
 
     const findCategory = SqlSchema.findOneOption({
       Request: Schema.String,
-      Result: CategoryRow,
+      Result: Category,
       execute: (name) => sql`
-        SELECT ${category} AS category FROM categories c WHERE c.name = lower(btrim(${name}))
+        SELECT ${category} FROM categories WHERE name = lower(btrim(${name}))
       `,
     });
 
     const insertCategory = SqlSchema.findOneOption({
       Request: Schema.Struct({ name: Schema.String, kind: CategoryKind }),
-      Result: CategoryRow,
+      Result: Category,
       execute: ({ name, kind }) => sql`
-        INSERT INTO categories AS c (name, kinds)
+        INSERT INTO categories (name, kinds)
         VALUES (lower(btrim(${name})), ARRAY[${kind}::category_kind])
-        ON CONFLICT (name) DO NOTHING RETURNING ${category} AS category
+        ON CONFLICT (name) DO NOTHING RETURNING ${category}
       `,
     });
 
-    // The guard re-checks the latest row version after a concurrent update, so
-    // concurrent saves of different kinds both keep theirs.
     const addKind = SqlSchema.findOneOption({
       Request: Schema.Struct({ id: CategoryId, kind: CategoryKind }),
-      Result: CategoryRow,
+      Result: Category,
       execute: ({ id, kind }) => sql`
-        UPDATE categories AS c SET kinds = category_kinds_with(c.kinds, ${kind}::category_kind)
-        WHERE c.id = ${id} AND NOT (${kind}::category_kind = ANY(c.kinds))
-        RETURNING ${category} AS category
+        UPDATE categories SET kinds = category_kinds_with(kinds, ${kind}::category_kind)
+        WHERE id = ${id} AND NOT (${kind}::category_kind = ANY(kinds))
+        RETURNING ${category}
       `,
     });
 
-    const listNames = Effect.fn("@goho/CategoryRepository.listNames")(
+    const listNamesForCategory = Effect.fn("@goho/CategoryRepository.listNamesForCategory")(
       (kind: CategoryKind) =>
         selectNames(kind).pipe(Effect.map((rows) => rows.map((row) => row.name))),
-      Effect.mapError((cause) => new PersistenceError({ operation: "listNames", cause })),
+      Effect.mapError(
+        (cause) => new PersistenceError({ operation: "listNamesForCategory", cause }),
+      ),
     );
 
     const withKind = Effect.fnUntraced(function* (existing: Category, kind: CategoryKind) {
       if (existing.kinds.includes(kind)) return existing;
       const updated = yield* addKind({ id: existing.id, kind });
-      if (Option.isSome(updated)) return updated.value.category;
-      // A concurrent save added the kind first.
-      const reread = yield* findCategory(existing.name).pipe(Effect.flatMap(Effect.fromOption));
-      return reread.category;
+      if (Option.isSome(updated)) return updated.value;
+      return yield* findCategory(existing.name).pipe(Effect.flatMap(Effect.fromOption));
     });
 
-    // Looking up first keeps reuse from consuming identity values. When a
-    // concurrent transaction commits the same name after that lookup, the insert
-    // does nothing and a new statement sees the committed row.
     const findOrCreate = Effect.fn("@goho/CategoryRepository.findOrCreate")(
       function* (name: string, kind: CategoryKind) {
         const existing = yield* findCategory(name);
-        if (Option.isSome(existing)) return yield* withKind(existing.value.category, kind);
+        if (Option.isSome(existing)) return yield* withKind(existing.value, kind);
         const inserted = yield* insertCategory({ name, kind });
-        if (Option.isSome(inserted)) return inserted.value.category;
+        if (Option.isSome(inserted)) return inserted.value;
         const committed = yield* findCategory(name).pipe(Effect.flatMap(Effect.fromOption));
-        return yield* withKind(committed.category, kind);
+        return yield* withKind(committed, kind);
       },
       Effect.mapError((cause) => new PersistenceError({ operation: "findOrCreate", cause })),
     );
 
-    return Service.of({ findOrCreate, listNames });
+    return Service.of({ findOrCreate, listNamesForCategory });
   }),
 );

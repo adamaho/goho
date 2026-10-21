@@ -1,7 +1,6 @@
+import { Category, CategoryId } from "@goho/goho-api/categories";
 import {
   CalendarDate,
-  Category,
-  CategoryId,
   DecimalString,
   Receipt as ReceiptSchema,
   ReceiptId,

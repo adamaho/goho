@@ -1,9 +1,8 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { Category, CategoryId } from "@goho/goho-api/categories";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import {
-  Category,
-  CategoryId,
   CreateReceiptRequest,
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,

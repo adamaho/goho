@@ -31,7 +31,7 @@ const upload: ReceiptUpload = {
 
 const dependencies = (options: {
   readonly currency?: string;
-  readonly categoryNames?: ReturnType<CategoryRepository.Interface["listNames"]>;
+  readonly categoryNames?: ReturnType<CategoryRepository.Interface["listNamesForCategory"]>;
   readonly transaction?: Transaction.Interface["run"];
   readonly generateObject?: Ai.Interface["generateObject"];
   readonly insertReceipt?: ReceiptRepository.Interface["insert"];
@@ -47,7 +47,7 @@ const dependencies = (options: {
       : Layer.succeed(Transaction.Service, { run: options.transaction }),
     Layer.succeed(CategoryRepository.Service, {
       // Receipt extraction is only offered receipt categories.
-      listNames: (kind) =>
+      listNamesForCategory: (kind) =>
         kind === "receipt"
           ? (options.categoryNames ?? Effect.succeed(["groceries", "household"]))
           : Effect.die(`Unexpected ${kind} category listing`),
@@ -174,7 +174,10 @@ it.effect("fails without calling AI when category names cannot be read or none e
   Effect.gen(function* () {
     for (const categoryNames of [
       Effect.fail(
-        new CategoryRepository.PersistenceError({ operation: "listNames", cause: "down" }),
+        new CategoryRepository.PersistenceError({
+          operation: "listNamesForCategory",
+          cause: "down",
+        }),
       ),
       Effect.succeed([]),
     ]) {

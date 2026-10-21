@@ -797,7 +797,7 @@ it.effect("reuses one lowercase category per name and keeps categories without i
     const repo = yield* Repository.Service;
     const categories = yield* CategoryRepository.Service;
     const catalog = catalogRows;
-    expect(yield* categories.listNames("receipt")).toEqual(seededNames);
+    expect(yield* categories.listNamesForCategory("receipt")).toEqual(seededNames);
     const seeded = yield* catalog;
     const first = yield* repo.insert(receiptInput);
     yield* repo.insert(withCategory("GROCERIES"));
@@ -813,7 +813,7 @@ it.effect("reuses one lowercase category per name and keeps categories without i
       ["Snacks", "snacks", "Grocery"].map((category) => repo.insert(withCategory(category))),
       { concurrency: "unbounded" },
     );
-    expect(yield* categories.listNames("receipt")).toEqual(
+    expect(yield* categories.listNamesForCategory("receipt")).toEqual(
       [...seededNames, "grocery", "snacks"].sort(),
     );
     expect(
@@ -834,7 +834,7 @@ it.effect("reuses one lowercase category per name and keeps categories without i
     yield* repo.updateItem(first, apples!, { category: "Pet food" });
     for (const { id } of yield* repo.list) yield* repo.delete(id);
     expect(yield* categories.findOrCreate("pet food", "receipt")).toEqual(petFood);
-    expect(yield* categories.listNames("receipt")).toEqual(
+    expect(yield* categories.listNamesForCategory("receipt")).toEqual(
       [...seededNames, "grocery", "pet food", "snacks"].sort(),
     );
     expect((yield* catalog).slice(0, seeded.length)).toEqual(seeded);
@@ -2262,10 +2262,10 @@ it.effect("makes populated categories receipt categories without changing data o
     ]);
     // Receipt extraction is offered every receipt category, but not book-only ones.
     const categories = yield* Effect.provide(CategoryRepository.Service, CategoryRepository.layer);
-    expect(yield* categories.listNames("receipt")).toEqual(
+    expect(yield* categories.listNamesForCategory("receipt")).toEqual(
       [...seededNames, "fiction", "snacks"].sort(),
     );
-    expect(yield* categories.listNames("book")).toEqual(["fiction", "nonfiction"]);
+    expect(yield* categories.listNamesForCategory("book")).toEqual(["fiction", "nonfiction"]);
     expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([]);
   }).pipe(
     Effect.provide(
