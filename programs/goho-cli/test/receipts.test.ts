@@ -9,7 +9,13 @@ const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 const runView = (receiptId: string, baseUrl: string) =>
   runCommand(baseUrl, ["receipts", "view", receiptId]);
 
-const groceries = { id: "3", name: "groceries", icon: "groceries", color: "green" };
+const groceries = {
+  id: "3",
+  name: "groceries",
+  icon: "groceries",
+  color: "green",
+  kinds: ["receipt"],
+};
 const receipt = {
   id: "42",
   storeName: "Example Store",

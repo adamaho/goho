@@ -39,6 +39,7 @@ const groceries = Category.make({
   name: "groceries",
   icon: "groceries",
   color: "green",
+  kinds: ["receipt"],
 });
 
 const receipt = Receipt.make({
@@ -533,6 +534,7 @@ const snacks = Category.make({
   name: "snacks",
   icon: "other",
   color: "grey",
+  kinds: ["receipt", "book"],
 });
 
 const recordUpdates = () => {

@@ -13,7 +13,8 @@ import java.util.UUID
 
 private val previewTime = Instant.parse("2026-09-30T12:00:00Z")
 
-private val shopping = Category("1", "shopping", "shopping", Category.Color.purple)
+private val shopping =
+    Category("1", "shopping", "shopping", Category.Color.purple, setOf(CategoryKind.receipt))
 
 private fun receipt(id: String, merchant: String, date: String, total: String, currency: String) =
     Receipt(

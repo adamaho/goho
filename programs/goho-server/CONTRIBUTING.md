@@ -92,6 +92,15 @@ references it; a referenced category cannot be deleted. A receipt has no categor
 of its own: the API derives its `categories` from its items, each once in item
 order. Items are written with a `category` name and read with the category object.
 
+- `kinds` is a nonempty `category_kind[]` (`receipt`, `book`) listing the domains
+  a category applies to. A database constraint keeps each kind once, in enum
+  order, so every response lists them the same way. Direct SQL inserts default
+  to `{receipt}`.
+- Migration 0014 made every existing category a receipt category by adding the
+  column with that default, so no row was updated and timestamps stayed. It
+  seeded `fiction` and `nonfiction` as book categories. An existing category with
+  either name kept its ID, metadata and timestamps and also became a book category.
+
 - `icon` is a required free-form icon identifier; the server does not limit it to
   the app's bundled icons, so clients decide how to show unfamiliar ones. `color`
   is a stable key from the app's colour palette, enforced by a database
@@ -105,14 +114,17 @@ order. Items are written with a `category` name and read with the category objec
   category; different words such as `grocery` and `groceries` stay separate.
 - Saving a receipt or item finds each category by name or creates it in the same
   transaction, so a failed or rolled-back save leaves no new category behind. A
-  PATCH for a missing receipt or item creates nothing. Reusing a category does not
-  update it. A receipt save looks up each distinct incoming name once; case or
-  space variants are separate lookups that resolve to the same category.
+  PATCH for a missing receipt or item creates nothing. Reusing a category that
+  already has the saving domain's kind does not update it. Reusing one of another
+  kind keeps its ID and adds the kind with a guarded update, so concurrent saves
+  of different kinds both keep theirs. A receipt save looks up each distinct
+  incoming name once; case or space variants are separate lookups that resolve to
+  the same category.
 - Categories stay when their items are deleted or moved to another category.
-- Upload processing reads the current names before each AI request. The model's
-  structured output only accepts those names, so it cannot invent a category; an
-  empty catalog or any other name fails the upload. The stored extraction keeps
-  the categories as the model returned them.
+- Upload processing reads the current receipt category names before each AI
+  request. The model's structured output only accepts those names, so it cannot
+  invent a category; an empty catalog or any other name fails the upload. The
+  stored extraction keeps the categories as the model returned them.
 - Migration 0012 built the catalog from existing receipt categories, trimming
   space-padded legacy values from direct SQL, and linked
   each receipt without firing update triggers, so timestamps stayed and no

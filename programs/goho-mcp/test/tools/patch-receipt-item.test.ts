@@ -11,7 +11,7 @@ const item = {
   position: 0,
   name: "Granny Smith apples",
   amount: "4.5",
-  category: { id: "9", name: "snacks", icon: "other", color: "grey" },
+  category: { id: "9", name: "snacks", icon: "other", color: "grey", kinds: ["receipt"] },
 };
 
 const ItemResult = Schema.Struct({

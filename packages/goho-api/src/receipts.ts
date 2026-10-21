@@ -1,5 +1,26 @@
 import { Schema } from "effect";
 
+import { Category, CategoryId } from "./categories.ts";
+
+export {
+  /**
+   * Shared category with its display metadata and kinds, kept here for receipt
+   * consumers. It is defined in `@goho/goho-api/categories`.
+   *
+   * @category models
+   * @since 0.1.0
+   */
+  Category,
+  /**
+   * Persisted category identity, kept here for receipt consumers. It is defined
+   * in `@goho/goho-api/categories`.
+   *
+   * @category models
+   * @since 0.1.0
+   */
+  CategoryId,
+};
+
 const Name = Schema.Trim.check(Schema.isNonEmpty()).annotate({
   description: "Nonempty text with the extra whitespace scraped off the boards.",
 });
@@ -249,76 +270,12 @@ export const ReceiptItemId = BigintId.annotate({
  */
 export type ReceiptItemId = typeof ReceiptItemId.Type;
 
-/**
- * Persisted category identity, kept as decimal text like other IDs.
- *
- * @category models
- * @since 0.1.0
- */
-export const CategoryId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u))
-  .annotate({
-    identifier: "CategoryId",
-    description: "The category's positive number on the roster.",
-    examples: ["3"],
-  })
-  .pipe(Schema.brand("CategoryId"));
-
-/**
- * Decoded persisted category identity.
- *
- * @category models
- * @since 0.1.0
- */
-export type CategoryId = typeof CategoryId.Type;
-
-/**
- * Shared category with its display metadata.
- *
- * @category models
- * @since 0.1.0
- */
-export const Category = Schema.Struct({
-  id: CategoryId.annotateKey({ description: "The category's roster number." }),
-  name: Schema.String.annotate({
-    description: "Trimmed lowercase category name.",
-    examples: ["groceries"],
-  }),
-  icon: Schema.String.annotate({
-    description:
-      "Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.",
-    examples: ["groceries"],
-  }),
-  color: Schema.Literals([
-    "green",
-    "orange",
-    "purple",
-    "brown",
-    "pink",
-    "red",
-    "blue",
-    "yellow",
-    "grey",
-  ]).annotate({ description: "Stable colour key for showing the category." }),
-}).annotate({
-  identifier: "Category",
-  description:
-    "A category on the shared roster. New names suit up with the `other` icon and `grey` colour.",
-  examples: [{ id: CategoryId.make("3"), name: "groceries", icon: "groceries", color: "green" }],
-});
-
-/**
- * Decoded category.
- *
- * @category models
- * @since 0.1.0
- */
-export interface Category extends Schema.Schema.Type<typeof Category> {}
-
 const groceries = Category.make({
   id: CategoryId.make("3"),
   name: "groceries",
   icon: "groceries",
   color: "green",
+  kinds: ["receipt"],
 });
 
 /**
