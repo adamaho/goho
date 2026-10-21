@@ -9,6 +9,7 @@ import {
   OpenApi,
 } from "effect/http-api";
 
+import { Book, BooksUnavailable, CreateBookRequest } from "./books.ts";
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
@@ -47,7 +48,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud.",
   )
   .add(
     // Health
@@ -324,6 +325,30 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.",
+          ),
+      ),
+    // Books
+    HttpApiGroup.make("books")
+      .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .add(
+        HttpApiEndpoint.post("create", "/books", {
+          payload: CreateBookRequest,
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.",
+            }),
+            BooksUnavailable.annotate({
+              description: "The server could not save this book; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Add a book")
+          .annotate(
+            OpenApi.Description,
+            "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
           ),
       ),
   );

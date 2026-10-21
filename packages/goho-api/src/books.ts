@@ -178,3 +178,18 @@ export class BookConflict extends Schema.TaggedError<BookConflict>()(
       "Another book on the roster already has that title and author. Nothing changed and nothing merged.",
   },
 ) {}
+
+/**
+ * Books could not be read or saved; details stay in the server logs.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BooksUnavailable extends Schema.TaggedError<BooksUnavailable>()(
+  "BooksUnavailable",
+  {},
+  {
+    httpApiStatus: 500,
+    description: "The server could not get to the book roster. Nothing changed; take another shot.",
+  },
+) {}

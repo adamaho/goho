@@ -1,7 +1,7 @@
 # @goho/goho-server
 
-Exposes receipt uploads, retrieval, creation, correction, deletion, health checks,
-and API documentation. The server implements the shared
+Exposes receipt uploads, retrieval, creation, correction, deletion, a shared book
+list, health checks, and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
@@ -134,3 +134,24 @@ roll back so deletion can be retried. An already missing photo does not block de
 Photo storage does not participate in the database transaction. If the database
 commit fails after photo removal, the receipt may remain without its photo;
 retrying deletion completes the cleanup.
+
+### Books
+
+Books form one shared list. Each book has `id` (a decimal string like receipt
+IDs), `title`, `author`, a `category` object as on receipt items, a nullable
+`readingLevel`, and `hasImage`, which is `false` until cover uploads are added.
+Create returns this shape under `data`.
+
+A book's identity is its title and author, ignoring case and extra whitespace;
+the spelling it was first saved with is shown. The same title by another author
+is a different book.
+
+- `POST /books` takes `title`, `author`, `category`, and an optional
+  `readingLevel` (null or omitted when unknown). Values are trimmed and must stay
+  nonempty, and unsupported fields are rejected. The category is saved in
+  lowercase and joins the shared catalog if it is new. If the identity is already
+  saved, the saved book returns unchanged with HTTP 200; the request's category
+  and reading level are ignored and no category is created.
+
+Invalid bodies return HTTP 400 with an empty body. Persistence failures return
+HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
