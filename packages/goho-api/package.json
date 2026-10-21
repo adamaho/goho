@@ -9,6 +9,7 @@
   },
   "exports": {
     "./api": "./src/api.ts",
+    "./book-uploads": "./src/book-uploads.ts",
     "./books": "./src/books.ts",
     "./categories": "./src/categories.ts",
     "./receipt-uploads": "./src/receipt-uploads.ts",
