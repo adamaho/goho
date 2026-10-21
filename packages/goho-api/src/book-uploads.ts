@@ -125,6 +125,17 @@ export const BookUpload = Schema.Struct({
 export interface BookUpload extends Schema.Schema.Type<typeof BookUpload> {}
 
 /**
+ * No cover upload has the requested ID.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookUploadNotFound extends Schema.Error<BookUploadNotFound>("BookUploadNotFound")(
+  Schema.TaggedStruct("BookUploadNotFound", {}).annotate({ identifier: "BookUploadNotFound" }),
+  { httpApiStatus: 404, description: "No cover scan is wearing that number, bud." },
+) {}
+
+/**
  * Cover uploads could not be stored, read, or deleted; details stay in the
  * server logs.
  *

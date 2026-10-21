@@ -2,9 +2,10 @@ import {
   type BookUpload as PublicBookUpload,
   BookUploadContentType,
   BookUploadId,
+  BookUploadNotFound,
   BookUploadsUnavailable,
 } from "@goho/goho-api/book-uploads";
-import { Context, Crypto, Effect, Layer, Schema } from "effect";
+import { Context, Crypto, Effect, Layer, Option, Schema } from "effect";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
@@ -34,6 +35,10 @@ export const UploadInput = Schema.Struct({
  */
 export interface UploadInput extends Schema.Schema.Type<typeof UploadInput> {}
 
+// Persistence and storage details stay in the logs; callers see the domain error.
+const unavailable = (message: string) => (error: unknown) =>
+  Effect.logError(message, error).pipe(Effect.andThen(Effect.fail(new BookUploadsUnavailable())));
+
 const toPublic = (upload: BookUpload): PublicBookUpload => ({
   id: upload.id,
   fileName: upload.fileName,
@@ -52,11 +57,15 @@ const toPublic = (upload: BookUpload): PublicBookUpload => ({
  * @since 0.1.0
  */
 export interface Interface {
+  readonly list: Effect.Effect<ReadonlyArray<PublicBookUpload>, BookUploadsUnavailable>;
   readonly create: (input: UploadInput) => Effect.Effect<PublicBookUpload, BookUploadsUnavailable>;
+  readonly get: (
+    uploadId: BookUploadId,
+  ) => Effect.Effect<PublicBookUpload, BookUploadNotFound | BookUploadsUnavailable>;
 }
 
 /**
- * Creates cover uploads.
+ * Creates cover uploads and retrieves their durable status.
  *
  * @category services
  * @since 0.1.0
@@ -121,6 +130,31 @@ export const layer = Layer.effect(
       Effect.uninterruptible,
     );
 
-    return Service.of({ create });
+    const get = Effect.fn("@goho/BookUploads.get")(
+      (uploadId: BookUploadId) =>
+        repository.findById(uploadId).pipe(
+          Effect.flatMap(
+            Option.match({
+              onNone: () => Effect.fail(new BookUploadNotFound()),
+              onSome: (upload) => Effect.succeed(toPublic(upload)),
+            }),
+          ),
+        ),
+      Effect.catchTag(
+        "GohoServer.BookUploadRepository.PersistenceError",
+        unavailable("Book upload retrieval failed"),
+      ),
+    );
+
+    const list = repository.list.pipe(
+      Effect.map((uploads) => uploads.map(toPublic)),
+      Effect.catchTag(
+        "GohoServer.BookUploadRepository.PersistenceError",
+        unavailable("Book upload listing failed"),
+      ),
+      Effect.withSpan("@goho/BookUploads.list"),
+    );
+
+    return Service.of({ create, get, list });
   }),
 );

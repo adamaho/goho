@@ -44,25 +44,28 @@ const BookUploadsLive = HttpApiBuilder.group(api, "bookUploads", (handlers) =>
   Effect.gen(function* () {
     const uploads = yield* BookUploads.Service;
     const fileSystem = yield* FileSystem.FileSystem;
-    return handlers.handle("create", ({ payload }) =>
-      Effect.gen(function* () {
-        const bytes = yield* fileSystem
-          .readFile(payload.file.path)
-          .pipe(
-            Effect.catchCause((cause) =>
-              Effect.logError("Temporary book upload could not be read", cause).pipe(
-                Effect.andThen(Effect.fail(new BookUploadsUnavailable())),
+    return handlers
+      .handle("create", ({ payload }) =>
+        Effect.gen(function* () {
+          const bytes = yield* fileSystem
+            .readFile(payload.file.path)
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.logError("Temporary book upload could not be read", cause).pipe(
+                  Effect.andThen(Effect.fail(new BookUploadsUnavailable())),
+                ),
               ),
-            ),
-          );
-        const input = yield* Schema.decodeUnknownEffect(BookUploads.UploadInput)({
-          name: payload.file.name,
-          contentType: payload.file.contentType,
-          bytes,
-        }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
-        return yield* uploads.create(input).pipe(Effect.map(withData));
-      }),
-    );
+            );
+          const input = yield* Schema.decodeUnknownEffect(BookUploads.UploadInput)({
+            name: payload.file.name,
+            contentType: payload.file.contentType,
+            bytes,
+          }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
+          return yield* uploads.create(input).pipe(Effect.map(withData));
+        }),
+      )
+      .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))
+      .handle("list", () => uploads.list.pipe(Effect.map(withData)));
   }),
 );
 

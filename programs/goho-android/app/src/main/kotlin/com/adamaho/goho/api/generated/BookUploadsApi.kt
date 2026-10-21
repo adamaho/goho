@@ -6,7 +6,10 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BookUploadNotFound
 import com.adamaho.goho.api.generated.model.BookUploadsCreate202Response
+import com.adamaho.goho.api.generated.model.BookUploadsGet200Response
+import com.adamaho.goho.api.generated.model.BookUploadsList200Response
 import com.adamaho.goho.api.generated.model.BookUploadsUnavailable
 
 import okhttp3.MultipartBody
@@ -27,5 +30,34 @@ interface BookUploadsApi {
     @Multipart
     @POST("book-uploads")
     suspend fun bookUploadsCreate(@Part file: MultipartBody.Part): Response<BookUploadsCreate202Response>
+
+    /**
+     * GET book-uploads/{uploadId}
+     * Get book cover upload status
+     * Returns the latest queue or processing status and the book ID after a clean finish.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
+     *  - 404: No cover scan is wearing that number, bud.
+     *  - 500: The server could not retrieve this cover scan.
+     *
+     * @param uploadId 
+     * @return [BookUploadsGet200Response]
+     */
+    @GET("book-uploads/{uploadId}")
+    suspend fun bookUploadsGet(@Path("uploadId") uploadId: java.util.UUID): Response<BookUploadsGet200Response>
+
+    /**
+     * GET book-uploads
+     * List book cover uploads
+     * Pulls every cover scan off the bench, newest first, with its current status.
+     * Responses:
+     *  - 200: Success
+     *  - 500: The server could not pull the cover scans off the bench.
+     *
+     * @return [BookUploadsList200Response]
+     */
+    @GET("book-uploads")
+    suspend fun bookUploadsList(): Response<BookUploadsList200Response>
 
 }
