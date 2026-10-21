@@ -167,6 +167,17 @@ export interface Book extends Schema.Schema.Type<typeof Book> {}
 // call it `…Encoded`.
 
 /**
+ * No book has the requested ID.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookNotFound extends Schema.Error<BookNotFound>("BookNotFound")(
+  Schema.TaggedStruct("BookNotFound", {}).annotate({ identifier: "BookNotFound" }),
+  { httpApiStatus: 404, description: "No book is wearing that number, bud." },
+) {}
+
+/**
  * A correction would give a book the title and author of another saved book.
  *
  * @category errors

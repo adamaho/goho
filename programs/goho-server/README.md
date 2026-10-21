@@ -140,7 +140,7 @@ retrying deletion completes the cleanup.
 Books form one shared list. Each book has `id` (a decimal string like receipt
 IDs), `title`, `author`, a `category` object as on receipt items, a nullable
 `readingLevel`, and `hasImage`, which is `false` until cover uploads are added.
-Create returns this shape under `data`.
+Create, retrieval, and listing all return this same shape under `data`.
 
 A book's identity is its title and author, ignoring case and extra whitespace;
 the spelling it was first saved with is shown. The same title by another author
@@ -152,6 +152,12 @@ is a different book.
   lowercase and joins the shared catalog if it is new. If the identity is already
   saved, the saved book returns unchanged with HTTP 200; the request's category
   and reading level are ignored and no category is created.
+- `GET /books` lists books newest first. `?search=` keeps books whose title or
+  author contains the text, ignoring case and extra whitespace; punctuation
+  matches literally, and a blank search lists every book. Sending `search` more
+  than once returns HTTP 400.
+- `GET /books/:bookId` returns one book.
 
-Invalid bodies return HTTP 400 with an empty body. Persistence failures return
+Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
+book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
 HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.

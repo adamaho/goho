@@ -1,11 +1,20 @@
-import { type Book, BooksUnavailable, type CreateBookRequest } from "@goho/goho-api/books";
-import { Context, Effect, Layer } from "effect";
+import {
+  type Book,
+  type BookId,
+  BookNotFound,
+  BooksUnavailable,
+  type CreateBookRequest,
+} from "@goho/goho-api/books";
+import { Context, Effect, Layer, Option } from "effect";
 
 import * as BookRepository from "./repository.ts";
 
 // Persistence details stay in the logs; callers see the domain error.
 const unavailable = (message: string) => (error: BookRepository.PersistenceError) =>
   Effect.logError(message, error).pipe(Effect.andThen(Effect.fail(new BooksUnavailable())));
+
+const requireBook = <A>(saved: Option.Option<A>) =>
+  Effect.fromOption(saved).pipe(Effect.mapError(() => new BookNotFound()));
 
 /**
  * Book operations.
@@ -18,10 +27,15 @@ export interface Interface {
    * Saves a new book, or returns the saved book with the same identity unchanged.
    */
   readonly create: (book: CreateBookRequest) => Effect.Effect<Book, BooksUnavailable>;
+  /** Books newest first, filtered by title or author when `search` is supplied. */
+  readonly list: (
+    search: string | undefined,
+  ) => Effect.Effect<ReadonlyArray<Book>, BooksUnavailable>;
+  readonly get: (bookId: BookId) => Effect.Effect<Book, BookNotFound | BooksUnavailable>;
 }
 
 /**
- * Creates books.
+ * Creates, lists, and retrieves books.
  *
  * @category models
  * @since 0.1.0
@@ -47,6 +61,22 @@ export const layer = Layer.effect(
       ),
     );
 
-    return Service.of({ create });
+    const list = Effect.fn("@goho/BookService.list")(
+      (search: string | undefined) => repository.list(search ?? ""),
+      Effect.catchTag(
+        "GohoServer.BookRepository.PersistenceError",
+        unavailable("Book listing failed"),
+      ),
+    );
+
+    const get = Effect.fn("@goho/BookService.get")(
+      (bookId: BookId) => repository.findById(bookId).pipe(Effect.flatMap(requireBook)),
+      Effect.catchTag(
+        "GohoServer.BookRepository.PersistenceError",
+        unavailable("Book retrieval failed"),
+      ),
+    );
+
+    return Service.of({ create, get, list });
   }),
 );

@@ -328,6 +328,12 @@ it.effect("serves saved books over HTTP with one Book shape", () =>
       }),
     ).toEqual({ data: expected });
     expect(yield* categoryNamed("poetry")).toBeUndefined();
+    expect(yield* client.books.get({ params: { bookId: book.id } })).toEqual({ data: expected });
+    expect(yield* client.books.list({ query: {} })).toEqual({ data: [expected] });
+    expect(yield* client.books.list({ query: { search: "TOLKIEN" } })).toEqual({
+      data: [expected],
+    });
+    expect(yield* client.books.list({ query: { search: "silmarillion" } })).toEqual({ data: [] });
 
     const { data: other } = yield* client.books.create({
       payload: { title: "The Silmarillion", author: "J. R. R. Tolkien", category: "Fiction" },

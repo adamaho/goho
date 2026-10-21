@@ -852,6 +852,61 @@
       }
     },
     "/books": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "books.list",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "Text to find in a title or author, ignoring case and extra spaces. Punctuation matches literally; blank lists every book.",
+              "examples": ["hobbit"]
+            },
+            "required": false
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Book"
+                      },
+                      "description": "Matching books, newest on the roster first; empty when none match."
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query is a bad pass, such as `search` sent more than once; the response body stays empty."
+          },
+          "500": {
+            "description": "The server could not pull the books off the bench.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls saved books off the bench, newest first. Add `search` to find title or author matches for autocomplete.",
+        "summary": "List books"
+      },
       "post": {
         "tags": ["books"],
         "operationId": "books.create",
@@ -901,6 +956,66 @@
           },
           "required": true
         }
+      }
+    },
+    "/books/{bookId}": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "books.get",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Book"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The book ID is malformed or out of range; the response body stays empty."
+          },
+          "404": {
+            "description": "No book is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this book.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get a book"
       }
     }
   },
@@ -1103,6 +1218,17 @@
             "readingLevel": "Grade 4"
           }
         ]
+      },
+      "BookNotFound": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookNotFound"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
       },
       "InternalServerError": {
         "type": "object",

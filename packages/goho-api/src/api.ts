@@ -9,7 +9,7 @@ import {
   OpenApi,
 } from "effect/http-api";
 
-import { Book, BooksUnavailable, CreateBookRequest } from "./books.ts";
+import { Book, BookId, BookNotFound, BooksUnavailable, CreateBookRequest } from "./books.ts";
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
@@ -337,6 +337,54 @@ export const api = HttpApi.make("goho-server")
     // Books
     HttpApiGroup.make("books")
       .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .add(
+        HttpApiEndpoint.get("list", "/books", {
+          query: {
+            search: Schema.optionalKey(
+              Schema.String.annotate({
+                description:
+                  "Text to find in a title or author, ignoring case and extra spaces. Punctuation matches literally; blank lists every book.",
+                examples: ["hobbit"],
+              }),
+            ),
+          },
+          success: DataResponse(
+            Schema.Array(Book).annotate({
+              description: "Matching books, newest on the roster first; empty when none match.",
+            }),
+          ),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The query is a bad pass, such as `search` sent more than once; the response body stays empty.",
+            }),
+            BooksUnavailable.annotate({
+              description: "The server could not pull the books off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List books")
+          .annotate(
+            OpenApi.Description,
+            "Pulls saved books off the bench, newest first. Add `search` to find title or author matches for autocomplete.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/books/:bookId", {
+          params: { bookId: BookId },
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not retrieve this book.",
+            }),
+          ],
+        }).annotate(OpenApi.Summary, "Get a book"),
+      )
       .add(
         HttpApiEndpoint.post("create", "/books", {
           payload: CreateBookRequest,
