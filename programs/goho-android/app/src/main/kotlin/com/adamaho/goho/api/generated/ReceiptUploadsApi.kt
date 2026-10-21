@@ -37,6 +37,7 @@ interface ReceiptUploadsApi {
      * Clears a failed upload and its original image off the bench. Queued, processing, and succeeded uploads return 409; delete the receipt to remove a successful scan.
      * Responses:
      *  - 204: <No Content>
+     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
      *  - 404: No receipt upload is wearing that number, bud.
      *  - 409: Only failed uploads can be deleted; this upload has a different status.
      *  - 500: The server could not delete this upload and its stored image.
@@ -53,6 +54,7 @@ interface ReceiptUploadsApi {
      * Returns the latest queue or processing status and the receipt ID after a clean finish.
      * Responses:
      *  - 200: Success
+     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
      *  - 404: No receipt upload is wearing that number, bud.
      *  - 500: The server could not retrieve this receipt upload.
      *
