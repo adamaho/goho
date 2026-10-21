@@ -32,6 +32,22 @@ interface BooksApi {
     suspend fun booksCreate(@Body createBookRequest: CreateBookRequest): Response<BooksCreate200Response>
 
     /**
+     * DELETE books/{bookId}
+     * Delete a book
+     * Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.
+     * Responses:
+     *  - 204: <No Content>
+     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 404: No book is wearing that number, bud.
+     *  - 500: The server could not delete this book; nothing changed.
+     *
+     * @param bookId 
+     * @return [Unit]
+     */
+    @DELETE("books/{bookId}")
+    suspend fun booksDelete(@Path("bookId") bookId: kotlin.String): Response<Unit>
+
+    /**
      * GET books/{bookId}
      * Get a book
      * 
