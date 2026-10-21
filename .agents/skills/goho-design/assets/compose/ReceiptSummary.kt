@@ -1,3 +1,5 @@
+// Snapshot before the October 21 category handoff. Adapt category tags and ranking
+// from references/components.md before refreshing this copy with the native implementation.
 package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat

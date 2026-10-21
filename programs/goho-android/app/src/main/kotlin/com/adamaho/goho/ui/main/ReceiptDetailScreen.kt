@@ -209,7 +209,6 @@ fun ReceiptDetailScreen(
                                 amount,
                                 code,
                                 locale,
-                                stacked,
                             )
                         }
                     }

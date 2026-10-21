@@ -1,6 +1,7 @@
 // Goho UI primitives. Reference implementation from the design handoff; not compiled
 // against the project, so fix any API drift for the project's Compose version.
 // Bram status content, shared skeletons and delayed retry icons follow the current screen specs.
+// Category display predates the October 21 handoff; follow references/components.md, Category tags.
 package com.goho.ui.components // TODO: match the app's package
 
 import com.adamaho.goho.ui.components.ReceiptUploadTag
@@ -561,7 +562,7 @@ fun ReceiptRow(
                 when (state) {
                     ReceiptRowState.Processing -> ReceiptUploadTag(processing = true)
                     ReceiptRowState.NotProcessed -> ReceiptUploadTag(processing = false)
-                    is ReceiptRowState.Processed -> Unit // category display is temporarily hidden
+                    is ReceiptRowState.Processed -> Unit // pre-October 21 snapshot; see the category tag spec
                 }
             }
         }

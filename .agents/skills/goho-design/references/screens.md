@@ -17,7 +17,7 @@ List and details receipt options and deletion use the same supported server endp
 
 - Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ReceiptCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
-- Category display is temporarily hidden while its UX is reconsidered: processed rows show no tag beneath the price. Large-text/narrow layouts stack the right-aligned amount without squeezing the date.
+- Processed rows show the top-spend category beneath the price as a labelled `Tag`, plus a Grey `TagCount` (“+N”) when the receipt has other categories (see components.md, Category tags). Processing and Not processed rows keep their upload tag and show no category. Large-text/narrow layouts stack the right-aligned amount and tags without squeezing the date. Mockups: `category-list-light.png`, `category-list-dark.png`.
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
 - Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
 - Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
@@ -45,11 +45,11 @@ Two ways in, one sheet: press and hold any Processed or Not processed row, or ta
 **Items** (24 below the photo; only when the receipt has line items):
 
 - Header inset to `textInset`: "Items" (`section`, `textTertiary`), with no item count. 8dp below it, the ItemsCard.
-- Items appear in receipt order.
+- Items appear in receipt order. Item names use one line with an ellipsis for overflow at every font size. Each item row starts with a 24dp icon-only `CategoryIcon` for its category, 12dp before the name; the Total row has no icon. Vertically center the tag, name and amount in the row. Do not group or reorder items by category, and do not add a category breakdown card. Mockups: `category-details-light.png`, `category-details-dark.png`. Native captures: [light](../assets/mockups/category-items-native-light.png) and [dark](../assets/mockups/category-items-native-dark.png); loading and large-text checks are documented in the [mockup guide](../assets/mockups/README.md#receipt-item-category-icons-native-implementation).
 
 **Details** (24 below Items, or below the photo when there are no items): section label "Details", then a read-only DetailList:
 
-- Merchant, Date ("Sep 24, 2026"), Subtotal and Tax. The Category row is temporarily hidden with the rest of category display. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
+- Merchant, Date ("Sep 24, 2026"), Subtotal and Tax. There is no Category row; categories are shown on each item. Omit the separate Currency row, since the hero total already includes its currency code. Preserve Subtotal and Tax here as requested. Total appears in the hero and at the bottom of Items; when there are no items, put Total after Tax in Details instead.
 
 The screen scrolls; with items it is usually taller than one screen (about 980dp for the four-item example).
 
@@ -125,7 +125,7 @@ One Sheet, opened from the details screen's overflow button, by pressing and hol
 - Reuse `ReceiptSummary` rather than a separate sheet-header layout. The list wrapper supplies gestures and row padding; the sheet header is display-only.
 - Place it 18dp below the grabber with 20dp side padding. The content uses the list's 12dp thumbnail gap, 5dp line gap and standard typography.
 - Thumbnail: the same 40×48dp photo or receipt placeholder with 8dp corners and a 1dp outline.
-- First line: merchant on the left, amount and smaller currency code on the right (`rowTitle`, 16/22 Medium; code 12/16). Second line: the shared date/time formatting on the left (`meta`, 13/18), upload-status tag below the amount on the right when present; processed receipts show no category tag while category display is hidden.
+- First line: merchant on the left, amount and smaller currency code on the right (`rowTitle`, 16/22 Medium; code 12/16). Second line: the shared date/time formatting on the left (`meta`, 13/18), upload-status tag below the amount on the right when present; processed receipts show the same top-spend category `Tag` and `TagCount` as the list row.
 - Use the same icon, colour, label wrapping and 160dp tag maximum as the list.
 - At narrow widths or font scale ≥1.3, use the same stacked layout as the list: merchant, right-aligned amount/tag, then date. The sheet can grow and scroll.
 - Keep the summary mounted through menu, confirmation, deleting and failure states, whether opened from the list or Details.
