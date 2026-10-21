@@ -94,6 +94,9 @@ object GohoSpacing {
     val tagMaxWidth = 160.dp
     val categoryIcon = 24.dp
     val categoryIconGap = 12.dp
+    val breakdownRowVertical = 12.dp
+    val breakdownBarHeight = 3.dp
+    val breakdownBarGap = 8.dp
     val pillHeight = 22.dp
     val pillHorizontal = 9.dp
     val skeletonWidth = 52.dp

@@ -118,7 +118,8 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
 - Detail list row: min height 47, label left, value right.
-- Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item name. Vertically center the tag, name and amount in the row, with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
+- Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item or category name. In item rows, vertically center the tag, name and amount with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
+- Category breakdown (mirrored in native `Spacing.kt`): `breakdownRowVertical` = 12, `breakdownBarHeight` = 3, `breakdownBarGap` = 8. Rows reuse `cardPadding` = 16 horizontally; the bar uses `divider` for its track and the category `TagColor` content colour for its fill.
 - Tag: `tagHeight` = 24 minimum, `tagHorizontal` = 8, `tagVertical` = 4, `tagIcon` = 14, `tagIconGap` = 5. Standard rows use `tagMaxWidth` = 160; stacked layouts allow the available width and wrap long labels. All sizes remain theme tokens.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
