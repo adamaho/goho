@@ -8,8 +8,8 @@ import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.CreateReceiptRequest
-import com.adamaho.goho.api.generated.model.EffectHttpApiErrorInternalServerErrorEncoded
-import com.adamaho.goho.api.generated.model.EffectHttpApiErrorNotFoundEncoded
+import com.adamaho.goho.api.generated.model.InternalServerError
+import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.PatchReceiptItemRequest
 import com.adamaho.goho.api.generated.model.PatchReceiptRequest
 import com.adamaho.goho.api.generated.model.ReceiptsCreate200Response

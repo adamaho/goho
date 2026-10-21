@@ -34,21 +34,21 @@ import com.squareup.moshi.JsonClass
  */
 
 
-data class EffectHttpApiErrorConflictEncoded (
+data class BooksUnavailable (
 
     @Json(name = "_tag")
-    val tag: EffectHttpApiErrorConflictEncoded.Tag
+    val tag: BooksUnavailable.Tag
 
 ) {
 
     /**
      * 
      *
-     * Values: Conflict
+     * Values: BooksUnavailable
      */
     @JsonClass(generateAdapter = false)
     enum class Tag(val value: kotlin.String) {
-        @Json(name = "Conflict") Conflict("Conflict");
+        @Json(name = "BooksUnavailable") BooksUnavailable("BooksUnavailable");
     }
 
 }

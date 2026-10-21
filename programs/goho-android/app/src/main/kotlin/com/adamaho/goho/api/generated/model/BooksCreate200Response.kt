@@ -23,6 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.Book
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -30,26 +31,17 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param `data` 
  */
 
 
-data class EffectHttpApiErrorInternalServerErrorEncoded (
+data class BooksCreate200Response (
 
-    @Json(name = "_tag")
-    val tag: EffectHttpApiErrorInternalServerErrorEncoded.Tag
+    @Json(name = "data")
+    val `data`: Book
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: InternalServerError
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "InternalServerError") InternalServerError("InternalServerError");
-    }
 
 }
 

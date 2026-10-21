@@ -4,6 +4,7 @@ import { Effect, FileSystem, Layer, Schema } from "effect";
 import { HttpMiddleware, HttpRouter } from "effect/http";
 import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
 
+import * as Books from "./books/service.ts";
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
 
@@ -65,6 +66,15 @@ const ReceiptsLive = HttpApiBuilder.group(api, "receipts", (handlers) =>
   }),
 );
 
+const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
+  Effect.gen(function* () {
+    const books = yield* Books.Service;
+    return handlers.handle("create", ({ payload }) =>
+      books.create(payload).pipe(Effect.map(withData)),
+    );
+  }),
+);
+
 const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
   handlers.handle("check", () => Effect.succeed(withData({ status: "ok" as const }))),
 );
@@ -76,7 +86,7 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([ReceiptUploadsLive, ReceiptsLive, HealthLive]),
+  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, HealthLive]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),

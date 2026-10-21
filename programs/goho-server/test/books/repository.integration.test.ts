@@ -1,14 +1,20 @@
-import { NodeCrypto, NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeHttpServer, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
-import { BookId, type CreateBookRequest } from "@goho/goho-api/books";
-import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
+import { Book, BookId, type CreateBookRequest } from "@goho/goho-api/books";
+import * as Client from "@goho/goho-server-client/client";
+import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result, Schema } from "effect";
+import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
 import * as BookRepository from "#src/books/repository.ts";
+import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
+import * as Http from "#src/http.ts";
+import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
+import * as Receipts from "#src/receipts/service.ts";
 import { behindOpenTransaction } from "#test/helpers/locks.ts";
 
 const hobbit: CreateBookRequest = {
@@ -278,4 +284,54 @@ it.effect("deletes a book and keeps its category", () =>
     expect((yield* books.list("")).map(({ id }) => id)).toEqual([retained]);
     expect(yield* categoryNamed("fantasy")).toMatchObject({ kinds: ["book"] });
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+const HttpDatabaseLive = HttpRouter.serve(
+  Http.layer.pipe(
+    Layer.provide([
+      Books.layer,
+      Layer.mock(Receipts.Service, {}),
+      Layer.mock(ReceiptUploads.Service, {}),
+    ]),
+  ),
+).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));
+
+it.effect("serves saved books over HTTP with one Book shape", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    // The typed client encodes already-trimmed values, so wire trimming uses a raw request.
+    const created = yield* HttpClient.post("/books", {
+      body: yield* HttpBody.json({
+        title: "  The Hobbit ",
+        author: "J. R. R. Tolkien",
+        category: " Fiction ",
+        readingLevel: "Grade 4",
+      }),
+    });
+    expect(created.status).toBe(200);
+    const { data: book } = yield* created.json.pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(Schema.Struct({ data: Book }))),
+    );
+    const expected = {
+      id: book.id,
+      title: "The Hobbit",
+      author: "J. R. R. Tolkien",
+      category: yield* categoryNamed("fiction"),
+      readingLevel: "Grade 4",
+      hasImage: false,
+    };
+    expect(book).toEqual(expected);
+    // A duplicate returns the saved book as it is and adds no category.
+    expect(
+      yield* client.books.create({
+        payload: { title: "the hobbit", author: "j. r. r. tolkien", category: "Poetry" },
+      }),
+    ).toEqual({ data: expected });
+    expect(yield* categoryNamed("poetry")).toBeUndefined();
+
+    const { data: other } = yield* client.books.create({
+      payload: { title: "The Silmarillion", author: "J. R. R. Tolkien", category: "Fiction" },
+    });
+    expect(other.readingLevel).toBeNull();
+  }).pipe(Effect.provide(HttpDatabaseLive)),
 );

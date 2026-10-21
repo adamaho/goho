@@ -16,6 +16,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
+import * as Books from "#src/books/service.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
@@ -108,6 +109,7 @@ const testLayer = (
           ]),
         ),
         receiptUploadsTest(receiptUploads),
+        Layer.mock(Books.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
@@ -376,6 +378,7 @@ it.effect(
                 patchItem: () => Effect.die("Health must not rename items"),
               }),
               receiptUploadsTest(),
+              Layer.mock(Books.Service, {}),
             ]),
           ),
         ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),

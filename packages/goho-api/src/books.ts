@@ -163,18 +163,34 @@ export const Book = Schema.Struct({
  */
 export interface Book extends Schema.Schema.Type<typeof Book> {}
 
+// Errors name their wire schema; `Schema.TaggedError` cannot, so OpenAPI would
+// call it `…Encoded`.
+
 /**
  * A correction would give a book the title and author of another saved book.
  *
  * @category errors
  * @since 0.1.0
  */
-export class BookConflict extends Schema.TaggedError<BookConflict>()(
-  "BookConflict",
-  {},
+export class BookConflict extends Schema.Error<BookConflict>("BookConflict")(
+  Schema.TaggedStruct("BookConflict", {}).annotate({ identifier: "BookConflict" }),
   {
     httpApiStatus: 409,
     description:
       "Another book on the roster already has that title and author. Nothing changed and nothing merged.",
+  },
+) {}
+
+/**
+ * Books could not be read or saved; details stay in the server logs.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BooksUnavailable extends Schema.Error<BooksUnavailable>("BooksUnavailable")(
+  Schema.TaggedStruct("BooksUnavailable", {}).annotate({ identifier: "BooksUnavailable" }),
+  {
+    httpApiStatus: 500,
+    description: "The server could not get to the book roster. Nothing changed; take another shot.",
   },
 ) {}

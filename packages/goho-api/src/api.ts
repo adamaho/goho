@@ -9,6 +9,7 @@ import {
   OpenApi,
 } from "effect/http-api";
 
+import { Book, BooksUnavailable, CreateBookRequest } from "./books.ts";
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
@@ -34,6 +35,13 @@ const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema })
 // Corrections reject unsupported fields so a mixed payload never partly saves.
 const strictPayload = { onExcessProperty: "error" } as const;
 
+// Built-in error bodies have no name of their own, so OpenAPI would call them `…Encoded`.
+const NotFound = HttpApiError.NotFound.pipe(Schema.annotateEncoded({ identifier: "NotFound" }));
+const Conflict = HttpApiError.Conflict.pipe(Schema.annotateEncoded({ identifier: "Conflict" }));
+const InternalServerError = HttpApiError.InternalServerError.pipe(
+  Schema.annotateEncoded({ identifier: "InternalServerError" }),
+);
+
 // API groups
 
 /**
@@ -47,7 +55,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud.",
   )
   .add(
     // Health
@@ -84,7 +92,7 @@ export const api = HttpApi.make("goho-server")
             HttpApiError.BadRequestNoContent.annotate({
               description: "The upload is missing a supported receipt image.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not store or queue the receipt image.",
             }),
           ],
@@ -99,7 +107,7 @@ export const api = HttpApi.make("goho-server")
         HttpApiEndpoint.get("list", "/receipt-uploads", {
           success: DataResponse(Schema.Array(ReceiptUpload)),
           error: [
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not pull the uploads off the bench.",
             }),
           ],
@@ -118,14 +126,14 @@ export const api = HttpApi.make("goho-server")
             HttpApiError.BadRequestNoContent.annotate({
               description: "The upload ID is not a version 4 UUID; the response body stays empty.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
-            HttpApiError.Conflict.annotate({
+            Conflict.annotate({
               description:
                 "Only failed uploads can be deleted; this upload has a different status.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not delete this upload and its stored image.",
             }),
           ],
@@ -144,10 +152,10 @@ export const api = HttpApi.make("goho-server")
             HttpApiError.BadRequestNoContent.annotate({
               description: "The upload ID is not a version 4 UUID; the response body stays empty.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not retrieve this receipt upload.",
             }),
           ],
@@ -169,7 +177,7 @@ export const api = HttpApi.make("goho-server")
             }),
           ),
           error: [
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not pull the receipts off the bench.",
             }),
           ],
@@ -189,10 +197,10 @@ export const api = HttpApi.make("goho-server")
               description:
                 "The receipt ID is malformed or out of range; the response body stays empty.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not retrieve this receipt.",
             }),
           ],
@@ -212,10 +220,10 @@ export const api = HttpApi.make("goho-server")
               description:
                 "The receipt ID is malformed or out of range; the response body stays empty.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not delete this receipt and its stored image.",
             }),
           ],
@@ -243,10 +251,10 @@ export const api = HttpApi.make("goho-server")
               description:
                 "The receipt ID is malformed or out of range; the response body stays empty.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No scanned image is linked to this receipt, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not retrieve this receipt image.",
             }),
           ],
@@ -265,7 +273,7 @@ export const api = HttpApi.make("goho-server")
             HttpApiError.BadRequestNoContent.annotate({
               description: "The payload is a bad pass; the response body stays empty.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "Receipt validation or persistence missed the net.",
             }),
           ],
@@ -286,10 +294,10 @@ export const api = HttpApi.make("goho-server")
               description:
                 "The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not save this correction; nothing changed.",
             }),
           ],
@@ -311,10 +319,10 @@ export const api = HttpApi.make("goho-server")
               description:
                 "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
             }),
-            HttpApiError.NotFound.annotate({
+            NotFound.annotate({
               description: "That receipt has no item wearing this number, bud.",
             }),
-            HttpApiError.InternalServerError.annotate({
+            InternalServerError.annotate({
               description: "The server could not save this correction; nothing changed.",
             }),
           ],
@@ -324,6 +332,30 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.",
+          ),
+      ),
+    // Books
+    HttpApiGroup.make("books")
+      .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .add(
+        HttpApiEndpoint.post("create", "/books", {
+          payload: CreateBookRequest,
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.",
+            }),
+            BooksUnavailable.annotate({
+              description: "The server could not save this book; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Add a book")
+          .annotate(
+            OpenApi.Description,
+            "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
           ),
       ),
   );
