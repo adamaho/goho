@@ -4,8 +4,10 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import { FileId } from "#src/file-storage.ts";
+import * as QueueConstants from "#src/queues/constants.ts";
 
-import { BookUpload, QueuedBookUpload } from "./model.ts";
+import { type BookExtraction, BookUpload, QueuedBookUpload } from "./model.ts";
+import * as BookUploadQueue from "./queue.ts";
 
 /**
  * Unexpected failure while validating or persisting a cover upload.
@@ -74,10 +76,28 @@ export interface Interface {
     uploadId: BookUploadId,
   ) => Effect.Effect<Option.Option<BookUpload>, PersistenceError>;
   readonly markProcessing: (uploadId: BookUploadId) => Effect.Effect<BookUpload, TransitionError>;
+  /**
+   * Links a processing upload to its book and records the extraction. The upload
+   * becomes the book's cover only when the book has none, so a later or slower
+   * scan never replaces it. Locks the book first, which serializes this choice
+   * with other scans and with book deletion; fails, changing nothing, when the
+   * book no longer exists. Joins the caller's transaction as a savepoint.
+   */
+  readonly markSucceeded: (
+    uploadId: BookUploadId,
+    bookId: BookId,
+    extraction: BookExtraction,
+  ) => Effect.Effect<BookUpload, TransitionError>;
   readonly markFailed: (
     uploadId: BookUploadId,
     failureCode: BookUploadFailureCode,
   ) => Effect.Effect<BookUpload, TransitionError>;
+  /**
+   * Marks queued or processing uploads failed with `internal_error` when their
+   * queue job has already failed, and returns the uploads it changed. Requires
+   * the queue table, which the queue layer creates.
+   */
+  readonly markAbandonedFailed: Effect.Effect<ReadonlyArray<BookUpload>, PersistenceError>;
 }
 
 /**
@@ -178,6 +198,35 @@ export const layer = Layer.effect(
       `,
     });
 
+    const lockBook = SqlSchema.findOneOption({
+      Request: BookId,
+      Result: Schema.Struct({ id: BookId }),
+      execute: (bookId) => sql`SELECT id::text AS id FROM books WHERE id = ${bookId} FOR UPDATE`,
+    });
+
+    // A separate statement after the lock sees any cover committed while waiting
+    // for it; one statement would keep the snapshot from before the wait.
+    const updateToSucceeded = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        uploadId: BookUploadId,
+        bookId: BookId,
+        extractionVersion: Schema.Int,
+        extractedPayload: Schema.String,
+      }),
+      Result: BookUploadRow,
+      execute: (request) => sql`
+        UPDATE book_uploads
+        SET status = 'succeeded', book_id = ${request.bookId},
+          is_cover = NOT EXISTS (
+            SELECT 1 FROM book_uploads WHERE book_id = ${request.bookId} AND is_cover
+          ),
+          extraction_version = ${request.extractionVersion},
+          extracted_payload = ${request.extractedPayload}::jsonb
+        WHERE id = ${request.uploadId} AND status = 'processing'
+        RETURNING ${columns}
+      `,
+    });
+
     const updateToFailed = SqlSchema.findOneOption({
       Request: Schema.Struct({ uploadId: BookUploadId, failureCode: BookUploadFailureCode }),
       Result: BookUploadRow,
@@ -185,6 +234,21 @@ export const layer = Layer.effect(
         UPDATE book_uploads
         SET status = 'failed', failure_code = ${request.failureCode}
         WHERE id = ${request.uploadId} AND status IN ('queued', 'processing')
+        RETURNING ${columns}
+      `,
+    });
+
+    const updateAbandonedToFailed = SqlSchema.findAll({
+      Request: Schema.Void,
+      Result: BookUploadRow,
+      execute: () => sql`
+        UPDATE book_uploads
+        SET status = 'failed', failure_code = 'internal_error'
+        WHERE status IN ('queued', 'processing')
+        AND id::text IN (
+          SELECT id FROM ${sql(QueueConstants.tableName)}
+          WHERE queue_name = ${BookUploadQueue.name} AND state = 'failed'
+        )
         RETURNING ${columns}
       `,
     });
@@ -242,9 +306,46 @@ export const layer = Layer.effect(
         transition("markProcessing", uploadId, "processing", updateToProcessing(uploadId)),
     );
 
+    const markSucceeded = Effect.fn("@goho/BookUploadRepository.markSucceeded")(
+      (uploadId: BookUploadId, bookId: BookId, extraction: BookExtraction) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const locked = yield* lockBook(bookId).pipe(persistenceError("markSucceeded"));
+            if (Option.isNone(locked)) {
+              return yield* new PersistenceError({
+                operation: "markSucceeded",
+                cause: `Book ${bookId} was deleted before the upload succeeded`,
+              });
+            }
+            return yield* transition(
+              "markSucceeded",
+              uploadId,
+              "succeeded",
+              updateToSucceeded({
+                uploadId,
+                bookId,
+                extractionVersion: extraction.version,
+                extractedPayload: JSON.stringify(extraction.payload),
+              }),
+            );
+          }),
+        ),
+      Effect.catchTag("SqlError", (cause) =>
+        Effect.fail(new PersistenceError({ operation: "markSucceeded", cause })),
+      ),
+    );
+
     const markFailed = Effect.fn("@goho/BookUploadRepository.markFailed")(
       (uploadId: BookUploadId, failureCode: BookUploadFailureCode) =>
         transition("markFailed", uploadId, "failed", updateToFailed({ uploadId, failureCode })),
+    );
+
+    // The queue does not redeliver failed jobs, so their unfinished uploads need
+    // reconciling. The status guard leaves uploads a running worker already finished.
+    const markAbandonedFailed = updateAbandonedToFailed(undefined).pipe(
+      Effect.map((rows) => rows.map(fromRow)),
+      persistenceError("markAbandonedFailed"),
+      Effect.withSpan("@goho/BookUploadRepository.markAbandonedFailed"),
     );
 
     return Service.of({
@@ -252,8 +353,10 @@ export const layer = Layer.effect(
       deleteFailed,
       findById,
       list,
+      markAbandonedFailed,
       markFailed,
       markProcessing,
+      markSucceeded,
     });
   }),
 );

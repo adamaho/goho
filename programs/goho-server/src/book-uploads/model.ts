@@ -7,6 +7,7 @@ import {
 import { BookId } from "@goho/goho-api/books";
 import { Schema } from "effect";
 
+import type { ParsedBook } from "#src/books/extraction.ts";
 import { FileId } from "#src/file-storage.ts";
 import { NonEmptyText } from "#src/schema.ts";
 
@@ -53,3 +54,14 @@ export const BookUpload = Schema.Struct({
  * @since 0.1.0
  */
 export interface BookUpload extends Schema.Schema.Type<typeof BookUpload> {}
+
+/**
+ * Extraction result recorded when a cover upload succeeds.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface BookExtraction {
+  readonly version: number;
+  readonly payload: ParsedBook;
+}

@@ -3,7 +3,7 @@
   "info": {
     "title": "Goho API",
     "version": "0.0.0",
-    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud."
+    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud."
   },
   "paths": {
     "/health": {
@@ -1128,7 +1128,7 @@
             }
           },
           "500": {
-            "description": "The server could not delete this book; nothing changed.",
+            "description": "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1138,7 +1138,7 @@
             }
           }
         },
-        "description": "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+        "description": "Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.",
         "summary": "Delete a book"
       }
     },
@@ -1569,7 +1569,7 @@
           },
           "hasImage": {
             "type": "boolean",
-            "description": "Whether a cover image is on file."
+            "description": "Whether a cover image is on file; the first scan of a book without one adds it."
           }
         },
         "required": ["id", "title", "author", "category", "readingLevel", "hasImage"],
@@ -2235,7 +2235,7 @@
     },
     {
       "name": "books",
-      "description": "One shared roster of unique books, entered by hand."
+      "description": "One shared roster of unique books, entered by hand or saved from cover scans."
     },
     {
       "name": "bookUploads",

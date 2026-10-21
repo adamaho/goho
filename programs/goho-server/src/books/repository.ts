@@ -1,3 +1,4 @@
+import { BookUploadContentType } from "@goho/goho-api/book-uploads";
 import {
   Book,
   BookConflict,
@@ -10,6 +11,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import * as CategoryRepository from "#src/categories/repository.ts";
+import { FileId } from "#src/file-storage.ts";
 
 /**
  * Expected failure while reading or saving books.
@@ -60,8 +62,29 @@ export interface Interface {
     bookId: BookId,
     changes: PatchBookRequest,
   ) => Effect.Effect<Option.Option<Book>, BookConflict | PersistenceError>;
-  /** Deletes the book; false when it does not exist. Its category stays. */
-  readonly delete: (bookId: BookId) => Effect.Effect<boolean, PersistenceError>;
+  /** The stored file and MIME type of the book's cover; none without one or a book. */
+  readonly findCover: (bookId: BookId) => Effect.Effect<Option.Option<Cover>, PersistenceError>;
+  /**
+   * Deletes the book with all its uploads and returns their file IDs for the
+   * caller to remove before committing; none when the book does not exist. Its
+   * category stays. The book is locked before its uploads are collected, so a
+   * scan succeeding concurrently either finishes first and is collected or finds
+   * the book gone.
+   */
+  readonly delete: (
+    bookId: BookId,
+  ) => Effect.Effect<Option.Option<ReadonlyArray<FileId>>, PersistenceError>;
+}
+
+/**
+ * Stored cover image of a book.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface Cover {
+  readonly fileId: FileId;
+  readonly contentType: BookUploadContentType;
 }
 
 /**
@@ -93,14 +116,17 @@ export const layer = Layer.effect(
     const categories = yield* CategoryRepository.Service;
 
     // Each book with its category as the API object; text IDs keep their precision
-    // in JSON. Covers arrive with book uploads; until then no book has one.
+    // in JSON. A book's cover is the one upload marked as it.
     const selectBooks = sql.literal(`
       SELECT b.id::text AS id, b.title, b.author,
         jsonb_build_object(
           'id', c.id::text, 'name', c.name, 'icon', c.icon, 'color', c.color,
           'kinds', to_jsonb(c.kinds)
         ) AS category,
-        b.reading_level AS "readingLevel", false AS "hasImage"
+        b.reading_level AS "readingLevel",
+        EXISTS (
+          SELECT 1 FROM book_uploads u WHERE u.book_id = b.id AND u.is_cover
+        ) AS "hasImage"
       FROM books b JOIN categories c ON c.id = b.category_id
     `);
 
@@ -240,17 +266,47 @@ export const layer = Layer.effect(
       ),
     );
 
-    const deleteRow = SqlSchema.findOneOption({
+    const selectCover = SqlSchema.findOneOption({
       Request: BookId,
-      Result: IdRow,
-      execute: (bookId) => sql`DELETE FROM books WHERE id = ${bookId} RETURNING id::text AS id`,
+      Result: Schema.Struct({ fileId: FileId, contentType: BookUploadContentType }),
+      execute: (bookId) => sql`
+        SELECT file_id AS "fileId", content_type AS "contentType"
+        FROM book_uploads WHERE book_id = ${bookId} AND is_cover
+      `,
+    });
+
+    const findCover = Effect.fn("@goho/BookRepository.findCover")(
+      selectCover,
+      Effect.mapError((cause) => new PersistenceError({ operation: "findCover", cause })),
+    );
+
+    const deleteUploads = SqlSchema.findAll({
+      Request: BookId,
+      Result: Schema.Struct({ file_id: FileId }),
+      execute: (bookId) =>
+        sql`DELETE FROM book_uploads WHERE book_id = ${bookId} RETURNING file_id`,
+    });
+
+    const deleteRow = SqlSchema.void({
+      Request: BookId,
+      execute: (bookId) => sql`DELETE FROM books WHERE id = ${bookId}`,
     });
 
     const deleteBook = Effect.fn("@goho/BookRepository.deleteBook")(
-      (bookId: BookId) => deleteRow(bookId).pipe(Effect.map(Option.isSome)),
+      (bookId: BookId) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            // Serializes with scans choosing this book's cover, and keeps the file
+            // IDs until the caller's transaction commits.
+            if (Option.isNone(yield* lockBook(bookId))) return Option.none();
+            const uploads = yield* deleteUploads(bookId);
+            yield* deleteRow(bookId);
+            return Option.some(uploads.map((upload) => upload.file_id));
+          }),
+        ),
       Effect.mapError((cause) => new PersistenceError({ operation: "delete", cause })),
     );
 
-    return Service.of({ delete: deleteBook, findById, findOrCreate, list, update });
+    return Service.of({ delete: deleteBook, findById, findCover, findOrCreate, list, update });
   }),
 );
