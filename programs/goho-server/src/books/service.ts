@@ -2,6 +2,7 @@ import {
   type Book,
   type BookConflict,
   type BookId,
+  BookImageNotFound,
   BookNotFound,
   BooksUnavailable,
   type CreateBookRequest,
@@ -48,10 +49,16 @@ export interface Interface {
    * retry, while files already removed stay removed.
    */
   readonly delete: (bookId: BookId) => Effect.Effect<void, BookNotFound | BooksUnavailable>;
+  readonly getImage: (
+    bookId: BookId,
+  ) => Effect.Effect<
+    { readonly bytes: Uint8Array; readonly contentType: string },
+    BookImageNotFound | BooksUnavailable
+  >;
 }
 
 /**
- * Creates, lists, retrieves, corrects, and deletes books.
+ * Creates, lists, retrieves, corrects, and deletes books, and serves their covers.
  *
  * @category models
  * @since 0.1.0
@@ -124,6 +131,19 @@ export const layer = Layer.effect(
       }),
     );
 
-    return Service.of({ create, delete: deleteBook, get, list, patch });
+    const getImage = Effect.fn("@goho/BookService.getImage")(
+      function* (bookId: BookId) {
+        const cover = yield* repository.findCover(bookId);
+        if (Option.isNone(cover)) return yield* new BookImageNotFound();
+        const bytes = yield* storage.get(cover.value.fileId);
+        return { bytes, contentType: cover.value.contentType };
+      },
+      Effect.catchTags({
+        "GohoServer.BookRepository.PersistenceError": unavailable("Book cover lookup failed"),
+        "GohoServer.FileStorage.StorageError": unavailable("Book cover retrieval failed"),
+      }),
+    );
+
+    return Service.of({ create, delete: deleteBook, get, getImage, list, patch });
   }),
 );

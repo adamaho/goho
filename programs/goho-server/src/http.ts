@@ -108,7 +108,17 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
       .handle("patch", ({ params, payload }) =>
         books.patch(params.bookId, payload).pipe(Effect.map(withData)),
       )
-      .handle("delete", ({ params }) => books.delete(params.bookId));
+      .handle("delete", ({ params }) => books.delete(params.bookId))
+      .handle("getImage", ({ params }) =>
+        books.getImage(params.bookId).pipe(
+          Effect.map(({ bytes, contentType }) =>
+            HttpApiSchema.withHeaders({
+              body: bytes,
+              headers: { "content-type": contentType, "cache-control": "private, no-store" },
+            }),
+          ),
+        ),
+      );
   }),
 );
 

@@ -4,9 +4,11 @@ import com.adamaho.goho.api.generated.infrastructure.CollectionFormats.*
 import retrofit2.http.*
 import retrofit2.Response
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BookConflict
+import com.adamaho.goho.api.generated.model.BookImageNotFound
 import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
 import com.adamaho.goho.api.generated.model.BooksGet200Response
@@ -62,6 +64,22 @@ interface BooksApi {
      */
     @GET("books/{bookId}")
     suspend fun booksGet(@Path("bookId") bookId: kotlin.String): Response<BooksGet200Response>
+
+    /**
+     * GET books/{bookId}/image
+     * Get a book cover image
+     * Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 404: No cover is on file for that book number, bud.
+     *  - 500: The server could not retrieve this cover image.
+     *
+     * @param bookId 
+     * @return [ResponseBody]
+     */
+    @GET("books/{bookId}/image")
+    suspend fun booksGetImage(@Path("bookId") bookId: kotlin.String): Response<ResponseBody>
 
     /**
      * GET books

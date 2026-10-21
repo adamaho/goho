@@ -157,6 +157,9 @@ is a different book.
   matches literally, and a blank search lists every book. Sending `search` more
   than once returns HTTP 400.
 - `GET /books/:bookId` returns one book.
+- `GET /books/:bookId/image` returns the cover's bytes with its MIME type and
+  `Cache-Control: private, no-store`. A book without a cover, or a missing book,
+  returns HTTP 404 with `{"_tag":"BookImageNotFound"}`.
 - `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
   `readingLevel`; omitted fields keep their values and `null` clears the reading
   level. Taking another book's title and author returns HTTP 409 with

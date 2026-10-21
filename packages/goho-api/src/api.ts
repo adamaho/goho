@@ -20,6 +20,7 @@ import {
   Book,
   BookConflict,
   BookId,
+  BookImageNotFound,
   BookNotFound,
   BooksUnavailable,
   CreateBookRequest,
@@ -47,6 +48,14 @@ const ImageUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).p
     maxTotalSize: "21 megabytes",
   }),
 );
+
+const ImageResponse = HttpApiSchema.WithHeaders(
+  Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" })),
+  Schema.Struct({
+    "content-type": Schema.String,
+    "cache-control": Schema.String,
+  }),
+).annotate({ httpApiStatus: 200 });
 
 // Corrections reject unsupported fields so a mixed payload never partly saves.
 const strictPayload = { onExcessProperty: "error" } as const;
@@ -253,15 +262,7 @@ export const api = HttpApi.make("goho-server")
       .add(
         HttpApiEndpoint.get("getImage", "/receipts/:receiptId/image", {
           params: { receiptId: ReceiptId },
-          success: HttpApiSchema.WithHeaders(
-            Schema.Uint8Array.pipe(
-              HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }),
-            ),
-            Schema.Struct({
-              "content-type": Schema.String,
-              "cache-control": Schema.String,
-            }),
-          ).annotate({ httpApiStatus: 200 }),
+          success: ImageResponse,
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
@@ -469,6 +470,27 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("getImage", "/books/:bookId/image", {
+          params: { bookId: BookId },
+          success: ImageResponse,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookImageNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not retrieve this cover image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a book cover image")
+          .annotate(
+            OpenApi.Description,
+            "Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.",
           ),
       ),
     // Book uploads
