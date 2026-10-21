@@ -39,6 +39,7 @@ interface ReceiptsApi {
      * Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
+     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
      *  - 404: No receipt is wearing that number, bud.
      *  - 500: The server could not delete this receipt and its stored image.
      *
@@ -54,6 +55,7 @@ interface ReceiptsApi {
      * Brings back one saved receipt with its items lined up by position.
      * Responses:
      *  - 200: Success
+     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
      *  - 404: No receipt is wearing that number, bud.
      *  - 500: The server could not retrieve this receipt.
      *
@@ -69,6 +71,7 @@ interface ReceiptsApi {
      * Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.
      * Responses:
      *  - 200: Success
+     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
      *  - 404: No scanned image is linked to this receipt, bud.
      *  - 500: The server could not retrieve this receipt image.
      *

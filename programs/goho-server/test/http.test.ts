@@ -220,13 +220,6 @@ it.effect("returns HTTP 404 when a receipt has no uploaded image", () =>
   ),
 );
 
-it.effect("rejects malformed receipt IDs for image retrieval", () =>
-  Effect.gen(function* () {
-    const response = yield* HttpClient.get("/receipts/not-an-integer/image");
-    expect(response.status).toBe(400);
-  }).pipe(Effect.provide(TestLive)),
-);
-
 it.effect("returns HTTP 404 when a receipt upload does not exist", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(`/receipt-uploads/${receiptUpload.id}`);
@@ -250,13 +243,39 @@ it.effect("returns HTTP 404 when a receipt does not exist", () =>
   }).pipe(Effect.provide(testLayer({ findById: () => Effect.succeedNone }))),
 );
 
-it.effect("rejects malformed and overlong receipt IDs at the HTTP boundary", () =>
+it.effect("rejects malformed and out-of-range receipt IDs on every receipt route", () =>
   Effect.gen(function* () {
-    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
-      const response = yield* HttpClient.get(`/receipts/${id}`);
-      expect(response.status).toBe(400);
+    const receiptChange = yield* HttpBody.json({ storeName: "Corner Store" });
+    const itemChange = yield* HttpBody.json({ name: "Pears" });
+    for (const id of [
+      "not-an-integer",
+      "0",
+      "-1",
+      "01",
+      "9223372036854775808",
+      "10000000000000000000",
+    ]) {
+      for (const [route, request] of [
+        ["get", HttpClient.get(`/receipts/${id}`)],
+        ["getImage", HttpClient.get(`/receipts/${id}/image`)],
+        ["delete", HttpClient.del(`/receipts/${id}`)],
+        ["patch", HttpClient.patch(`/receipts/${id}`, { body: receiptChange })],
+        ["patchItem", HttpClient.patch(`/receipts/${id}/items/${itemId}`, { body: itemChange })],
+      ] as const) {
+        expect((yield* request).status, `${route} ${id}`).toBe(400);
+      }
     }
-  }).pipe(Effect.provide(TestLive)),
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        {
+          findById: () => Effect.die("Must not get"),
+          delete: () => Effect.die("Must not delete"),
+        },
+        { getImage: () => Effect.die("Must not get image") },
+      ),
+    ),
+  ),
 );
 
 it.effect("returns HTTP 500 without exposing receipt listing failure details", () =>
@@ -406,14 +425,6 @@ it.effect("returns HTTP 404 when deleting a missing receipt", () =>
   }).pipe(Effect.provide(testLayer({ delete: () => Effect.succeedNone }))),
 );
 
-it.effect("rejects malformed receipt IDs before deleting anything", () =>
-  Effect.gen(function* () {
-    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
-      expect((yield* HttpClient.del(`/receipts/${id}`)).status).toBe(400);
-    }
-  }).pipe(Effect.provide(testLayer({ delete: () => Effect.die("Must not delete") }))),
-);
-
 it.effect("returns HTTP 500 without exposing database deletion failure details", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.del(`/receipts/${receipt.id}`);
@@ -487,10 +498,18 @@ it.effect(
   },
 );
 
-it.effect("rejects malformed upload IDs before deletion", () =>
+it.effect("rejects malformed upload IDs before lookup or deletion", () =>
   Effect.gen(function* () {
+    expect((yield* HttpClient.get("/receipt-uploads/not-a-uuid")).status).toBe(400);
     expect((yield* HttpClient.del("/receipt-uploads/not-a-uuid")).status).toBe(400);
-  }).pipe(Effect.provide(testLayer({}, { delete: () => Effect.die("Must not delete") }))),
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        {},
+        { get: () => Effect.die("Must not get"), delete: () => Effect.die("Must not delete") },
+      ),
+    ),
+  ),
 );
 
 it.effect("returns the documented status for missing, non-failed, and unavailable uploads", () =>
@@ -596,14 +615,15 @@ it.effect("corrects an item by ID through the generated client and returns only 
         yield* client.receipts.patchItem({ params: { receiptId: receipt.id, itemId }, payload }),
       ).toEqual({ data: { ...receipt.items[0], ...saved } });
     }
-    // The largest PostgreSQL bigint stays exact text end to end.
-    const response = yield* HttpClient.patch(`/receipts/${receipt.id}/items/9223372036854775807`, {
+    // The largest PostgreSQL bigint stays exact text end to end for both IDs.
+    const maxId = "9223372036854775807";
+    const response = yield* HttpClient.patch(`/receipts/${maxId}/items/${maxId}`, {
       body: yield* HttpBody.json({ name: "  Granny Smith apples  ", category: " Snacks " }),
     });
     expect(response.status).toBe(200);
     expect(yield* response.json).toStrictEqual({
       data: {
-        id: "9223372036854775807",
+        id: maxId,
         position: 0,
         name: "Granny Smith apples",
         amount: "11",
@@ -615,8 +635,8 @@ it.effect("corrects an item by ID through the generated client and returns only 
       { receiptId: receipt.id, itemId, changes: { category: "Snacks" } },
       { receiptId: receipt.id, itemId, changes: { name: "Pears", category: "Snacks" } },
       {
-        receiptId: receipt.id,
-        itemId: "9223372036854775807",
+        receiptId: maxId,
+        itemId: maxId,
         changes: { name: "Granny Smith apples", category: "Snacks" },
       },
     ]);
@@ -666,12 +686,6 @@ it.effect("rejects empty, unsupported, mixed, null, and invalid receipt correcti
       body: HttpBody.text("{", "application/json"),
     });
     expect(unparsable.status).toBe(400);
-    for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
-      const response = yield* HttpClient.patch(`/receipts/${id}`, {
-        body: yield* HttpBody.json({ storeName: "Corner Store" }),
-      });
-      expect(response.status).toBe(400);
-    }
     expect(recorded.updates).toEqual([]);
   }).pipe(Effect.provide(testLayer(recorded.repository)));
 });
@@ -724,12 +738,6 @@ it.effect(
         });
         expect(response.status, id).toBe(400);
         expect(yield* response.text).toBe("");
-      }
-      for (const id of ["not-an-integer", "0", "10000000000000000000"]) {
-        const response = yield* HttpClient.patch(`/receipts/${id}/items/${itemId}`, {
-          body: yield* HttpBody.json({ name: "Pears" }),
-        });
-        expect(response.status).toBe(400);
       }
       expect(recorded.itemUpdates).toEqual([]);
     }).pipe(Effect.provide(testLayer(recorded.repository)));

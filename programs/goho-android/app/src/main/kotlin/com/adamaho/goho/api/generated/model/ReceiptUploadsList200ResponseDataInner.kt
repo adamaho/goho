@@ -34,7 +34,7 @@ import com.squareup.moshi.JsonClass
  * @param fileName 
  * @param contentType 
  * @param status 
- * @param receiptId The receipt's positive number on the roster, bud.
+ * @param receiptId The receipt's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.
  * @param failureCode 
  * @param createdAt 
  * @param updatedAt 
@@ -55,7 +55,7 @@ data class ReceiptUploadsList200ResponseDataInner (
     @Json(name = "status")
     val status: ReceiptUploadsList200ResponseDataInner.Status,
 
-    /* The receipt's positive number on the roster, bud. */
+    /* The receipt's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud. */
     @Json(name = "receiptId")
     val receiptId: kotlin.String?,
 

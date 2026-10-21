@@ -79,7 +79,7 @@ export const api = HttpApi.make("goho-server")
       .add(
         HttpApiEndpoint.post("create", "/receipt-uploads", {
           payload: ReceiptUploadPayload,
-          success: DataResponse(ReceiptUpload).pipe(HttpApiSchema.status(202)),
+          success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description: "The upload is missing a supported receipt image.",
@@ -115,6 +115,9 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: HttpApiSchema.NoContent,
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
             HttpApiError.NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
@@ -138,6 +141,9 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: DataResponse(ReceiptUpload),
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
             HttpApiError.NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
@@ -179,6 +185,10 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: DataResponse(Receipt),
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The receipt ID is malformed or out of range; the response body stays empty.",
+            }),
             HttpApiError.NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -198,6 +208,10 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: HttpApiSchema.NoContent,
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The receipt ID is malformed or out of range; the response body stays empty.",
+            }),
             HttpApiError.NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -223,8 +237,12 @@ export const api = HttpApi.make("goho-server")
               "content-type": Schema.String,
               "cache-control": Schema.String,
             }),
-          ),
+          ).annotate({ httpApiStatus: 200 }),
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The receipt ID is malformed or out of range; the response body stays empty.",
+            }),
             HttpApiError.NotFound.annotate({
               description: "No scanned image is linked to this receipt, bud.",
             }),

@@ -139,19 +139,30 @@ export const CreateReceiptRequest = Schema.Struct({
  */
 export interface CreateReceiptRequest extends Schema.Schema.Type<typeof CreateReceiptRequest> {}
 
+const maxId = 9_223_372_036_854_775_807n;
+
+const BigintId = Schema.String.check(
+  // Abort on a bad format so `BigInt` never sees non-digits, even with `errors: "all"`.
+  Schema.isPattern(/^[1-9]\d{0,18}$/u).abort(),
+  Schema.makeFilter((value) => BigInt(value) <= maxId, {
+    expected: `an ID no greater than ${maxId}`,
+    // JSON Schema has no numeric bound for strings; the description states the range.
+    toJsonSchema: () => ({}),
+  }),
+);
+
 /**
- * Persisted receipt identity.
+ * Persisted receipt identity: canonical positive decimal text within
+ * PostgreSQL `bigint` range, kept as a string so clients cannot round it.
  *
  * @category models
  * @since 0.1.0
  */
-export const ReceiptId = Schema.String.check(Schema.isPattern(/^[1-9]\d{0,18}$/u))
-  .annotate({
-    identifier: "ReceiptId",
-    description: "The receipt's positive number on the roster, bud.",
-    examples: ["42"],
-  })
-  .pipe(Schema.brand("ReceiptId"));
+export const ReceiptId = BigintId.annotate({
+  identifier: "ReceiptId",
+  description: `The receipt's positive number on the roster, from 1 through ${maxId} without leading zeros, bud.`,
+  examples: ["42"],
+}).pipe(Schema.brand("ReceiptId"));
 
 /**
  * Decoded persisted receipt identity.
@@ -217,8 +228,6 @@ export interface PatchReceiptItemRequest extends Schema.Schema.Type<
   typeof PatchReceiptItemRequest
 > {}
 
-const maxItemId = 9_223_372_036_854_775_807n;
-
 /**
  * Persisted receipt item identity: canonical positive decimal text within
  * PostgreSQL `bigint` range, kept as a string so clients cannot round it.
@@ -226,20 +235,11 @@ const maxItemId = 9_223_372_036_854_775_807n;
  * @category models
  * @since 0.1.0
  */
-export const ReceiptItemId = Schema.String.check(
-  Schema.isPattern(/^[1-9]\d{0,18}$/u),
-  Schema.makeFilter((value) => BigInt(value) <= maxItemId, {
-    expected: `an ID no greater than ${maxItemId}`,
-    // JSON Schema has no numeric bound for strings; the description states the range.
-    toJsonSchema: () => ({}),
-  }),
-)
-  .annotate({
-    identifier: "ReceiptItemId",
-    description: `The item's positive number on the roster, from 1 through ${maxItemId} without leading zeros. It sticks with the item through renames.`,
-    examples: ["7"],
-  })
-  .pipe(Schema.brand("ReceiptItemId"));
+export const ReceiptItemId = BigintId.annotate({
+  identifier: "ReceiptItemId",
+  description: `The item's positive number on the roster, from 1 through ${maxId} without leading zeros. It sticks with the item through renames.`,
+  examples: ["7"],
+}).pipe(Schema.brand("ReceiptItemId"));
 
 /**
  * Decoded persisted receipt item identity.
