@@ -72,7 +72,10 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
     return handlers
       .handle("list", ({ query }) => books.list(query.search).pipe(Effect.map(withData)))
       .handle("get", ({ params }) => books.get(params.bookId).pipe(Effect.map(withData)))
-      .handle("create", ({ payload }) => books.create(payload).pipe(Effect.map(withData)));
+      .handle("create", ({ payload }) => books.create(payload).pipe(Effect.map(withData)))
+      .handle("patch", ({ params, payload }) =>
+        books.patch(params.bookId, payload).pipe(Effect.map(withData)),
+      );
   }),
 );
 

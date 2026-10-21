@@ -296,7 +296,7 @@ const HttpDatabaseLive = HttpRouter.serve(
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));
 
-it.effect("serves saved books over HTTP with one Book shape", () =>
+it.effect("serves saved books over HTTP with one Book shape and domain errors", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");
     // The typed client encodes already-trimmed values, so wire trimming uses a raw request.
@@ -339,5 +339,15 @@ it.effect("serves saved books over HTTP with one Book shape", () =>
       payload: { title: "The Silmarillion", author: "J. R. R. Tolkien", category: "Fiction" },
     });
     expect(other.readingLevel).toBeNull();
+    const collision = yield* HttpClient.patch(`/books/${other.id}`, {
+      body: yield* HttpBody.json({ title: "THE HOBBIT", category: "Brand New Shelf" }),
+    });
+    expect(collision.status).toBe(409);
+    expect(yield* collision.json).toEqual({ _tag: "BookConflict" });
+    expect(yield* categoryNamed("brand new shelf")).toBeUndefined();
+
+    expect(
+      yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } }),
+    ).toEqual({ data: { ...expected, readingLevel: null } });
   }).pipe(Effect.provide(HttpDatabaseLive)),
 );

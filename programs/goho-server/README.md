@@ -140,7 +140,7 @@ retrying deletion completes the cleanup.
 Books form one shared list. Each book has `id` (a decimal string like receipt
 IDs), `title`, `author`, a `category` object as on receipt items, a nullable
 `readingLevel`, and `hasImage`, which is `false` until cover uploads are added.
-Create, retrieval, and listing all return this same shape under `data`.
+Create, correction, retrieval, and listing all return this same shape under `data`.
 
 A book's identity is its title and author, ignoring case and extra whitespace;
 the spelling it was first saved with is shown. The same title by another author
@@ -157,6 +157,10 @@ is a different book.
   matches literally, and a blank search lists every book. Sending `search` more
   than once returns HTTP 400.
 - `GET /books/:bookId` returns one book.
+- `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
+  `readingLevel`; omitted fields keep their values and `null` clears the reading
+  level. Taking another book's title and author returns HTTP 409 with
+  `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
 
 Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return

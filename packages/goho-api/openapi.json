@@ -1016,6 +1016,85 @@
           }
         },
         "summary": "Get a book"
+      },
+      "patch": {
+        "tags": ["books"],
+        "operationId": "books.patch",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Book"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved."
+          },
+          "404": {
+            "description": "No book is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookNotFound"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another book on the roster already has that title and author. Nothing changed and nothing merged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookConflict"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save this correction; nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book's title and author returns 409; books are never merged.",
+        "summary": "Correct a book",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchBookRequest"
+              }
+            }
+          },
+          "required": true
+        }
       }
     }
   },
@@ -1027,6 +1106,28 @@
           "_tag": {
             "type": "string",
             "enum": ["BooksUnavailable"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookConflict": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookConflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookNotFound": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookNotFound"]
           }
         },
         "required": ["_tag"],
@@ -1176,6 +1277,50 @@
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
       },
+      "PatchBookRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Book title, shown as spelled. Case and extra spaces don't make it a different book.",
+            "examples": ["The Hobbit"]
+          },
+          "author": {
+            "type": "string",
+            "description": "Author, shown as spelled. The same title by a different author is a different book.",
+            "examples": ["J. R. R. Tolkien"]
+          },
+          "category": {
+            "type": "string",
+            "description": "Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.",
+            "examples": ["Fiction"]
+          },
+          "readingLevel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reading level as you'd write it, or null when nobody has set one.",
+            "examples": ["Grade 4", null]
+          }
+        },
+        "additionalProperties": false,
+        "minProperties": 1,
+        "description": "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null reading level clears it.",
+        "examples": [
+          {
+            "readingLevel": "Grade 5"
+          },
+          {
+            "title": "The Hobbit",
+            "readingLevel": null
+          }
+        ]
+      },
       "CreateBookRequest": {
         "type": "object",
         "properties": {
@@ -1218,17 +1363,6 @@
             "readingLevel": "Grade 4"
           }
         ]
-      },
-      "BookNotFound": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["BookNotFound"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
       },
       "InternalServerError": {
         "type": "object",

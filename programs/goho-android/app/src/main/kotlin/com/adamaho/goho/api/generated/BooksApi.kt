@@ -6,12 +6,14 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BookConflict
 import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
 import com.adamaho.goho.api.generated.model.BooksGet200Response
 import com.adamaho.goho.api.generated.model.BooksList200Response
 import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.CreateBookRequest
+import com.adamaho.goho.api.generated.model.PatchBookRequest
 
 interface BooksApi {
     /**
@@ -59,5 +61,23 @@ interface BooksApi {
      */
     @GET("books")
     suspend fun booksList(@Query("search") search: kotlin.String? = null): Response<BooksList200Response>
+
+    /**
+     * PATCH books/{bookId}
+     * Correct a book
+     * Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book&#39;s title and author returns 409; books are never merged.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.
+     *  - 404: No book is wearing that number, bud.
+     *  - 409: Another book on the roster already has that title and author. Nothing changed and nothing merged.
+     *  - 500: The server could not save this correction; nothing changed.
+     *
+     * @param bookId 
+     * @param patchBookRequest 
+     * @return [BooksGet200Response]
+     */
+    @PATCH("books/{bookId}")
+    suspend fun booksPatch(@Path("bookId") bookId: kotlin.String, @Body patchBookRequest: PatchBookRequest): Response<BooksGet200Response>
 
 }

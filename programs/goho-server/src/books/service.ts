@@ -1,9 +1,11 @@
 import {
   type Book,
+  type BookConflict,
   type BookId,
   BookNotFound,
   BooksUnavailable,
   type CreateBookRequest,
+  type PatchBookRequest,
 } from "@goho/goho-api/books";
 import { Context, Effect, Layer, Option } from "effect";
 
@@ -32,10 +34,15 @@ export interface Interface {
     search: string | undefined,
   ) => Effect.Effect<ReadonlyArray<Book>, BooksUnavailable>;
   readonly get: (bookId: BookId) => Effect.Effect<Book, BookNotFound | BooksUnavailable>;
+  /** Saves the supplied fields; fails without changes for a missing book or a taken identity. */
+  readonly patch: (
+    bookId: BookId,
+    changes: PatchBookRequest,
+  ) => Effect.Effect<Book, BookNotFound | BookConflict | BooksUnavailable>;
 }
 
 /**
- * Creates, lists, and retrieves books.
+ * Creates, lists, retrieves, and corrects books.
  *
  * @category models
  * @since 0.1.0
@@ -77,6 +84,15 @@ export const layer = Layer.effect(
       ),
     );
 
-    return Service.of({ create, get, list });
+    const patch = Effect.fn("@goho/BookService.patch")(
+      (bookId: BookId, changes: PatchBookRequest) =>
+        repository.update(bookId, changes).pipe(Effect.flatMap(requireBook)),
+      Effect.catchTag(
+        "GohoServer.BookRepository.PersistenceError",
+        unavailable("Book correction failed"),
+      ),
+    );
+
+    return Service.of({ create, get, list, patch });
   }),
 );
