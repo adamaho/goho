@@ -88,8 +88,11 @@ it.effect("rejects invalid item patches before contacting the API", () =>
     const valid = { receipt_id: "42", item_id: "7", changes: { name: item.name } };
     const invalidInputs = [
       { ...valid, receipt_id: "0" },
+      { ...valid, receipt_id: "abc" },
+      { ...valid, receipt_id: "9223372036854775808" },
       { ...valid, receipt_id: 42 },
       { ...valid, item_id: "0" },
+      { ...valid, item_id: "abc" },
       { ...valid, item_id: "07" },
       { ...valid, item_id: "9223372036854775808" },
       { ...valid, item_id: 7 },

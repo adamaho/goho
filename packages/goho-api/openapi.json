@@ -280,6 +280,9 @@
           "204": {
             "description": "<No Content>"
           },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+          },
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
             "content": {
@@ -409,6 +412,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
           },
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
@@ -561,6 +567,9 @@
               }
             }
           },
+          "400": {
+            "description": "The receipt ID is malformed or out of range; the response body stays empty."
+          },
           "404": {
             "description": "No receipt is wearing that number, bud.",
             "content": {
@@ -602,6 +611,9 @@
         "responses": {
           "204": {
             "description": "<No Content>"
+          },
+          "400": {
+            "description": "The receipt ID is malformed or out of range; the response body stays empty."
           },
           "404": {
             "description": "No receipt is wearing that number, bud.",
@@ -731,6 +743,9 @@
                 "required": true
               }
             }
+          },
+          "400": {
+            "description": "The receipt ID is malformed or out of range; the response body stays empty."
           },
           "404": {
             "description": "No scanned image is linked to this receipt, bud.",
@@ -988,7 +1003,7 @@
       "ReceiptId": {
         "type": "string",
         "pattern": "^[1-9]\\d{0,18}$",
-        "description": "The receipt's positive number on the roster, bud.",
+        "description": "The receipt's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["42"]
       },
       "PatchReceiptItemRequest": {

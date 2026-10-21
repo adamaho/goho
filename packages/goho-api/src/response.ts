@@ -11,12 +11,14 @@ export interface DataResponse<A> {
 }
 
 /**
- * Wraps a payload schema in the shared successful response envelope.
+ * Wraps a payload schema in the shared successful response envelope, sent as
+ * HTTP 200 unless the endpoint annotates another `httpApiStatus`.
  *
  * @category schemas
  * @since 0.1.0
  */
-export const DataResponse = <S extends Schema.Top>(schema: S) => Schema.Struct({ data: schema });
+export const DataResponse = <S extends Schema.Top>(schema: S) =>
+  Schema.Struct({ data: schema }).annotate({ httpApiStatus: 200 });
 
 /**
  * Wraps a successful payload in the shared response envelope.
