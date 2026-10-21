@@ -167,6 +167,7 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
       for (const [route, request] of [
         ["get", HttpClient.get(`/books/${id}`)],
         ["patch", HttpClient.patch(`/books/${id}`, { body: change })],
+        ["delete", HttpClient.del(`/books/${id}`)],
       ] as const) {
         expect((yield* request).status, `${route} ${id}`).toBe(400);
       }
@@ -180,6 +181,8 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
 });
 
 const getBook = HttpClient.get(`/books/${book.id}`);
+
+const deleteBook = HttpClient.del(`/books/${book.id}`);
 
 const patchTitle = (title: string) =>
   HttpBody.json({ title }).pipe(
@@ -198,6 +201,7 @@ it.effect("returns domain errors with their declared statuses", () =>
     const notFound = { status: 404, tag: "BookNotFound" };
     const cases: ReadonlyArray<ErrorCase> = [
       { repository: { findById: () => Effect.succeedNone }, request: getBook, ...notFound },
+      { repository: { delete: () => Effect.succeed(false) }, request: deleteBook, ...notFound },
       {
         repository: { update: () => Effect.succeedNone },
         request: patchTitle("Gone"),
@@ -226,6 +230,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
     findById: () => Effect.fail(persistenceError("findById")),
     list: () => Effect.fail(persistenceError("list")),
     update: () => Effect.fail(persistenceError("update")),
+    delete: () => Effect.fail(persistenceError("delete")),
   });
   return Effect.gen(function* () {
     const body = yield* HttpBody.json({
@@ -238,6 +243,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
       HttpClient.get("/books"),
       HttpClient.get(`/books/${book.id}`),
       HttpClient.patch(`/books/${book.id}`, { body }),
+      HttpClient.del(`/books/${book.id}`),
     ]) {
       const response = yield* request;
       expect(response.status).toBe(500);

@@ -39,10 +39,11 @@ export interface Interface {
     bookId: BookId,
     changes: PatchBookRequest,
   ) => Effect.Effect<Book, BookNotFound | BookConflict | BooksUnavailable>;
+  readonly delete: (bookId: BookId) => Effect.Effect<void, BookNotFound | BooksUnavailable>;
 }
 
 /**
- * Creates, lists, retrieves, and corrects books.
+ * Creates, lists, retrieves, corrects, and deletes books.
  *
  * @category models
  * @since 0.1.0
@@ -93,6 +94,16 @@ export const layer = Layer.effect(
       ),
     );
 
-    return Service.of({ create, get, list, patch });
+    const deleteBook = Effect.fn("@goho/BookService.deleteBook")(
+      function* (bookId: BookId) {
+        if (!(yield* repository.delete(bookId))) return yield* new BookNotFound();
+      },
+      Effect.catchTag(
+        "GohoServer.BookRepository.PersistenceError",
+        unavailable("Book deletion failed"),
+      ),
+    );
+
+    return Service.of({ create, delete: deleteBook, get, list, patch });
   }),
 );

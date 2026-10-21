@@ -161,6 +161,7 @@ is a different book.
   `readingLevel`; omitted fields keep their values and `null` clears the reading
   level. Taking another book's title and author returns HTTP 409 with
   `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
+- `DELETE /books/:bookId` removes the book and returns HTTP 204. Its category stays.
 
 Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return

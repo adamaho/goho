@@ -75,7 +75,8 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
       .handle("create", ({ payload }) => books.create(payload).pipe(Effect.map(withData)))
       .handle("patch", ({ params, payload }) =>
         books.patch(params.bookId, payload).pipe(Effect.map(withData)),
-      );
+      )
+      .handle("delete", ({ params }) => books.delete(params.bookId));
   }),
 );
 

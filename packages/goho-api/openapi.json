@@ -1095,6 +1095,51 @@
           },
           "required": true
         }
+      },
+      "delete": {
+        "tags": ["books"],
+        "operationId": "books.delete",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "The book ID is malformed or out of range; the response body stays empty."
+          },
+          "404": {
+            "description": "No book is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this book; nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+        "summary": "Delete a book"
       }
     }
   },
@@ -1111,23 +1156,29 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
-      "BookConflict": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["BookConflict"]
-          }
-        },
-        "required": ["_tag"],
-        "additionalProperties": false
-      },
       "BookNotFound": {
         "type": "object",
         "properties": {
           "_tag": {
             "type": "string",
             "enum": ["BookNotFound"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
+        "examples": ["12"]
+      },
+      "BookConflict": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookConflict"]
           }
         },
         "required": ["_tag"],
@@ -1270,12 +1321,6 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The category's positive number on the roster.",
         "examples": ["3"]
-      },
-      "BookId": {
-        "type": "string",
-        "pattern": "^[1-9]\\d{0,18}$",
-        "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
-        "examples": ["12"]
       },
       "PatchBookRequest": {
         "type": "object",

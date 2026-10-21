@@ -437,5 +437,26 @@ export const api = HttpApi.make("goho-server")
             OpenApi.Description,
             "Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book's title and author returns 409; books are never merged.",
           ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/books/:bookId", {
+          params: { bookId: BookId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not delete this book; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a book")
+          .annotate(
+            OpenApi.Description,
+            "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+          ),
       ),
   );

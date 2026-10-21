@@ -349,5 +349,18 @@ it.effect("serves saved books over HTTP with one Book shape and domain errors", 
     expect(
       yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } }),
     ).toEqual({ data: { ...expected, readingLevel: null } });
+
+    expect(yield* client.books.delete({ params: { bookId: book.id } })).toBeUndefined();
+    for (const response of [
+      yield* HttpClient.get(`/books/${book.id}`),
+      yield* HttpClient.del(`/books/${book.id}`),
+      yield* HttpClient.patch(`/books/${book.id}`, {
+        body: yield* HttpBody.json({ title: "Gone" }),
+      }),
+    ]) {
+      expect(response.status).toBe(404);
+      expect(yield* response.json).toEqual({ _tag: "BookNotFound" });
+    }
+    expect(yield* client.books.list({ query: {} })).toEqual({ data: [other] });
   }).pipe(Effect.provide(HttpDatabaseLive)),
 );
