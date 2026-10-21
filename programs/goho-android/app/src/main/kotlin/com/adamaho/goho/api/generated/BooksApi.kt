@@ -4,9 +4,11 @@ import com.adamaho.goho.api.generated.infrastructure.CollectionFormats.*
 import retrofit2.http.*
 import retrofit2.Response
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BookConflictEncoded
+import com.adamaho.goho.api.generated.model.BookImageNotFoundEncoded
 import com.adamaho.goho.api.generated.model.BookNotFoundEncoded
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
 import com.adamaho.goho.api.generated.model.BooksGet200Response
@@ -34,12 +36,12 @@ interface BooksApi {
     /**
      * DELETE books/{bookId}
      * Delete a book
-     * Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.
+     * Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
      *  - 400: The book ID is malformed or out of range; the response body stays empty.
      *  - 404: No book is wearing that number, bud.
-     *  - 500: The server could not delete this book; nothing changed.
+     *  - 500: The server could not delete this book and its stored images; take another shot to finish the cleanup.
      *
      * @param bookId 
      * @return [Unit]
@@ -64,11 +66,28 @@ interface BooksApi {
     suspend fun booksGet(@Path("bookId") bookId: kotlin.String): Response<BooksGet200Response>
 
     /**
+     * GET books/{bookId}/image
+     * Get a book cover image
+     * Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.
+     * Responses:
+     *  - 200: Success
+     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 404: No cover is on file for that book number, bud.
+     *  - 500: The server could not retrieve this cover image.
+     *
+     * @param bookId 
+     * @return [ResponseBody]
+     */
+    @GET("books/{bookId}/image")
+    suspend fun booksGetImage(@Path("bookId") bookId: kotlin.String): Response<ResponseBody>
+
+    /**
      * GET books
      * List books
      * Pulls saved books off the bench, newest first. Add &#x60;search&#x60; to find title or author matches for autocomplete.
      * Responses:
      *  - 200: Success
+     *  - 400: The query is a bad pass, such as `search` sent more than once; the response body stays empty.
      *  - 500: The server could not pull the books off the bench.
      *
      * @param search  (optional)

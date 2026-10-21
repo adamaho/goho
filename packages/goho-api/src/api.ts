@@ -10,9 +10,17 @@ import {
 } from "effect/http-api";
 
 import {
+  BookUpload,
+  BookUploadConflict,
+  BookUploadId,
+  BookUploadNotFound,
+  BookUploadsUnavailable,
+} from "./book-uploads.ts";
+import {
   Book,
   BookConflict,
   BookId,
+  BookImageNotFound,
   BookNotFound,
   BooksUnavailable,
   CreateBookRequest,
@@ -32,13 +40,22 @@ import { DataResponse } from "./response.ts";
 
 // Payload schemas
 
-const ReceiptUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
+// Receipt and book cover uploads share one image upload policy.
+const ImageUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
   HttpApiSchema.asMultipart({
     maxParts: 1,
     maxFileSize: "20 megabytes",
     maxTotalSize: "21 megabytes",
   }),
 );
+
+const ImageResponse = HttpApiSchema.WithHeaders(
+  Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" })),
+  Schema.Struct({
+    "content-type": Schema.String,
+    "cache-control": Schema.String,
+  }),
+).annotate({ httpApiStatus: 200 });
 
 // Corrections reject unsupported fields so a mixed payload never partly saves.
 const strictPayload = { onExcessProperty: "error" } as const;
@@ -56,7 +73,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud.",
   )
   .add(
     // Health
@@ -87,7 +104,7 @@ export const api = HttpApi.make("goho-server")
       .annotate(OpenApi.Description, "Single-file receipt uploads and their processing status.")
       .add(
         HttpApiEndpoint.post("create", "/receipt-uploads", {
-          payload: ReceiptUploadPayload,
+          payload: ImageUploadPayload,
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
@@ -238,15 +255,7 @@ export const api = HttpApi.make("goho-server")
       .add(
         HttpApiEndpoint.get("getImage", "/receipts/:receiptId/image", {
           params: { receiptId: ReceiptId },
-          success: HttpApiSchema.WithHeaders(
-            Schema.Uint8Array.pipe(
-              HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" }),
-            ),
-            Schema.Struct({
-              "content-type": Schema.String,
-              "cache-control": Schema.String,
-            }),
-          ).annotate({ httpApiStatus: 200 }),
+          success: ImageResponse,
           error: [
             HttpApiError.BadRequestNoContent.annotate({
               description:
@@ -337,7 +346,10 @@ export const api = HttpApi.make("goho-server")
       ),
     // Books
     HttpApiGroup.make("books")
-      .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .annotate(
+        OpenApi.Description,
+        "One shared roster of unique books, entered by hand or saved from cover scans.",
+      )
       .add(
         HttpApiEndpoint.get("list", "/books", {
           query: {
@@ -355,6 +367,10 @@ export const api = HttpApi.make("goho-server")
             }),
           ),
           error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The query is a bad pass, such as `search` sent more than once; the response body stays empty.",
+            }),
             BooksUnavailable.annotate({
               description: "The server could not pull the books off the bench.",
             }),
@@ -438,14 +454,114 @@ export const api = HttpApi.make("goho-server")
             }),
             BookNotFound,
             BooksUnavailable.annotate({
-              description: "The server could not delete this book; nothing changed.",
+              description:
+                "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "Delete a book")
           .annotate(
             OpenApi.Description,
-            "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+            "Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("getImage", "/books/:bookId/image", {
+          params: { bookId: BookId },
+          success: ImageResponse,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookImageNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not retrieve this cover image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a book cover image")
+          .annotate(
+            OpenApi.Description,
+            "Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.",
+          ),
+      ),
+    // Book uploads
+    HttpApiGroup.make("bookUploads")
+      .annotate(OpenApi.Description, "Single-file book cover scans and their processing status.")
+      .add(
+        HttpApiEndpoint.post("create", "/book-uploads", {
+          payload: ImageUploadPayload,
+          success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload is missing a supported cover image.",
+            }),
+            BookUploadsUnavailable.annotate({
+              description: "The server could not store or queue the cover image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Upload a book cover")
+          .annotate(
+            OpenApi.Description,
+            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("list", "/book-uploads", {
+          success: DataResponse(Schema.Array(BookUpload)),
+          error: [
+            BookUploadsUnavailable.annotate({
+              description: "The server could not pull the cover scans off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List book cover uploads")
+          .annotate(
+            OpenApi.Description,
+            "Pulls every cover scan off the bench, newest first, with its current status.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/book-uploads/:uploadId", {
+          params: { uploadId: BookUploadId },
+          success: DataResponse(BookUpload),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
+            BookUploadNotFound,
+            BookUploadsUnavailable.annotate({
+              description: "The server could not retrieve this cover scan.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get book cover upload status")
+          .annotate(
+            OpenApi.Description,
+            "Returns the latest queue or processing status and the book ID after a clean finish.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/book-uploads/:uploadId", {
+          params: { uploadId: BookUploadId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
+            }),
+            BookUploadNotFound,
+            BookUploadConflict,
+            BookUploadsUnavailable.annotate({
+              description: "The server could not delete this scan and its stored image.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a failed book cover upload")
+          .annotate(
+            OpenApi.Description,
+            "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
           ),
       ),
   );

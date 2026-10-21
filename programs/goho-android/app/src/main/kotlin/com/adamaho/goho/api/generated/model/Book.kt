@@ -36,7 +36,7 @@ import com.squareup.moshi.JsonClass
  * @param author Author, shown as spelled. The same title by a different author is a different book.
  * @param category The book's category.
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
- * @param hasImage Whether a cover image is on file.
+ * @param hasImage Whether a cover image is on file; the first scan of a book without one adds it.
  */
 
 
@@ -62,7 +62,7 @@ data class Book (
     @Json(name = "readingLevel")
     val readingLevel: kotlin.String?,
 
-    /* Whether a cover image is on file. */
+    /* Whether a cover image is on file; the first scan of a book without one adds it. */
     @Json(name = "hasImage")
     val hasImage: kotlin.Boolean
 

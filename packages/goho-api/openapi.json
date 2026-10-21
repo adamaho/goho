@@ -3,7 +3,7 @@
   "info": {
     "title": "Goho API",
     "version": "0.0.0",
-    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud."
+    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud."
   },
   "paths": {
     "/health": {
@@ -890,6 +890,9 @@
               }
             }
           },
+          "400": {
+            "description": "The query is a bad pass, such as `search` sent more than once; the response body stays empty."
+          },
           "500": {
             "description": "The server could not pull the books off the bench.",
             "content": {
@@ -1125,7 +1128,7 @@
             }
           },
           "500": {
-            "description": "The server could not delete this book; nothing changed.",
+            "description": "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1135,19 +1138,437 @@
             }
           }
         },
-        "description": "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
+        "description": "Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.",
         "summary": "Delete a book"
+      }
+    },
+    "/books/{bookId}/image": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "books.getImage",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "cache-control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            }
+          },
+          "400": {
+            "description": "The book ID is malformed or out of range; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover is on file for that book number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookImageNotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this cover image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooksUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.",
+        "summary": "Get a book cover image"
+      }
+    },
+    "/book-uploads": {
+      "post": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.create",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BookUpload"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The upload is missing a supported cover image."
+          },
+          "500": {
+            "description": "The server could not store or queue the cover image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+        "summary": "Upload a book cover",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "get": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookUpload"
+                      }
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the cover scans off the bench.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every cover scan off the bench, newest first, with its current status.",
+        "summary": "List book cover uploads"
+      }
+    },
+    "/book-uploads/{uploadId}": {
+      "get": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.get",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BookUpload"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover scan is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadNotFoundEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this cover scan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the latest queue or processing status and the book ID after a clean finish.",
+        "summary": "Get book cover upload status"
+      },
+      "delete": {
+        "tags": ["bookUploads"],
+        "operationId": "bookUploads.delete",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/BookUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+          },
+          "404": {
+            "description": "No cover scan is wearing that number, bud.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadNotFoundEncoded"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadConflictEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this scan and its stored image.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadsUnavailableEncoded"
+                }
+              }
+            }
+          }
+        },
+        "description": "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
+        "summary": "Delete a failed book cover upload"
       }
     }
   },
   "components": {
     "schemas": {
+      "BookUploadsUnavailableEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadsUnavailable"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookUploadConflictEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadConflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookUploadNotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadNotFound"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookUploadId": {
+        "type": "string",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+        "format": "uuid",
+        "description": "The cover scan's version 4 UUID; use it to check on this upload.",
+        "examples": ["3b5f0a8e-2c4d-4e8f-9a1b-6c7d8e9f0a1b"]
+      },
+      "BookUpload": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/BookUploadId"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "File name the scan arrived with."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp"],
+            "description": "MIME type of the stored scan."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "succeeded", "failed"],
+            "description": "Where the scan is in the play: queued, processing, succeeded, or failed."
+          },
+          "bookId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The book this scan saved or matched, once it succeeds; several scans can land on one book."
+          },
+          "failureCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "storage_failed",
+                  "processing_failed",
+                  "book_creation_failed",
+                  "internal_error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the scan failed, once it fails; details stay in the server logs."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the scan came off the bench."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When the scan's status last changed."
+          }
+        },
+        "required": [
+          "id",
+          "fileName",
+          "contentType",
+          "status",
+          "bookId",
+          "failureCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false,
+        "description": "A cover scan and how its processing is going.",
+        "examples": [
+          {
+            "id": "3b5f0a8e-2c4d-4e8f-9a1b-6c7d8e9f0a1b",
+            "fileName": "hobbit-cover.jpg",
+            "contentType": "image/jpeg",
+            "status": "succeeded",
+            "bookId": "12",
+            "failureCode": null,
+            "createdAt": "2026-10-20 14:03:11.52+00",
+            "updatedAt": "2026-10-20 14:03:19.07+00"
+          }
+        ]
+      },
+      "BookId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
+        "examples": ["12"]
+      },
       "BooksUnavailableEncoded": {
         "type": "object",
         "properties": {
           "_tag": {
             "type": "string",
             "enum": ["BooksUnavailable"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "BookImageNotFoundEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookImageNotFound"]
           }
         },
         "required": ["_tag"],
@@ -1163,12 +1584,6 @@
         },
         "required": ["_tag"],
         "additionalProperties": false
-      },
-      "BookId": {
-        "type": "string",
-        "pattern": "^[1-9]\\d{0,18}$",
-        "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
-        "examples": ["12"]
       },
       "BookConflictEncoded": {
         "type": "object",
@@ -1228,7 +1643,7 @@
           },
           "hasImage": {
             "type": "boolean",
-            "description": "Whether a cover image is on file."
+            "description": "Whether a cover image is on file; the first scan of a book without one adds it."
           }
         },
         "required": ["id", "title", "author", "category", "readingLevel", "hasImage"],
@@ -1894,7 +2309,11 @@
     },
     {
       "name": "books",
-      "description": "One shared roster of unique books, entered by hand."
+      "description": "One shared roster of unique books, entered by hand or saved from cover scans."
+    },
+    {
+      "name": "bookUploads",
+      "description": "Single-file book cover scans and their processing status."
     }
   ]
 }

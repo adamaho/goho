@@ -1,7 +1,7 @@
 # @goho/goho-server
 
 Exposes receipt uploads, retrieval, creation, correction, deletion, a shared book
-list, health checks, and API documentation. The server implements the shared
+list with cover scans, health checks, and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
@@ -139,7 +139,7 @@ retrying deletion completes the cleanup.
 
 Books form one shared list. Each book has `id` (a decimal string like receipt
 IDs), `title`, `author`, a `category` object as on receipt items, a nullable
-`readingLevel`, and `hasImage`, which is `false` until cover uploads are added.
+`readingLevel`, and `hasImage`, which is whether a cover scan is on file.
 Create, correction, retrieval, and listing all return this same shape under `data`.
 
 A book's identity is its title and author, ignoring case and extra whitespace;
@@ -154,14 +154,46 @@ is a different book.
   and reading level are ignored and no category is created.
 - `GET /books` lists books newest first. `?search=` keeps books whose title or
   author contains the text, ignoring case and extra whitespace; punctuation
-  matches literally, and a blank search lists every book.
+  matches literally, and a blank search lists every book. Sending `search` more
+  than once returns HTTP 400.
 - `GET /books/:bookId` returns one book.
+- `GET /books/:bookId/image` returns the cover's bytes with its MIME type and
+  `Cache-Control: private, no-store`. A book without a cover, or a missing book,
+  returns HTTP 404 with `{"_tag":"BookImageNotFound"}`.
 - `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
   `readingLevel`; omitted fields keep their values and `null` clears the reading
   level. Taking another book's title and author returns HTTP 409 with
   `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
-- `DELETE /books/:bookId` removes the book and returns HTTP 204. Its category stays.
+- `DELETE /books/:bookId` removes the book with all its successful cover
+  uploads, their original images, and extraction data, and returns HTTP 204. Its
+  category stays. As with receipts, a commit failure after image removal can
+  leave the book without some images until deletion is retried.
 
 Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
 HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
+
+### Book cover uploads
+
+`POST /book-uploads` accepts one multipart `file` containing a JPEG, PNG, or WebP
+cover image, with the same size limit as receipt uploads. It stores the original
+in `GOHO_UPLOADS_DIRECTORY`, queues processing, and returns HTTP 202 with the
+upload under `data`. Other file types return HTTP 400, and files over the limit
+return HTTP 413.
+
+Processing reads the title, author, and category from the cover. The category is
+one of the current book categories; nothing else, such as a reading level, is
+read. A new book is saved without a reading level. A book with the same title
+and author is reused exactly as saved, and the scan becomes its cover only when
+it has none. Several scans can succeed for one book.
+
+`GET /book-uploads` lists uploads newest first, and `GET /book-uploads/:uploadId`
+returns one. Each has `status` (`queued`, `processing`, `succeeded`, or
+`failed`), the `bookId` after success, and a `failureCode` after failure:
+`storage_failed`, `processing_failed`, `book_creation_failed`, or
+`internal_error`. Failure and crash recovery work as for receipt uploads.
+
+`DELETE /book-uploads/:uploadId` removes a failed upload and its image with HTTP 204. Other statuses return HTTP 409 with `{"_tag":"BookUploadConflict"}`; delete
+the book to remove its successful scans. Missing uploads return HTTP 404 with
+`{"_tag":"BookUploadNotFound"}`, and malformed UUIDs return HTTP 400. Storage or
+database failures return HTTP 500 with `{"_tag":"BookUploadsUnavailable"}`.

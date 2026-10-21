@@ -10,6 +10,10 @@ import {
 import { Config, Layer, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 
+import * as BookUploadQueue from "./book-uploads/queue.ts";
+import * as BookUploadRepository from "./book-uploads/repository.ts";
+import * as BookUploads from "./book-uploads/service.ts";
+import * as BookUploadWorker from "./book-uploads/worker.ts";
 import * as BookRepository from "./books/repository.ts";
 import * as Books from "./books/service.ts";
 import * as CategoryRepository from "./categories/repository.ts";
@@ -31,15 +35,20 @@ const RepositoryLive = ReceiptRepository.layer.pipe(
   Layer.provide([CategoryRepositoryLive, Database.layer]),
 );
 
-const BooksLive = Books.layer.pipe(
-  Layer.provide(BookRepository.layer.pipe(Layer.provide([CategoryRepositoryLive, Database.layer]))),
+const BookRepositoryLive = BookRepository.layer.pipe(
+  Layer.provide([CategoryRepositoryLive, Database.layer]),
 );
 
 const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
   Layer.provide(Database.layer),
 );
 
+const BookUploadRepositoryLive = BookUploadRepository.layer.pipe(Layer.provide(Database.layer));
+
+// Both queues share one memoized queue store and cleanup fiber.
 const ReceiptUploadQueueLive = ReceiptUploadQueue.layer.pipe(Layer.provide(Database.layer));
+
+const BookUploadQueueLive = BookUploadQueue.layer.pipe(Layer.provide(Database.layer));
 
 const TransactionLive = Transaction.layer.pipe(Layer.provide(Database.layer));
 
@@ -48,6 +57,32 @@ const FileStorageLive = Layer.unwrap(
     Config.map((directory) => FileStorage.layerFileSystem({ directory })),
   ),
 ).pipe(Layer.provide([NodeCrypto.layer, NodeFileSystem.layer, NodePath.layer]));
+
+const BooksLive = Books.layer.pipe(
+  Layer.provide([BookRepositoryLive, FileStorageLive, TransactionLive]),
+);
+
+const BookUploadsLive = BookUploads.layer.pipe(
+  Layer.provide([
+    BookUploadQueueLive,
+    BookUploadRepositoryLive,
+    FileStorageLive,
+    NodeCrypto.layer,
+    TransactionLive,
+  ]),
+);
+
+const BookUploadWorkerLive = BookUploadWorker.layer.pipe(
+  Layer.provide([
+    Ai.layer,
+    BookRepositoryLive,
+    BookUploadQueueLive,
+    BookUploadRepositoryLive,
+    CategoryRepositoryLive,
+    FileStorageLive,
+    TransactionLive,
+  ]),
+);
 
 const ReceiptsLive = Receipts.layer.pipe(
   Layer.provide([RepositoryLive, FileStorageLive, TransactionLive]),
@@ -76,7 +111,7 @@ const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
 );
 
 const ServerLive = HttpRouter.serve(
-  Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive, BooksLive])),
+  Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive, BooksLive, BookUploadsLive])),
 ).pipe(
   Layer.provide(
     NodeHttpServer.layerConfig(createServer, {
@@ -88,4 +123,6 @@ const ServerLive = HttpRouter.serve(
     }),
   ),
 );
-Layer.launch(Layer.merge(ServerLive, ReceiptUploadWorkerLive)).pipe(NodeRuntime.runMain);
+Layer.launch(Layer.mergeAll(ServerLive, ReceiptUploadWorkerLive, BookUploadWorkerLive)).pipe(
+  NodeRuntime.runMain,
+);

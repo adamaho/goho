@@ -4,31 +4,23 @@ import { Postgres } from "@goho/core";
 import { Book, BookId, type CreateBookRequest } from "@goho/goho-api/books";
 import { CreateReceiptRequest } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import {
-  Config,
-  Context,
-  Crypto,
-  Deferred,
-  Effect,
-  Fiber,
-  Layer,
-  Option,
-  Redacted,
-  Result,
-  Schema,
-} from "effect";
+import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result, Schema } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
 import * as BookRepository from "#src/books/repository.ts";
 import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
+import * as Transaction from "#src/database/transaction.ts";
+import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import { behindOpenTransaction } from "#test/helpers/locks.ts";
 
 const hobbit: CreateBookRequest = {
   title: "The Hobbit",
@@ -100,38 +92,6 @@ const tables = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   return yield* Effect.all([sql`SELECT * FROM books ORDER BY id`, catalogRows]);
 });
-
-// Holds `first` in an open transaction until `second`, on another connection,
-// waits on one of its locks in a statement containing `statement`. Then commits.
-const behindOpenTransaction = <A, B, E1, E2>(
-  first: Effect.Effect<A, E1, SqlClient.SqlClient>,
-  second: Effect.Effect<B, E2>,
-  statement: string,
-) =>
-  Effect.gen(function* () {
-    const sql = yield* SqlClient.SqlClient;
-    const ready = yield* Deferred.make<A>();
-    const release = yield* Deferred.make<void>();
-    const holder = yield* sql
-      .withTransaction(
-        first.pipe(
-          Effect.tap((value) => Deferred.succeed(ready, value)),
-          Effect.tap(() => Deferred.await(release)),
-        ),
-      )
-      .pipe(Effect.forkChild);
-    const held = yield* Deferred.await(ready);
-    // Forked outside the transaction, so it runs on its own connection.
-    const waiter = yield* second.pipe(Effect.forkChild);
-    yield* sql<{ waiting: number }>`
-      SELECT count(*)::int AS waiting FROM pg_stat_activity
-      WHERE wait_event_type = 'Lock' AND pid <> pg_backend_pid()
-        AND query LIKE ${`%${statement}%`}
-    `.pipe(Effect.repeat({ until: ([row]) => (row?.waiting ?? 0) > 0 }));
-    yield* Deferred.succeed(release, undefined);
-    yield* Fiber.join(holder);
-    return [held, yield* Fiber.join(waiter)] as const;
-  });
 
 it.effect("enforces category kinds and book identity in the database", () =>
   Effect.gen(function* () {
@@ -394,20 +354,22 @@ it.effect("deletes a book and keeps its category", () =>
     const books = yield* BookRepository.Service;
     const { id: bookId } = yield* books.findOrCreate({ ...hobbit, category: "Fantasy" });
     const { id: retained } = yield* books.findOrCreate({ ...hobbit, title: "The Silmarillion" });
-    expect(yield* books.delete(bookId)).toBe(true);
-    expect(yield* books.delete(bookId)).toBe(false);
+    expect(yield* books.delete(bookId)).toEqual(Option.some([]));
+    expect(yield* books.delete(bookId)).toEqual(Option.none());
     expect(yield* books.findById(bookId)).toEqual(Option.none());
     expect((yield* books.list("")).map(({ id }) => id)).toEqual([retained]);
     expect(yield* categoryNamed("fantasy")).toMatchObject({ kinds: ["book"] });
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+// Books without scans have no files, so storage must stay untouched.
 const HttpDatabaseLive = HttpRouter.serve(
   Http.layer.pipe(
     Layer.provide([
-      Books.layer,
+      Books.layer.pipe(Layer.provide([Transaction.layer, Layer.mock(FileStorage.Service, {})])),
       Layer.mock(Receipts.Service, {}),
       Layer.mock(ReceiptUploads.Service, {}),
+      Layer.mock(BookUploads.Service, {}),
     ]),
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));
