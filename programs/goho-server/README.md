@@ -1,7 +1,7 @@
 # @goho/goho-server
 
-Exposes receipt uploads, retrieval, creation, correction, deletion, health checks,
-and API documentation. The server implements the shared
+Exposes receipt uploads, retrieval, creation, correction, deletion, a shared book
+list, health checks, and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
@@ -86,9 +86,11 @@ lowercase, so `Groceries` and `groceries` are the same category; an unfamiliar
 name adds a new one with the generic `other` icon and `grey` colour. The complete
 receipt is returned under `data`. Each returned item has a server-generated `id`,
 a decimal string like receipt IDs, its zero-based `position` in the receipt, and
-its `category` object (`id`, `name`, `icon`, and `color`). `icon` is a free-form
+its `category` object (`id`, `name`, `icon`, `color`, and `kinds`). `icon` is a free-form
 identifier string, so clients should fall back for ones they don't know; `color`
-is one of the fixed palette keys. A receipt has no
+is one of the fixed palette keys. `kinds` lists, once each and in a fixed order,
+whether the category is used for `receipt` items, `book`s, or both; books and
+receipts share one catalog. A receipt has no
 category of its own: its `categories` lists each distinct item category once, in
 item order.
 
@@ -132,3 +134,34 @@ roll back so deletion can be retried. An already missing photo does not block de
 Photo storage does not participate in the database transaction. If the database
 commit fails after photo removal, the receipt may remain without its photo;
 retrying deletion completes the cleanup.
+
+### Books
+
+Books form one shared list. Each book has `id` (a decimal string like receipt
+IDs), `title`, `author`, a `category` object as on receipt items, a nullable
+`readingLevel`, and `hasImage`, which is `false` until cover uploads are added.
+Create, correction, retrieval, and listing all return this same shape under `data`.
+
+A book's identity is its title and author, ignoring case and extra whitespace;
+the spelling it was first saved with is shown. The same title by another author
+is a different book.
+
+- `POST /books` takes `title`, `author`, `category`, and an optional
+  `readingLevel` (null or omitted when unknown). Values are trimmed and must stay
+  nonempty, and unsupported fields are rejected. The category is saved in
+  lowercase and joins the shared catalog if it is new. If the identity is already
+  saved, the saved book returns unchanged with HTTP 200; the request's category
+  and reading level are ignored and no category is created.
+- `GET /books` lists books newest first. `?search=` keeps books whose title or
+  author contains the text, ignoring case and extra whitespace; punctuation
+  matches literally, and a blank search lists every book.
+- `GET /books/:bookId` returns one book.
+- `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
+  `readingLevel`; omitted fields keep their values and `null` clears the reading
+  level. Taking another book's title and author returns HTTP 409 with
+  `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
+- `DELETE /books/:bookId` removes the book and returns HTTP 204. Its category stays.
+
+Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
+book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
+HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.

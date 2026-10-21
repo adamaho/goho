@@ -14,6 +14,8 @@ import receiptItemIds from "./migrations/0010-receipt-item-ids.ts";
 import receiptHistory from "./migrations/0011-receipt-history.ts";
 import receiptCategories from "./migrations/0012-receipt-categories.ts";
 import itemCategories from "./migrations/0013-item-categories.ts";
+import categoryKinds from "./migrations/0014-category-kinds.ts";
+import books from "./migrations/0015-books.ts";
 
 /**
  * Explicit migration registry, shared by the migration command and tests.
@@ -37,6 +39,8 @@ export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
       "0011_receipt_history": receiptHistory,
       "0012_receipt_categories": receiptCategories,
       "0013_item_categories": itemCategories,
+      "0014_category_kinds": categoryKinds,
+      "0015_books": books,
     }),
     table: "goho_migrations",
   });

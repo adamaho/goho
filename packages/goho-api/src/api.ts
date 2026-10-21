@@ -9,6 +9,15 @@ import {
   OpenApi,
 } from "effect/http-api";
 
+import {
+  Book,
+  BookConflict,
+  BookId,
+  BookNotFound,
+  BooksUnavailable,
+  CreateBookRequest,
+  PatchBookRequest,
+} from "./books.ts";
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
@@ -47,7 +56,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster. No authentication required, bud.",
   )
   .add(
     // Health
@@ -324,6 +333,119 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.",
+          ),
+      ),
+    // Books
+    HttpApiGroup.make("books")
+      .annotate(OpenApi.Description, "One shared roster of unique books, entered by hand.")
+      .add(
+        HttpApiEndpoint.get("list", "/books", {
+          query: {
+            search: Schema.optionalKey(
+              Schema.String.annotate({
+                description:
+                  "Text to find in a title or author, ignoring case and extra spaces. Punctuation matches literally; blank lists every book.",
+                examples: ["hobbit"],
+              }),
+            ),
+          },
+          success: DataResponse(
+            Schema.Array(Book).annotate({
+              description: "Matching books, newest on the roster first; empty when none match.",
+            }),
+          ),
+          error: [
+            BooksUnavailable.annotate({
+              description: "The server could not pull the books off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List books")
+          .annotate(
+            OpenApi.Description,
+            "Pulls saved books off the bench, newest first. Add `search` to find title or author matches for autocomplete.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/books/:bookId", {
+          params: { bookId: BookId },
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not retrieve this book.",
+            }),
+          ],
+        }).annotate(OpenApi.Summary, "Get a book"),
+      )
+      .add(
+        HttpApiEndpoint.post("create", "/books", {
+          payload: CreateBookRequest,
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.",
+            }),
+            BooksUnavailable.annotate({
+              description: "The server could not save this book; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Add a book")
+          .annotate(
+            OpenApi.Description,
+            "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.patch("patch", "/books/:bookId", {
+          params: { bookId: BookId },
+          payload: PatchBookRequest,
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
+            }),
+            BookNotFound,
+            BookConflict,
+            BooksUnavailable.annotate({
+              description: "The server could not save this correction; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Correct a book")
+          .annotate(
+            OpenApi.Description,
+            "Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book's title and author returns 409; books are never merged.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/books/:bookId", {
+          params: { bookId: BookId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The book ID is malformed or out of range; the response body stays empty.",
+            }),
+            BookNotFound,
+            BooksUnavailable.annotate({
+              description: "The server could not delete this book; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a book")
+          .annotate(
+            OpenApi.Description,
+            "Takes the book off the roster for good. Its category stays. Returns no body after a clean finish.",
           ),
       ),
   );

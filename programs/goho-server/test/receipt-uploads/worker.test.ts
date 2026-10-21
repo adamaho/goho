@@ -31,7 +31,7 @@ const upload: ReceiptUpload = {
 
 const dependencies = (options: {
   readonly currency?: string;
-  readonly categoryNames?: CategoryRepository.Interface["listNames"];
+  readonly categoryNames?: ReturnType<CategoryRepository.Interface["listNames"]>;
   readonly transaction?: Transaction.Interface["run"];
   readonly generateObject?: Ai.Interface["generateObject"];
   readonly insertReceipt?: ReceiptRepository.Interface["insert"];
@@ -46,7 +46,11 @@ const dependencies = (options: {
       ? Transaction.layerTest
       : Layer.succeed(Transaction.Service, { run: options.transaction }),
     Layer.succeed(CategoryRepository.Service, {
-      listNames: options.categoryNames ?? Effect.succeed(["groceries", "household"]),
+      // Receipt extraction is only offered receipt categories.
+      listNames: (kind) =>
+        kind === "receipt"
+          ? (options.categoryNames ?? Effect.succeed(["groceries", "household"]))
+          : Effect.die(`Unexpected ${kind} category listing`),
       findOrCreate: () => Effect.die("Unexpected category creation"),
     }),
     Layer.succeed(FileStorage.Service, {
