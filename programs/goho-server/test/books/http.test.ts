@@ -1,6 +1,12 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Book, BookId, type CreateBookRequest, type PatchBookRequest } from "@goho/goho-api/books";
+import {
+  Book,
+  BookConflict,
+  BookId,
+  type CreateBookRequest,
+  type PatchBookRequest,
+} from "@goho/goho-api/books";
 import { CategoryId } from "@goho/goho-api/categories";
 import * as Client from "@goho/goho-server-client/client";
 import { Effect, Layer, Option } from "effect";
@@ -90,6 +96,11 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
     });
     expect(yield* client.books.list({ query: {} })).toEqual({ data: [book] });
     yield* client.books.list({ query: { search: " 100%_cotton? " } });
+    yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } });
+    const patched = yield* HttpClient.patch("/books/9223372036854775807", {
+      body: yield* HttpBody.json({ title: "  The Hobbit  ", category: " Fantasy " }),
+    });
+    expect(patched.status).toBe(200);
     expect(calls).toEqual([
       ["findOrCreate", { title: "The Hobbit", author: "J. R. R. Tolkien", category: "Fiction" }],
       [
@@ -104,6 +115,8 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
       // An omitted search lists everything; given text passes through untouched.
       ["list", ""],
       ["list", " 100%_cotton? "],
+      ["update", book.id, { readingLevel: null }],
+      ["update", "9223372036854775807", { title: "The Hobbit", category: "Fantasy" }],
     ]);
   }).pipe(Effect.provide(layer));
 });
@@ -134,8 +147,27 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
       expect(response.status, JSON.stringify(payload)).toBe(400);
       expect(yield* response.text).toBe("");
     }
+    for (const payload of [
+      {},
+      { title: null },
+      { author: " " },
+      { category: null },
+      { readingLevel: "" },
+      { title: "The Hobbit", hasImage: true },
+      { readingLevel: null, id: "13" },
+      null,
+    ]) {
+      const response = yield* HttpClient.patch(`/books/${book.id}`, {
+        body: yield* HttpBody.json(payload),
+      });
+      expect(response.status, JSON.stringify(payload)).toBe(400);
+    }
+    const change = yield* HttpBody.json({ title: "The Hobbit" });
     for (const id of ["0", "-1", "01", "1.0", "abc", "9223372036854775808"]) {
-      for (const [route, request] of [["get", HttpClient.get(`/books/${id}`)]] as const) {
+      for (const [route, request] of [
+        ["get", HttpClient.get(`/books/${id}`)],
+        ["patch", HttpClient.patch(`/books/${id}`, { body: change })],
+      ] as const) {
         expect((yield* request).status, `${route} ${id}`).toBe(400);
       }
     }
@@ -149,9 +181,14 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
 
 const getBook = HttpClient.get(`/books/${book.id}`);
 
+const patchTitle = (title: string) =>
+  HttpBody.json({ title }).pipe(
+    Effect.flatMap((body) => HttpClient.patch(`/books/${book.id}`, { body })),
+  );
+
 interface ErrorCase {
   readonly repository: Partial<BookRepository.Interface>;
-  readonly request: typeof getBook;
+  readonly request: typeof getBook | ReturnType<typeof patchTitle>;
   readonly status: number;
   readonly tag: string;
 }
@@ -161,6 +198,17 @@ it.effect("returns domain errors with their declared statuses", () =>
     const notFound = { status: 404, tag: "BookNotFound" };
     const cases: ReadonlyArray<ErrorCase> = [
       { repository: { findById: () => Effect.succeedNone }, request: getBook, ...notFound },
+      {
+        repository: { update: () => Effect.succeedNone },
+        request: patchTitle("Gone"),
+        ...notFound,
+      },
+      {
+        repository: { update: () => Effect.fail(new BookConflict()) },
+        request: patchTitle("Taken"),
+        status: 409,
+        tag: "BookConflict",
+      },
     ];
     for (const { repository, request, status, tag } of cases) {
       yield* Effect.gen(function* () {
@@ -177,6 +225,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
     findOrCreate: () => Effect.fail(persistenceError("findOrCreate")),
     findById: () => Effect.fail(persistenceError("findById")),
     list: () => Effect.fail(persistenceError("list")),
+    update: () => Effect.fail(persistenceError("update")),
   });
   return Effect.gen(function* () {
     const body = yield* HttpBody.json({
@@ -188,6 +237,7 @@ it.effect("returns HTTP 500 without exposing book persistence details", () => {
       HttpClient.post("/books", { body }),
       HttpClient.get("/books"),
       HttpClient.get(`/books/${book.id}`),
+      HttpClient.patch(`/books/${book.id}`, { body }),
     ]) {
       const response = yield* request;
       expect(response.status).toBe(500);

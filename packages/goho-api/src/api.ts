@@ -9,7 +9,15 @@ import {
   OpenApi,
 } from "effect/http-api";
 
-import { Book, BookId, BookNotFound, BooksUnavailable, CreateBookRequest } from "./books.ts";
+import {
+  Book,
+  BookConflict,
+  BookId,
+  BookNotFound,
+  BooksUnavailable,
+  CreateBookRequest,
+  PatchBookRequest,
+} from "./books.ts";
 import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
@@ -404,6 +412,30 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.patch("patch", "/books/:bookId", {
+          params: { bookId: BookId },
+          payload: PatchBookRequest,
+          success: DataResponse(Book),
+          error: [
+            HttpApiError.BadRequestNoContent.annotate({
+              description:
+                "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
+            }),
+            BookNotFound,
+            BookConflict,
+            BooksUnavailable.annotate({
+              description: "The server could not save this correction; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Correct a book")
+          .annotate(
+            OpenApi.Description,
+            "Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book's title and author returns 409; books are never merged.",
           ),
       ),
   );
