@@ -41,10 +41,15 @@ Once the server is ready, seed the local database from a second terminal:
 pnpm --filter @goho/goho-server db:seed
 ```
 
-- Seeding creates four fictional receipts through the receipt creation API.
+- Seeding creates four fictional receipts and five books through the receipt and
+  book creation APIs. The books cover several categories, with and without reading
+  levels, and one long title.
 - It targets `http://127.0.0.1:3000`; set `GOHO_SERVER_URL` for another local server.
-- It skips when any receipt already exists, so reruns add no duplicates.
-- It does not upload images or call OpenAI.
+- Receipts and books seed independently. Receipts are skipped when any receipt
+  already exists. Each book is created by title and author, which returns an
+  existing match unchanged. Reruns add no duplicates.
+- It does not upload images or call OpenAI, so seeded books have no covers or
+  book uploads.
 
 An OpenAI key is not needed to create, read, or seed receipts locally. To process
 uploaded receipt images, put a real `OPENAI_API_KEY` in the ignored `.env` file.

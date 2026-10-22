@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -45,20 +44,10 @@ internal fun ReceiptSummary(
                 )
     val today = now.atZone(zone).toLocalDate()
     val date =
-        when (entry?.date) {
-            null -> if (entry == null) "" else stringResource(R.string.date_unknown)
-            today -> stringResource(R.string.date_today)
-            today.minusDays(1) -> stringResource(R.string.date_yesterday)
-            else ->
-                entry.date.format(
-                    DateTimeFormatter.ofPattern(
-                        DateFormat.getBestDateTimePattern(
-                            locale,
-                            if (entry.date.year == today.year) "EEEMMMd" else "EEEMMMdy",
-                        ),
-                        locale,
-                    )
-                )
+        when {
+            entry == null -> ""
+            entry.date == null -> stringResource(R.string.date_unknown)
+            else -> relativeDate(entry.date, today, locale)
         }
     val justNow =
         entry?.status == ReceiptListStatus.Processing &&

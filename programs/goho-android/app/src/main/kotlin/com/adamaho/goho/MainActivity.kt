@@ -16,14 +16,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.adamaho.goho.api.generated.BookUploadsApi
+import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
@@ -31,19 +35,26 @@ import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
+import com.adamaho.goho.ui.main.BookListController
+import com.adamaho.goho.ui.main.BookOverview
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
 import com.adamaho.goho.ui.main.ScanPreviewScreen
+import com.adamaho.goho.ui.main.Section
+import com.adamaho.goho.ui.main.SectionScreen
+import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
+import com.adamaho.goho.ui.main.receiptListEntries
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.IOException
+import java.time.ZoneId
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +70,8 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody
 import okio.BufferedSink
 
-@Serializable private data object ReceiptListRoute : NavKey
+/** The section root; the selected section is activity state, so Back does not switch sections. */
+@Serializable private data object SectionRoute : NavKey
 
 @Serializable private data class ReceiptDetailRoute(val receiptId: String) : NavKey
 
@@ -70,25 +82,25 @@ class MainActivity : ComponentActivity() {
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
     private var uploadToReveal by mutableStateOf<String?>(null)
-    private var receiptPollingJob: Job? = null
+    private var section by mutableStateOf(Section.Receipts)
+    private var pollingJob: Job? = null
     private var refreshAfterCurrent = false
     private var historyRevision = 0L
 
-    private val receiptUploadsApi by lazy {
-        ApiClient(
-                baseUrl = BuildConfig.GOHO_SERVER_URL,
-                okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
-            )
-            .createService(ReceiptUploadsApi::class.java)
+    private val receiptUploadsApi by lazy { service<ReceiptUploadsApi>() }
+    private val receiptsApi by lazy { service<ReceiptsApi>() }
+    private val receiptThumbnails = ThumbnailCache { loadReceiptImage(it) }
+    private val books by lazy {
+        BookListController(lifecycleScope, service<BooksApi>(), service<BookUploadsApi>())
     }
+    private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
 
-    private val receiptsApi by lazy {
+    private inline fun <reified T> service(): T =
         ApiClient(
                 baseUrl = BuildConfig.GOHO_SERVER_URL,
                 okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
             )
-            .createService(ReceiptsApi::class.java)
-    }
+            .createService(T::class.java)
 
     private val scannerLauncher =
         registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -112,8 +124,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+        section =
+            preferences.getString(SECTION_KEY, null)?.let { saved ->
+                Section.entries.find { it.name == saved }
+            } ?: Section.Receipts
         setContent {
-            val backStack = rememberNavBackStack(ReceiptListRoute)
+            val backStack = rememberNavBackStack(SectionRoute)
             GohoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -138,25 +154,67 @@ class MainActivity : ComponentActivity() {
                             },
                             entryProvider = { route ->
                                 when (route) {
-                                    ReceiptListRoute ->
+                                    SectionRoute ->
                                         NavEntry(route) {
-                                            ReceiptOverview(
-                                                state = overviewState,
-                                                uploadToReveal = uploadToReveal,
-                                                onUploadRevealed = { uploadToReveal = null },
-                                                deleteReceipt = ::deleteReceipt,
-                                                loadReceiptImage = ::loadReceiptImage,
+                                            val receiptCount =
+                                                remember(overviewState) {
+                                                    if (overviewState.hasLoaded)
+                                                        receiptListEntries(
+                                                                overviewState.receipts,
+                                                                overviewState.uploads,
+                                                                ZoneId.systemDefault(),
+                                                            )
+                                                            .size
+                                                    else null
+                                                }
+                                            val bookState = books.state
+                                            SectionScreen(
+                                                section = section,
+                                                onSectionChange = ::selectSection,
+                                                receiptCount = receiptCount,
+                                                bookCount =
+                                                    if (bookState.hasLoaded) bookState.books.size
+                                                    else null,
                                                 isOpeningScanner = isOpeningScanner,
-                                                scanError = scanError,
-                                                onScanClick = ::openScanner,
-                                                onRetryClick = { refreshHistory() },
-                                                onRefresh = {
-                                                    refreshHistory(userInitiated = true)
-                                                },
-                                                onReceiptClick = {
-                                                    backStack.add(ReceiptDetailRoute(it))
-                                                },
-                                            )
+                                                onScanReceipt = ::openScanner,
+                                            ) { menuOpen ->
+                                                when (section) {
+                                                    Section.Receipts ->
+                                                        ReceiptOverview(
+                                                            state = overviewState,
+                                                            menuOpen = menuOpen,
+                                                            uploadToReveal = uploadToReveal,
+                                                            onUploadRevealed = {
+                                                                uploadToReveal = null
+                                                            },
+                                                            deleteReceipt = ::deleteReceipt,
+                                                            thumbnails = receiptThumbnails,
+                                                            isOpeningScanner = isOpeningScanner,
+                                                            scanError = scanError,
+                                                            onRetryClick = { refreshHistory() },
+                                                            onRefresh = {
+                                                                refreshHistory(userInitiated = true)
+                                                            },
+                                                            onReceiptClick = {
+                                                                backStack.add(
+                                                                    ReceiptDetailRoute(it)
+                                                                )
+                                                            },
+                                                        )
+                                                    Section.Books ->
+                                                        BookOverview(
+                                                            state = bookState,
+                                                            menuOpen = menuOpen,
+                                                            covers = books.covers,
+                                                            isOpeningScanner = isOpeningScanner,
+                                                            scanError = scanError,
+                                                            onRetryClick = { books.refresh() },
+                                                            onRefresh = {
+                                                                books.refresh(userInitiated = true)
+                                                            },
+                                                        )
+                                                }
+                                            }
                                         }
                                     is ReceiptDetailRoute ->
                                         NavEntry(route) {
@@ -203,7 +261,9 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         refreshHistory()
-        receiptPollingJob = lifecycleScope.launch {
+        books.refresh()
+        pollingJob = lifecycleScope.launch {
+            launch { books.pollPendingUploads() }
             snapshotFlow {
                 overviewState.uploads.any {
                     it.status == ReceiptUploadsList200ResponseDataInner.Status.queued ||
@@ -222,9 +282,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
-        receiptPollingJob?.cancel()
-        receiptPollingJob = null
+        pollingJob?.cancel()
+        pollingJob = null
         super.onStop()
+    }
+
+    private fun selectSection(next: Section) {
+        section = next
+        preferences.edit { putString(SECTION_KEY, next.name) }
     }
 
     private suspend fun loadReceipt(receiptId: String): Receipt? =
@@ -408,6 +473,7 @@ class MainActivity : ComponentActivity() {
                             status != ReceiptUploadsCreate202ResponseData.Status.failed
                     ) {
                         uploadToReveal = response.body()?.data?.id?.toString()
+                        selectSection(Section.Receipts)
                         scannedImageUri = null
                         refreshHistory()
                         UploadStatus.Submitted
@@ -420,5 +486,9 @@ class MainActivity : ComponentActivity() {
                     UploadStatus.Failed
                 }
         }
+    }
+
+    private companion object {
+        const val SECTION_KEY = "section"
     }
 }

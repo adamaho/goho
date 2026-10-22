@@ -19,7 +19,7 @@ fun Modifier.topHighlight(color: Color): Modifier = drawWithContent {
 }
 
 @Composable
-fun ReceiptCard(
+fun ListCard(
     modifier: Modifier = Modifier,
     verticalPadding: Dp = GohoSpacing.cardVerticalPadding,
     content: @Composable ColumnScope.() -> Unit,
@@ -48,7 +48,7 @@ fun ReceiptCard(
 }
 
 @Composable
-fun ReceiptDivider() {
+fun ListDivider() {
     Box(
         Modifier.fillMaxWidth()
             .padding(start = GohoSpacing.dividerStart)

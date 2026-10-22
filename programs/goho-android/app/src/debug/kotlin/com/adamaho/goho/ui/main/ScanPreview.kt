@@ -70,16 +70,7 @@ private fun PreviewCapture(initialStatus: UploadStatus) {
                     }
                 }
             }
-        if (cancelled)
-            ReceiptOverview(
-                receiptListPreviewState,
-                false,
-                null,
-                {},
-                {},
-                {},
-                loadReceiptImage = { null },
-            )
+        if (cancelled) ReceiptsPreviewScreen(receiptListPreviewState)
         else
             ScanPreviewScreen(
                 uri,

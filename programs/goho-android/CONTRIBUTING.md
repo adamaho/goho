@@ -135,8 +135,10 @@ fails when that copy is stale.
 
 ## Code organization and style
 
-Keep this app small while it has one screen. `MainActivity` owns the Android
-entry point, `ui/main` owns the screen, and `theme` owns Compose theming. As
+Keep this app small. `MainActivity` owns the Android entry point, receipt data
+and the selected section. `ui/main` owns the screens: the shared `SectionScreen`
+root with its Receipts and Books content, `BookListController` for Books data,
+receipt details and the scan preview. `theme` owns Compose theming. As
 features grow, follow the official [Guide to app architecture](https://developer.android.com/topic/architecture)
 and [architecture recommendations](https://developer.android.com/topic/architecture/recommendations):
 keep UI state and business data separate, use a screen-level `ViewModel` when
