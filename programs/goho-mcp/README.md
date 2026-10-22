@@ -1,9 +1,9 @@
 # @goho/goho-mcp
 
-Goho receipts are small, structured records that give an MCP client a useful
-read and write workflow. This local stdio server exposes receipt lookup,
-creation, correction, and deletion through the existing Goho HTTP API, so it can be tested without hosting
-or an OpenAI key.
+Goho receipts and books are small, structured records that give an MCP client a
+useful read and write workflow. This local stdio server exposes receipt and book
+lookup, creation, correction, and deletion through the existing Goho HTTP API, so
+it can be tested without hosting or an OpenAI key.
 
 ## Agent-first setup
 
@@ -119,3 +119,17 @@ while the client is connected and reserves stdout for protocol messages.
   It returns the saved item with its ID, position, name, amount, and category.
   Categories are saved in lowercase, and an unfamiliar name adds a new one.
   Both patch tools trim values and reject unsupported fields.
+- `list_books` returns books, newest first. It takes an optional `search`
+  string that matches title or author, ignoring case. After seeding a fresh
+  database, it returns five books.
+- `get_book` takes a string `book_id`. Use an ID returned by `list_books`.
+- `create_book` takes `title`, `author`, `category`, and an optional
+  `readingLevel`. If a saved book already has that title and author, ignoring
+  case and extra spaces, it returns that book unchanged instead of adding one.
+- `delete_book` takes a string `book_id` and permanently removes that book and
+  its cover scans. Its category stays. It returns the deleted ID.
+- `patch_book` takes a string `book_id` and a `changes` object containing at
+  least one of `title`, `author`, `category`, or `readingLevel`, for example:
+  `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. A null
+  `readingLevel` clears it. It returns the complete saved book. A title and
+  author matching another saved book is rejected; books are never merged.
