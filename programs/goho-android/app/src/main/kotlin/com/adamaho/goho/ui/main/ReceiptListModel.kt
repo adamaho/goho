@@ -60,7 +60,7 @@ fun receiptListEntries(
             receiptId = receipt.id,
             merchant = receipt.storeName,
             date = runCatching { LocalDate.parse(receipt.receiptDate) }.getOrNull(),
-            uploadedAt = upload?.let { receiptUploadInstant(it.createdAt) },
+            uploadedAt = upload?.let { uploadInstant(it.createdAt) },
             total = receipt.total,
             currency = receipt.currency,
             status = ReceiptListStatus.Processed,
@@ -70,7 +70,7 @@ fun receiptListEntries(
         uploads
             .filter { it.status != ReceiptUploadsList200ResponseDataInner.Status.succeeded }
             .map { upload ->
-                val instant = receiptUploadInstant(upload.createdAt)
+                val instant = uploadInstant(upload.createdAt)
                 ReceiptListEntry(
                     key = "upload:${upload.id}",
                     uploadId = upload.id,
@@ -129,7 +129,7 @@ fun receiptAmount(value: String?, locale: Locale): String {
 }
 
 /** PostgreSQL timestamptz::text uses a space separator and may shorten offsets to +00. */
-internal fun receiptUploadInstant(value: String): Instant? = runCatching {
+internal fun uploadInstant(value: String): Instant? = runCatching {
     val timestamp = value.trim().replaceFirst(' ', 'T')
     val normalized =
         if (Regex("[+-]\\d{2}$").containsMatchIn(timestamp)) "$timestamp:00" else timestamp

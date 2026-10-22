@@ -9,6 +9,7 @@ import androidx.core.view.WindowCompat
 import com.adamaho.goho.api.generated.model.*
 import com.adamaho.goho.theme.GohoTheme
 import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 private val previewTime = Instant.parse("2026-09-30T12:00:00Z")
@@ -81,14 +82,32 @@ private fun ListPreview(state: ReceiptOverviewState) {
                     }
                 }
             }
+        ReceiptsPreviewScreen(state, previewTime)
+    }
+}
+
+/** The Receipts section with its shared title and Add button, without server images. */
+@Composable
+internal fun ReceiptsPreviewScreen(state: ReceiptOverviewState, previewTime: Instant? = null) {
+    SectionScreen(
+        section = Section.Receipts,
+        onSectionChange = {},
+        receiptCount =
+            if (state.hasLoaded)
+                receiptListEntries(state.receipts, state.uploads, ZoneId.systemDefault()).size
+            else null,
+        bookCount = null,
+        isOpeningScanner = false,
+        onScanReceipt = {},
+    ) { menuOpen ->
         ReceiptOverview(
             state,
             false,
             null,
             {},
             {},
-            {},
-            loadReceiptImage = { null },
+            remember { ThumbnailCache { null } },
+            menuOpen = menuOpen,
             previewTime = previewTime,
         )
     }

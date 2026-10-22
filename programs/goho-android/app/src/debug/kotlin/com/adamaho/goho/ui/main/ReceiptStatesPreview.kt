@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 
@@ -29,12 +31,19 @@ fun NoReceiptsPreview() = StatePreview { NoReceiptsState() }
 @Preview(name = "Connection error – dark", widthDp = 412, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Preview(name = "Connection error – large text", widthDp = 320, fontScale = 1.5f)
 @Composable
-fun ReceiptsConnectionErrorPreview() = StatePreview { ReceiptsConnectionErrorState(onRetry = {}) }
+fun ReceiptsConnectionErrorPreview() = StatePreview {
+    LoadErrorState(stringResource(R.string.receipts_load_failed_body), onRetry = {})
+}
 
 @Preview(name = "Retrying", widthDp = 412)
 @Composable
 fun ReceiptsRetryingPreview() = StatePreview {
-    ReceiptsConnectionErrorState(onRetry = {}, isRetrying = true, showProgress = true)
+    LoadErrorState(
+        stringResource(R.string.receipts_load_failed_body),
+        onRetry = {},
+        isRetrying = true,
+        showProgress = true,
+    )
 }
 
 @Preview(name = "All good – light", widthDp = 412)

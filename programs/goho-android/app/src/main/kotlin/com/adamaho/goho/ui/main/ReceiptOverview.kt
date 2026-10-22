@@ -2,43 +2,29 @@ package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat
 import androidx.annotation.StringRes
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import com.adamaho.goho.R
@@ -51,7 +37,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 data class ReceiptOverviewState(
     val uploads: List<ReceiptUploadsList200ResponseDataInner> = emptyList(),
@@ -63,49 +48,35 @@ data class ReceiptOverviewState(
     val refreshError: Boolean = false,
 )
 
+/**
+ * Receipts content below the section title. [thumbnails] outlives section switches so returning to
+ * Receipts does not reload photos that already loaded.
+ */
 @Composable
-fun ReceiptOverview(
+internal fun ReceiptOverview(
     state: ReceiptOverviewState,
     isOpeningScanner: Boolean,
     @StringRes scanError: Int?,
-    onScanClick: () -> Unit,
     onRetryClick: () -> Unit,
     onReceiptClick: (String) -> Unit,
-    loadReceiptImage: suspend (String) -> ByteArray?,
+    thumbnails: ThumbnailCache,
     modifier: Modifier = Modifier,
+    menuOpen: Boolean = false,
     previewTime: Instant? = null,
     deleteReceipt: suspend (ReceiptListEntry) -> Boolean = { false },
     onRefresh: () -> Unit = onRetryClick,
     uploadToReveal: String? = null,
     onUploadRevealed: () -> Unit = {},
 ) {
-    val clock by
-        produceState(initialValue = previewTime ?: Instant.now(), previewTime) {
-            if (previewTime == null)
-                while (true) {
-                    value = Instant.now()
-                    delay(30_000)
-                }
-        }
+    val clock by rememberClock(previewTime)
     val config = LocalConfiguration.current
     val locale = config.locales[0]
     val zone = ZoneId.systemDefault()
-    val today = clock.atZone(zone).toLocalDate()
     val entries =
         remember(state.receipts, state.uploads, zone) {
             receiptListEntries(state.receipts, state.uploads, zone)
         }
-    val pagerState = rememberPagerState { 2 }
-    val scope = rememberCoroutineScope()
-    val reduced = rememberReducedMotion()
-    val haptics = LocalHapticFeedback.current
-    var lastHapticPage by remember { mutableIntStateOf(pagerState.settledPage) }
-    LaunchedEffect(pagerState.settledPage) {
-        if (pagerState.settledPage != lastHapticPage) {
-            haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-            lastHapticPage = pagerState.settledPage
-        }
-    }
+    val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
     val uploadedEntryVisible =
@@ -114,133 +85,50 @@ fun ReceiptOverview(
         if (uploadToReveal == null) return@LaunchedEffect
         // Reset on return, then again when the uploaded row arrives: stable item keys
         // otherwise preserve the old first visible receipt as rows are inserted above it.
-        lastHapticPage = 0
-        pagerState.scrollToPage(0)
+        pages.select(0, animate = false)
         allListState.scrollToItem(0)
         if (uploadedEntryVisible) onUploadRevealed()
     }
     var optionsEntry by remember { mutableStateOf<ReceiptListEntry?>(null) }
-    var addMenuOpen by rememberSaveable { mutableStateOf(false) }
-    var titleMenuOpen by rememberSaveable { mutableStateOf(false) }
-    val menuOpen = addMenuOpen || titleMenuOpen
-    val addButtonFocus = remember { FocusRequester() }
-    fun closeAddMenu() {
-        addMenuOpen = false
-        addButtonFocus.requestFocus()
-    }
-    LaunchedEffect(isOpeningScanner) { if (isOpeningScanner) addMenuOpen = false }
-    val currentLoadImage by rememberUpdatedState(loadReceiptImage)
-    val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }
-    val recovery = updateTransition(state.error, label = "Receipt recovery")
-    // This screen has no text input. Ignore an outgoing launcher keyboard's insets so
-    // Add stays anchored to the window during cold start, before the IME finishes hiding.
-    Box(modifier.fillMaxSize().background(GohoTheme.colors.background)) {
-        Column(
-            Modifier.fillMaxSize()
-                .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-                .focusProperties { onEnter = { if (menuOpen) cancelFocusChange() } }
-                .focusGroup()
-                .then(if (menuOpen) Modifier.clearAndSetSemantics {} else Modifier)
-        ) {
-            ReceiptListHeader(
-                entries.size,
-                entries.count { it.status == ReceiptListStatus.NotProcessed },
-                pagerState.currentPage == 1,
-                { attentionOnly ->
-                    val page = if (attentionOnly) 1 else 0
-                    // The tab already supplies its own selection haptic.
-                    lastHapticPage = page
-                    scope.launch {
-                        if (reduced) pagerState.scrollToPage(page)
-                        else pagerState.animateScrollToPage(page)
-                    }
-                },
-                locale,
-                showFilters = !state.error && state.hasLoaded,
-                hasLoaded = state.hasLoaded,
-                titleMenuOpen = titleMenuOpen,
-                onTitleMenuChange = { open ->
-                    if (open) addMenuOpen = false
-                    titleMenuOpen = open
-                },
-            )
-            PullToRefresh(
-                refreshing = state.refreshing,
-                failed = state.refreshError || state.error,
-                enabled = !menuOpen && !state.loading && (state.hasLoaded || state.error),
-                onRefresh = onRefresh,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) {
-                HorizontalPager(
-                    state = pagerState,
-                    beyondViewportPageCount = 1,
-                    userScrollEnabled =
-                        state.hasLoaded &&
-                            !state.error &&
-                            !state.refreshing &&
-                            optionsEntry == null &&
-                            !menuOpen,
-                    modifier = Modifier.fillMaxSize(),
-                ) { page ->
-                    recovery.AnimatedContent(
-                        transitionSpec = {
-                            if (initialState && !targetState && !reduced)
-                                (fadeIn(tween(GohoMotion.STATUS_CROSSFADE_MILLIS)) togetherWith
-                                        fadeOut(tween(GohoMotion.STATUS_CROSSFADE_MILLIS)))
-                                    .using(null)
-                            else (EnterTransition.None togetherWith ExitTransition.None).using(null)
-                        }
-                    ) { error ->
-                        ReceiptListPage(
-                            state = state,
-                            entries = entries,
-                            attentionOnly = page == 1,
-                            error = error,
-                            animateEntrance = !recovery.currentState,
-                            clock = clock,
-                            locale = locale,
-                            zone = zone,
-                            listState = if (page == 0) allListState else attentionListState,
-                            isOpeningScanner = isOpeningScanner,
-                            scanError = scanError,
-                            onRetryClick = onRetryClick,
-                            onRefresh = onRefresh,
-                            onReceiptClick = onReceiptClick,
-                            onOptions = { optionsEntry = it },
-                            thumbnails = thumbnails,
-                            modifier =
-                                if (error != state.error || page != pagerState.currentPage)
-                                    Modifier.clearAndSetSemantics {}
-                                else Modifier,
-                        )
-                    }
-                }
-            }
-        }
-        // One persistent action belongs to the screen, outside page and recovery transitions.
-        AddMenu(
-            open = addMenuOpen,
-            actions =
-                listOf(
-                    // Book scanning is deliberately a no-op until its app flow is implemented.
-                    AddMenuAction(R.string.scan_book, R.drawable.ic_add_book) {},
-                    AddMenuAction(R.string.scan_receipt, R.drawable.ic_add_receipt, onScanClick),
-                ),
-            onDismiss = ::closeAddMenu,
+    FilterPager(
+        state = pages,
+        total = entries.size,
+        attention = entries.count { it.status == ReceiptListStatus.NotProcessed },
+        showFilters = !state.error && state.hasLoaded,
+        swipeEnabled =
+            state.hasLoaded &&
+                !state.error &&
+                !state.refreshing &&
+                optionsEntry == null &&
+                !menuOpen,
+        error = state.error,
+        refreshing = state.refreshing,
+        refreshFailed = state.refreshError || state.error,
+        refreshEnabled = !menuOpen && !state.loading && (state.hasLoaded || state.error),
+        onRefresh = onRefresh,
+        refreshLabel = stringResource(R.string.receipts_refresh),
+        refreshProgressLabel = stringResource(R.string.receipts_refreshing),
+        modifier = modifier,
+    ) { attentionOnly, error, animateEntrance, pageModifier ->
+        ReceiptListPage(
+            state = state,
+            entries = entries,
+            attentionOnly = attentionOnly,
+            error = error,
+            animateEntrance = animateEntrance,
+            clock = clock,
+            locale = locale,
+            zone = zone,
+            listState = if (attentionOnly) attentionListState else allListState,
+            isOpeningScanner = isOpeningScanner,
+            scanError = scanError,
+            onRetryClick = onRetryClick,
+            onRefresh = onRefresh,
+            onReceiptClick = onReceiptClick,
+            onOptions = { optionsEntry = it },
+            thumbnails = thumbnails,
+            modifier = pageModifier,
         )
-        AddButton(
-            open = addMenuOpen,
-            enabled = !isOpeningScanner,
-            onClick = { if (addMenuOpen) closeAddMenu() else addMenuOpen = true },
-            modifier =
-                Modifier.align(Alignment.BottomEnd)
-                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-                    .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
-                    .focusRequester(addButtonFocus)
-                    .focusProperties { canFocus = !titleMenuOpen }
-                    .then(if (titleMenuOpen) Modifier.clearAndSetSemantics {} else Modifier),
-        )
-        SectionMenuScrim(open = titleMenuOpen, onDismiss = { titleMenuOpen = false })
     }
     optionsEntry?.let { entry ->
         key(entry.key) {
@@ -274,7 +162,7 @@ private fun ReceiptListPage(
     onRefresh: () -> Unit,
     onReceiptClick: (String) -> Unit,
     onOptions: (ReceiptListEntry) -> Unit,
-    thumbnails: ReceiptThumbnails,
+    thumbnails: ThumbnailCache,
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
@@ -319,7 +207,7 @@ private fun ReceiptListPage(
                     if (state.refreshError)
                         ListNotice(
                             stringResource(R.string.receipts_refresh_failed),
-                            stringResource(R.string.receipts_retry),
+                            stringResource(R.string.retry),
                             onRefresh,
                         )
                     if (!error) {
@@ -328,7 +216,8 @@ private fun ReceiptListPage(
                     }
                     when {
                         error ->
-                            ReceiptsConnectionErrorState(
+                            LoadErrorState(
+                                description = stringResource(R.string.receipts_load_failed_body),
                                 onRetry = { if (state.error && !state.loading) onRetryClick() },
                                 isRetrying = state.loading || !state.error,
                                 showProgress = state.error && showLoading && !state.refreshing,
@@ -353,7 +242,7 @@ private fun ReceiptListPage(
                     item("refresh-error") {
                         ListNotice(
                             stringResource(R.string.receipts_refresh_failed),
-                            stringResource(R.string.receipts_retry),
+                            stringResource(R.string.retry),
                             onRefresh,
                         )
                     }
@@ -370,9 +259,9 @@ private fun ReceiptListPage(
                                 )
                             ) {
                                 ReceiptSectionHeading("")
-                                ReceiptCard {
+                                ListCard {
                                     repeat(4) { index ->
-                                        if (index > 0) ReceiptDivider()
+                                        if (index > 0) ListDivider()
                                         ReceiptRow(
                                             null,
                                             clock,
@@ -401,7 +290,7 @@ private fun ReceiptListPage(
                                 ReceiptSectionHeading(
                                     sectionTitle(section.group, locale, today.year)
                                 )
-                                ReceiptCard {
+                                ListCard {
                                     section.entries.forEachIndexed { index, entry ->
                                         key(entry.key) {
                                             AnimatedVisibility(
@@ -427,7 +316,7 @@ private fun ReceiptListPage(
                                                             it.key in visibleKeys
                                                         }
                                                     )
-                                                        ReceiptDivider()
+                                                        ListDivider()
                                                 }
                                             }
                                         }
@@ -479,33 +368,6 @@ private fun sectionTitle(group: ReceiptDateGroup, locale: Locale, year: Int): St
     }
 
 @Composable
-private fun ListNotice(message: String, action: String? = null, onAction: () -> Unit = {}) {
-    val c = GohoTheme.colors
-    Column(
-        Modifier.fillMaxWidth()
-            .padding(
-                horizontal = GohoSpacing.textInsetFromMargin,
-                vertical = GohoSpacing.contentGap,
-            )
-    ) {
-        Text(
-            message,
-            style = GohoTheme.type.meta,
-            color = c.textSecondary,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        )
-        if (action != null)
-            ActionButton(
-                action,
-                onAction,
-                modifier = Modifier.padding(top = GohoSpacing.contentGap),
-                variant = 2,
-                color = ButtonColor.Grey,
-            )
-    }
-}
-
-@Composable
 private fun ReceiptRow(
     entry: ReceiptListEntry?,
     now: Instant,
@@ -514,7 +376,7 @@ private fun ReceiptRow(
     expanded: Boolean,
     onReceiptClick: (String) -> Unit,
     onReceiptOptions: (ReceiptListEntry) -> Unit,
-    thumbnails: ReceiptThumbnails,
+    thumbnails: ThumbnailCache,
 ) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }

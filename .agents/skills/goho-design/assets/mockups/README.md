@@ -6,7 +6,7 @@ The current family icon sources and Android resources are documented in the [lau
 
 ## Section navigation and add button (October 22, 2026, approved design)
 
-Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu is implemented on Receipts with Books as a dismiss-only no-op; title swiping, section switching and Books screens remain planned. Native title-menu and Add captures below show the implemented controls; older captures with Scan are historical for that control.
+Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu, switching sections from it and a display-only Books list are implemented; title swiping and book scanning remain planned. Native title-menu, Add and Books captures below show the implemented controls; older captures with Scan are historical for that control.
 
 - `nav-title-light.png`, `nav-title-dark.png`: Receipts with the `SectionTitle` chevron and the round Add button.
 - `nav-menu-receipts-light.png`, `nav-menu-receipts-dark.png`, `nav-menu-books-light.png`, `nav-menu-books-dark.png`: the section menu open from each section, current section tinted, with counts.
@@ -16,7 +16,7 @@ Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kD
 
 ## Title menu (native implementation)
 
-Unedited Goho Dev captures from the Pixel 9 API 36 emulator using existing receipts from the local development server. Standard images are 1080×2424px at 420dpi. These show only the title menu: Receipts is selected, its count matches All, and Books intentionally only dismisses with no count or navigation. The title swipe and Books screens remain future work.
+Unedited Goho Dev captures from the Pixel 9 API 36 emulator using existing receipts from the local development server. Standard images are 1080×2424px at 420dpi. These show only the title menu as first implemented, when Books only dismissed with no count; the [Books list captures](#books-list-native-implementation) show the current switching and Books count. The title swipe remains future work.
 
 - `section-title-native-light.png`: the title trigger with its chevron and unchanged filters/content.
 - `section-menu-native-light.png`, `section-menu-native-dark.png`: anchored sheet surface, selected tint, receipt count, icon rows and light scrim above the list and Add.
@@ -24,7 +24,20 @@ Unedited Goho Dev captures from the Pixel 9 API 36 emulator using existing recei
 
 Manual checks cover row, title, outside and Back dismissal; keyboard focus on Receipts and return to the title; large text and reduced motion; and preserving the current filter. The selected row retains an accessibility click action so it can dismiss like Books. The menu hides the underlying receipt/Add semantics and blocks their gestures while open. Build, lint and Kotlin formatting accompany these checks; no automated Android tests or harnesses were added or run.
 
-Canonical source snapshots: `SectionTitle.kt`, `SectionMenu.kt`, `ReceiptListHeader.kt`, `ReceiptOverview.kt`, `Spacing.kt`, `Shape.kt` and `Motion.kt` in `assets/compose/`. `SectionNavigation.kt` is a future navigation sketch, not the implementation.
+Canonical source snapshots: `SectionTitle.kt`, `SectionMenu.kt`, `SectionScreen.kt`, `Spacing.kt`, `Shape.kt` and `Motion.kt` in `assets/compose/`. `SectionNavigation.kt` is a future title-swipe sketch, not the implementation.
+
+## Books list (native implementation)
+
+Display-only Books list reached from the title menu, using books from the local development seed (no covers). The dark and large-text captures also include temporary processing and failed upload rows; these were removed after manual validation. It follows [screens.md section 8](../../references/screens.md#8-books-list); the approved `nav-add-closed-*.png` and `nav-menu-books-*.png` renders above remain the design reference. Native captures from the Goho Dev emulator, added after validation:
+
+- `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders, one-line titles, author and optional reading level, and server category tags.
+- `books-menu-native-light.png`: the section menu opened from Books, Books selected, with Receipts' All count and the saved-book count.
+- `books-native-loading-light.png`: the initial skeleton rows with Add in its usual position.
+- `books-native-empty-light.png`: the text-only empty state.
+- `books-native-error-light.png`: initial connection failure with the Books copy and retry action.
+- `books-native-large-dark.png`: 2× font scale; tags move beneath the metadata and titles stay on one line.
+
+Canonical source snapshots: `SectionScreen.kt`, `FilterPager.kt`, `ReceiptOverview.kt`, `BookOverview.kt`, `BookRow.kt`, `UploadTags.kt`, `CategoryIcon.kt`, `PullToRefresh.kt` and `Spacing.kt` in `assets/compose/`.
 
 ## Add button and menu (native implementation)
 

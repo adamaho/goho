@@ -349,7 +349,7 @@ fun ActionButton(
 // Shared icon-only actions live in IconButton.kt.
 
 // ---------- Tags and badges ----------
-// Tags now delegate to the canonical Tag / ReceiptTags reference files.
+// Tags now delegate to the canonical Tag / UploadTags reference files.
 
 @Composable
 fun CountBadge(count: Int, modifier: Modifier = Modifier) {

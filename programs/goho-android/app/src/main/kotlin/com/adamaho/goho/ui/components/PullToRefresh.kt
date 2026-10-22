@@ -28,7 +28,10 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 
-/** Uses the platform nested-scroll gesture with Goho's own indicator and accessibility action. */
+/**
+ * Uses the platform nested-scroll gesture with Goho's own indicator and accessibility action.
+ * [refreshLabel] names the action and [progressLabel] announces a running refresh.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PullToRefresh(
@@ -36,6 +39,8 @@ internal fun PullToRefresh(
     failed: Boolean,
     enabled: Boolean,
     onRefresh: () -> Unit,
+    refreshLabel: String,
+    progressLabel: String,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -130,11 +135,9 @@ internal fun PullToRefresh(
             tween(if (reduced) 0 else GohoMotion.REFRESH_MORPH_MILLIS),
             label = "Refresh ring sweep",
         )
-    val refreshLabel = stringResource(R.string.receipts_refresh)
-    val progressLabel = stringResource(R.string.receipts_refreshing)
-    val failureLabel = stringResource(R.string.receipts_refresh_failed_indicator)
-    val pullLabel = stringResource(R.string.receipts_pull_to_refresh)
-    val releaseLabel = stringResource(R.string.receipts_release_to_refresh)
+    val failureLabel = stringResource(R.string.refresh_failed_indicator)
+    val pullLabel = stringResource(R.string.pull_to_refresh)
+    val releaseLabel = stringResource(R.string.release_to_refresh)
     // Material retains the drag position while running, including the brief failure outcome.
     val distance = state.distanceFraction.coerceIn(0f, 1f)
     val offset = GohoSpacing.refreshThreshold * distance

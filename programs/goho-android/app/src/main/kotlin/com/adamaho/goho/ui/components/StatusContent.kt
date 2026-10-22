@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
 @Composable
-internal fun ReceiptStatusContent(
+internal fun StatusContent(
     title: String,
     description: String,
     modifier: Modifier = Modifier,

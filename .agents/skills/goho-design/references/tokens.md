@@ -99,7 +99,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 
 | Token         | Radius | Use                                                                  |
 | ------------- | ------ | -------------------------------------------------------------------- |
-| `thumb`       | 8      | Receipt thumbnails in rows                                           |
+| `thumb`       | 8      | Receipt thumbnails and book covers in rows                           |
 | `button`      | 20     | Primary and secondary buttons (not fully round)                      |
 | `card`        | 20     | Grouped list cards, detail card, photo frame                         |
 | `fab`         | 24     | Historical Scan button (Add button is `pill`)                        |
@@ -117,7 +117,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `screenMargin` = 16: edges of cards and the filter. The Add button uses its separate 24dp end margin.
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
-- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
+- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge. Book rows use a 40×56 cover (`thumbWidth` × `coverHeight`) in the same column, so their dividers keep the 68dp start.
 - Detail list row: min height 47, label left, value right.
 - Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item or category name. In item rows, vertically center the tag, name and amount with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
 - Category breakdown (mirrored in native `Spacing.kt`): `breakdownRowVertical` = 12, `breakdownBarHeight` = 3, `breakdownBarGap` = 8. Rows reuse `cardPadding` = 16 horizontally; the bar uses `divider` for its track and the category `TagColor` content colour for its fill.
@@ -171,6 +171,7 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 - Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition. Use weight 500 and retain one light haptic per completed filter click.
 - `timestamp`: Geist 400, 13sp / 18sp, zero tracking, proportional digit widths.
 - Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.
+- Book cover placeholders: 20dp (`coverIcon`) book or scan icons centered in the 40×56dp cover. Failed scans add an 8dp (`coverDot`) `attention` dot inset 6dp (`coverDotInset`) from the bottom end.
 
 ## Receipt item card
 

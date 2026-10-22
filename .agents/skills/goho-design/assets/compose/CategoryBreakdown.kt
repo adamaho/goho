@@ -25,7 +25,7 @@ internal fun CategoryBreakdown(
     locale: Locale,
     stacked: Boolean,
 ) {
-    ReceiptCard {
+    ListCard {
         repeat(categories?.size ?: 2) { index ->
             CategoryBreakdownRow(categories?.get(index), currencyCode, locale, stacked)
         }

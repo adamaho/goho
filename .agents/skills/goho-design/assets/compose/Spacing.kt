@@ -62,6 +62,10 @@ object GohoSpacing {
     val rowMinHeight = 72.dp
     val thumbWidth = 40.dp
     val thumbHeight = 48.dp
+    val coverHeight = 56.dp // Book covers share thumbWidth and the divider inset.
+    val coverIcon = 20.dp
+    val coverDot = 8.dp
+    val coverDotInset = 6.dp
     val thumbToText = 12.dp
     val dividerStart = 68.dp // cardPadding + thumbWidth + thumbToText
     val detailTopBarHeight = 56.dp

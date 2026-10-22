@@ -7,9 +7,9 @@ import com.adamaho.goho.R
 
 @Composable
 fun NoNeedsAttentionState(modifier: Modifier = Modifier, animateEntrance: Boolean = true) {
-    ReceiptStatusContent(
-        title = stringResource(R.string.receipts_attention_empty),
-        description = stringResource(R.string.receipts_attention_empty_body),
+    StatusContent(
+        title = stringResource(R.string.attention_empty_title),
+        description = stringResource(R.string.attention_empty_body),
         modifier = modifier,
         illustration = R.drawable.status_needs_attention,
         animateEntrance = animateEntrance,

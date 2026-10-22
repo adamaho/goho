@@ -26,7 +26,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
-fun ReceiptFilter(
+fun ListFilter(
     total: Int,
     attention: Int,
     attentionOnly: Boolean,
@@ -42,7 +42,7 @@ fun ReceiptFilter(
     ) {
         FilterSegment(!attentionOnly, { onSelect(false) }) {
             Text(
-                stringResource(R.string.receipts_filter_all),
+                stringResource(R.string.filter_all),
                 style = GohoTheme.type.segment,
                 maxLines = 1,
             )
@@ -54,7 +54,7 @@ fun ReceiptFilter(
         }
         FilterSegment(attentionOnly, { onSelect(true) }, Modifier.weight(1f, fill = false)) {
             Text(
-                stringResource(R.string.receipts_failed_title),
+                stringResource(R.string.filter_needs_attention),
                 modifier = Modifier.weight(1f, fill = false),
                 style = GohoTheme.type.segment,
             )
