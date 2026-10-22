@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 
 object GohoShapes {
     val statusCard = RoundedCornerShape(32.dp)
+    val sectionMenu = RoundedCornerShape(20.dp)
     val sheet = RoundedCornerShape(28.dp)
     val heldRow = RoundedCornerShape(14.dp)
     val button = RoundedCornerShape(20.dp)

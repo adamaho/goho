@@ -222,13 +222,14 @@ Use the HorizontalPager in production `ui/main/ReceiptOverview.kt`, mirrored in 
 
 ## SectionTitle and SectionMenu
 
-Approved October 22, 2026; behaviour in `screens.md` section 7. Reference: `assets/compose/SectionNavigation.kt` (not compiled; fix API drift against the project’s Compose version).
+Native menu implementation; behaviour in `screens.md` section 7. `assets/compose/SectionTitle.kt`, `SectionMenu.kt` and `ReceiptListHeader.kt` mirror the app. `SectionNavigation.kt` is only a future title-swipe/switching sketch and must not replace the native menu code.
 
-`SectionNavigation.kt` is still an illustrative sketch. Implement title/content transition coordination, the section-menu scrim and exit transition, accessible focus transfer/restoration, and the specified reduced-motion behaviour when section navigation is requested. Coordinate its state with the existing Add menu so the menus cannot overlap and title swipes are disabled while either is open. Move new measurements into theme tokens and adapt package/API names; the written spec takes precedence over the sketch.
-
-- `Section` registry entry: stable `id`, display `title`, `icon`, nullable `count` (null hides it) and the scan action used by `AddMenu`. Keep the list ordered; it defines menu order, swipe order and Add menu order.
-- `SectionTitle(sections, currentId, onSelect)`: the title row with chevron, tap-to-open menu and the vertical title swipe. It owns the roll animation, `SegmentTick` haptic, rubber band and accessibility actions. It replaces the plain title text in `ReceiptListHeader` and the Books header; filters stay where they are.
-- `SectionMenu`: `Popup` anchored under the title with the 35% scrim, `sectionMenu` shape, `sheet` fill and sheet ring/shadow. Rows use `indication = null` with a `surfacePressed` / `surfaceMutedPressed` pressed fill, like `SheetMenuItem`. No Material `DropdownMenu` (it brings ripples and Material shapes).
+- `SectionTitle(title, open, onClick, modifier)`: title heading/Button with the 18dp chevron, expanded/collapsed semantics and shared press feedback. It only toggles the menu; it has no swipe or next/previous actions.
+- `SectionMenuEntry(label, icon, selected, count, onClick)`: resource-backed label/icon, selected state, nullable formatted count and callback. The screen supplies Receipts (selected, loaded All count) then Books (unknown count omitted). Both callbacks are intentionally empty in this step; choosing a row dismisses first.
+- `SectionMenu(open, entries, onDismiss, onClosed)`: modal `Popup` anchored 4dp below the title row at the screen margin. It owns selected-row focus, Back/outside dismissal, selected-button semantics (including a click action on the current section), the shared press treatment and a scrollable body bounded by the window. Width grows with font scale from 240dp to the available width. It retains the popup for its 120ms exit, disables outgoing actions immediately and calls `onClosed` after removal to restore title focus.
+- `SectionMenuScrim(open, onDismiss)`: full-window overlay at 0.35 × the existing scrim alpha, drawn above screen content and Add. Its 160ms enter/120ms exit matches the popup; the popup also scales from 0.96 around the top/start anchor. Remove animations snaps the menu, scrim and chevron.
+- `ReceiptOverview` coordinates the two menus, hides underlying semantics, disables pager/pull-to-refresh while either menu is open, and leaves receipt filters and scroll positions intact. `ReceiptListHeader` owns the anchor and restores title focus.
+- Use `sectionMenu` shape, `sheet` fill, sheet ring/shadow and selected `accentContainer` colours. No Material dropdown styling or ripples. A full section registry, persistence, title roll/swipe and Books navigation wait for actual section switching.
 
 ## AddButton and AddMenu
 

@@ -121,6 +121,8 @@ fun ReceiptOverview(
     }
     var optionsEntry by remember { mutableStateOf<ReceiptListEntry?>(null) }
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var titleMenuOpen by rememberSaveable { mutableStateOf(false) }
+    val menuOpen = addMenuOpen || titleMenuOpen
     val addButtonFocus = remember { FocusRequester() }
     fun closeAddMenu() {
         addMenuOpen = false
@@ -136,9 +138,9 @@ fun ReceiptOverview(
         Column(
             Modifier.fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-                .focusProperties { onEnter = { if (addMenuOpen) cancelFocusChange() } }
+                .focusProperties { onEnter = { if (menuOpen) cancelFocusChange() } }
                 .focusGroup()
-                .then(if (addMenuOpen) Modifier.clearAndSetSemantics {} else Modifier)
+                .then(if (menuOpen) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
             ReceiptListHeader(
                 entries.size,
@@ -155,11 +157,17 @@ fun ReceiptOverview(
                 },
                 locale,
                 showFilters = !state.error && state.hasLoaded,
+                hasLoaded = state.hasLoaded,
+                titleMenuOpen = titleMenuOpen,
+                onTitleMenuChange = { open ->
+                    if (open) addMenuOpen = false
+                    titleMenuOpen = open
+                },
             )
             PullToRefresh(
                 refreshing = state.refreshing,
                 failed = state.refreshError || state.error,
-                enabled = !addMenuOpen && !state.loading && (state.hasLoaded || state.error),
+                enabled = !menuOpen && !state.loading && (state.hasLoaded || state.error),
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
@@ -171,7 +179,7 @@ fun ReceiptOverview(
                             !state.error &&
                             !state.refreshing &&
                             optionsEntry == null &&
-                            !addMenuOpen,
+                            !menuOpen,
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
                     recovery.AnimatedContent(
@@ -228,8 +236,11 @@ fun ReceiptOverview(
                 Modifier.align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
                     .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
-                    .focusRequester(addButtonFocus),
+                    .focusRequester(addButtonFocus)
+                    .focusProperties { canFocus = !titleMenuOpen }
+                    .then(if (titleMenuOpen) Modifier.clearAndSetSemantics {} else Modifier),
         )
+        SectionMenuScrim(open = titleMenuOpen, onDismiss = { titleMenuOpen = false })
     }
     optionsEntry?.let { entry ->
         key(entry.key) {

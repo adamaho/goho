@@ -274,6 +274,7 @@ val GohoType = GohoTypography(
 // ---------- Shape ----------
 
 object GohoShapes {
+    val sectionMenu = RoundedCornerShape(20.dp)
     val statusCard = RoundedCornerShape(32.dp)
     val thumb = RoundedCornerShape(8.dp)
     val button = RoundedCornerShape(20.dp)

@@ -1,4 +1,9 @@
 <resources>
+    <string name="books_title">Books</string>
+    <string name="section_title_description">Section: %1$s</string>
+    <string name="section_menu_title">Sections</string>
+    <string name="section_menu_expanded">Menu expanded</string>
+    <string name="section_menu_collapsed">Menu collapsed</string>
     <string name="app_name">Goho</string>
     <string name="add">Add</string>
     <string name="add_menu_title">Add</string>

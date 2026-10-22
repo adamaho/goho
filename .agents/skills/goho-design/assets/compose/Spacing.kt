@@ -81,6 +81,15 @@ object GohoSpacing {
     val fabMarginEnd = 24.dp
     val fabBottom = 28.dp
     val hairline = 1.dp
+    val sectionChevron = 18.dp
+    val sectionChevronSlot = 28.dp
+    val sectionChevronGap = 2.dp
+    val sectionMenuWidth = 240.dp
+    val sectionMenuOffset = 4.dp
+    val sectionMenuPadding = 6.dp
+    val sectionMenuRow = 48.dp
+    val sectionMenuRowHorizontal = 14.dp
+    val sectionMenuIcon = 20.dp
     val headerHeight = 44.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp

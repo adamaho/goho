@@ -9,6 +9,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
+    const val SECTION_MENU_ENTER_MILLIS = 160
+    const val SECTION_MENU_EXIT_MILLIS = 120
+    const val SECTION_MENU_START_SCALE = 0.96f
+    const val SECTION_MENU_SCRIM_ALPHA = 0.35f
     const val ADD_MENU_ENTER_MILLIS = 180
     const val ADD_MENU_EXIT_MILLIS = 140
     const val ADD_MENU_SCRIM_ENTER_MILLIS = 240
