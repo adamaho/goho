@@ -25,19 +25,25 @@ internal fun PhotoControlButton(
             modifier = modifier,
             opacity = opacity,
         ) {
-            val tint = LocalContentColor.current
-            Canvas(Modifier.size(GohoSpacing.photoCloseIcon)) {
-                fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
-                    drawLine(
-                        tint,
-                        Offset(size.width * x1, size.height * y1),
-                        Offset(size.width * x2, size.height * y2),
-                        GohoSpacing.iconStroke.toPx(),
-                        StrokeCap.Round,
-                    )
-                line(.24f, .24f, .76f, .76f)
-                line(.24f, .76f, .76f, .24f)
-            }
+            CloseIcon()
         }
+    }
+}
+
+/** The X drawn in close buttons, in the current content colour. */
+@Composable
+internal fun CloseIcon() {
+    val tint = LocalContentColor.current
+    Canvas(Modifier.size(GohoSpacing.photoCloseIcon)) {
+        fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
+            drawLine(
+                tint,
+                Offset(size.width * x1, size.height * y1),
+                Offset(size.width * x2, size.height * y2),
+                GohoSpacing.iconStroke.toPx(),
+                StrokeCap.Round,
+            )
+        line(.24f, .24f, .76f, .76f)
+        line(.24f, .76f, .76f, .24f)
     }
 }

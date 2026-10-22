@@ -30,7 +30,7 @@ data class BookListState(
     val refreshError: Boolean = false,
 )
 
-/** Books content below the section title. Rows are display-only. */
+/** Books content below the section title. Saved rows open the book overlay. */
 @Composable
 internal fun BookOverview(
     state: BookListState,
@@ -39,6 +39,7 @@ internal fun BookOverview(
     @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
+    onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
 ) {
@@ -83,6 +84,7 @@ internal fun BookOverview(
             onRetryClick = onRetryClick,
             onRefresh = onRefresh,
             covers = covers,
+            onBookClick = onBookClick,
             modifier = pageModifier,
         )
     }
@@ -104,6 +106,7 @@ private fun BookListPage(
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     covers: ThumbnailCache,
+    onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
@@ -184,7 +187,15 @@ private fun BookListPage(
                             entries.forEachIndexed { index, entry ->
                                 key(entry.key) {
                                     if (index > 0) ListDivider()
-                                    BookRow(entry, now, zone, locale, expanded, covers)
+                                    BookRow(
+                                        entry,
+                                        now,
+                                        zone,
+                                        locale,
+                                        expanded,
+                                        covers,
+                                        onBookClick,
+                                    )
                                 }
                             }
                         }
