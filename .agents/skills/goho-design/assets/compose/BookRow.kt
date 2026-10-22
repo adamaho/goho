@@ -170,27 +170,58 @@ private fun BookTag(entry: BookListEntry?, modifier: Modifier = Modifier) {
 }
 
 /**
- * Loads a saved cover once visible. Books without one show a neutral book, scans in progress a
- * lavender scan mark, and failed scans an orange book with an attention dot. Decorative: the row
- * text and tag describe the state.
+ * Loads a saved cover once visible. Saved books without one, or whose cover fails to load, show the
+ * small generated cover; scans in progress show a lavender scan mark, and failed scans an orange
+ * book with an attention dot. Decorative: the row text and tag describe the state.
  */
 @Composable
 private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache) {
-    val c = GohoTheme.colors
-    val shape = GohoShapes.thumb
-    val bookId = (entry as? BookListEntry.Saved)?.book?.takeIf { it.hasImage }?.id
+    val book = (entry as? BookListEntry.Saved)?.book
+    val bookId = book?.takeIf { it.hasImage }?.id
     var visible by remember { mutableStateOf(false) }
+    // A cover still loading keeps the neutral placeholder rather than flashing the generated one.
+    var loading by remember(bookId) { mutableStateOf(bookId != null) }
     val bitmap by
         produceState<Bitmap?>(null, bookId, visible, covers) {
-            value = if (visible && bookId != null) covers.get(bookId) else null
+            // Keep a loaded cover while off screen so it doesn't flash the generated one on return.
+            if (bookId == null) value = null
+            else if (visible) value = covers.get(bookId).also { loading = false }
         }
-    val processing = entry is BookListEntry.Scan && !entry.failed
-    val failed = entry?.needsAttention == true
+    val image = bitmap
     Box(
         Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
             .size(GohoSpacing.thumbWidth, GohoSpacing.coverHeight)
-            .clip(shape)
+            .clip(GohoShapes.thumb)
             .skeleton(block = true)
+    ) {
+        when {
+            image != null ->
+                Image(
+                    image.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier =
+                        Modifier.matchParentSize()
+                            .border(
+                                GohoSpacing.hairline,
+                                GohoTheme.colors.outline,
+                                GohoShapes.thumb,
+                            ),
+                )
+            book != null && !loading -> GeneratedBookCover(book, BookCoverSize.Small)
+            else -> CoverPlaceholder(entry)
+        }
+    }
+}
+
+@Composable
+private fun CoverPlaceholder(entry: BookListEntry?) {
+    val c = GohoTheme.colors
+    val shape = GohoShapes.thumb
+    val processing = entry is BookListEntry.Scan && !entry.failed
+    val failed = entry?.needsAttention == true
+    Box(
+        Modifier.fillMaxSize()
             .background(
                 when {
                     processing -> c.accentContainer
@@ -201,35 +232,25 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache) {
             .border(GohoSpacing.hairline, c.outline, shape),
         contentAlignment = Alignment.Center,
     ) {
-        val image = bitmap
-        if (image != null)
-            Image(
-                image.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize(),
+        Icon(
+            painterResource(
+                if (processing) R.drawable.ic_tag_processing else R.drawable.ic_add_book
+            ),
+            contentDescription = null,
+            tint =
+                when {
+                    processing -> c.onAccentContainer
+                    failed -> c.attention
+                    else -> c.textSecondary
+                },
+            modifier = Modifier.size(GohoSpacing.coverIcon),
+        )
+        if (failed)
+            Box(
+                Modifier.align(Alignment.BottomEnd)
+                    .padding(GohoSpacing.coverDotInset)
+                    .size(GohoSpacing.coverDot)
+                    .background(c.attention, GohoShapes.pill)
             )
-        else {
-            Icon(
-                painterResource(
-                    if (processing) R.drawable.ic_tag_processing else R.drawable.ic_add_book
-                ),
-                contentDescription = null,
-                tint =
-                    when {
-                        processing -> c.onAccentContainer
-                        failed -> c.attention
-                        else -> c.textSecondary
-                    },
-                modifier = Modifier.size(GohoSpacing.coverIcon),
-            )
-            if (failed)
-                Box(
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(GohoSpacing.coverDotInset)
-                        .size(GohoSpacing.coverDot)
-                        .background(c.attention, GohoShapes.pill)
-                )
-        }
     }
 }

@@ -47,7 +47,7 @@ Display-only Books list reached from the title menu, using books from the local 
 - `books-native-error-light.png`: initial connection failure with the Books copy and retry action.
 - `books-native-large-dark.png`: 2× font scale; tags move beneath the metadata and titles stay on one line.
 
-Canonical source snapshots: `SectionScreen.kt`, `FilterPager.kt`, `ReceiptOverview.kt`, `BookOverview.kt`, `BookRow.kt`, `UploadTags.kt`, `CategoryIcon.kt`, `PullToRefresh.kt` and `Spacing.kt` in `assets/compose/`.
+Canonical source snapshots: `SectionScreen.kt`, `FilterPager.kt`, `ReceiptOverview.kt`, `BookOverview.kt`, `BookRow.kt`, `GeneratedBookCover.kt`, `UploadTags.kt`, `CategoryIcon.kt`, `PullToRefresh.kt` and `Spacing.kt` in `assets/compose/`.
 
 ## Add button and menu (native implementation)
 
