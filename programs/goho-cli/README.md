@@ -1,6 +1,6 @@
 # @goho/goho-cli
 
-Calls the Goho server to upload, inspect, list, patch, and delete receipts. OpenAI credentials
+Calls the Goho server to upload, inspect, list, patch, and delete receipts and books. OpenAI credentials
 belong only to the [server](../goho-server/README.md).
 
 ## Setup
@@ -86,5 +86,64 @@ pnpm --filter @goho/goho-cli start receipts delete <positive-integer-receipt-id>
 The command permanently removes the receipt, its items, and any scanned image,
 then prints `Deleted receipt <id>.` There is no confirmation prompt. A missing
 receipt exits nonzero with a specific message.
+
+## List books
+
+```bash
+pnpm --filter @goho/goho-cli start books list
+```
+
+The command prints a JSON array containing every persisted book, newest first.
+An empty database prints `[]`.
+
+## Upload a book cover
+
+```bash
+pnpm --filter @goho/goho-cli start books upload <path>
+```
+
+The command accepts one JPEG, PNG, or WebP cover image and immediately prints the
+queued upload resource as JSON. Keep its UUID to check processing status.
+
+## Check book upload status
+
+```bash
+pnpm --filter @goho/goho-cli start books status <upload-id>
+```
+
+The command prints `queued`, `processing`, `succeeded`, or `failed`. A successful
+upload includes the saved or matched book ID; a failed upload includes a stable
+failure code.
+
+## View a book
+
+```bash
+pnpm --filter @goho/goho-cli start books view <positive-integer-book-id>
+```
+
+The command prints the complete book as JSON. A malformed ID or a valid ID that
+does not exist exits nonzero; a missing book prints a specific message.
+
+## Patch a book
+
+```bash
+pnpm --filter @goho/goho-cli start books patch 12 --title "The Hobbit" --reading-level "Grade 5"
+```
+
+Supply at least one of `--title`, `--author`, `--category`, or `--reading-level`.
+Only supplied fields change, and values are trimmed and must be nonblank.
+Categories are saved in lowercase, and an unfamiliar name adds a new category.
+The command prints the complete saved book as JSON. A title and author that match
+another book exit nonzero; books are never merged.
+
+## Delete a book
+
+```bash
+pnpm --filter @goho/goho-cli start books delete <positive-integer-book-id>
+```
+
+The command permanently removes the book, its successful cover scans, and their
+images, then prints `Deleted book <id>.` There is no confirmation prompt. A missing
+book exits nonzero with a specific message.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.
