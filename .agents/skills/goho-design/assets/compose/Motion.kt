@@ -1,6 +1,8 @@
 package com.adamaho.goho.theme
 
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.snap
@@ -56,6 +58,16 @@ object GohoMotion {
     const val FILTER_FILL_WIDTH_REVEAL = 0.14f
     const val FILTER_FILL_HEIGHT_REVEAL = 0.10f
     const val SHIMMER_MILLIS = 1800
+    const val BOOK_OVERLAY_OPEN_MILLIS = 340
+    const val BOOK_OVERLAY_CLOSE_MILLIS = 260
+    const val BOOK_OVERLAY_FROST_MILLIS = 200
+    const val BOOK_OVERLAY_REDUCED_MILLIS = 150
+    const val BOOK_COVER_CROSSFADE_MILLIS = 150
+    const val BOOK_OVERLAY_TEXT_FRACTION = 0.3f // text and Close arrive over the last 30%
+    const val BOOK_OVERLAY_FROST_ALPHA = 0.86f
+    const val BOOK_OVERLAY_FROST_FALLBACK_ALPHA = 0.94f // where blur is unavailable (API < 31)
+    const val BOOK_OVERLAY_DRAG_FROST_FADE = 0.6f // frost fades by up to 60% while dragging
+    val emphasizedDecelerate: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 }
 
 object GohoPhotoMotion {

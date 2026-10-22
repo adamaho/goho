@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 /** Viewer-local state; the details photo and scroll position are never transformed. */
 @Stable
-internal class ReceiptPhotoState(
+internal class PhotoViewerState(
     private val imageSize: IntSize,
     private val scope: CoroutineScope,
 ) {
@@ -127,7 +127,7 @@ internal class ReceiptPhotoState(
 
 /** One drag recognizer arbitrates pinch/pan versus dismissal, after touch slop. */
 internal fun Modifier.photoGestures(
-    state: ReceiptPhotoState,
+    state: PhotoViewerState,
     dismissDistance: Float,
     dismissVelocity: Float,
     onDismiss: () -> Unit,

@@ -206,7 +206,7 @@ One formatter for every amount in the app (list rows, hero, items, total):
 
 ## PhotoControlButton
 
-- The close button in the photo viewer.
+- The close button in the shared `PhotoViewer` (receipt photos and book covers). Its X is the shared `CloseIcon`, also used by the book overlay’s Close.
 - Delegates to `IconButton` with variant 2/Grey under the dark Goho theme in both app themes, because it sits on the dark photo well. Uses the shared 44dp circle, charcoal face, grey rim, shadow and 20dp close icon.
 - Preserve visual fade, close semantics and the Goho press; no separate photo-button surface.
 
@@ -254,9 +254,9 @@ Native implementation of the October 22 design. `assets/compose/AddButton.kt` an
 
 ## BookRow and BookCover
 
-Display-only Books rows in `ui/main/BookRow.kt` (mirrored, with the generated cover in `ui/components/GeneratedBookCover.kt`), inside one `ListCard` separated by `ListDivider`. `BookListEntry` is either `Saved(book)` or `Scan(uploadId, failed, uploadedAt)`; `bookListEntries` lists queued, processing and failed scans first in server order, then saved books in server order (newest first). Succeeded scans are represented by their book, which several scans can share. Saved rows key by book ID and scans by upload ID.
+Books rows in `ui/main/BookRow.kt` (mirrored, with the generated cover in `ui/components/GeneratedBookCover.kt`), inside one `ListCard` separated by `ListDivider`. `BookListEntry` is either `Saved(book)` or `Scan(uploadId, failed, uploadedAt)`; `bookListEntries` lists queued, processing and failed scans first in server order, then saved books in server order (newest first). Succeeded scans are represented by their book, which several scans can share. Saved rows key by book ID and scans by upload ID.
 
-- Row: `BookCover` | column(title, metadata) | tag, with the receipt row padding, 72dp minimum height and merged, non-interactive semantics. No tap, hold or options.
+- Row: `BookCover` | column(title, metadata) | tag, with the receipt row padding, 72dp minimum height and merged semantics. Saved rows open the book overlay on tap, with the Goho pressed fill (`surfacePressed`, no ripple) and a click action; focus returns to the row when the overlay closes. Scan rows have no tap, hold or options.
 - Title: `rowTitle`, one line with ellipsis at every font size; `textPrimary` for saved books, `textSecondary` for “New book” and “Unknown book”.
 - Metadata (`meta`, `textTertiary`): author, or “author · reading level” when one is set. A processing scan shows a shimmering 12dp pill in the metadata line. A failed scan shows its upload time like receipt rows (“Today, 8:14 AM”, otherwise “Yesterday” or a short weekday date).
 - Tag: `CategoryTag` for saved books from the server's icon and colour keys; `BookUploadTag` for scans. Standard rows cap it at 160dp beside the text; at font scale ≥1.3 or narrow widths the tag moves under the metadata, end-aligned, and metadata may wrap.

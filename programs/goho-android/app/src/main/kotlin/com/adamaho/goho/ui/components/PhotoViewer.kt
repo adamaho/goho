@@ -31,11 +31,15 @@ import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import kotlin.math.roundToInt
 
+/**
+ * Full-screen, always-dark photo viewer with zoom, pan and swipe down to close. Content-agnostic:
+ * callers supply the image and its accessibility [description].
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun ReceiptPhotoViewer(image: ImageBitmap, merchant: String, onClose: () -> Unit) {
+internal fun PhotoViewer(image: ImageBitmap, description: String, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val state = remember(image) { ReceiptPhotoState(IntSize(image.width, image.height), scope) }
+    val state = remember(image) { PhotoViewerState(IntSize(image.width, image.height), scope) }
     val reduced = rememberReducedMotion()
     SideEffect { state.reducedMotion = reduced }
     var closing by remember { mutableStateOf(false) }
@@ -75,14 +79,11 @@ internal fun ReceiptPhotoViewer(image: ImageBitmap, merchant: String, onClose: (
             val controlTop = statusBarTop + GohoSpacing.photoCloseTop
             val dragRange = with(density) { GohoSpacing.photoDragRange.toPx() }
             val dismissDistance = with(density) { GohoSpacing.photoDismissDistance.toPx() }
-            val description =
-                if (merchant.isBlank()) stringResource(R.string.receipt_photo_description)
-                else stringResource(R.string.receipt_photo_merchant_description, merchant)
-            val zoomIn = stringResource(R.string.receipt_photo_zoom_in)
-            val zoomOut = stringResource(R.string.receipt_photo_zoom_out)
-            val toggle = stringResource(R.string.receipt_photo_toggle_controls)
+            val zoomIn = stringResource(R.string.photo_zoom_in)
+            val zoomOut = stringResource(R.string.photo_zoom_out)
+            val toggle = stringResource(R.string.photo_toggle_controls)
             val zoomDescription =
-                stringResource(R.string.receipt_photo_zoom_level, (state.scale * 100).roundToInt())
+                stringResource(R.string.photo_zoom_level, (state.scale * 100).roundToInt())
             Box(
                 Modifier.fillMaxSize().clipToBounds().drawBehind {
                     val dragFraction = (state.drag / dragRange).coerceIn(0f, 1f)
