@@ -262,7 +262,16 @@ fun ReceiptDetailScreen(
         )
     }
     image?.let { photo ->
-        if (photoOpen) ReceiptPhotoViewer(photo, receipt?.storeName.orEmpty()) { photoOpen = false }
+        if (photoOpen) {
+            val merchant = receipt?.storeName.orEmpty()
+            PhotoViewer(
+                photo,
+                if (merchant.isBlank()) stringResource(R.string.receipt_photo_description)
+                else stringResource(R.string.receipt_photo_merchant_description, merchant),
+            ) {
+                photoOpen = false
+            }
+        }
     }
 }
 
