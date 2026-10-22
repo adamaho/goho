@@ -282,7 +282,7 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 
 **Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running.
 
-**List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”) come first, newest first. Saved books follow in server order, newest first; each shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag`. A succeeded scan never adds a second row. Needs attention lists failed scans. Covers load only for books with `hasImage`; books without one show a neutral book placeholder. See `BookRow` in `components.md`.
+**List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”) come first, newest first. Saved books follow in server order, newest first; each shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag`. A succeeded scan never adds a second row. Needs attention lists failed scans. Covers load only for books with `hasImage`; books without one, or whose cover fails to load, show the small generated cloth cover in their category colour (approved October 22, 2026; see `BookCover` in `components.md` and section 9). See `BookRow` in `components.md`.
 
 **States:**
 
@@ -294,3 +294,34 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 - Scanner notices: when Scan receipt is chosen from Books, “Opening scanner…” and scanner errors appear above the Books list as on Receipts.
 
 **Large text:** at font scale ≥1.3 or narrow widths the category or upload tag moves beneath the metadata, end-aligned, and metadata may wrap. Titles stay on one line with an ellipsis.
+
+## 9. Book overlay (lifted book)
+
+Approved design, October 22, 2026; not implemented. Replaces a separate book details screen: books carry nothing beyond what the row shows, so tapping a saved book lifts its cover out of the list instead of navigating. Mockups: `book-overlay-pressed-light.png`, `book-overlay-flight-light.png`, `book-overlay-light.png`, `book-overlay-dark.png`, `book-overlay-flight-dark.png`, `book-overlay-dismiss-dark.png`, `book-overlay-confirm-light.png` and `book-overlay-delete-error-dark.png`. Books and covers in them are sample data. Design references (not compiled): `assets/compose/BookOverlay.kt` and `GeneratedBookCover.kt`.
+
+Opened by tapping a saved book row. Rows still reading a cover are not tappable; Not processed book scans open the options sheet with Delete scan (`DELETE /book-uploads/{uploadId}`), exactly as Not processed receipts do. The overlay is a modal layer inside the Books section, not a destination: no route, and the section, filter page and scroll position stay underneath. It shows the row’s data (title, author, reading level, category), so it needs no extra request. The cover comes from `GET /books/{bookId}/image` only when `hasImage` is true.
+
+**Layout** (over the whole screen, including the header and Add button):
+
+- Frost: the theme `background` at 86% with a 14dp blur over the list (where blur is unavailable, 94% with no blur). Tapping the frost closes.
+- Close: a variant 2/Grey round 44dp button with an X, 16dp from the end, at the top bar position. “Close” for accessibility.
+- Cover: centered, 76dp below the top inset. Photo covers keep their own aspect ratio inside a `bookCover` box of 260×292dp (at most 292dp tall and 260dp wide; a 2:3 cover is about 195×292dp, a square picture book 260×260dp), never cropped, clipped to shape `cover` (8dp), with a 1dp `outline` ring and a soft drop shadow (0/16/34dp, black at 45% dark / `shadow` at 30% light, −12dp spread). Tap opens the existing photo viewer with the full image; accessibility action “View book cover”, viewer description “Book cover, {title}”. Books without a cover use the generated cover below.
+- Text, 24 below the cover, 24dp side padding, centered: title in `bookTitle` (26/32sp SemiBold, −0.02em, `textPrimary`, wraps, never truncated); 6dp below, author then “ · reading level” when set, 16/22sp Regular `textSecondary`; 14dp below, the category `Tag` from the server `icon` and `color` keys.
+- Delete book: a full-width variant 2/Grey button 16dp from each side and 28dp above the navigation bar inset, with a trash icon and label in `onDangerContainer`.
+- When the content is taller than the screen (long titles, large font scales), the cover and text scroll; Close and Delete book stay fixed.
+
+**Generated cover** (approved October 22, 2026, “cloth”; `hasImage` false, or the image fails to load): use a 200×292dp `cover` slot (2:3, at the top of the `bookCover` box) so every lifted book has a consistent shape, and draw a clothbound book in the category colour with the title and author printed straight on it. Cloth: the category `TagColor` content colour in light mode; in dark mode, the dark container mixed 24% toward the dark content colour. Spine: a 14dp band on the leading edge in the cloth colour mixed 28% toward black, followed by a 2dp highlight in white at 22% (light) / 10% (dark). Text, in one same-hue contrasting colour: the category `TagColor` container in light mode, and the dark content colour mixed 40% toward white in dark mode (5.2:1 or better on the cloth in every colour). Title in `bookCoverTitle` (22/28sp SemiBold, −0.01em) at 26dp top, 34dp start (past the spine) and 20dp end, up to 5 lines with an ellipsis. Author in 16/20sp Medium, one line with an ellipsis, 20dp from the bottom with the same side insets. No label, card or rule. The slot keeps a 1dp inset ring (black 8% light, white 6% dark) and the same shadow as a real cover. It is decorative: not tappable, no viewer, and hidden from accessibility (the overlay text already announces the title and author). Unknown category colours use Grey (Fiction and Nonfiction are Grey today). The Books list uses the small version of this cover (see `BookCover` in components.md).
+
+**Motion** (shared element, `SharedTransitionLayout` with the row’s `BookCover` as the source):
+
+- Open, 340ms, emphasized decelerate: the cover’s bounds transform from the 40×56dp thumbnail to its overlay size and position; a photo cover’s 2:3 crop opens out to the full image as it grows (animate the clip, not the scale). The row keeps an empty thumbnail slot while the cover is away. The frost fades in over the first 200ms. Text, Close and Delete book fade in and rise 8dp over the last 30%.
+- The full-size image replaces the cached thumbnail with a 150ms crossfade when it arrives; until then the upscaled thumbnail stands in. A failed load keeps the thumbnail upscaled; there is no error.
+- Close (Close, Back, tap on the frost), 260ms: the same transform in reverse, back into the row, which may have scrolled; if the row is off screen, the cover fades out instead.
+- Swipe down anywhere on the cover or text: the cover follows the finger and scales toward 0.86, while the frost and text fade with the drag. Releasing past 96dp or with a downward fling of 1,000dp/s closes; otherwise it springs back (damping 0.8, stiffness 400).
+- Reduced motion: 150ms crossfade in and out; no flight, scale or rise. Swipe down still closes.
+
+**Accessibility**: a modal pane titled with the book’s title. Focus moves to Close on open and back to the row on close. The cover and generated cover are described once (“View book cover” when tappable); the title is a heading. Back closes the overlay before anything else.
+
+**Deleting a book**: Delete book swaps in place for the red “Delete book” button and a “Cancel” button, as in the options sheet confirmation (section 5): no heading or description. “Deleting…” locks the overlay (no close, no swipe). Failure keeps it open with “Couldn’t delete this book. Try again.” above the buttons. Success fades the overlay out without flying the cover home, and the row folds out of the Books list. `DELETE /books/{bookId}` also removes the book’s scans and cover; there is no undo.
+
+Not part of Books: editing, cover replacement, search or manual entry.

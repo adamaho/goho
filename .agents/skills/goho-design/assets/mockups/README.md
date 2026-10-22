@@ -4,6 +4,16 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Book overlay, lifted book (October 22, 2026, approved design)
+
+Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. Design references (not compiled): `assets/compose/BookOverlay.kt` and `GeneratedBookCover.kt`.
+
+- `book-overlay-pressed-light.png`, `book-overlay-flight-light.png`, `book-overlay-light.png`: tap, the cover mid-flight from the row over the frosting list, and the lifted book with a generated cloth cover (also in `book-overlay-delete-error-dark.png`).
+- `book-overlay-dark.png`, `book-overlay-flight-dark.png`: a photo cover lifted and mid-flight on the dark palette.
+- `book-overlay-dismiss-dark.png`: swipe down to close, with the cover shrinking and the text fading.
+- `book-overlay-confirm-light.png`, `book-overlay-delete-error-dark.png`: Delete book confirmation in place, and its failure state.
+- `books-generated-covers-light.png`, `books-generated-covers-dark.png`: the Books list with the small generated cover for books without a cover image, in each category colour, beside an illustrative real cover.
+
 ## Section navigation and add button (October 22, 2026, approved design)
 
 Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu, switching sections from it and a display-only Books list are implemented; title swiping and book scanning remain planned. Native title-menu, Add and Books captures below show the implemented controls; older captures with Scan are historical for that control.
@@ -30,7 +40,7 @@ Canonical source snapshots: `SectionTitle.kt`, `SectionMenu.kt`, `SectionScreen.
 
 Display-only Books list reached from the title menu, using books from the local development seed (no covers). The dark and large-text captures also include temporary processing and failed upload rows; these were removed after manual validation. It follows [screens.md section 8](../../references/screens.md#8-books-list); the approved `nav-add-closed-*.png` and `nav-menu-books-*.png` renders above remain the design reference. Native captures from the Goho Dev emulator, added after validation:
 
-- `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders, one-line titles, author and optional reading level, and server category tags.
+- `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders (now superseded by the generated cover, `books-generated-covers-*.png`), one-line titles, author and optional reading level, and server category tags.
 - `books-menu-native-light.png`: the section menu opened from Books, Books selected, with Receipts' All count and the saved-book count.
 - `books-native-loading-light.png`: the initial skeleton rows with Add in its usual position.
 - `books-native-empty-light.png`: the text-only empty state.
