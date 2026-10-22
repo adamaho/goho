@@ -254,7 +254,7 @@ Native implementation of the October 22 design. `assets/compose/AddButton.kt` an
 
 ## BookRow and BookCover
 
-Display-only Books rows in `ui/main/BookRow.kt` (mirrored), inside one `ListCard` separated by `ListDivider`. `BookListEntry` is either `Saved(book)` or `Scan(uploadId, failed, uploadedAt)`; `bookListEntries` lists queued, processing and failed scans first in server order, then saved books in server order (newest first). Succeeded scans are represented by their book, which several scans can share. Saved rows key by book ID and scans by upload ID.
+Display-only Books rows in `ui/main/BookRow.kt` (mirrored; the approved generated thumbnail is sketched in `assets/compose/GeneratedBookCover.kt`, not yet in the app), inside one `ListCard` separated by `ListDivider`. `BookListEntry` is either `Saved(book)` or `Scan(uploadId, failed, uploadedAt)`; `bookListEntries` lists queued, processing and failed scans first in server order, then saved books in server order (newest first). Succeeded scans are represented by their book, which several scans can share. Saved rows key by book ID and scans by upload ID.
 
 - Row: `BookCover` | column(title, metadata) | tag, with the receipt row padding, 72dp minimum height and merged, non-interactive semantics. No tap, hold or options.
 - Title: `rowTitle`, one line with ellipsis at every font size; `textPrimary` for saved books, `textSecondary` for “New book” and “Unknown book”.
