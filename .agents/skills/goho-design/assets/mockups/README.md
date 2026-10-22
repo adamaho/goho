@@ -4,15 +4,15 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
-## Book details, cover first (October 22, 2026, approved design)
+## Book overlay, lifted book (October 22, 2026, approved design)
 
-Design renders from the Goho brand canvas (“Book details”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-details-cover-first) wins where they differ. Books and covers are illustrative sample data.
+Design renders from the Goho brand canvas (“Book details as an overlay”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data.
 
-- `book-details-light.png`, `book-details-dark.png`: cover first, centered title, author · reading level and category tag; no Details card.
-- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated “cloth” cover for books without a cover image (category colour cloth, darker spine, title and author printed in a same-hue contrasting colour); the light one also has no reading level and a long title that the cover truncates while the hero wraps it.
+- `book-overlay-pressed-light.png`, `book-overlay-flight-light.png`, `book-overlay-light.png`: tap, the cover mid-flight from the row over the frosting list, and the lifted book with a generated cloth cover (also in `book-overlay-delete-error-dark.png`).
+- `book-overlay-dark.png`, `book-overlay-flight-dark.png`: a photo cover lifted and mid-flight on the dark palette.
+- `book-overlay-dismiss-dark.png`: swipe down to close, with the cover shrinking and the text fading.
+- `book-overlay-confirm-light.png`, `book-overlay-delete-error-dark.png`: Delete book confirmation in place, and its failure state.
 - `books-generated-covers-light.png`, `books-generated-covers-dark.png`: the Books list with the small generated cover for books without a cover image, in each category colour, beside an illustrative real cover.
-- `book-details-loading-light.png`, `book-details-cover-loading-dark.png`: initial loading, and a loaded book whose cover is still loading.
-- `book-details-options-light.png`, `book-details-confirm-dark.png`, `book-details-delete-error-light.png`: the shared options sheet with Delete book, its confirmation and its failure state.
 
 ## Section navigation and add button (October 22, 2026, approved design)
 
