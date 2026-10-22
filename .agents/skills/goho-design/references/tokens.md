@@ -100,7 +100,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 | Token         | Radius | Use                                                                  |
 | ------------- | ------ | -------------------------------------------------------------------- |
 | `thumb`       | 8      | Receipt thumbnails and book covers in rows                           |
-| `cover` | 8 | Book cover and generated cover on book details |
+| `cover`       | 8      | Book cover and generated cover on book details                       |
 | `button`      | 20     | Primary and secondary buttons (not fully round)                      |
 | `card`        | 20     | Grouped list cards, detail card, photo frame                         |
 | `fab`         | 24     | Historical Scan button (Add button is `pill`)                        |
