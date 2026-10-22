@@ -60,8 +60,9 @@ a second terminal at the repository root:
 GOHO_SERVER_URL=http://127.0.0.1:3000 pnpm --filter @goho/goho-server db:seed
 ```
 
-This creates four fictional receipts through the API. The seed command skips
-when any receipt already exists, so running it again does not duplicate them.
+This creates four fictional receipts and five books through the API. Receipts are
+skipped when any receipt already exists and books are matched by title and author,
+so running it again does not duplicate either.
 
 ## Connect an MCP client
 

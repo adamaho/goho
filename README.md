@@ -32,7 +32,7 @@ Run pnpm check. Report what worked and any steps that still need my attention.
 
 The server setup runs PostgreSQL and migrations before starting watch mode. The
 seed command runs after the server is ready and can be repeated without creating
-duplicate receipts.
+duplicate receipts or books.
 
 ## Contributing
 

@@ -1,5 +1,16 @@
 <resources>
     <string name="books_title">Books</string>
+    <string name="books_loading">Loading books…</string>
+    <string name="books_load_failed_body">We couldn’t load your books. Let’s try again.</string>
+    <string name="books_empty_title">No books yet</string>
+    <string name="books_empty_body">Saved books will appear here.</string>
+    <string name="books_refresh">Refresh books</string>
+    <string name="books_refreshing">Refreshing books…</string>
+    <string name="books_refresh_failed">Couldn’t refresh books. Your previous list is still here.</string>
+    <string name="book_new">New book</string>
+    <string name="book_unknown">Unknown book</string>
+    <string name="book_reading">Reading cover…</string>
+    <string name="book_author_level">%1$s · %2$s</string>
     <string name="section_title_description">Section: %1$s</string>
     <string name="section_menu_title">Sections</string>
     <string name="section_menu_expanded">Menu expanded</string>
@@ -20,14 +31,14 @@
     <string name="upload_failed">Upload failed. Please try again.</string>
     <string name="upload_retry">Retry upload</string>
     <string name="receipts_loading">Loading receipts…</string>
-    <string name="receipts_load_failed">A little hiccup</string>
+    <string name="load_failed_title">A little hiccup</string>
     <string name="receipt_queue_title">In progress</string>
     <string name="receipt_queue_empty">No receipts in the queue.</string>
     <string name="upload_queued">Queued</string>
     <string name="upload_processing">Processing</string>
     <string name="receipts_processed_title">Processed receipts</string>
     <string name="receipts_processed_empty">No processed receipts yet.</string>
-    <string name="receipts_failed_title">Needs attention</string>
+    <string name="filter_needs_attention">Needs attention</string>
     <string name="receipts_failed_item">Processing failed</string>
     <string name="receipt_back">Back</string>
     <string name="receipt_detail_title">Receipt</string>
@@ -44,7 +55,7 @@
     <string name="receipt_total">Total</string>
     <string name="goho_wordmark" translatable="false">goho</string>
     <string name="receipt_reading">Reading receipt…</string>
-    <string name="receipt_not_processed">Not processed</string>
+    <string name="not_processed">Not processed</string>
     <string name="receipt_new">New receipt</string>
     <string name="receipt_unknown">Unknown receipt</string>
     <string name="receipts_empty_title">No receipts yet</string>
@@ -55,8 +66,8 @@
     <string name="date_last_week">Last week</string>
     <string name="date_unknown">Date unavailable</string>
     <string name="date_just_now">Just now</string>
-    <string name="receipts_filter_all">All</string>
-    <string name="receipts_attention_empty">All good</string>
+    <string name="filter_all">All</string>
+    <string name="attention_empty_title">All good</string>
     <string name="scan_cancel">Cancel</string>
     <string name="upload_busy">Uploading…</string>
     <string name="scan_preview_unavailable">Preview unavailable</string>
@@ -84,14 +95,14 @@
     <string name="date_today_time">Today, %1$s</string>
     <string name="receipt_cancel">Cancel</string>
     <string name="receipts_load_failed_body">We couldn’t load your receipts. Let’s try again.</string>
-    <string name="receipts_retry">Try again</string>
-    <string name="receipts_retrying">Trying again…</string>
-    <string name="receipts_attention_empty_body">Nothing needs your attention right now.</string>
+    <string name="retry">Try again</string>
+    <string name="retrying">Trying again…</string>
+    <string name="attention_empty_body">Nothing needs your attention right now.</string>
     <string name="receipts_refresh">Refresh receipts</string>
     <string name="receipts_refreshing">Refreshing receipts…</string>
-    <string name="receipts_pull_to_refresh">Pull to refresh</string>
-    <string name="receipts_release_to_refresh">Release to refresh</string>
+    <string name="pull_to_refresh">Pull to refresh</string>
+    <string name="release_to_refresh">Release to refresh</string>
     <string name="receipts_refresh_failed">Couldn’t refresh receipts. Your previous list is still here.</string>
-    <string name="receipts_refresh_failed_indicator">Refresh failed.</string>
+    <string name="refresh_failed_indicator">Refresh failed.</string>
     <string name="receipt_item_description">%1$s, %2$s, %3$s</string>
 </resources>

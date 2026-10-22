@@ -1,5 +1,6 @@
 package com.adamaho.goho.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -11,8 +12,30 @@ import java.util.Locale
 /** Item category metadata from the API; null is only used by the existing loading layout. */
 @Composable
 internal fun CategoryIcon(category: Category?, modifier: Modifier = Modifier) {
-    val icon =
-        when (category?.icon) {
+    Tag(
+        icon = painterResource(category.iconRes),
+        color = category.tagColor,
+        contentDescription = category?.displayName.orEmpty(),
+        modifier = modifier,
+    )
+}
+
+/** Labelled category tag for list rows, using the same server icon and colour keys. */
+@Composable
+internal fun CategoryTag(category: Category, modifier: Modifier = Modifier) {
+    Tag(
+        label = category.displayName,
+        icon = painterResource(category.iconRes),
+        color = category.tagColor,
+        modifier = modifier,
+    )
+}
+
+/** Unfamiliar server icon keys use the generic tag icon. */
+@get:DrawableRes
+internal val Category?.iconRes: Int
+    get() =
+        when (this?.icon) {
             "groceries" -> R.drawable.ic_tag_groceries
             "meals" -> R.drawable.ic_tag_meals
             "shopping" -> R.drawable.ic_tag_shopping
@@ -23,13 +46,6 @@ internal fun CategoryIcon(category: Category?, modifier: Modifier = Modifier) {
             "entertainment" -> R.drawable.ic_tag_entertainment
             else -> R.drawable.ic_tag_other
         }
-    Tag(
-        icon = painterResource(icon),
-        color = category.tagColor,
-        contentDescription = category?.displayName.orEmpty(),
-        modifier = modifier,
-    )
-}
 
 internal val Category?.tagColor: TagColor
     get() =

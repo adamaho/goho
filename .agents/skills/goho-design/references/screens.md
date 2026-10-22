@@ -1,8 +1,8 @@
 # Goho screens
 
-All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. The native app implements SectionTitle with its anchored menu and Add. Books in the title menu and Scan book in Add are explicitly requested dismiss-only no-ops. Title swiping, section switching and Books screens remain future design targets.
+All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. The native app implements SectionTitle with its anchored menu, switching between Receipts and a display-only Books list (section 8), and Add. Scan book in Add is an explicitly requested dismiss-only no-op. Title swiping, book scanning and further Books screens remain future design targets.
 
-Three screens, a photo viewer, section navigation and the Add button (section 7), the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Three screens, a photo viewer, section navigation and the Add button (section 7), the Books list (section 8), the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
 List and details receipt options and deletion use the same supported server endpoints. Verify server support before implementing new behavior.
 
@@ -15,7 +15,7 @@ List and details receipt options and deletion use the same supported server endp
 
 **List**
 
-- Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ReceiptCard, 24dp above each label.
+- Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ListCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
 - Processed rows show the top-spend category beneath the price as a labelled `Tag`, plus a Grey `TagCount` (“+N”) when the receipt has other categories (see components.md, Category tags). Processing and Not processed rows keep their upload tag and show no category. Large-text/narrow layouts stack the right-aligned amount and tags without squeezing the date. Mockups: `category-list-light.png`, `category-list-dark.png`.
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
@@ -173,7 +173,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Initial receipts loading**
 
-- Reuse the existing section heading, ReceiptCard, four ReceiptRows, thumbnails and text. Pass absent data while loading; do not create fake receipt models or duplicate the row layout.
+- Reuse the existing section heading, ListCard, four ReceiptRows, thumbnails and text. Pass absent data while loading; do not create fake receipt models or duplicate the row layout.
 - Wrap the group in `SkeletonScope` and apply `Modifier.skeleton` to the existing text and image elements. After 200ms, render skeletonBase/skeletonShimmer masks; preserve measured typography, row padding and large-text stacking. Keep the Receipts header and Scan available.
 - Expose one “Loading receipts…” polite live region with indeterminate progress. Placeholder descendants have no text or click semantics. Do not replace loaded content during background refreshes. Preserve the existing error/retry flow.
 
@@ -218,7 +218,7 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 
 ## Horizontal receipt pages
 
-All and Needs attention share one receipt data source and row layout, presented as two pages in a Compose HorizontalPager. Swipe left to reveal Needs attention and right to reveal All. Content tracks the finger throughout the drag, with both pages visible halfway; use the native distance/velocity settling behaviour and never wrap at the ends. Keep the adjacent page composed so its content is ready before the swipe finishes. Keep a separate vertical list and status scroll position on each page rather than resetting on tab changes.
+All and Needs attention share one receipt data source and row layout, presented as two pages in a Compose HorizontalPager. Books uses the same pages through the shared `FilterPager`; everything below applies to both sections. Swipe left to reveal Needs attention and right to reveal All. Content tracks the finger throughout the drag, with both pages visible halfway; use the native distance/velocity settling behaviour and never wrap at the ends. Keep the adjacent page composed so its content is ready before the swipe finishes. Keep a separate vertical list and status scroll position on each page rather than resetting on tab changes.
 
 Keep the header and one Add button mounted outside the pager. Anchor the Add button 24dp from the end edge and 28dp above the window’s bottom safe area in every state, including the first cold-start frame; ignore outgoing keyboard insets on this screen and respect system bars and display cutouts. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
 
@@ -226,9 +226,9 @@ Wrap the pager in the shared pull-to-refresh container so both pages refresh the
 
 ## 7. Section navigation and add button
 
-Approved October 22, 2026. Add and the title menu are implemented on Receipts. Books and Scan book are visible no-ops that close their respective menu, as requested by the user. Title swiping, section switching and Books screens remain planned. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
+Approved October 22, 2026. Add, the title menu and switching sections from the menu are implemented, with a display-only Books list (section 8). Scan book is a visible no-op that closes the Add menu, as requested by the user. Title swiping and the book scanning flow remain planned. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
 
-**Future section registry.** When section switching is implemented, one ordered list drives the menu and title swipe: Receipts (receipt icon, count = All count), then Books (book icon, count = number of books). Each entry also supplies its scan action. The Add stack reads the registry in reverse so Receipts remains nearest the button. A future module supplies its content and scan flow through a registry entry.
+**Section order.** The native `Section` enum orders Receipts (receipt icon, count = All count), then Books (book icon, count = number of saved books, excluding unfinished or failed scans), and drives the menu. The Add stack lists Scan book above Scan receipt so Receipts remains nearest the button. When title swiping or book scanning arrives, the same order drives the swipe and each section supplies its scan action.
 
 **SectionTitle** (replaces the plain list title on every section root)
 
@@ -239,9 +239,9 @@ Approved October 22, 2026. Add and the title menu are implemented on Receipts. B
 
 - Anchored under the title: 4dp below the title row, aligned to the 16dp screen margin, width 240dp (grows for large text, never past the screen margin). Shape `sectionMenu` 20dp, fill `sheet`, 6dp padding, the sheet ring and shadow. A `scrim` at 35% alpha covers the screen behind it; the header stays visible.
 - One row per section, 48dp minimum height, 14dp side padding, 14dp corners: 20dp icon, 12dp gap, name in `rowTitle`, count right-aligned in `meta`. Current section: `accentContainer` fill, icon, name and count in `onAccentContainer`. Others: icon `textSecondary`, name `textPrimary`, count `textTertiary`. Omit a count until its data has loaded; never show 0 for unknown.
-- **Current native scope:** Receipts stays selected. Both rows close the menu without navigation, network calls or changes to the filter/scroll position; Books has no count. The menu and its scrim fade in over 160ms and out over 120ms, with the popup scaling from 0.96 around its start/top anchor. Remove animations snaps both and the chevron. Add and title menus cannot overlap. The modal popup blocks underlying input and hides receipt/Add semantics.
-- The chevron turns 180° while open. Choosing the current section just closes the menu. Future section switching will close the menu and roll the title to the new name (below); the current Books entry only dismisses. Outside tap, Back or the title closes it.
-- Native semantics: the title is a heading/Button named “Section: Receipts”, with expanded/collapsed state. The popup is a “Sections” pane with selected button rows (the current section retains its dismissal action); focus moves to Receipts on open and returns to the title after exit. Next/Previous section actions are deferred with actual switching.
+- **Current native scope:** the current section is selected. Choosing the other section finishes the 120ms menu exit before changing the title and page, without a title roll or content crossfade. The outgoing title, selected menu row and content stay stable throughout the fade; choosing the current section only closes it. Neither choice changes a filter or scroll position or makes a network call; counts appear once each section has loaded. The menu and its scrim fade in over 160ms and out over 120ms, with the popup scaling from 0.96 around its start/top anchor. Composite the popup surface, rows and shadow into one layer so they fade together, with shadow drawing space outside the face and no rectangular shadow remnant. Remove animations snaps both and the chevron. Add and title menus cannot overlap. The modal popup blocks underlying input and hides receipt/Add semantics.
+- The chevron turns 180° while open. Choosing the current section just closes the menu. The title swipe (below) will add the roll; menu switches change the title in place. Outside tap, Back or the title closes it.
+- Native semantics: the title is a heading/Button named “Section: Receipts” (or Books), with expanded/collapsed state. The popup is a “Sections” pane with selected button rows (the current section retains its dismissal action); focus moves to the current section on open and returns to the title after exit. Next/Previous section actions are deferred with title swiping.
 
 **Title swipe (planned)**
 
@@ -249,10 +249,10 @@ Approved October 22, 2026. Add and the title menu are implemented on Receipts. B
 - Commit when released past 24dp or flung faster than 1,000dp/s in the drag direction, finishing over `TITLE_ROLL_MILLIS` (220ms, `FastOutSlowInEasing`), with one `SegmentTick` haptic. Otherwise spring back (`dampingRatio = 0.8f`, `stiffness = 400f`). At the first or last section the title rubber-bands at most 8dp and returns, with no haptic.
 - The gesture lives only in the fixed header, so it never competes with pull-to-refresh, the All / Needs attention pager or row gestures. Disable it while the section menu or Add menu is open.
 
-**Switching sections (planned)**
+**Switching sections (implemented from the menu)**
 
-- Each section keeps its own state: selected filter page, scroll positions and loaded data. Switching does not refetch beyond the usual on-show refresh, and never resets a scroll position.
-- Persist the last-used section locally and open it on the next cold start.
+- Each section keeps its own state: selected filter page, scroll positions and loaded data. Both sections load and refresh independently when the app starts or returns to the foreground; switching does not refetch and never resets a scroll position.
+- The last-used section is persisted locally and opens on the next cold start.
 - Back on a section root behaves as today (leaves the app); it does not return to the previous section.
 
 **AddButton**
@@ -264,7 +264,7 @@ Approved October 22, 2026. Add and the title menu are implemented on Receipts. B
 
 - The plus rotates 45° into a close mark (content description “Close add menu”). A full `scrim` fades in over the section content, below the button and menu.
 - Actions stack right-aligned above the button: bottom action 16dp above it, 10dp between actions. Order is fixed on every section, top to bottom: **Scan book**, **Scan receipt**. Each action is a 52dp pill (`pill`) on `sheet` with the sheet ring and shadow, 16dp start and 20dp end padding, a 20dp icon in `onAccentContainer`, 10dp gap and the label in `rowTitle` / `textPrimary`. Minimum width fits the label; large text grows the pill and wraps rather than truncates.
-- Choosing an action closes the menu immediately and opens the document scanner for that section. Scan receipt uses the existing scan preview and upload. Scan book uses the same preview titled “New book” with “Upload cover”, targeting `POST /book-uploads`; confirm backend support before implementation. After a successful upload, switch to that section if needed and show All at the top, as receipts do today. Cancel returns to the section the scan started from.
+- Choosing an action closes the menu immediately and opens the document scanner for that section. Scan receipt uses the existing scan preview and upload. Scan book uses the same preview titled “New book” with “Upload cover”, targeting `POST /book-uploads`; confirm backend support before implementation. After a successful upload, switch to that section if needed and show All at the top; a receipt upload from Books already does this. Cancel returns to the section the scan started from.
 - Tap the scrim, the close mark or Back to dismiss. Semantics: `menu` with `menuitem` actions; focus moves to the first action on open and back to the Add button on close.
 
 **Motion**
@@ -273,3 +273,24 @@ Approved October 22, 2026. Add and the title menu are implemented on Receipts. B
 - Add remains visually pressed for the entire time the menu is open, then springs back when dismissed. Purple glossy buttons use a violet lower shade in their face and inset reflection.
 - Add menu: actions rise 8dp, fade and spring from 0.92 scale (damping 0.6, stiffness 450). Opening Add gives a ContextClick haptic. Scan receipt enters after 45ms, followed by Scan book 45ms later; each entry gives a lighter SegmentTick. Closing cancels pending entry haptics. Closing fades and shrinks each action over 140ms in reverse order with the same stagger. The full-screen overlay fades linearly over 240ms on opening and 180ms on closing; it has independent timing from the staggered actions. The icon keeps 180ms opening / 140ms closing timing. Interrupted animations continue from their current position.
 - Remove animations: menus appear and disappear immediately without stagger, entry haptics, scale or rise (the initial Add press still gives feedback), the icon swaps without rotating, and a section change crossfades title and content over 150ms with no roll. The swipe still works and commits without following the finger.
+
+## 8. Books (list)
+
+Native list-only implementation of the October 22 design (`nav-add-closed-*.png`, `nav-menu-books-*.png`). Books follows the Receipts list patterns with its own data; book scanning, details, deletion, editing and search are not implemented, and rows are display-only.
+
+**Header:** `SectionTitle` “Books” with the shared menu, then the shared All / Needs attention tabs. All counts every displayed row, including scans in progress and failed scans; the menu's Books count is saved books only.
+
+**Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running.
+
+**List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”) come first, newest first. Saved books follow in server order, newest first; each shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag`. A succeeded scan never adds a second row. Needs attention lists failed scans. Covers load only for books with `hasImage`; books without one show a neutral book placeholder. See `BookRow` in `components.md`.
+
+**States:**
+
+- Initial loading: four skeleton rows in the same card with one “Loading books…” announcement after the shared 200ms delay.
+- No books: text-only status content, “No books yet” / “Saved books will appear here.”, with no illustration and no instruction to scan.
+- Needs attention, empty: the shared “All good” state.
+- Load error: the shared load-error artwork and retry, “We couldn’t load your books. Let’s try again.”
+- Refresh: the shared pull-to-refresh with “Refresh books” and “Refreshing books…”. A failed refresh keeps the cached rows and shows “Couldn’t refresh books. Your previous list is still here.” with Try again.
+- Scanner notices: when Scan receipt is chosen from Books, “Opening scanner…” and scanner errors appear above the Books list as on Receipts.
+
+**Large text:** at font scale ≥1.3 or narrow widths the category or upload tag moves beneath the metadata, end-aligned, and metadata may wrap. Titles stay on one line with an ellipsis.

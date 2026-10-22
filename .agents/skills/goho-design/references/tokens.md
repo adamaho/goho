@@ -99,7 +99,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 
 | Token         | Radius | Use                                                                  |
 | ------------- | ------ | -------------------------------------------------------------------- |
-| `thumb`       | 8      | Receipt thumbnails in rows                                           |
+| `thumb`       | 8      | Receipt thumbnails and book covers in rows                           |
 | `button`      | 20     | Primary and secondary buttons (not fully round)                      |
 | `card`        | 20     | Grouped list cards, detail card, photo frame                         |
 | `fab`         | 24     | Historical Scan button (Add button is `pill`)                        |
@@ -117,7 +117,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `screenMargin` = 16: edges of cards and the filter. The Add button uses its separate 24dp end margin.
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
-- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
+- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge. Book rows use a 40×56 cover (`thumbWidth` × `coverHeight`) in the same column, so their dividers keep the 68dp start.
 - Detail list row: min height 47, label left, value right.
 - Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item or category name. In item rows, vertically center the tag, name and amount with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
 - Category breakdown (mirrored in native `Spacing.kt`): `breakdownRowVertical` = 12, `breakdownBarHeight` = 3, `breakdownBarGap` = 8. Rows reuse `cardPadding` = 16 horizontally; the bar uses `divider` for its track and the category `TagColor` content colour for its fill.
@@ -171,6 +171,7 @@ The `statusCard` color and shape tokens and legacy elevation treatment are retai
 - Separate filter tabs remain below the title, without an enclosing track: 13sp / 18sp, 10dp horizontal padding, 5dp count gaps, 36dp visible selected pill within at least 44dp tap targets. No scroll transition. Use weight 500 and retain one light haptic per completed filter click.
 - `timestamp`: Geist 400, 13sp / 18sp, zero tracking, proportional digit widths.
 - Receipt placeholders: 20×28dp symbols, 1.5dp stroke, centered in the existing 40×48dp thumbnail.
+- Book cover placeholders: 20dp (`coverIcon`) book or scan icons centered in the 40×56dp cover. Failed scans add an 8dp (`coverDot`) `attention` dot inset 6dp (`coverDotInset`) from the bottom end.
 
 ## Receipt item card
 
@@ -194,20 +195,21 @@ Receipt pages use native HorizontalPager distance/velocity settling with no cust
 
 Approved October 22, 2026 (`screens.md` section 7).
 
-| Token                   | Value                                                                 | Use                                     |
-| ----------------------- | --------------------------------------------------------------------- | --------------------------------------- |
-| `sectionMenu` (shape)   | 20dp                                                                  | Section menu surface                    |
-| `sectionMenuWidth`      | 240dp minimum                                                         | Section menu; grows for large text      |
-| `sectionMenuOffset`     | 4dp                                                                   | Gap below the title row                 |
-| `sectionMenuPadding`    | 6dp                                                                   | Inside the menu surface                 |
-| `sectionMenuRow`        | 48dp min height, 14dp sides, 14dp corners                             | Section rows                            |
-| `sectionChevron`        | 18dp icon in a 28dp slot, 2dp stroke, 2dp gap                         | Chevron after the title                 |
-| `sectionMenuScrimAlpha` | 0.35 × `scrim`                                                        | Behind the section menu                 |
-| `addButton`             | 60dp circle (`pill`)                                                  | Shared Add button                       |
-| `addIcon`               | 22dp, 2.2dp stroke                                                    | Plus / close mark                       |
-| `addMenuAction`         | 52dp tall, `pill`, 16dp start / 20dp end padding, 20dp icon, 10dp gap | Add menu actions                        |
-| `addMenuGap`            | 10dp between actions, 16dp above the button                           | Add menu stack                          |
-| `titleSwipeThreshold`   | 24dp or 1,000dp/s                                                     | Commit a title swipe                    |
-| `titleRubberBand`       | 8dp                                                                   | Drag limit at the first or last section |
+| Token                      | Value                                                                 | Use                                                                |
+| -------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `sectionMenu` (shape)      | 20dp                                                                  | Section menu surface                                               |
+| `sectionMenuWidth`         | 240dp minimum                                                         | Section menu; grows for large text                                 |
+| `sectionMenuShadowPadding` | 32dp (`sheetElevation × 2`)                                           | Drawing outsets for the composited popup shadow; no layout padding |
+| `sectionMenuOffset`        | 4dp                                                                   | Gap below the title row                                            |
+| `sectionMenuPadding`       | 6dp                                                                   | Inside the menu surface                                            |
+| `sectionMenuRow`           | 48dp min height, 14dp sides, 14dp corners                             | Section rows                                                       |
+| `sectionChevron`           | 18dp icon in a 28dp slot, 2dp stroke, 2dp gap                         | Chevron after the title                                            |
+| `sectionMenuScrimAlpha`    | 0.35 × `scrim`                                                        | Behind the section menu                                            |
+| `addButton`                | 60dp circle (`pill`)                                                  | Shared Add button                                                  |
+| `addIcon`                  | 22dp, 2.2dp stroke                                                    | Plus / close mark                                                  |
+| `addMenuAction`            | 52dp tall, `pill`, 16dp start / 20dp end padding, 20dp icon, 10dp gap | Add menu actions                                                   |
+| `addMenuGap`               | 10dp between actions, 16dp above the button                           | Add menu stack                                                     |
+| `titleSwipeThreshold`      | 24dp or 1,000dp/s                                                     | Commit a title swipe                                               |
+| `titleRubberBand`          | 8dp                                                                   | Drag limit at the first or last section                            |
 
 Motion: native `SECTION_MENU_ENTER_MILLIS` = 160 / `SECTION_MENU_EXIT_MILLIS` = 120, `SECTION_MENU_START_SCALE` = 0.96, `SECTION_MENU_SCRIM_ALPHA` = 0.35, fade + scale from 0.96 at the title’s start corner; `TITLE_ROLL_MILLIS` = 220 with `FastOutSlowInEasing`, spring back `dampingRatio = 0.8f`, `stiffness = 400f`; `ADD_MENU_ENTER_MILLIS` = 180 and `ADD_MENU_EXIT_MILLIS` = 140 for the 45° icon rotation. The overlay uses independent `ADD_MENU_SCRIM_ENTER_MILLIS` = 240 / `ADD_MENU_SCRIM_EXIT_MILLIS` = 180 with linear opacity, read in the drawing phase. Interrupted fades continue from their current opacity. Each action rises 8dp, fades and scales from 0.92 with a spring (`dampingRatio = 0.6f`, `stiffness = 450f`); `ADD_MENU_STAGGER_MILLIS` = 45, nearest the button first, starting 45ms after the initial press. Add uses ContextClick feedback and each entry uses SegmentTick; dismissal cancels pending ticks. Exit fades and shrinks over 140ms per action, staggered top to bottom. Reduced motion skips the stagger and entry ticks and snaps the menu and icon; initial press feedback remains. Reduced motion snaps the current title menu, scrim and chevron. Future section changes omit scale, rise, rotation and roll and crossfade over 150ms. The native menu reserves 32dp (`addMenuShadowPadding`) around the stack for shadows, compensating its outer inset to preserve the 16dp visible gap above Add. `sheetRing` is white 5% in dark mode and `#26233A` 4% in light mode. Colours otherwise reuse existing tokens: `sheet`, `scrim`, `accentContainer` / `onAccentContainer` (current section, action icons), `textPrimary`, `textSecondary`, `textTertiary`, `buttonPrimary` / `onButtonPrimary`.

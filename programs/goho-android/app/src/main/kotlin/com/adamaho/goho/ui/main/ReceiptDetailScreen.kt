@@ -219,7 +219,7 @@ fun ReceiptDetailScreen(
                     }
                     item("details") {
                         DetailSectionHeading(stringResource(R.string.receipt_details_section))
-                        ReceiptCard {
+                        ListCard {
                             rows.forEachIndexed { index, (label, value) ->
                                 if (index > 0) ReceiptDetailDivider()
                                 ReceiptDetailRow(stringResource(label), stacked) {

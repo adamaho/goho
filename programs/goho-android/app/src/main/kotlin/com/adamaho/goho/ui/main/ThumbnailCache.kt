@@ -31,31 +31,28 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 /**
- * A screen-scoped, bounded cache; failed/missing images use a receipt placeholder until the next
- * visit.
+ * A bounded receipt-photo or book-cover cache keyed by record ID. Only decoded images are kept, so
+ * a missing, failed or undecodable image is requested again the next time its row needs it.
  */
-internal class ReceiptThumbnails(private val loadImage: suspend (String) -> ByteArray?) {
-    private data class Result(val bitmap: Bitmap?)
-
+internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArray?) {
     private val cache =
-        object : LruCache<String, Result>(4 * 1024 * 1024) {
-            override fun sizeOf(key: String, value: Result) =
-                maxOf(1024, value.bitmap?.byteCount ?: 0)
+        object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
+            override fun sizeOf(key: String, value: Bitmap) = value.byteCount
         }
     private val requests = Semaphore(3)
 
-    suspend fun get(receiptId: String): Bitmap? =
+    suspend fun get(id: String): Bitmap? =
         withContext(Dispatchers.IO) {
-            cache.get(receiptId)?.let {
-                return@withContext it.bitmap
+            cache.get(id)?.let {
+                return@withContext it
             }
             requests.withPermit {
-                cache.get(receiptId)?.let {
-                    return@withPermit it.bitmap
+                cache.get(id)?.let {
+                    return@withPermit it
                 }
                 val bitmap =
                     try {
-                        loadImage(receiptId)?.let { bytes ->
+                        loadImage(id)?.let { bytes ->
                             val options =
                                 BitmapFactory.Options().apply { inJustDecodeBounds = true }
                             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
@@ -63,7 +60,7 @@ internal class ReceiptThumbnails(private val loadImage: suspend (String) -> Byte
                             else {
                                 options.inJustDecodeBounds = false
                                 options.inSampleSize =
-                                    receiptThumbnailSampleSize(options.outWidth, options.outHeight)
+                                    thumbnailSampleSize(options.outWidth, options.outHeight)
                                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
                             }
                         }
@@ -71,14 +68,13 @@ internal class ReceiptThumbnails(private val loadImage: suspend (String) -> Byte
                         if (error is CancellationException) throw error
                         null
                     }
-                cache.put(receiptId, Result(bitmap))
-                bitmap
+                bitmap?.also { cache.put(id, it) }
             }
         }
 }
 
-/** Bound the longest decoded side, including extreme receipt aspect ratios. */
-internal fun receiptThumbnailSampleSize(width: Int, height: Int): Int {
+/** Bound the longest decoded side, including extreme receipt and cover aspect ratios. */
+internal fun thumbnailSampleSize(width: Int, height: Int): Int {
     var sample = 1
     while (maxOf(width, height) / sample > 384 && sample <= Int.MAX_VALUE / 2) sample *= 2
     return sample
@@ -88,7 +84,7 @@ internal fun receiptThumbnailSampleSize(width: Int, height: Int): Int {
 internal fun ReceiptThumbnail(
     receiptId: String?,
     status: ReceiptListStatus,
-    thumbnails: ReceiptThumbnails,
+    thumbnails: ThumbnailCache,
 ) {
     var visible by remember { mutableStateOf(false) }
     val bitmap by

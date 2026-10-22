@@ -25,7 +25,7 @@ internal fun ReceiptItemsCard(
     locale: Locale,
 ) {
     val c = GohoTheme.colors
-    ReceiptCard(verticalPadding = GohoSpacing.itemCardTop) {
+    ListCard(verticalPadding = GohoSpacing.itemCardTop) {
         repeat(items?.size ?: 3) { index ->
             val item = items?.get(index)
             if (index > 0) ReceiptDetailDivider()
