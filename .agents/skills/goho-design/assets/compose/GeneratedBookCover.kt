@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 
@@ -60,7 +61,7 @@ internal fun Modifier.bookCoverShadow(colors: GohoColors, shape: RoundedCornerSh
         Shadow(
             radius = GohoSpacing.bookCoverShadowRadius,
             spread = GohoSpacing.bookCoverShadowSpread,
-            offset = DpOffset(GohoSpacing.flatElevation, GohoSpacing.bookCoverShadowY),
+            offset = DpOffset(x = 0.dp, y = GohoSpacing.bookCoverShadowY),
             color = colors.shadow,
             alpha = colors.bookCoverShadowAlpha,
         ),

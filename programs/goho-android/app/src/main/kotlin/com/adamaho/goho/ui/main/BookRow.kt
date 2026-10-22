@@ -183,8 +183,9 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache) {
     var loading by remember(bookId) { mutableStateOf(bookId != null) }
     val bitmap by
         produceState<Bitmap?>(null, bookId, visible, covers) {
-            value =
-                if (visible && bookId != null) covers.get(bookId).also { loading = false } else null
+            // Keep a loaded cover while off screen so it doesn't flash the generated one on return.
+            if (bookId == null) value = null
+            else if (visible) value = covers.get(bookId).also { loading = false }
         }
     val image = bitmap
     Box(
