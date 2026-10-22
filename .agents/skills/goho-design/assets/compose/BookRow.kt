@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -11,12 +13,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -24,6 +31,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
+import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import java.time.Instant
@@ -33,8 +41,9 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
- * Display-only Books row. A null [entry] keeps the same layout for skeleton loading. [expanded]
- * moves the tag below the text for large fonts and narrow screens; titles always stay on one line.
+ * Books row. Saved books open the book overlay through [onClick]; scans are display-only. A null
+ * [entry] keeps the same layout for skeleton loading. [expanded] moves the tag below the text for
+ * large fonts and narrow screens; titles always stay on one line.
  */
 @Composable
 internal fun BookRow(
@@ -44,8 +53,30 @@ internal fun BookRow(
     locale: Locale,
     expanded: Boolean,
     covers: ThumbnailCache,
+    onClick: ((Book) -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
+    val book = (entry as? BookListEntry.Saved)?.book
+    val interaction = remember { MutableInteractionSource() }
+    val press by pressProgress(interaction)
+    // Focus returns to the row when its book overlay closes.
+    val focus = remember { FocusRequester() }
+    val lifted = book != null && LocalBookOverlay.current?.isLifted(book.id) == true
+    var wasLifted by remember { mutableStateOf(false) }
+    LaunchedEffect(lifted) {
+        if (wasLifted && !lifted) focus.requestFocus()
+        wasLifted = lifted
+    }
+    val clickable =
+        if (book != null && onClick != null)
+            Modifier.focusRequester(focus)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.Button,
+                    onClick = { onClick(book) },
+                )
+        else Modifier
     val title =
         when (entry) {
             null -> ""
@@ -55,7 +86,9 @@ internal fun BookRow(
         }
     Row(
         Modifier.fillMaxWidth()
-            .background(c.surface)
+            .then(clickable)
+            // Rows fill edge to edge inside the card, so the shared press darkens the fill only.
+            .drawBehind { drawRect(lerp(c.surface, c.surfacePressed, press.coerceIn(0f, 1f))) }
             .heightIn(min = GohoSpacing.rowMinHeight)
             .semantics(mergeDescendants = true) {}
             .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),
@@ -188,12 +221,8 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache) {
             else if (visible) value = covers.get(bookId).also { loading = false }
         }
     val image = bitmap
-    Box(
-        Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
-            .size(GohoSpacing.thumbWidth, GohoSpacing.coverHeight)
-            .clip(GohoShapes.thumb)
-            .skeleton(block = true)
-    ) {
+    @Composable
+    fun Cover(modifier: Modifier) {
         when {
             image != null ->
                 Image(
@@ -201,27 +230,42 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache) {
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier =
-                        Modifier.matchParentSize()
+                        modifier
+                            .fillMaxSize()
+                            .clip(GohoShapes.thumb)
                             .border(
                                 GohoSpacing.hairline,
                                 GohoTheme.colors.outline,
                                 GohoShapes.thumb,
                             ),
                 )
-            book != null && !loading -> GeneratedBookCover(book, BookCoverSize.Small)
-            else -> CoverPlaceholder(entry)
+            book != null && !loading -> GeneratedBookCover(book, BookCoverSize.Small, modifier)
+            else -> CoverPlaceholder(entry, modifier)
         }
+    }
+    // The slot keeps its size while a lifted cover is away in the book overlay.
+    Box(
+        Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
+            .size(GohoSpacing.thumbWidth, GohoSpacing.coverHeight)
+            .clip(GohoShapes.thumb)
+            .skeleton(block = true)
+    ) {
+        if (book != null)
+            LiftableBookCover(book.id, onScreen = visible, photo = image != null) { Cover(it) }
+        else Cover(Modifier)
     }
 }
 
 @Composable
-private fun CoverPlaceholder(entry: BookListEntry?) {
+private fun CoverPlaceholder(entry: BookListEntry?, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val shape = GohoShapes.thumb
     val processing = entry is BookListEntry.Scan && !entry.failed
     val failed = entry?.needsAttention == true
     Box(
-        Modifier.fillMaxSize()
+        modifier
+            .fillMaxSize()
+            .clip(shape)
             .background(
                 when {
                     processing -> c.accentContainer

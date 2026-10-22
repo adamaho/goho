@@ -6,7 +6,7 @@ The current family icon sources and Android resources are documented in the [lau
 
 ## Book overlay, lifted book (October 22, 2026, approved design)
 
-Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. Design references (not compiled): `assets/compose/BookOverlay.kt` and `GeneratedBookCover.kt`.
+Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. `assets/compose/BookOverlay.kt` and `GeneratedBookCover.kt` mirror the native implementation, which omits the approved Delete book states.
 
 - `book-overlay-pressed-light.png`, `book-overlay-flight-light.png`, `book-overlay-light.png`: tap, the cover mid-flight from the row over the frosting list, and the lifted book with a generated cloth cover (also in `book-overlay-delete-error-dark.png`).
 - `book-overlay-dark.png`, `book-overlay-flight-dark.png`: a photo cover lifted and mid-flight on the dark palette.
