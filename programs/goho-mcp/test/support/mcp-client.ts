@@ -40,6 +40,39 @@ export const DeleteResult = Schema.Struct({
 });
 
 /**
+ * Response shape for a successful book list.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const BookListResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ books: Schema.Array(Schema.Unknown) }),
+});
+
+/**
+ * Response shape for a successful book lookup, creation, or correction.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const BookResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ book: Schema.Unknown }),
+});
+
+/**
+ * Response shape for a successful book deletion.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const DeleteBookResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ deleted_book_id: Schema.String }),
+});
+
+/**
  * Response shape for an MCP tool failure.
  *
  * @category testing

@@ -19,12 +19,14 @@ const ToolList = Schema.Struct({
   ),
 });
 
-it.effect("registers the receipt tools through MCP", () =>
+it.effect("registers the receipt and book tools through MCP", () =>
   Effect.gen(function* () {
     const client = yield* startMcpClient("http://127.0.0.1:3000");
     const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
       yield* client.request(2, "tools/list", {}),
     );
+    const annotationsOf = (name: string) =>
+      discovered.tools.find((tool) => tool.name === name)?.annotations;
 
     expect(discovered.tools.map((tool) => tool.name)).toEqual([
       "list_receipts",
@@ -33,21 +35,35 @@ it.effect("registers the receipt tools through MCP", () =>
       "delete_receipt",
       "patch_receipt",
       "patch_receipt_item",
+      "list_books",
+      "get_book",
+      "create_book",
+      "delete_book",
+      "patch_book",
     ]);
-    expect(discovered.tools[0]?.annotations.readOnlyHint).toBe(true);
-    expect(discovered.tools[1]?.annotations.readOnlyHint).toBe(true);
-    expect(discovered.tools[2]?.annotations.readOnlyHint).toBe(false);
-    for (const name of ["patch_receipt", "patch_receipt_item"]) {
-      expect(discovered.tools.find((tool) => tool.name === name)?.annotations).toEqual({
+    for (const name of ["list_receipts", "get_receipt", "list_books", "get_book"]) {
+      expect(annotationsOf(name)?.readOnlyHint).toBe(true);
+    }
+    expect(annotationsOf("create_receipt")?.readOnlyHint).toBe(false);
+    expect(annotationsOf("create_book")).toEqual({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    });
+    for (const name of ["patch_receipt", "patch_receipt_item", "patch_book"]) {
+      expect(annotationsOf(name)).toEqual({
         readOnlyHint: false,
         destructiveHint: true,
         idempotentHint: true,
         openWorldHint: false,
       });
     }
-    expect(discovered.tools[3]?.annotations).toMatchObject({
-      readOnlyHint: false,
-      destructiveHint: true,
-    });
+    for (const name of ["delete_receipt", "delete_book"]) {
+      expect(annotationsOf(name)).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: true,
+      });
+    }
   }).pipe(Effect.provide(NodeServices.layer)),
 );
