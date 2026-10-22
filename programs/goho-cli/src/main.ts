@@ -4,12 +4,13 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect } from "effect";
 import { Command } from "effect/cli";
 
+import { booksCommand } from "./commands/books.ts";
 import { receiptsCommand } from "./commands/receipts.ts";
 import * as GohoServer from "./goho-server.ts";
 
 const command = Command.make("goho").pipe(
   Command.withDescription("Command-line interface for Goho"),
-  Command.withSubcommands([receiptsCommand]),
+  Command.withSubcommands([receiptsCommand, booksCommand]),
 );
 
 Command.run(command, { version: "0.0.0" }).pipe(
