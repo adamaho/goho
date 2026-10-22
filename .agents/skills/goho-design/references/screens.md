@@ -1,6 +1,6 @@
 # Goho screens
 
-All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. SectionTitle and Books describe the October 22 design target. The native app retains the plain Receipts title and now implements Add with Scan receipt plus the explicitly requested no-op Scan book action.
+All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. The native app implements SectionTitle with its anchored menu and Add. Books in the title menu and Scan book in Add are explicitly requested dismiss-only no-ops. Title swiping, section switching and Books screens remain future design targets.
 
 Three screens, a photo viewer, section navigation and the Add button (section 7), the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
@@ -226,9 +226,9 @@ Wrap the pager in the shared pull-to-refresh container so both pages refresh the
 
 ## 7. Section navigation and add button
 
-Approved October 22, 2026. Add is implemented on Receipts; title navigation and Books remain planned. Scan book is currently a visible no-op that closes the menu, as requested by the user. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
+Approved October 22, 2026. Add and the title menu are implemented on Receipts. Books and Scan book are visible no-ops that close their respective menu, as requested by the user. Title swiping, section switching and Books screens remain planned. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
 
-**Section registry.** One ordered list drives the menu and title swipe: Receipts (receipt icon, count = All count), then Books (book icon, count = number of books). Each entry also supplies its scan action. The Add stack reads the registry in reverse so Receipts remains nearest the button. A future module supplies its content and scan flow through a registry entry.
+**Future section registry.** When section switching is implemented, one ordered list drives the menu and title swipe: Receipts (receipt icon, count = All count), then Books (book icon, count = number of books). Each entry also supplies its scan action. The Add stack reads the registry in reverse so Receipts remains nearest the button. A future module supplies its content and scan flow through a registry entry.
 
 **SectionTitle** (replaces the plain list title on every section root)
 
@@ -239,16 +239,17 @@ Approved October 22, 2026. Add is implemented on Receipts; title navigation and 
 
 - Anchored under the title: 4dp below the title row, aligned to the 16dp screen margin, width 240dp (grows for large text, never past the screen margin). Shape `sectionMenu` 20dp, fill `sheet`, 6dp padding, the sheet ring and shadow. A `scrim` at 35% alpha covers the screen behind it; the header stays visible.
 - One row per section, 48dp minimum height, 14dp side padding, 14dp corners: 20dp icon, 12dp gap, name in `rowTitle`, count right-aligned in `meta`. Current section: `accentContainer` fill, icon, name and count in `onAccentContainer`. Others: icon `textSecondary`, name `textPrimary`, count `textTertiary`. Omit a count until its data has loaded; never show 0 for unknown.
-- The chevron turns 180° while open. Choosing the current section just closes the menu. Choosing another closes the menu and rolls the title to the new name (below). Outside tap, Back or the title closes it.
-- Semantics: the title is a Button, “Section: Receipts. Double-tap to change”, with custom actions “Next section” and “Previous section”. The menu uses `menu` / `menuitemradio`; focus moves to the current section on open and returns to the title on close.
+- **Current native scope:** Receipts stays selected. Both rows close the menu without navigation, network calls or changes to the filter/scroll position; Books has no count. The menu and its scrim fade in over 160ms and out over 120ms, with the popup scaling from 0.96 around its start/top anchor. Remove animations snaps both and the chevron. Add and title menus cannot overlap. The modal popup blocks underlying input and hides receipt/Add semantics.
+- The chevron turns 180° while open. Choosing the current section just closes the menu. Future section switching will close the menu and roll the title to the new name (below); the current Books entry only dismisses. Outside tap, Back or the title closes it.
+- Native semantics: the title is a heading/Button named “Section: Receipts”, with expanded/collapsed state. The popup is a “Sections” pane with selected button rows (the current section retains its dismissal action); focus moves to Receipts on open and returns to the title after exit. Next/Previous section actions are deferred with actual switching.
 
-**Title swipe**
+**Title swipe (planned)**
 
 - Vertical drag that starts on the title. Up selects the next section, down the previous; there is no wrap. The outgoing name follows the finger upward (or downward) and fades as the incoming name enters from the opposite side, one title height apart; the section content crossfades with the same progress. Header filters, list scroll and the Add button stay put.
 - Commit when released past 24dp or flung faster than 1,000dp/s in the drag direction, finishing over `TITLE_ROLL_MILLIS` (220ms, `FastOutSlowInEasing`), with one `SegmentTick` haptic. Otherwise spring back (`dampingRatio = 0.8f`, `stiffness = 400f`). At the first or last section the title rubber-bands at most 8dp and returns, with no haptic.
 - The gesture lives only in the fixed header, so it never competes with pull-to-refresh, the All / Needs attention pager or row gestures. Disable it while the section menu or Add menu is open.
 
-**Switching sections**
+**Switching sections (planned)**
 
 - Each section keeps its own state: selected filter page, scroll positions and loaded data. Switching does not refetch beyond the usual on-show refresh, and never resets a scroll position.
 - Persist the last-used section locally and open it on the next cold start.

@@ -36,7 +36,9 @@ import com.goho.ui.theme.*
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
-// Reference only (not compiled). Behaviour: references/screens.md section 7.
+// Future navigation sketch only (not compiled). Current menu implementation:
+// SectionTitle.kt, SectionMenu.kt and ReceiptListHeader.kt. Do not add title swiping
+// or wire Books navigation until requested. Behaviour: references/screens.md section 7.
 
 /** One top-level Goho section. The ordered registry drives the menu, the title swipe and the Add menu. */
 @Immutable

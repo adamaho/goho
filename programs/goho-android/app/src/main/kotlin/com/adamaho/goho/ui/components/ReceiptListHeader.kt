@@ -1,15 +1,14 @@
 package com.adamaho.goho.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
+import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
@@ -20,22 +19,43 @@ fun ReceiptListHeader(
     onSelect: (Boolean) -> Unit,
     locale: Locale,
     showFilters: Boolean = true,
+    hasLoaded: Boolean = true,
+    titleMenuOpen: Boolean,
+    onTitleMenuChange: (Boolean) -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth()
             .padding(horizontal = GohoSpacing.screenMargin)
             .padding(top = GohoSpacing.headerTop, bottom = GohoSpacing.contentGap)
     ) {
-        Row(
-            Modifier.padding(start = GohoSpacing.textInsetFromMargin)
-                .heightIn(min = GohoSpacing.headerHeight),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.receipts_title),
-                style = GohoTheme.type.screenTitle,
-                color = GohoTheme.colors.textPrimary,
-                modifier = Modifier.weight(1f).semantics { heading() },
+        val titleFocus = remember { FocusRequester() }
+        Box(Modifier.fillMaxWidth()) {
+            SectionTitle(
+                title = stringResource(R.string.receipts_title),
+                open = titleMenuOpen,
+                onClick = { onTitleMenuChange(!titleMenuOpen) },
+                modifier =
+                    Modifier.padding(start = GohoSpacing.textInsetFromMargin)
+                        .focusRequester(titleFocus),
+            )
+            SectionMenu(
+                open = titleMenuOpen,
+                entries =
+                    listOf(
+                        SectionMenuEntry(
+                            R.string.receipts_title,
+                            R.drawable.ic_add_receipt,
+                            selected = true,
+                            count =
+                                if (hasLoaded) NumberFormat.getIntegerInstance(locale).format(total)
+                                else null,
+                        ) {},
+                        // Books is a dismiss-only placeholder until section switching is
+                        // implemented.
+                        SectionMenuEntry(R.string.books_title, R.drawable.ic_add_book) {},
+                    ),
+                onDismiss = { onTitleMenuChange(false) },
+                onClosed = { titleFocus.requestFocus() },
             )
         }
         if (showFilters) ReceiptFilter(total, attention, attentionOnly, onSelect, locale)
