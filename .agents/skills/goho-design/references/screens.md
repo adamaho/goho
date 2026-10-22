@@ -294,3 +294,29 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 - Scanner notices: when Scan receipt is chosen from Books, “Opening scanner…” and scanner errors appear above the Books list as on Receipts.
 
 **Large text:** at font scale ≥1.3 or narrow widths the category or upload tag moves beneath the metadata, end-aligned, and metadata may wrap. Titles stay on one line with an ellipsis.
+
+## 9. Book details (cover first)
+
+Approved design, October 22, 2026; not implemented. Book rows are display-only today; when this page is built, tapping a saved book opens it. Mockups: `book-details-light.png`, `book-details-dark.png`, `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`, `book-details-loading-light.png`, `book-details-cover-loading-dark.png`, `book-details-options-light.png`, `book-details-confirm-dark.png` and `book-details-delete-error-light.png`. Books and covers in them are sample data.
+
+Opened by tapping a saved book row. Rows still reading a cover are not tappable; Not processed book scans open the options sheet with Delete scan (`DELETE /book-uploads/{uploadId}`), exactly as Not processed receipts do. Read-only: data from `GET /books/{bookId}`, cover from `GET /books/{bookId}/image` only when `hasImage` is true.
+
+**Top bar**: identical to receipt details (variant 2/Grey back and “More options” round buttons, no title).
+
+**Cover** (books with `hasImage` only; 12 below the bar, centered): the cover image at `bookCover` 140×204dp, `ContentScale.Crop` inside shape `cover` (8dp), a 1dp `outline` ring and a soft drop shadow (0/16/34dp, black at 45% dark / `shadow` at 30% light, −12dp spread). It sits directly on the background, not in a photo frame. Tap opens the existing photo viewer with the uncropped image; accessibility action “View book cover”, viewer description “Book cover, {title}”. While the image is loading, show a `cover`-shaped skeleton mask of the same size that is not tappable.
+
+**Generated cover** (approved October 22, 2026; `hasImage` false, or the image fails to load): keep the same 140×204dp `cover` slot so every book page has the same shape. Fill it with the book category’s `TagColor` container; draw a 7dp spine on the leading edge in the category content colour at 18% alpha and a 1dp ring in `outline`. Set the title in `bookCoverTitle` (16/20sp SemiBold, −0.01em) in the content colour, top-aligned at 18dp top, 20dp start and 14dp end padding, up to 5 lines with an ellipsis. Set the author in 12/16sp Medium, content colour at 85%, bottom-aligned 14dp from the bottom. Same shadow as a real cover, at half strength in light mode. It is decorative: not tappable, no viewer, and hidden from accessibility (the hero already announces the title and author). Unknown category colours use Grey. Book list thumbnails without a cover keep the neutral book placeholder.
+
+**Hero** (20 below the cover or generated cover; 24dp side padding, centered text):
+
+- Title in `bookTitle` (26/32sp SemiBold, −0.02em), `textPrimary`, wrapping on as many lines as it needs; never truncated.
+- 6dp below: author in `rowTitle` weight 400 (16/22sp), `textSecondary`.
+- 12dp below: the book’s category as a labelled `Tag`, using the server `icon` and `color` keys like receipt categories, with the name in sentence case.
+
+**Details** (24 below the hero): section label “Details”, then a read-only DetailList: Title, Author, Category (the same `Tag`, right-aligned) and Reading level. Omit the Reading level row when it is null. Long values wrap and stay right-aligned; labels keep their width. No footer.
+
+**Loading**: reuse the layout under `SkeletonScope` after 200ms of pending work: cover mask (when the row’s summary says it has a cover, or always on a cold open), title and author line masks, tag mask, and four detail rows. Back stays available; More hides until loaded. Announce “Loading book…” once. A book known to have no cover shows its generated cover once loaded. Failure uses the existing details retry state with “We couldn’t load this book. Let’s try again.”
+
+**Deleting a book**: More opens the shared options sheet with the book’s list-row summary as its header (cover thumbnail, title, author · reading level, category tag). The only action is “Delete book” (trash icon, `onDangerContainer`). Confirmation, “Deleting…”, the failure line “Couldn’t delete this book. Try again.” and dismissal rules match section 5, with no heading or description. On success the sheet drops, details goes back, and the row folds out of the Books list. `DELETE /books/{bookId}` also removes the book’s scans and cover; there is no undo.
+
+Not part of Books: editing, cover replacement, search or manual entry.

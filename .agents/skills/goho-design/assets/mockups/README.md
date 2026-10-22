@@ -4,6 +4,15 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Book details, cover first (October 22, 2026, approved design)
+
+Design renders from the Goho brand canvas (“Book details”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-details-cover-first) wins where they differ. Books and covers are illustrative sample data.
+
+- `book-details-light.png`, `book-details-dark.png`: cover first, centered title, author and category tag, then the Details card.
+- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated cover for books without a cover image (category tag colours, title, author, spine); the light one also has no reading level and a long wrapping title.
+- `book-details-loading-light.png`, `book-details-cover-loading-dark.png`: initial loading, and a loaded book whose cover is still loading.
+- `book-details-options-light.png`, `book-details-confirm-dark.png`, `book-details-delete-error-light.png`: the shared options sheet with Delete book, its confirmation and its failure state.
+
 ## Section navigation and add button (October 22, 2026, approved design)
 
 Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu, switching sections from it and a display-only Books list are implemented; title swiping and book scanning remain planned. Native title-menu, Add and Books captures below show the implemented controls; older captures with Scan are historical for that control.
