@@ -195,20 +195,21 @@ Receipt pages use native HorizontalPager distance/velocity settling with no cust
 
 Approved October 22, 2026 (`screens.md` section 7).
 
-| Token                   | Value                                                                 | Use                                     |
-| ----------------------- | --------------------------------------------------------------------- | --------------------------------------- |
-| `sectionMenu` (shape)   | 20dp                                                                  | Section menu surface                    |
-| `sectionMenuWidth`      | 240dp minimum                                                         | Section menu; grows for large text      |
-| `sectionMenuOffset`     | 4dp                                                                   | Gap below the title row                 |
-| `sectionMenuPadding`    | 6dp                                                                   | Inside the menu surface                 |
-| `sectionMenuRow`        | 48dp min height, 14dp sides, 14dp corners                             | Section rows                            |
-| `sectionChevron`        | 18dp icon in a 28dp slot, 2dp stroke, 2dp gap                         | Chevron after the title                 |
-| `sectionMenuScrimAlpha` | 0.35 × `scrim`                                                        | Behind the section menu                 |
-| `addButton`             | 60dp circle (`pill`)                                                  | Shared Add button                       |
-| `addIcon`               | 22dp, 2.2dp stroke                                                    | Plus / close mark                       |
-| `addMenuAction`         | 52dp tall, `pill`, 16dp start / 20dp end padding, 20dp icon, 10dp gap | Add menu actions                        |
-| `addMenuGap`            | 10dp between actions, 16dp above the button                           | Add menu stack                          |
-| `titleSwipeThreshold`   | 24dp or 1,000dp/s                                                     | Commit a title swipe                    |
-| `titleRubberBand`       | 8dp                                                                   | Drag limit at the first or last section |
+| Token                      | Value                                                                 | Use                                                                |
+| -------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `sectionMenu` (shape)      | 20dp                                                                  | Section menu surface                                               |
+| `sectionMenuWidth`         | 240dp minimum                                                         | Section menu; grows for large text                                 |
+| `sectionMenuShadowPadding` | 32dp (`sheetElevation × 2`)                                           | Drawing outsets for the composited popup shadow; no layout padding |
+| `sectionMenuOffset`        | 4dp                                                                   | Gap below the title row                                            |
+| `sectionMenuPadding`       | 6dp                                                                   | Inside the menu surface                                            |
+| `sectionMenuRow`           | 48dp min height, 14dp sides, 14dp corners                             | Section rows                                                       |
+| `sectionChevron`           | 18dp icon in a 28dp slot, 2dp stroke, 2dp gap                         | Chevron after the title                                            |
+| `sectionMenuScrimAlpha`    | 0.35 × `scrim`                                                        | Behind the section menu                                            |
+| `addButton`                | 60dp circle (`pill`)                                                  | Shared Add button                                                  |
+| `addIcon`                  | 22dp, 2.2dp stroke                                                    | Plus / close mark                                                  |
+| `addMenuAction`            | 52dp tall, `pill`, 16dp start / 20dp end padding, 20dp icon, 10dp gap | Add menu actions                                                   |
+| `addMenuGap`               | 10dp between actions, 16dp above the button                           | Add menu stack                                                     |
+| `titleSwipeThreshold`      | 24dp or 1,000dp/s                                                     | Commit a title swipe                                               |
+| `titleRubberBand`          | 8dp                                                                   | Drag limit at the first or last section                            |
 
 Motion: native `SECTION_MENU_ENTER_MILLIS` = 160 / `SECTION_MENU_EXIT_MILLIS` = 120, `SECTION_MENU_START_SCALE` = 0.96, `SECTION_MENU_SCRIM_ALPHA` = 0.35, fade + scale from 0.96 at the title’s start corner; `TITLE_ROLL_MILLIS` = 220 with `FastOutSlowInEasing`, spring back `dampingRatio = 0.8f`, `stiffness = 400f`; `ADD_MENU_ENTER_MILLIS` = 180 and `ADD_MENU_EXIT_MILLIS` = 140 for the 45° icon rotation. The overlay uses independent `ADD_MENU_SCRIM_ENTER_MILLIS` = 240 / `ADD_MENU_SCRIM_EXIT_MILLIS` = 180 with linear opacity, read in the drawing phase. Interrupted fades continue from their current opacity. Each action rises 8dp, fades and scales from 0.92 with a spring (`dampingRatio = 0.6f`, `stiffness = 450f`); `ADD_MENU_STAGGER_MILLIS` = 45, nearest the button first, starting 45ms after the initial press. Add uses ContextClick feedback and each entry uses SegmentTick; dismissal cancels pending ticks. Exit fades and shrinks over 140ms per action, staggered top to bottom. Reduced motion skips the stagger and entry ticks and snaps the menu and icon; initial press feedback remains. Reduced motion snaps the current title menu, scrim and chevron. Future section changes omit scale, rise, rotation and roll and crossfade over 150ms. The native menu reserves 32dp (`addMenuShadowPadding`) around the stack for shadows, compensating its outer inset to preserve the 16dp visible gap above Add. `sheetRing` is white 5% in dark mode and `#26233A` 4% in light mode. Colours otherwise reuse existing tokens: `sheet`, `scrim`, `accentContainer` / `onAccentContainer` (current section, action icons), `textPrimary`, `textSecondary`, `textTertiary`, `buttonPrimary` / `onButtonPrimary`.

@@ -47,6 +47,7 @@ fun SectionScreen(
     val locale = LocalConfiguration.current.locales[0]
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
     var titleMenuOpen by rememberSaveable { mutableStateOf(false) }
+    var pendingSection by remember { mutableStateOf<Section?>(null) }
     val menuOpen = addMenuOpen || titleMenuOpen
     val addButtonFocus = remember { FocusRequester() }
     val titleFocus = remember { FocusRequester() }
@@ -75,7 +76,10 @@ fun SectionScreen(
                     title = stringResource(section.title),
                     open = titleMenuOpen,
                     onClick = {
-                        if (!titleMenuOpen) addMenuOpen = false
+                        if (!titleMenuOpen) {
+                            addMenuOpen = false
+                            pendingSection = null
+                        }
                         titleMenuOpen = !titleMenuOpen
                     },
                     modifier =
@@ -100,11 +104,19 @@ fun SectionScreen(
                                         NumberFormat.getIntegerInstance(locale).format(it)
                                     },
                             ) {
-                                if (entry != section) onSectionChange(entry)
+                                // Keep the title, selected row and page stable during exit.
+                                if (entry != section) pendingSection = entry
                             }
                         },
                     onDismiss = { titleMenuOpen = false },
-                    onClosed = { titleFocus.requestFocus() },
+                    onClosed = {
+                        // Compose the next page only after the popup has finished closing.
+                        pendingSection?.let { next ->
+                            pendingSection = null
+                            onSectionChange(next)
+                        }
+                        titleFocus.requestFocus()
+                    },
                 )
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {

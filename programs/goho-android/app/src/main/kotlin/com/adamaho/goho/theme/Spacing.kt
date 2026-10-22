@@ -90,6 +90,7 @@ object GohoSpacing {
     val sectionChevronGap = 2.dp
     val sectionMenuWidth = 240.dp
     val sectionMenuOffset = 4.dp
+    val sectionMenuShadowPadding = sheetElevation * 2
     val sectionMenuPadding = 6.dp
     val sectionMenuRow = 48.dp
     val sectionMenuRowHorizontal = 14.dp

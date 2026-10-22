@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.LayerOutsets
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -166,7 +167,10 @@ fun SectionMenu(
                             .coerceAtLeast(GohoSpacing.sectionMenuRow)
                 )
                 .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                    // Fade the surface, rows and shadow as one image. Modulating each
+                    // draw separately leaves the shadow visible through the fading face.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    outsets = LayerOutsets(GohoSpacing.sectionMenuShadowPadding)
                     alpha = progress.value
                     val scale =
                         GohoMotion.SECTION_MENU_START_SCALE +

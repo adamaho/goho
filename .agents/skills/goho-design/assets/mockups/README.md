@@ -218,3 +218,10 @@ The remaining files were rendered from the older design canvas, usually at 824×
 - `tokens.png` / `tokens-light.png`: Historical token boards; use the Bram values in `references/tokens.md` and `assets/compose/GohoTheme.kt` instead.
 
 Written specs win over any older image. Preserve proportional figures, compact fixed filters, scale-only row holds, no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.
+
+## Section menu closing frames (October 22, 2026)
+
+- `section-menu-close-native-light.png`: selected frames from a normal-speed native recording, cropped to the header and top rows. The outgoing Books title, selected menu row and page remain stable until the popup finishes closing; Receipts appears afterward.
+- `section-menu-close-native-dark.png`: the same close in dark mode, captured with Android animator duration temporarily set to 4× to inspect the fade. The menu face, rows and shadow fade together. Normal animation speed was restored after capture.
+
+These are cropped native Pixel 9 API 36 emulator frames with frame numbers and original video timestamps, not redrawn layouts or a frame-rate benchmark. The popup has one shared parent outside the section bodies. The existing open-menu captures remain valid for its settled appearance.
