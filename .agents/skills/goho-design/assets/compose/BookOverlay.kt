@@ -323,50 +323,56 @@ private fun BookOverlay(
                     )
                 )
         )
-        Column(
-            Modifier.fillMaxSize()
-                // Taps on the frost close; the cover and text below consume their own taps.
-                .pointerInput(state) { detectTapGestures { state.close() } }
-                .nestedScroll(swipe)
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(top = GohoSpacing.bookOverlayCoverTop, bottom = GohoSpacing.screenMargin),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            val image = full ?: thumbnail
-            val coverModifier =
-                if (reduced) Modifier
-                else
-                    with(state.shared) {
-                        // Opaque for the whole flight out; drawn above the row cover on the way
-                        // home
-                        // and fading out over it (alone, when the row is off screen).
-                        Modifier.sharedBounds(
-                            rememberSharedContentState(coverKey(book.id)),
-                            visibility,
-                            enter = EnterTransition.None,
-                            exit = fadeOut(tween(GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS)),
-                            boundsTransform = state.coverBounds,
-                            resizeMode = coverResize(photo = image != null),
-                            zIndexInOverlay = 1f,
-                        )
-                    }
-            Box(
-                Modifier.graphicsLayer {
-                    translationY = drag
-                    scaleX = 1f - (1f - GohoPhotoMotion.MIN_DRAG_SCALE) * dragFraction()
-                    scaleY = scaleX
-                }
+        // The cover and text are centred below the Close bar and above the navigation bar; when
+        // taller than that space they start at its top and scroll while Close stays fixed.
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.fillMaxSize()
+                    // Taps on the frost close; the cover and text below consume their own taps.
+                    .pointerInput(state) { detectTapGestures { state.close() } }
+                    .nestedScroll(swipe)
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(top = GohoSpacing.detailTopBarHeight),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (image != null) PhotoCover(image, full, coverModifier) { viewerOpen = true }
-                else GeneratedBookCover(book, BookCoverSize.Large, coverModifier)
+                val image = full ?: thumbnail
+                val coverModifier =
+                    if (reduced) Modifier
+                    else
+                        with(state.shared) {
+                            // Opaque for the whole flight out; drawn above the row cover on the way
+                            // home
+                            // and fading out over it (alone, when the row is off screen).
+                            Modifier.sharedBounds(
+                                rememberSharedContentState(coverKey(book.id)),
+                                visibility,
+                                enter = EnterTransition.None,
+                                exit = fadeOut(tween(GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS)),
+                                boundsTransform = state.coverBounds,
+                                resizeMode = coverResize(photo = image != null),
+                                zIndexInOverlay = 1f,
+                            )
+                        }
+                Box(
+                    Modifier.graphicsLayer {
+                        translationY = drag
+                        scaleX = 1f - (1f - GohoPhotoMotion.MIN_DRAG_SCALE) * dragFraction()
+                        scaleY = scaleX
+                    }
+                ) {
+                    if (image != null) PhotoCover(image, full, coverModifier) { viewerOpen = true }
+                    else GeneratedBookCover(book, BookCoverSize.Large, coverModifier)
+                }
+                BookOverlayText(
+                    book,
+                    arrive
+                        .graphicsLayer { alpha = 1f - dragFraction() }
+                        .pointerInput(Unit) { detectTapGestures {} },
+                )
             }
-            BookOverlayText(
-                book,
-                arrive
-                    .graphicsLayer { alpha = 1f - dragFraction() }
-                    .pointerInput(Unit) { detectTapGestures {} },
-            )
         }
         IconButton(
             contentDescription = stringResource(R.string.book_close),

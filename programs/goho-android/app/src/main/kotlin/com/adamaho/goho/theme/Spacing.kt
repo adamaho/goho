@@ -89,7 +89,6 @@ object GohoSpacing {
     val bookCoverShadowRadius = 34.dp
     val bookCoverShadowY = 16.dp
     val bookCoverShadowSpread = (-12).dp
-    val bookOverlayCoverTop = 76.dp
     val bookOverlayTextTop = 24.dp
     val bookOverlayTextSide = 24.dp
     val bookOverlayAuthorTop = 6.dp
