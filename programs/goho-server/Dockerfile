@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1
 
 # Build from the repository root: docker build -f programs/goho-server/Dockerfile .
-FROM node:24-bookworm-slim AS base
+FROM node:24.22.1-bookworm-slim AS base
 # Keep in sync with packageManager in the root package.json.
-RUN npm install --global pnpm@12.11.2 && npm cache clean --force
+RUN npm install --global pnpm@12.14.0 && npm cache clean --force
 WORKDIR /app
 
 FROM base AS pruner
 COPY . .
 # Keep in sync with the turbo version in the pnpm catalog.
-RUN pnpm dlx turbo@2.11.8 prune @goho/goho-server --docker
+RUN pnpm dlx turbo@2.11.10 prune @goho/goho-server --docker
 
 FROM base AS installer
 # Dependency manifests only, so this layer is reused until dependencies change.
@@ -17,7 +17,7 @@ COPY --from=pruner /app/out/json/ ./
 RUN pnpm install --frozen-lockfile --prod --filter "@goho/goho-server..."
 COPY --from=pruner /app/out/full/ ./
 
-FROM node:24-bookworm-slim
+FROM node:24.22.1-bookworm-slim
 LABEL org.opencontainers.image.title="goho-server"
 LABEL org.opencontainers.image.source="https://github.com/adamaho/goho"
 ENV NODE_ENV=production \
