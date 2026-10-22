@@ -9,7 +9,7 @@ The current family icon sources and Android resources are documented in the [lau
 Design renders from the Goho brand canvas (“Book details”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-details-cover-first) wins where they differ. Books and covers are illustrative sample data.
 
 - `book-details-light.png`, `book-details-dark.png`: cover first, centered title, author and category tag, then the Details card.
-- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated cover for books without a cover image (category tag colours, title, author, spine); the light one also has no reading level and a long wrapping title.
+- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated “cloth and label” cover for books without a cover image (category colour cloth, darker spine, title label in the tag container colour); the light one also has no reading level and a long title that the label truncates while the hero wraps it.
 - `book-details-loading-light.png`, `book-details-cover-loading-dark.png`: initial loading, and a loaded book whose cover is still loading.
 - `book-details-options-light.png`, `book-details-confirm-dark.png`, `book-details-delete-error-light.png`: the shared options sheet with Delete book, its confirmation and its failure state.
 
