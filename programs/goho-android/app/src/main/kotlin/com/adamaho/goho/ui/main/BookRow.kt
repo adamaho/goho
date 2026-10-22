@@ -87,7 +87,7 @@ internal fun BookRow(
     Row(
         Modifier.fillMaxWidth()
             .then(clickable)
-            .pressFeedback { press }
+            // Rows fill edge to edge inside the card, so the shared press darkens the fill only.
             .drawBehind { drawRect(lerp(c.surface, c.surfacePressed, press.coerceIn(0f, 1f))) }
             .heightIn(min = GohoSpacing.rowMinHeight)
             .semantics(mergeDescendants = true) {}
