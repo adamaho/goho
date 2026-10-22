@@ -1,8 +1,8 @@
 # Goho screens
 
-All standard actions and Scan use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`; their existing layouts and behaviour are unchanged.
+All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. SectionTitle and Books describe the October 22 design target. The native app retains the plain Receipts title and now implements Add with Scan receipt plus the explicitly requested no-op Scan book action.
 
-Three screens, a photo viewer, the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
+Three screens, a photo viewer, section navigation and the Add button (section 7), the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
 List and details receipt options and deletion use the same supported server endpoints. Verify server support before implementing new behavior.
 
@@ -10,7 +10,7 @@ List and details receipt options and deletion use the same supported server endp
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
-- Title “Receipts” (`screenTitle`, `textPrimary`) at the 20dp text inset (4dp inside the screen margin), in a row at least 44dp tall. The header is text-only in every state, with no Bram mark.
+- Title “Receipts” (`screenTitle`, `textPrimary`) at the 20dp text inset (4dp inside the screen margin), in a row at least 44dp tall, rendered as the shared `SectionTitle` with its chevron (section 7). The header is text-only in every state, with no Bram mark.
 - Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
 
 **List**
@@ -21,9 +21,9 @@ List and details receipt options and deletion use the same supported server endp
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
 - Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
 - Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
-- Leave bottom padding in the list so the last row can scroll clear of the Scan button.
+- Leave bottom padding in the list so the last row can scroll clear of the Add button.
 
-**Scan FAB** bottom right, with no bottom gradient over the list. Opens the existing scan flow.
+**Add button** bottom right, with no bottom gradient over the list. Opens the Add menu; Scan receipt opens the existing scan flow (section 7).
 
 **Deleting from the list** (mockups `list-hold-press*.png`, `list-tap-not-processed*.png`, `list-after-delete*.png`, plus the sheet mockups in section 5)
 Two ways in, one sheet: press and hold any Processed or Not processed row, or tap a Not processed row. Both open the Receipt options sheet described in section 5. On success the sheet drops away and you stay on the list: the row folds out (height and fade, 250ms), dividers close up, the "All" count drops and the Needs attention badge updates (hidden at 0). If that leaves a section empty, the section label goes too. If the Needs attention filter is active and nothing is left, show its empty state.
@@ -105,7 +105,7 @@ Opened by tapping the photo area on the details screen. Mockups: `photo-viewer.p
 
 ## 4. Scan preview
 
-Shown after the ML Kit document scanner returns a capture. Replaces the current centered "Goho" layout.
+Shown after the ML Kit document scanner returns a capture, started from the Add menu’s Scan receipt. Replaces the current centered "Goho" layout.
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`screenTitle`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
 
@@ -165,7 +165,7 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Layout and transitions**
 
-- Center the status content in the available content area below the fixed header and above the persistent Scan button, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping Scan.
+- Center the status content in the available content area below the fixed header and above the persistent Add button, respecting system insets. Give the scrollable content 16dp horizontal and vertical padding. On short screens or with larger text, allow the whole status content to scroll rather than clipping copy or overlapping the Add button.
 - Animate newly shown status content once: 200ms fade and 6dp upward settle. No looping or bouncing mascot animation.
 - During retry, keep the error header and status content mounted. Disable the button immediately and keep “Try again” visible for the first 200ms. If the request is still pending, replace the label with a centered 18dp loading icon in `onButtonPrimary`, retaining “Trying again…” and indeterminate progress for accessibility. Reserve button space for both labels at the current font scale, including 2× text. Failure restores “Try again” in place. Success crossfades the outgoing error screen to the loaded state in 200ms, with no second status entrance and no outgoing accessibility actions.
 - Loading visibility follows the actual pending request, independently of the outgoing recovery screen’s disabled button. Cancel the delay/icon on completion, failure or disposal; every attempt starts a fresh 200ms delay.
@@ -187,19 +187,19 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 
 **Needs attention, nothing in it**
 
-- Header includes the “Receipts” title and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Scan button stays.
-- Bram and the copy are centered vertically between the filter and the Scan button, directly on the screen background. Illustration `status-needs-attention`: Bram gives a calm thumbs-up with a soft smile, using his familiar lilac and cream palette and rounded arms. Keep the approved pose without confetti, streamers or extra decorative colors. The single transparent PNG serves both themes, in the shared 220×190dp illustration slot.
+- Header includes the “Receipts” title and filters ("Needs attention" selected, no badge). Preserve both filters after deleting the last failed receipt, even when the overall count is zero. The Add button stays.
+- Bram and the copy are centered vertically between the filter and the Add button, directly on the screen background. Illustration `status-needs-attention`: Bram gives a calm thumbs-up with a soft smile, using his familiar lilac and cream palette and rounded arms. Keep the approved pose without confetti, streamers or extra decorative colors. The single transparent PNG serves both themes, in the shared 220×190dp illustration slot.
 - Title "All good"; text "Nothing needs your attention right now." No button.
 
 **No receipts yet** (the account has no receipts at all)
 
-- Header shows the “Receipts” title and both page tabs, including All 0. The shared Scan button stays.
-- Bram and the copy are centered between the header and Scan footer, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding and illustration size, with a 4dp gap before the title. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
-- Title "No receipts yet"; text "Tap Scan to add your first one." No button.
+- Header shows the “Receipts” title and both page tabs, including All 0. The shared Add button stays.
+- Bram and the copy are centered between the header and the Add button, directly on the plain screen background. Omit card fill, border and rounded clipping. Preserve the shared status content padding and illustration size, with a 4dp gap before the title. Illustration `status-no-receipts`: Bram gently cradles a small blank cream receipt in front of his lower belly, with a welcoming smile. Preserve his broad lilac body, long rounded arms, small ivory horns and tiny feet. The single transparent PNG serves both themes; there is no separate floating receipt, plus badge or typing indicator.
+- Title "No receipts yet"; text "Tap + to scan your first one." No button.
 
 **A little hiccup** (the list request failed)
 
-- Header shows only the “Receipts” title, with no filters. The shared Scan button stays available because scanning does not require the server.
+- Header shows only the “Receipts” title, with no filters. The shared Add button stays available because scanning does not require the server.
 - Bram, copy and retry action are centered in the available area below the header, directly on the screen background. Illustration `status-load-error`: Bram gives a gentle shrug with his original rounded arms, without thumbs. Preserve the approved lilac and cream artwork unchanged in both themes, using the shared 220×190dp slot and 4dp title gap.
 - Title "A little hiccup"; text "We couldn’t load your receipts. Let’s try again."; full-width ActionButton (`Primary`) "Try again" 22dp below the text. While retrying, the button is disabled with stable bounds: keep "Try again" during the 200ms grace period, then show the loading icon while the request remains pending, with "Trying again…" exposed to accessibility.
 - Announce the status content as a polite live region when it appears.
@@ -209,8 +209,8 @@ Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.pn
 Keep the loading arc rotating continuously through the 200ms minimum and the entire bounce-to-zero exit. Stop only when it is invisible or changes to the warning triangle; honour Remove animations.
 
 - Use Compose nested-scroll pull-to-refresh around the content below the fixed header. The gesture works at the top of a populated list, the no-receipts state, and the empty Needs attention filter. A short pull cancels; releasing beyond 80dp triggers one refresh of both receipt and upload lists.
-- Preserve the selected filter and mounted rows while refreshing. Do not replace existing content with skeletons or move the header and Scan. Loading an initial list continues to use skeletons, while automatic polling stays quiet.
-- Reserve space below the header as the user pulls, so the 44dp indicator never covers a receipt row. The lavender arc fills to a complete 360° ring at the 80dp threshold and gives one GestureThresholdActivate haptic per pull, even if the finger moves back and forth across the threshold. On release, keep the indicator in that space and rotate a 270° arc once per second for the whole request. Keep the spinning indicator visible for at least 200ms from refresh start, then give it a small 108% anticipation bounce and shrink it to zero in place over 220ms, fading as it shrinks. On appearance, scale from zero through 108% to 100% over 180ms. Keep the reserved space until the indicator is invisible, then settle the list; never slide a completed indicator upward. Cancelled, below-threshold pulls still retract with the finger. Requests longer than 200ms add no extra wait. Apply the same minimum before showing a failure; update receipt data immediately. On failure, morph the ring into an attention-orange outlined warning triangle with an exclamation mark over 240ms; hold it for three seconds before the same bounce-to-zero dismissal. Keep Scan anchored as the content area changes height. Disable spin and snap the morph and dismissal when animations are disabled. Use the existing surface, accent/attention, pill shape and soft 2dp shadow tokens.
+- Preserve the selected filter and mounted rows while refreshing. Do not replace existing content with skeletons or move the header and the Add button. Loading an initial list continues to use skeletons, while automatic polling stays quiet.
+- Reserve space below the header as the user pulls, so the 44dp indicator never covers a receipt row. The lavender arc fills to a complete 360° ring at the 80dp threshold and gives one GestureThresholdActivate haptic per pull, even if the finger moves back and forth across the threshold. On release, keep the indicator in that space and rotate a 270° arc once per second for the whole request. Keep the spinning indicator visible for at least 200ms from refresh start, then give it a small 108% anticipation bounce and shrink it to zero in place over 220ms, fading as it shrinks. On appearance, scale from zero through 108% to 100% over 180ms. Keep the reserved space until the indicator is invisible, then settle the list; never slide a completed indicator upward. Cancelled, below-threshold pulls still retract with the finger. Requests longer than 200ms add no extra wait. Apply the same minimum before showing a failure; update receipt data immediately. On failure, morph the ring into an attention-orange outlined warning triangle with an exclamation mark over 240ms; hold it for three seconds before the same bounce-to-zero dismissal. Keep the Add button anchored as the content area changes height. Disable spin and snap the morph and dismissal when animations are disabled. Use the existing surface, accent/attention, pill shape and soft 2dp shadow tokens.
 - Do not start another request while a refresh is running. An explicit refresh can join an in-flight request; retain the existing deletion-revision guard so stale responses cannot restore deleted rows.
 - On failure after a successful load, keep cached receipts and filter state. Show “Couldn’t refresh receipts. Your previous list is still here.” and a shared Secondary ActionButton labelled “Try again”. Clear the notice on retry; restore it on failure. Initial load failures retain the existing full error state.
 - Expose a “Refresh receipts” accessibility action on the content region and a single “Refreshing receipts…” indeterminate progress announcement on the indicator. The gesture cue changes from “Pull to refresh” to “Release to refresh”. Failure replaces the progress semantics with a polite “Refresh failed” announcement.
@@ -220,6 +220,55 @@ Keep the loading arc rotating continuously through the 200ms minimum and the ent
 
 All and Needs attention share one receipt data source and row layout, presented as two pages in a Compose HorizontalPager. Swipe left to reveal Needs attention and right to reveal All. Content tracks the finger throughout the drag, with both pages visible halfway; use the native distance/velocity settling behaviour and never wrap at the ends. Keep the adjacent page composed so its content is ready before the swipe finishes. Keep a separate vertical list and status scroll position on each page rather than resetting on tab changes.
 
-Keep the header and one Scan button mounted outside the pager. Anchor Scan 24dp from the end edge and 28dp above the window’s bottom safe area in every state, including the first cold-start frame; ignore outgoing keyboard insets on this screen and respect system bars and display cutouts. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
+Keep the header and one Add button mounted outside the pager. Anchor the Add button 24dp from the end edge and 28dp above the window’s bottom safe area in every state, including the first cold-start frame; ignore outgoing keyboard insets on this screen and respect system bars and display cutouts. Both tabs remain available when either or both pages are empty. Tab taps animate the pager (snap with Remove animations); the selected tab follows the nearest page. Retain tab selection haptics and give one SegmentTick when a swipe settles on a different page, without a second haptic for a tab tap. Hide inactive page content from accessibility while retaining the accessible tab controls.
 
-Wrap the pager in the shared pull-to-refresh container so both pages refresh the same data with one indicator. Vertical scrolling, refresh, and receipt taps/holds retain their gestures. Disable page swipes during initial loading, full load errors, manual refresh and open receipt options. Background polling keeps pages interactive. Keep Scan available across loading, populated, empty and error states, with enough bottom space for list rows and status content to clear it. Scan only disables while the scanner is opening.
+Wrap the pager in the shared pull-to-refresh container so both pages refresh the same data with one indicator. Vertical scrolling, refresh, and receipt taps/holds retain their gestures. Disable page swipes during initial loading, full load errors, manual refresh and open receipt options. Background polling keeps pages interactive. Keep the Add button available across loading, populated, empty and error states, with enough bottom space for list rows and status content to clear it. The Add button only disables while the scanner is opening.
+
+## 7. Section navigation and add button
+
+Approved October 22, 2026. Add is implemented on Receipts; title navigation and Books remain planned. Scan book is currently a visible no-op that closes the menu, as requested by the user. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
+
+**Section registry.** One ordered list drives the menu and title swipe: Receipts (receipt icon, count = All count), then Books (book icon, count = number of books). Each entry also supplies its scan action. The Add stack reads the registry in reverse so Receipts remains nearest the button. A future module supplies its content and scan flow through a registry entry.
+
+**SectionTitle** (replaces the plain list title on every section root)
+
+- Same position and type as the current title: `screenTitle` in `textPrimary` at the 20dp text inset, status bar inset + 4dp, row at least 44dp tall. An 18dp chevron (`textSecondary`, 2dp stroke) follows the name with a 2dp gap, inside a 28dp round slot. The tap target is the whole title row width up to the chevron, at least 44dp tall.
+- Filters and everything below are unchanged. The title is not shown on details or scan preview screens.
+
+**SectionMenu** (tap the title)
+
+- Anchored under the title: 4dp below the title row, aligned to the 16dp screen margin, width 240dp (grows for large text, never past the screen margin). Shape `sectionMenu` 20dp, fill `sheet`, 6dp padding, the sheet ring and shadow. A `scrim` at 35% alpha covers the screen behind it; the header stays visible.
+- One row per section, 48dp minimum height, 14dp side padding, 14dp corners: 20dp icon, 12dp gap, name in `rowTitle`, count right-aligned in `meta`. Current section: `accentContainer` fill, icon, name and count in `onAccentContainer`. Others: icon `textSecondary`, name `textPrimary`, count `textTertiary`. Omit a count until its data has loaded; never show 0 for unknown.
+- The chevron turns 180° while open. Choosing the current section just closes the menu. Choosing another closes the menu and rolls the title to the new name (below). Outside tap, Back or the title closes it.
+- Semantics: the title is a Button, “Section: Receipts. Double-tap to change”, with custom actions “Next section” and “Previous section”. The menu uses `menu` / `menuitemradio`; focus moves to the current section on open and returns to the title on close.
+
+**Title swipe**
+
+- Vertical drag that starts on the title. Up selects the next section, down the previous; there is no wrap. The outgoing name follows the finger upward (or downward) and fades as the incoming name enters from the opposite side, one title height apart; the section content crossfades with the same progress. Header filters, list scroll and the Add button stay put.
+- Commit when released past 24dp or flung faster than 1,000dp/s in the drag direction, finishing over `TITLE_ROLL_MILLIS` (220ms, `FastOutSlowInEasing`), with one `SegmentTick` haptic. Otherwise spring back (`dampingRatio = 0.8f`, `stiffness = 400f`). At the first or last section the title rubber-bands at most 8dp and returns, with no haptic.
+- The gesture lives only in the fixed header, so it never competes with pull-to-refresh, the All / Needs attention pager or row gestures. Disable it while the section menu or Add menu is open.
+
+**Switching sections**
+
+- Each section keeps its own state: selected filter page, scroll positions and loaded data. Switching does not refetch beyond the usual on-show refresh, and never resets a scroll position.
+- Persist the last-used section locally and open it on the next cold start.
+- Back on a section root behaves as today (leaves the app); it does not return to the previous section.
+
+**AddButton**
+
+- 60dp circle (`pill`), glossy `buttonPrimary` finish from `ButtonSurface` (variant 1 / Purple), 22dp plus icon in `onButtonPrimary` with a 2.2dp stroke. Anchored exactly where Scan was: 24dp from the end edge and 28dp above the bottom safe area, outside the pager and section content, in every state including cold start, loading, empty and error. Content description “Add”. Uses the Goho press; no ripple. Disabled (40%) only while a scanner is opening.
+- Leave list and status bottom padding so the last row and status content clear the button, as before.
+
+**AddMenu** (tap the Add button)
+
+- The plus rotates 45° into a close mark (content description “Close add menu”). A full `scrim` fades in over the section content, below the button and menu.
+- Actions stack right-aligned above the button: bottom action 16dp above it, 10dp between actions. Order is fixed on every section, top to bottom: **Scan book**, **Scan receipt**. Each action is a 52dp pill (`pill`) on `sheet` with the sheet ring and shadow, 16dp start and 20dp end padding, a 20dp icon in `onAccentContainer`, 10dp gap and the label in `rowTitle` / `textPrimary`. Minimum width fits the label; large text grows the pill and wraps rather than truncates.
+- Choosing an action closes the menu immediately and opens the document scanner for that section. Scan receipt uses the existing scan preview and upload. Scan book uses the same preview titled “New book” with “Upload cover”, targeting `POST /book-uploads`; confirm backend support before implementation. After a successful upload, switch to that section if needed and show All at the top, as receipts do today. Cancel returns to the section the scan started from.
+- Tap the scrim, the close mark or Back to dismiss. Semantics: `menu` with `menuitem` actions; focus moves to the first action on open and back to the Add button on close.
+
+**Motion**
+
+- Section menu: fade and scale from 0.96 at the title’s start corner over `SECTION_MENU_MILLIS` (160ms); close reverses in 120ms. Chevron rotation shares the timing.
+- Add remains visually pressed for the entire time the menu is open, then springs back when dismissed. Purple glossy buttons use a violet lower shade in their face and inset reflection.
+- Add menu: actions rise 8dp, fade and spring from 0.92 scale (damping 0.6, stiffness 450). Opening Add gives a ContextClick haptic. Scan receipt enters after 45ms, followed by Scan book 45ms later; each entry gives a lighter SegmentTick. Closing cancels pending entry haptics. Closing fades and shrinks each action over 140ms in reverse order with the same stagger. The full-screen overlay fades linearly over 240ms on opening and 180ms on closing; it has independent timing from the staggered actions. The icon keeps 180ms opening / 140ms closing timing. Interrupted animations continue from their current position.
+- Remove animations: menus appear and disappear immediately without stagger, entry haptics, scale or rise (the initial Add press still gives feedback), the icon swaps without rotating, and a section change crossfades title and content over 150ms with no roll. The swipe still works and commits without following the finger.

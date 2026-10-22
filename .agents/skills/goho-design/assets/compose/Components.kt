@@ -136,14 +136,14 @@ fun rememberReducedMotion(): Boolean {
 
 /** 0 at rest, 1 when pressed; springs back past 0 on release for the friendly bounce. */
 @Composable
-fun pressProgress(interactionSource: MutableInteractionSource): State<Float> {
-    val pressed by interactionSource.collectIsPressedAsState()
+fun pressProgress(interactionSource: MutableInteractionSource, pressed: Boolean = false): State<Float> {
+    val pointerPressed by interactionSource.collectIsPressedAsState()
     val reduced = rememberReducedMotion()
     return animateFloatAsState(
-        targetValue = if (pressed && !reduced) 1f else 0f,
+        targetValue = if (pressed || (pointerPressed && !reduced)) 1f else 0f,
         animationSpec = when {
             reduced -> snap()
-            pressed -> GohoMotion.pressIn
+            pressed || pointerPressed -> GohoMotion.pressIn
             else -> GohoMotion.pressOut
         },
         label = "pressFeedback",

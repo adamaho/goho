@@ -24,11 +24,12 @@ fun IconButton(
     color: ButtonColor = ButtonColor.Grey,
     enabled: Boolean = true,
     opacity: () -> Float = { 1f },
+    pressed: Boolean = false,
     icon: @Composable () -> Unit,
 ) {
     val colors = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
+    val progress by pressProgress(interaction, pressed = pressed && enabled)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     // Keep the touch target and TalkBack node present while photo controls fade visually.
     Box(

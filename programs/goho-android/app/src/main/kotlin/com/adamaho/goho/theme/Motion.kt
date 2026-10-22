@@ -9,6 +9,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.unit.dp
 
 object GohoMotion {
+    const val ADD_MENU_ENTER_MILLIS = 180
+    const val ADD_MENU_EXIT_MILLIS = 140
+    const val ADD_MENU_SCRIM_ENTER_MILLIS = 240
+    const val ADD_MENU_SCRIM_EXIT_MILLIS = 180
+    const val ADD_MENU_STAGGER_MILLIS = 45L
+    const val ADD_MENU_START_SCALE = 0.92f
+    val addMenuEnter: AnimationSpec<Float> = spring(dampingRatio = 0.6f, stiffness = 450f)
+    val addMenuTranslation = 8.dp
     const val LOADING_DELAY_MILLIS = 200L
     const val LOADING_SPIN_MILLIS = 1000
     const val REFRESH_MIN_VISIBLE_MILLIS = 200L

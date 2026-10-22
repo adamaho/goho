@@ -1,4 +1,4 @@
-package com.goho.ui.components
+package com.adamaho.goho.ui.components
 
 import androidx.annotation.IntRange
 import androidx.compose.foundation.clickable
@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.*
-import com.goho.ui.theme.*
+import com.adamaho.goho.theme.*
 
 /** Icon-only action sharing the same finishes, colours and press feedback as labelled buttons. */
 @Composable
@@ -24,11 +24,12 @@ fun IconButton(
     color: ButtonColor = ButtonColor.Grey,
     enabled: Boolean = true,
     opacity: () -> Float = { 1f },
+    pressed: Boolean = false,
     icon: @Composable () -> Unit,
 ) {
     val colors = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
-    val progress by pressProgress(interaction)
+    val progress by pressProgress(interaction, pressed = pressed && enabled)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     // Keep the touch target and TalkBack node present while photo controls fade visually.
     Box(
@@ -47,7 +48,7 @@ fun IconButton(
         Box(
             Modifier.fillMaxSize()
                 .graphicsLayer { alpha = opacity().coerceIn(0f, 1f) * if (enabled) 1f else 0.4f }
-                .pressTransform { if (enabled) progress else 0f }
+                .pressFeedback { if (enabled) progress else 0f }
                 .buttonSurface(colors, GohoShapes.pill, p, variant, color)
                 .clearAndSetSemantics {},
             contentAlignment = Alignment.Center,

@@ -26,7 +26,7 @@ Goho follows the system light/dark setting. Both palettes use the same token nam
 | `accentRing`                                 | `#353B70`                     | same                          | Lower edge of glossy primary buttons                                 |
 | `accentPressed`                              | `#959AE3`                     | `#7D83CB`                     | Reserved lavender pressed colour                                     |
 | `onAccent`                                   | `#17183D`                     | `#1B1C45`                     | Foreground paired with the lighter accent in Material theme mappings |
-| `buttonPrimary` / `buttonPrimaryPressed`     | `#5059A6` / `#414A8C`         | same                          | Glossy primary and Scan fill                                         |
+| `buttonPrimary` / `buttonPrimaryPressed`     | `#5059A6` / `#414A8C`         | same                          | Glossy primary and Add button fill                                   |
 | `onButtonPrimary`                            | `#FFFFFF`                     | same                          | Primary labels, icons and loading arcs                               |
 | `buttonSecondary` / `buttonSecondaryPressed` | `#1F1E27` 94% / `#191820` 98% | `#FAF8FD` 96% / `#F0ECF6` 98% | Frosted secondary fill                                               |
 | `statusCard` / `statusCardRing`              | white 2.5% / white 7%         | white 60% / `#26233A` 6%      | Legacy status-card fill and ring; unused by current states           |
@@ -97,23 +97,24 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 
 ## Shape
 
-| Token        | Radius | Use                                                |
-| ------------ | ------ | -------------------------------------------------- |
-| `thumb`      | 8      | Receipt thumbnails in rows                         |
-| `button`     | 20     | Primary and secondary buttons (not fully round)    |
-| `card`       | 20     | Grouped list cards, detail card, photo frame       |
-| `fab`        | 24     | Scan button                                        |
-| `tag`        | 4      | Display-only category and upload-state tags        |
-| `pill`       | 50%    | Count badge, filter segments, round icon buttons   |
-| `statusCard` | 32     | Legacy status-card shape; unused by current states |
-| `sheet`      | 28     | Floating bottom sheet (all four corners)           |
+| Token         | Radius | Use                                                                  |
+| ------------- | ------ | -------------------------------------------------------------------- |
+| `thumb`       | 8      | Receipt thumbnails in rows                                           |
+| `button`      | 20     | Primary and secondary buttons (not fully round)                      |
+| `card`        | 20     | Grouped list cards, detail card, photo frame                         |
+| `fab`         | 24     | Historical Scan button (Add button is `pill`)                        |
+| `tag`         | 4      | Display-only category and upload-state tags                          |
+| `pill`        | 50%    | Add button/actions, count badge, filter segments, round icon buttons |
+| `statusCard`  | 32     | Legacy status-card shape; unused by current states                   |
+| `sheet`       | 28     | Floating bottom sheet (all four corners)                             |
+| `sectionMenu` | 20     | Section menu dropped from the title                                  |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
 ## Spacing and layout
 
 - 4dp grid.
-- `screenMargin` = 16: edges of cards and the filter. Scan uses its separate 24dp end margin.
+- `screenMargin` = 16: edges of cards and the filter. The Add button uses its separate 24dp end margin.
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
 - List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge.
@@ -125,13 +126,13 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
 - Status illustrations: no receipts, empty Needs attention and load error use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
 - Loading: `loadingIcon` = 24dp for initial receipt loading; retry reuses `buttonIcon` = 18dp. Both use `iconStroke` = 2dp.
-- Bottom: FAB sits 28dp above the navigation bar inset and 24dp from the end edge (`fabMarginEnd`), 8dp farther inward than the receipt cards.
+- Bottom: the Add button sits 28dp above the navigation bar inset and 24dp from the end edge (`fabMarginEnd`), 8dp farther inward than the receipt cards.
 
 ## Elevation and shadow
 
 Shadows are soft and wide rather than tight. Dark mode relies on a 1dp top highlight on cards; light mode on a faint ring plus a soft shadow.
 
-**Button treatment** (numbered finish × independent colour): shared native `ButtonSurface.kt`, with existing 20dp action / 24dp Scan corners and round 44dp icon-only controls. Colour chooses the base/pressed pair and content independently of the finish: Purple uses deep-periwinkle and white, Red uses red and white, Grey uses the theme’s neutral face and `textPrimary`. Variant 1 applies the glossy finish; variant 2 applies the frosted/rimmed finish. Existing primary/Scan, destructive and secondary actions use 1/Purple, 1/Red and 2/Grey respectively. The variant 1 face runs from white 6% over the fill at the top, through the fill at 45%, to black 14% over the fill at the bottom. Pressed colours use the same finish. No bright shine crosses the label.
+**Button treatment** (numbered finish × independent colour): shared native `ButtonSurface.kt`, with 20dp action corners, round 44dp icon-only controls and the round 60dp Add button. Colour chooses the base/pressed pair and content independently of the finish: Purple uses deep-periwinkle and white, Red uses red and white, Grey uses the theme’s neutral face and `textPrimary`. Variant 1 applies the glossy finish; variant 2 applies the frosted/rimmed finish. Existing primary/Add, destructive and secondary actions use 1/Purple, 1/Red and 2/Grey respectively. The variant 1 face runs from white 6% over the fill at the top, through the fill at 45%, to the palette shade over the fill at the bottom: Purple uses violet `buttonPrimaryShade` (`#30266F` at 28%); Red and Grey retain black 14%. The lower inset reflection uses the same palette shade. Pressed colours use the same finish. No bright shine crosses the label.
 
 For variant 1 and light variant 2, the 1dp outer rim runs from white 85% (light) / 62% (dark) at the top to the variant's edge colour at 45%. A second 1dp inset reflection at 1.5dp fades from white 32% (primary), 14%/16% (danger light/dark), or the secondary rim to transparent halfway down, then the lower shade. Primary lower rim is `#353B70`; danger retains its red edge.
 
@@ -141,7 +142,7 @@ This is a frosted **surface treatment**, not a live backdrop blur: current secon
 
 Shadows use two layers. Light variant 1 uses 0/1/2dp near + 0/4/16dp wide (−8dp spread), tightened to avoid muddying a secondary action 10dp below. Primary light uses `#343C75` at 12%/18%; danger light uses `#6E0F0F` at the same alphas. Dark variant 1 and both variant 2 themes retain 0/1/2dp near + 0/10/24dp wide (−8dp spread filled, −10dp secondary). Filled dark uses black 40%/60%. Secondary light uses `#26233A` at 5%/18%; dark uses black 12%/20%.
 
-Pressed: darken the fill, fade both shadows, scale to 97% and move down 1dp. No ripple. Preserve spring release, disabled 40% opacity and reduced-motion handling.
+Pressed: darken the fill, fade both shadows, scale to 97% and move down 1dp. Add holds this state while its menu is open and springs back on dismissal; reduced motion snaps the held state. No ripple. Preserve spring release, disabled 40% opacity and reduced-motion handling.
 
 | Element                 | Dark                                           | Light                                    |
 | ----------------------- | ---------------------------------------------- | ---------------------------------------- |
@@ -188,3 +189,25 @@ Use existing `skeletonBase`/`skeletonShimmer` colours and the 1.8s shimmer. Text
 `refreshThreshold` is 80dp and `refreshIndicator` is 44dp. The indicator uses the existing `pill` shape, `surface` fill, `accent` arc, `buttonShadowRadius` (2dp), `loadingIcon` (24dp) and `iconStroke` (2dp). It fills through 360° as drag distance reaches the threshold, then spins a 270° arc using `LOADING_SPIN_MILLIS` (1000ms). `REFRESH_MORPH_MILLIS` (240ms) controls the ring-to-warning morph and `REFRESH_FAILURE_MILLIS` (3000ms) holds the attention-coloured failure cue. `REFRESH_MIN_VISIBLE_MILLIS` (200ms) keeps the spinner open from refresh start before success dismissal or failure presentation. Use monotonic elapsed time and delay only the remaining interval; longer requests add no wait and receipt data updates immediately. `refreshEnter` scales 0 → 1.08 → 1 over 180ms (overshoot at 110ms). `refreshExit` scales 1 → 1.08 → 0 over 220ms (anticipation at 70ms), with alpha following the shrinking scale. Both use `REFRESH_BOUNCE_SCALE` (1.08). Dismiss in place before closing the reserved space; never allow a negative scale or a reappearance after zero. Remove animations disables spin and snaps the morph and dismissal; background refreshes never activate this indicator.
 
 Receipt pages use native HorizontalPager distance/velocity settling with no custom drag threshold. Preserve the existing filter selection animation and SegmentTick haptic. Tab navigation snaps when animations are disabled; dragging still tracks the finger.
+
+## Navigation and add menu
+
+Approved October 22, 2026 (`screens.md` section 7).
+
+| Token                   | Value                                                                 | Use                                     |
+| ----------------------- | --------------------------------------------------------------------- | --------------------------------------- |
+| `sectionMenu` (shape)   | 20dp                                                                  | Section menu surface                    |
+| `sectionMenuWidth`      | 240dp minimum                                                         | Section menu; grows for large text      |
+| `sectionMenuOffset`     | 4dp                                                                   | Gap below the title row                 |
+| `sectionMenuPadding`    | 6dp                                                                   | Inside the menu surface                 |
+| `sectionMenuRow`        | 48dp min height, 14dp sides, 14dp corners                             | Section rows                            |
+| `sectionChevron`        | 18dp icon in a 28dp slot, 2dp stroke, 2dp gap                         | Chevron after the title                 |
+| `sectionMenuScrimAlpha` | 0.35 × `scrim`                                                        | Behind the section menu                 |
+| `addButton`             | 60dp circle (`pill`)                                                  | Shared Add button                       |
+| `addIcon`               | 22dp, 2.2dp stroke                                                    | Plus / close mark                       |
+| `addMenuAction`         | 52dp tall, `pill`, 16dp start / 20dp end padding, 20dp icon, 10dp gap | Add menu actions                        |
+| `addMenuGap`            | 10dp between actions, 16dp above the button                           | Add menu stack                          |
+| `titleSwipeThreshold`   | 24dp or 1,000dp/s                                                     | Commit a title swipe                    |
+| `titleRubberBand`       | 8dp                                                                   | Drag limit at the first or last section |
+
+Motion: `SECTION_MENU_MILLIS` = 160 (close 120), fade + scale from 0.96 at the title’s start corner; `TITLE_ROLL_MILLIS` = 220 with `FastOutSlowInEasing`, spring back `dampingRatio = 0.8f`, `stiffness = 400f`; `ADD_MENU_ENTER_MILLIS` = 180 and `ADD_MENU_EXIT_MILLIS` = 140 for the 45° icon rotation. The overlay uses independent `ADD_MENU_SCRIM_ENTER_MILLIS` = 240 / `ADD_MENU_SCRIM_EXIT_MILLIS` = 180 with linear opacity, read in the drawing phase. Interrupted fades continue from their current opacity. Each action rises 8dp, fades and scales from 0.92 with a spring (`dampingRatio = 0.6f`, `stiffness = 450f`); `ADD_MENU_STAGGER_MILLIS` = 45, nearest the button first, starting 45ms after the initial press. Add uses ContextClick feedback and each entry uses SegmentTick; dismissal cancels pending ticks. Exit fades and shrinks over 140ms per action, staggered top to bottom. Reduced motion skips the stagger and entry ticks and snaps the menu and icon; initial press feedback remains. Reduced motion: no scale, rise, rotation or roll; section changes crossfade over 150ms. The native menu reserves 32dp (`addMenuShadowPadding`) around the stack for shadows, compensating its outer inset to preserve the 16dp visible gap above Add. `sheetRing` is white 5% in dark mode and `#26233A` 4% in light mode. Colours otherwise reuse existing tokens: `sheet`, `scrim`, `accentContainer` / `onAccentContainer` (current section, action icons), `textPrimary`, `textSecondary`, `textTertiary`, `buttonPrimary` / `onButtonPrimary`.

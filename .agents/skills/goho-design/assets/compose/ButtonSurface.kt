@@ -1,4 +1,4 @@
-package com.goho.ui.components
+package com.adamaho.goho.ui.components
 
 import androidx.annotation.IntRange
 import androidx.compose.foundation.background
@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.unit.DpOffset
-import com.goho.ui.theme.GohoColors
-import com.goho.ui.theme.GohoSpacing
+import com.adamaho.goho.theme.GohoColors
+import com.adamaho.goho.theme.GohoSpacing
 
 /** Variant 1 is glossy; variant 2 uses the frosted/rimmed finish. Colour is independent. */
 internal fun Modifier.buttonSurface(
@@ -40,7 +40,7 @@ internal fun Modifier.buttonSurface(
     val shadowColor = palette.shadow
     val nearAlpha = if (filled) colors.buttonShadowAlpha else colors.secondaryShadowAlpha
     val wideAlpha = if (filled) colors.buttonWideShadowAlpha else colors.secondaryWideShadowAlpha
-    val shade = if (filled) colors.buttonShade else colors.glassShade
+    val shade = if (filled) palette.shade else colors.glassShade
     val darkGlass = !filled && colors.isDark
     val sheen = if (filled) colors.buttonSheen else colors.glassSheen
     val highlight = if (filled) colors.buttonEdgeHighlight else colors.glassEdgeHighlight
