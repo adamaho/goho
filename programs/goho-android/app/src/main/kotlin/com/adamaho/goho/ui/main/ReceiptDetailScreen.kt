@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,7 +9,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
@@ -26,8 +24,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ReceiptDetailScreen(
@@ -59,24 +55,7 @@ fun ReceiptDetailScreen(
             return@LaunchedEffect
         }
         imageLoading = true
-        image =
-            loadReceiptImage(receiptId)?.let { bytes ->
-                withContext(Dispatchers.Default) {
-                    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-                    val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
-                    if (largestDimension <= 0) return@withContext null
-                    val sampleSize =
-                        generateSequence(1) { it * 2 }
-                            .first {
-                                largestDimension / it <= 4096 &&
-                                    bounds.outWidth.toLong() * bounds.outHeight / it / it <=
-                                        8_000_000
-                            }
-                    val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
-                }
-            }
+        image = loadReceiptImage(receiptId)?.let { decodePhoto(it) }
         imageLoading = false
     }
 
