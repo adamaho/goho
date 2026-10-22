@@ -1,12 +1,14 @@
 # Goho components
 
-Name UI components by their role, never with a `Goho` prefix: `Tag`, `ActionButton`, `IconButton`, `SkeletonScope` and `PullToRefresh`. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
+Name UI components by their role, never with a `Goho` prefix: `Tag`, `ActionButton`, `IconButton`, `SectionTitle`, `SectionMenu`, `AddButton`, `AddMenu`, `SkeletonScope` and `PullToRefresh`. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
 
 Deletion components and row interactions describe the October 2 v2 target design. Verify server support and implement them only as part of a requested deletion feature.
 
 Reference implementations live in `assets/compose/Components.kt`. Every pressable uses the Goho press (`Modifier.pressTransform`) with `indication = null`. Only the components below are needed; don't add others without a design.
 
-## ScanFab
+## ScanFab (historical)
+
+Replaced in the native app by `AddButton` and `AddMenu` (below). This section and the old combined `Components.kt` Scan example are historical.
 
 - 56 tall, shape `fab` 24, padding 18 left / 22 right.
 - Fill: glossy `buttonPrimary`; pressed `buttonPrimaryPressed`. Edge and shadow: the shared `ButtonSurface.kt` treatment in `tokens.md` (bright upper rim, inset reflection, darker lower edge, soft wide shadow).
@@ -15,7 +17,7 @@ Reference implementations live in `assets/compose/Components.kt`. Every pressabl
 
 ## ActionButton
 
-Use one shared component for standard actions. The finish is `variant: Int = 1`, restricted to 1 or 2 by annotation and a runtime check. Colour is independent: `color: ButtonColor = ButtonColor.Purple`, with `Purple`, `Red`, and `Grey`. All six combinations are supported. Scan keeps its specialized layout and uses variant 1 / Purple through the same surface. Icon-only actions use `IconButton` with the same surface and palette; they keep a compact round layout.
+Use one shared component for standard actions. The finish is `variant: Int = 1`, restricted to 1 or 2 by annotation and a runtime check. Colour is independent: `color: ButtonColor = ButtonColor.Purple`, with `Purple`, `Red`, and `Grey`. All six combinations are supported. The round Add button keeps its specialized layout and uses variant 1 / Purple through the same surface. Icon-only actions use `IconButton` with the same surface and palette; they keep a compact round layout.
 
 ```kotlin
 ActionButton("Upload receipt", onUpload, variant = 1, color = ButtonColor.Purple)
@@ -28,7 +30,7 @@ ActionButton("Delete receipt", onDelete, variant = 1, color = ButtonColor.Red)
 - Purple uses `buttonPrimary` / `buttonPrimaryPressed` and white `onButtonPrimary`; red uses `danger` / `dangerPressed` and white `onDanger`; grey uses `buttonSecondary` / `buttonSecondaryPressed` with `textPrimary`. Red remains reserved for destructive actions in product flows.
 - Full width inside the screen margin, at least 52dp tall, shape `button` 20 (not a pill), horizontal padding 20.
 - Optional decorative icon slot: the button supplies `LocalContentColor` from the chosen palette. Material icons and `UploadIcon` inherit it; custom drawing should read it too. Use 18dp icons and an 8dp gap.
-- The shared `ButtonColor.kt` palette resolver owns fill, pressed fill, content tint and shadow colour. `ButtonSurface.kt` applies the numbered finish; screens do not implement their own styling.
+- The shared `ButtonColor.kt` palette resolver owns fill, pressed fill, content tint, shadow colour and glossy lower shade. Purple uses a violet lower shade for both the face and inner edge. `ButtonSurface.kt` applies the numbered finish; screens do not implement their own styling.
 - Existing primary actions map to 1 / Purple, secondary actions to 2 / Grey, and destructive confirmation to 1 / Red. Stack actions with a 10dp gap.
 - Disabled: whole button at 40% alpha, no press, not clickable.
 - Loading: replace the label with an 18dp loading icon in the chosen colour palette's content colour. The receipts retry action does this after the shared 200ms delay. Keep both labels measured so the button bounds remain stable, expose “Trying again…” and indeterminate progress, and keep the icon itself decorative. Callers disable immediately while work is pending.
@@ -36,7 +38,7 @@ ActionButton("Delete receipt", onDelete, variant = 1, color = ButtonColor.Red)
 ## Status content (empty and error states)
 
 - Full width inside the screen margin, padding 28 top / 24 sides / 32 bottom (24 bottom when it has a button). Content centered directly on the screen background. No enclosing card fill, border or rounded clipping in any list status state.
-- Use the shared status content for no receipts, needs attention and load error. Preserve the shared padding, spacing, entrance and centered placement; the Scan footer stays separate when present.
+- Use the shared status content for no receipts, needs attention and load error. Preserve the shared padding, spacing, entrance and centered placement; the Add button stays separate when present.
 - No receipts, empty Needs attention and load error each show an illustration (220×190dp), followed by a 4dp gap before the title. Title is 20/26 SemiBold −0.02em `textPrimary`, followed by a 6dp gap before body text in `body` `textSecondary` (max width 290dp), then an optional full-width button 22dp below.
 - Illustration assets live in `assets/illustrations/`. No receipts uses `status-no-receipts.png`; empty Needs attention uses the calm thumbs-up `status-needs-attention.png`; load error uses the gentle shrug `status-load-error.png`. All three PNGs are 1350×1165 RGBA, with each state using the same transparent asset in both themes. Preserve the artwork unchanged and render with `ContentScale.Fit` in the existing slot up to 220dp wide with a 220:190 aspect ratio. These three poses are the only production Bram artwork. The neutral stance and former header mark are design identity references only; dedicated artwork for other states is deferred until its feature is implemented. The older SVGs in `legacy/` are not sources for these Bram images.
 - The illustration is decorative (`contentDescription = null`); the title is a heading and the title/body group carries the meaning. Only the load-error content is a polite live region.
@@ -210,8 +212,32 @@ Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at we
 
 Keep the loading arc rotating continuously through the 200ms minimum and the entire bounce-to-zero exit. Stop only when it is invisible or changes to the warning triangle; honour Remove animations.
 
-Use the production `ui/components/PullToRefresh.kt` and the matching `assets/compose/PullToRefresh.kt` reference. The container uses Material 3's `pullToRefresh` nested-scroll modifier for gesture arbitration and draws a Goho indicator. Wrap existing scrollable content; do not introduce a second list layout. Keep the fixed header and floating Scan outside the container. `refreshing` identifies user-initiated work independently of the ordinary loading flag; `failed` supplies its outcome. The component completes its pull ring and gives one threshold haptic, pins a spinning arc during work for a minimum of 200ms, and morphs into an orange warning triangle for three seconds on failure. Bounce into view from zero through 108% to 100%. On completion, bounce to 108% then shrink to zero with a fade in place; keep the content gap open until invisible. It reserves space above the content and leaves the header and footer anchored. Background failures do not activate this indicator; disable new pulls while a request is pending. Supply a Refresh receipts accessibility action for users who cannot perform the gesture.
+Use the production `ui/components/PullToRefresh.kt` and the matching `assets/compose/PullToRefresh.kt` reference. The container uses Material 3's `pullToRefresh` nested-scroll modifier for gesture arbitration and draws a Goho indicator. Wrap existing scrollable content; do not introduce a second list layout. Keep the fixed header and floating Add button outside the container. `refreshing` identifies user-initiated work independently of the ordinary loading flag; `failed` supplies its outcome. The component completes its pull ring and gives one threshold haptic, pins a spinning arc during work for a minimum of 200ms, and morphs into an orange warning triangle for three seconds on failure. Bounce into view from zero through 108% to 100%. On completion, bounce to 108% then shrink to zero with a fade in place; keep the content gap open until invisible. It reserves space above the content and leaves the header and footer anchored. Background failures do not activate this indicator; disable new pulls while a request is pending. Supply a Refresh receipts accessibility action for users who cannot perform the gesture.
 
-## Receipt pager and persistent Scan
+## Receipt pager and persistent Add button
 
-Use the HorizontalPager in production `ui/main/ReceiptOverview.kt`, mirrored in `assets/compose/ReceiptOverview.kt`. Each page uses the same ReceiptListPage composable with its own retained rows and vertical scroll state; receipt data and thumbnails remain shared. Keep both pages composed. ReceiptListHeader selects the pager’s current page and animates tab selections. PullToRefresh wraps the pager, while a single ScanButton is a sibling of the screen content, outside the pager and error-recovery transitions. Keep the screen inset by system bars and display cutouts only: the receipt list has no text input, so it must not reserve IME space left by the launcher during cold start. Scan stays at the same bottom position before skeletons appear, during loading and after results arrive. Do not create per-page Scan buttons or reset a page’s scroll position when changing tabs.
+The native pager and `ReceiptOverview.kt` snapshot now use the persistent Add button and menu. The same bottom safe-area position is retained during cold starts, loading, empty and error states; the scrim covers the window while content and controls respect system bars and display cutouts.
+
+Use the HorizontalPager in production `ui/main/ReceiptOverview.kt`, mirrored in `assets/compose/ReceiptOverview.kt`. Each page uses the same ReceiptListPage composable with its own retained rows and vertical scroll state; receipt data and thumbnails remain shared. Keep both pages composed. ReceiptListHeader selects the pager’s current page and animates tab selections. PullToRefresh wraps the pager, while a single AddButton (with its AddMenu) is a sibling of the screen content, outside the pager and error-recovery transitions. Keep the screen inset by system bars and display cutouts only: the receipt list has no text input, so it must not reserve IME space left by the launcher during cold start. The Add button stays at the same bottom position before skeletons appear, during loading and after results arrive, and across section switches. Do not create per-page or per-section Add buttons or reset a page’s scroll position when changing tabs.
+
+## SectionTitle and SectionMenu
+
+Approved October 22, 2026; behaviour in `screens.md` section 7. Reference: `assets/compose/SectionNavigation.kt` (not compiled; fix API drift against the project’s Compose version).
+
+`SectionNavigation.kt` is still an illustrative sketch. Implement title/content transition coordination, the section-menu scrim and exit transition, accessible focus transfer/restoration, and the specified reduced-motion behaviour when section navigation is requested. Coordinate its state with the existing Add menu so the menus cannot overlap and title swipes are disabled while either is open. Move new measurements into theme tokens and adapt package/API names; the written spec takes precedence over the sketch.
+
+- `Section` registry entry: stable `id`, display `title`, `icon`, nullable `count` (null hides it) and the scan action used by `AddMenu`. Keep the list ordered; it defines menu order, swipe order and Add menu order.
+- `SectionTitle(sections, currentId, onSelect)`: the title row with chevron, tap-to-open menu and the vertical title swipe. It owns the roll animation, `SegmentTick` haptic, rubber band and accessibility actions. It replaces the plain title text in `ReceiptListHeader` and the Books header; filters stay where they are.
+- `SectionMenu`: `Popup` anchored under the title with the 35% scrim, `sectionMenu` shape, `sheet` fill and sheet ring/shadow. Rows use `indication = null` with a `surfacePressed` / `surfaceMutedPressed` pressed fill, like `SheetMenuItem`. No Material `DropdownMenu` (it brings ripples and Material shapes).
+
+## AddButton and AddMenu
+
+Native implementation of the October 22 design. `assets/compose/AddButton.kt` and `AddMenu.kt` mirror the app; `ReceiptOverview.kt` shows the integration.
+
+- `AddButton(open, onClick, modifier, enabled)`: one persistent 60dp circle using `IconButton` with variant 1 / Purple and its shared press/surface treatment. The 22dp plus rotates 45° when open; its description changes from “Add” to “Close add menu”. It passes `pressed = open` to `IconButton`, holding the shared 97% scale, 1dp lowering, pressed fill and faded shadow until dismissal. `IconButton` exposes an optional `pressed: Boolean = false` for this persistent visual state; its touch target stays unchanged.
+- `AddMenu(open, actions, onDismiss, modifier)`: a full-window scrim with a right-aligned stack of `AddMenuAction(label, icon, onClick)` entries. Labels and drawable icons use resource IDs. Each action uses the sheet fill/ring/shadow, a 20dp icon, wrapping `rowTitle` text and a minimum 52dp height. Actions are supplied top to bottom; no section registry is needed until section navigation is implemented.
+- The receipt screen supplies Scan book, then Scan receipt. Scan receipt dismisses the menu and calls the existing scanner. **Scan book intentionally only dismisses the menu**, at the user’s request; no upload, navigation or scanner invocation is wired yet.
+- Back, the scrim and the close button dismiss. Focus enters the first action and returns to Add. Underlying receipt semantics are hidden while open; paging and pull-to-refresh are disabled. Outgoing actions lose their semantics and clicks immediately.
+- Actions rise 8dp, fade and spring from 0.92 scale (damping 0.6, stiffness 450), staggered 45ms from the button upwards. Closing fades and shrinks each action over 140ms, staggered 45ms from top to bottom. The screen overlay fades linearly over 240ms in / 180ms out, with opacity read during drawing so the fade does not recompose the action stack. The icon keeps 180ms in / 140ms out. Opening Add gives a ContextClick haptic; each action starts with a lighter SegmentTick at 45ms and 90ms after opening. Closing cancels pending entry ticks; restoring an already-open menu does not replay them. The button stays mounted. Remove animations skips entry ticks and snaps the menu and icon with no rise or rotation. Extra shadow drawing space preserves the 16dp gap above Add without a clipped shadow edge.
+- Insets use system bars and display cutouts, never the outgoing keyboard. The button remains 24dp from the end and 28dp above the bottom safe area. Labels can wrap at large text sizes, and the menu can scroll on short screens.
+- Icons are the native outline vectors in `assets/icons/navigation/`. The native theme exposes `sheetRing` (white 5% dark / `#26233A` 4% light); other dimensions and durations are in the matching `Spacing.kt` and `Motion.kt` snapshots.

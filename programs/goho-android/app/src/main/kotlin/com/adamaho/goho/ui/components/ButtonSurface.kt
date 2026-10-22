@@ -40,7 +40,7 @@ internal fun Modifier.buttonSurface(
     val shadowColor = palette.shadow
     val nearAlpha = if (filled) colors.buttonShadowAlpha else colors.secondaryShadowAlpha
     val wideAlpha = if (filled) colors.buttonWideShadowAlpha else colors.secondaryWideShadowAlpha
-    val shade = if (filled) colors.buttonShade else colors.glassShade
+    val shade = if (filled) palette.shade else colors.glassShade
     val darkGlass = !filled && colors.isDark
     val sheen = if (filled) colors.buttonSheen else colors.glassSheen
     val highlight = if (filled) colors.buttonEdgeHighlight else colors.glassEdgeHighlight

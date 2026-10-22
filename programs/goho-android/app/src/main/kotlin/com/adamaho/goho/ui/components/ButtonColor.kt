@@ -19,6 +19,7 @@ internal data class ButtonPalette(
     val ring: Color,
     val innerRing: Color,
     val shadow: Color,
+    val shade: Color,
 )
 
 internal fun GohoColors.buttonPalette(color: ButtonColor): ButtonPalette =
@@ -31,6 +32,7 @@ internal fun GohoColors.buttonPalette(color: ButtonColor): ButtonPalette =
                 accentRing,
                 buttonInnerRing,
                 accentShadow,
+                buttonPrimaryShade,
             )
         ButtonColor.Red ->
             ButtonPalette(
@@ -40,6 +42,7 @@ internal fun GohoColors.buttonPalette(color: ButtonColor): ButtonPalette =
                 dangerRing,
                 dangerInnerRing,
                 dangerShadow,
+                buttonShade,
             )
         ButtonColor.Grey ->
             ButtonPalette(
@@ -49,5 +52,6 @@ internal fun GohoColors.buttonPalette(color: ButtonColor): ButtonPalette =
                 secondaryRing,
                 glassInnerRing,
                 shadow,
+                buttonShade,
             )
     }

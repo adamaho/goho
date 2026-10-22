@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Goho</string>
+    <string name="add">Add</string>
+    <string name="add_menu_title">Add</string>
+    <string name="add_menu_close">Close add menu</string>
+    <string name="scan_book">Scan book</string>
     <string name="scan_receipt">Scan receipt</string>
     <string name="scan_opening">Opening scanner…</string>
     <string name="scan_failed">Could not open the scanner. Please try again.</string>
@@ -34,13 +38,12 @@
     <string name="receipt_tax">Tax</string>
     <string name="receipt_total">Total</string>
     <string name="goho_wordmark" translatable="false">goho</string>
-    <string name="scan_short">Scan</string>
     <string name="receipt_reading">Reading receipt…</string>
     <string name="receipt_not_processed">Not processed</string>
     <string name="receipt_new">New receipt</string>
     <string name="receipt_unknown">Unknown receipt</string>
     <string name="receipts_empty_title">No receipts yet</string>
-    <string name="receipts_empty_body">Tap Scan to add your first one.</string>
+    <string name="receipts_empty_body">Tap + to scan your first one.</string>
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>
     <string name="date_this_week">Earlier this week</string>

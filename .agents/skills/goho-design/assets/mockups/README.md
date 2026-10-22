@@ -4,6 +4,35 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Section navigation and add button (October 22, 2026, approved design)
+
+Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. Section navigation and Books remain planned. Native Add captures below show the implemented receipt menu; older captures with Scan are historical for that control.
+
+- `nav-title-light.png`, `nav-title-dark.png`: Receipts with the `SectionTitle` chevron and the round Add button.
+- `nav-menu-receipts-light.png`, `nav-menu-receipts-dark.png`, `nav-menu-books-light.png`, `nav-menu-books-dark.png`: the section menu open from each section, current section tinted, with counts.
+- `nav-swipe-halfway-light.png`, `nav-swipe-halfway-dark.png`: halfway through an upward title swipe from Receipts to Books; the title rolls and the content crossfades.
+- `nav-add-closed-light.png`, `nav-add-closed-dark.png`: Books with the Add button at rest.
+- `nav-add-menu-books-light.png`, `nav-add-menu-books-dark.png`, `nav-add-menu-receipts-light.png`, `nav-add-menu-receipts-dark.png`: the Add menu open (Scan book, Scan receipt) with the close mark and scrim.
+
+## Add button and menu (native implementation)
+
+Unedited Goho Dev captures from the Pixel 9 API 36 emulator, using the local development server with existing receipts. The standard closed/light/dark captures include the refined 22dp icon. Normal captures are 1080×2424px at 420dpi; the large-text capture is 840×1680px (320×640dp) at 2× font scale.
+
+- `add-button-native-light.png`: the persistent 60dp glossy Add button with its refined 22dp plus, 24dp from the end and 28dp above the bottom safe area.
+- `add-menu-native-light.png`, `add-menu-native-dark.png`: the scrim, sheet-surface action pills and close icon. Scan book appears above Scan receipt. The title remains plain Receipts; section navigation is still planned.
+- `add-menu-native-large-dark.png`: earlier layout verification (before the 22dp icon refinement); both action names and icons remain visible at 2× text, while Add stays fixed at the bottom.
+- `add-button-native-loading-light.png`: earlier layout verification (before the 22dp icon refinement); the existing loading preview shows the same skeleton components and exactly the same Add bounds as the populated list.
+
+Add stays visibly pressed while the menu is open, with the shared 97% scale, 1dp lowering, darker fill and faded shadow. Purple glossy buttons use a violet lower shade (`#30266F` at 28%) in the face and inset reflection.
+
+The screen overlay fades linearly over 240ms in and 180ms out, independent of the item animation; reduced motion snaps it. These static captures show its final opacity.
+
+The menu now springs from 0.92 scale and rises 8dp with 45ms between entries, nearest Add first. Opening gives one ContextClick haptic, then a lighter SegmentTick for each entry at 45ms and 90ms. Closing reverses the stagger; reduced motion snaps without entry ticks.
+
+Scan receipt calls the existing document scanner. Scan book deliberately only closes the menu, as requested by the user. No Books screen or book upload is implemented. Manual checks covered menu dismissal, the book no-op, scanner handoff, both themes, large text, reduced motion and loading placement. The emulator’s Google scanner returned a Play services error after handoff, so a complete capture/upload was not verified. Build, lint, Kotlin formatting and repository checks passed; no automated Android tests or harnesses were added or run.
+
+Native source references: `assets/compose/AddButton.kt`, `AddMenu.kt`, `ReceiptOverview.kt`, `Spacing.kt` and `Motion.kt`. Menu icon vectors are in `assets/icons/navigation/`.
+
 ## Item category tags (October 21, 2026, approved design)
 
 Source: [revised October 21 design handoff](https://drive.google.com/file/d/1GwsbJY8IJscVyHC61ArY7nvbv-vit1Uo/view). These are supplied design renders from the Goho brand canvas at 360dp width and 3×: list 1080×2340px, multi-category details 1080×4290px, single-category details 1080×3171px. They are approved design references, not emulator captures or evidence of an implemented feature. The [category component spec](../../references/components.md#category-tags) wins where they differ; retain the existing button finishes, filter styling, Scan safe-area placement and one-line, vertically centered item names at every font size. Details uses the item names from a real October 18 Costco receipt; categories and the other list rows are sample data.
@@ -108,7 +137,7 @@ Unedited manual development-app captures on the Pixel 9 API 36 emulator. All and
 - `receipt-pager-large-text-dark.png`: Scrollable status copy at 2× text size on a compact 320×457dp screen, with Scan clear of the content.
 - `receipt-pager-error.png`: Initial loading failure retains Scan alongside the retry action. A temporary local GET-only proxy supplied the failure; the normal server connection was restored afterward.
 
-Normal captures are 1080×2424px at 420dpi; the compact capture is 840×1200px. Manual checks confirmed one accessible Scan control, hidden inactive-page content, tab navigation, preserved list scroll position after visiting and scrolling the other page, vertical refresh, error recovery, and receipt taps and holds. No Android tests or harnesses were added. These supersede the previous switch-on-release filter captures. Older empty and error captures below remain artwork references; their per-state Scan placement and hidden tabs on All 0 are superseded by this pager.
+The standard closed/light/dark captures include the refined 22dp icon. Normal captures are 1080×2424px at 420dpi; the compact capture is 840×1200px. Manual checks confirmed one accessible Scan control, hidden inactive-page content, tab navigation, preserved list scroll position after visiting and scrolling the other page, vertical refresh, error recovery, and receipt taps and holds. No Android tests or harnesses were added. These supersede the previous switch-on-release filter captures. Older empty and error captures below remain artwork references; their per-state Scan placement and hidden tabs on All 0 are superseded by this pager.
 
 ## Current pull-to-refresh (October 12, 2026)
 

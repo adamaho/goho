@@ -16,6 +16,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -28,8 +29,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
@@ -115,18 +120,26 @@ fun ReceiptOverview(
         if (uploadedEntryVisible) onUploadRevealed()
     }
     var optionsEntry by remember { mutableStateOf<ReceiptListEntry?>(null) }
+    var addMenuOpen by rememberSaveable { mutableStateOf(false) }
+    val addButtonFocus = remember { FocusRequester() }
+    fun closeAddMenu() {
+        addMenuOpen = false
+        addButtonFocus.requestFocus()
+    }
+    LaunchedEffect(isOpeningScanner) { if (isOpeningScanner) addMenuOpen = false }
     val currentLoadImage by rememberUpdatedState(loadReceiptImage)
     val thumbnails = remember { ReceiptThumbnails { currentLoadImage(it) } }
     val recovery = updateTransition(state.error, label = "Receipt recovery")
     // This screen has no text input. Ignore an outgoing launcher keyboard's insets so
-    // Scan stays anchored to the window during cold start, before the IME finishes hiding.
-    Box(
-        modifier
-            .fillMaxSize()
-            .background(GohoTheme.colors.background)
-            .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-    ) {
-        Column(Modifier.fillMaxSize()) {
+    // Add stays anchored to the window during cold start, before the IME finishes hiding.
+    Box(modifier.fillMaxSize().background(GohoTheme.colors.background)) {
+        Column(
+            Modifier.fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+                .focusProperties { onEnter = { if (addMenuOpen) cancelFocusChange() } }
+                .focusGroup()
+                .then(if (addMenuOpen) Modifier.clearAndSetSemantics {} else Modifier)
+        ) {
             ReceiptListHeader(
                 entries.size,
                 entries.count { it.status == ReceiptListStatus.NotProcessed },
@@ -146,7 +159,7 @@ fun ReceiptOverview(
             PullToRefresh(
                 refreshing = state.refreshing,
                 failed = state.refreshError || state.error,
-                enabled = !state.loading && (state.hasLoaded || state.error),
+                enabled = !addMenuOpen && !state.loading && (state.hasLoaded || state.error),
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
@@ -157,7 +170,8 @@ fun ReceiptOverview(
                         state.hasLoaded &&
                             !state.error &&
                             !state.refreshing &&
-                            optionsEntry == null,
+                            optionsEntry == null &&
+                            !addMenuOpen,
                     modifier = Modifier.fillMaxSize(),
                 ) { page ->
                     recovery.AnimatedContent(
@@ -196,11 +210,25 @@ fun ReceiptOverview(
             }
         }
         // One persistent action belongs to the screen, outside page and recovery transitions.
-        ScanButton(
-            !isOpeningScanner,
-            onScanClick,
-            Modifier.align(Alignment.BottomEnd)
-                .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom),
+        AddMenu(
+            open = addMenuOpen,
+            actions =
+                listOf(
+                    // Book scanning is deliberately a no-op until its app flow is implemented.
+                    AddMenuAction(R.string.scan_book, R.drawable.ic_add_book) {},
+                    AddMenuAction(R.string.scan_receipt, R.drawable.ic_add_receipt, onScanClick),
+                ),
+            onDismiss = ::closeAddMenu,
+        )
+        AddButton(
+            open = addMenuOpen,
+            enabled = !isOpeningScanner,
+            onClick = { if (addMenuOpen) closeAddMenu() else addMenuOpen = true },
+            modifier =
+                Modifier.align(Alignment.BottomEnd)
+                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+                    .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
+                    .focusRequester(addButtonFocus),
         )
     }
     optionsEntry?.let { entry ->
