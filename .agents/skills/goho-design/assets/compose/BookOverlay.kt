@@ -55,6 +55,7 @@ import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -239,8 +240,12 @@ private fun BookOverlay(
     val swipe =
         remember(state, dismissDistance, dismissVelocity) {
             object : NestedScrollConnection {
-                // Upward scrolling first undoes a swipe in progress.
+                var settle: Job? = null
+
+                // A new drag takes over from a spring-back still settling; upward scrolling then
+                // first undoes a swipe in progress.
                 override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (source == NestedScrollSource.UserInput) settle?.cancel()
                     if (available.y >= 0f || drag <= 0f) return Offset.Zero
                     val consumed = maxOf(available.y, -drag)
                     drag += consumed
@@ -263,7 +268,7 @@ private fun BookOverlay(
                     if (drag <= 0f) return Velocity.Zero
                     if (drag > dismissDistance || available.y > dismissVelocity) state.close()
                     else
-                        scope.launch {
+                        settle = scope.launch {
                             animate(drag, 0f, animationSpec = GohoPhotoMotion.settle) { value, _ ->
                                 drag = value
                             }
@@ -328,7 +333,7 @@ private fun BookOverlay(
         BoxWithConstraints(Modifier.fillMaxSize()) {
             Column(
                 Modifier.fillMaxSize()
-                    // Taps on the frost close; the cover and text below consume their own taps.
+                    // Taps on the frost close; the cover and text block swallow theirs.
                     .pointerInput(state) { detectTapGestures { state.close() } }
                     .nestedScroll(swipe)
                     .verticalScroll(rememberScrollState())
@@ -343,9 +348,9 @@ private fun BookOverlay(
                     if (reduced) Modifier
                     else
                         with(state.shared) {
-                            // Opaque for the whole flight out; drawn above the row cover on the way
-                            // home
-                            // and fading out over it (alone, when the row is off screen).
+                            // Opaque for the whole flight out. On the way home it's drawn above
+                            // the row cover and fades out over it (alone, when the row is off
+                            // screen).
                             Modifier.sharedBounds(
                                 rememberSharedContentState(coverKey(book.id)),
                                 visibility,
@@ -358,10 +363,12 @@ private fun BookOverlay(
                         }
                 Box(
                     Modifier.graphicsLayer {
-                        translationY = drag
-                        scaleX = 1f - (1f - GohoPhotoMotion.MIN_DRAG_SCALE) * dragFraction()
-                        scaleY = scaleX
-                    }
+                            translationY = drag
+                            scaleX = 1f - (1f - GohoPhotoMotion.MIN_DRAG_SCALE) * dragFraction()
+                            scaleY = scaleX
+                        }
+                        // A generated or still-loading cover isn't tappable and doesn't close.
+                        .pointerInput(Unit) { detectTapGestures {} }
                 ) {
                     if (image != null) PhotoCover(image, full, coverModifier) { viewerOpen = true }
                     else GeneratedBookCover(book, BookCoverSize.Large, coverModifier)
@@ -430,7 +437,7 @@ private fun PhotoCover(
                             onClick = onOpen,
                         )
                         .semantics { contentDescription = description }
-                else Modifier.clearAndSetSemantics {}.pointerInput(Unit) { detectTapGestures {} }
+                else Modifier.clearAndSetSemantics {}
             )
             .bookCoverShadow(c, shape)
             .size(width, width / ratio)
