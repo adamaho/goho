@@ -9,7 +9,8 @@ The current family icon sources and Android resources are documented in the [lau
 Design renders from the Goho brand canvas (“Book details”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-details-cover-first) wins where they differ. Books and covers are illustrative sample data.
 
 - `book-details-light.png`, `book-details-dark.png`: cover first, centered title, author and category tag, then the Details card.
-- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated “cloth and label” cover for books without a cover image (category colour cloth, darker spine, title label in the tag container colour); the light one also has no reading level and a long title that the label truncates while the hero wraps it.
+- `book-details-no-cover-light.png`, `book-details-no-cover-dark.png`: the generated “cloth” cover for books without a cover image (category colour cloth, darker spine, title and author printed in a same-hue contrasting colour); the light one also has no reading level and a long title that the cover truncates while the hero wraps it.
+- `books-generated-covers-light.png`, `books-generated-covers-dark.png`: the Books list with the small generated cover for books without a cover image, in each category colour, beside an illustrative real cover.
 - `book-details-loading-light.png`, `book-details-cover-loading-dark.png`: initial loading, and a loaded book whose cover is still loading.
 - `book-details-options-light.png`, `book-details-confirm-dark.png`, `book-details-delete-error-light.png`: the shared options sheet with Delete book, its confirmation and its failure state.
 
@@ -39,7 +40,7 @@ Canonical source snapshots: `SectionTitle.kt`, `SectionMenu.kt`, `SectionScreen.
 
 Display-only Books list reached from the title menu, using books from the local development seed (no covers). The dark and large-text captures also include temporary processing and failed upload rows; these were removed after manual validation. It follows [screens.md section 8](../../references/screens.md#8-books-list); the approved `nav-add-closed-*.png` and `nav-menu-books-*.png` renders above remain the design reference. Native captures from the Goho Dev emulator, added after validation:
 
-- `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders, one-line titles, author and optional reading level, and server category tags.
+- `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders (now superseded by the generated cover, `books-generated-covers-*.png`), one-line titles, author and optional reading level, and server category tags.
 - `books-menu-native-light.png`: the section menu opened from Books, Books selected, with Receipts' All count and the saved-book count.
 - `books-native-loading-light.png`: the initial skeleton rows with Add in its usual position.
 - `books-native-empty-light.png`: the text-only empty state.
