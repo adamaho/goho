@@ -1,46 +1,10 @@
-import { BookUploadId, type BookUploadContentType } from "@goho/goho-server-client/book-uploads";
-import { Console, Effect, FileSystem, Path } from "effect";
+import { BookUploadId } from "@goho/goho-server-client/book-uploads";
+import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
-
-const contentTypeForExtension = (extension: string) => {
-  switch (extension) {
-    case ".jpeg":
-    case ".jpg":
-      return "image/jpeg" satisfies BookUploadContentType;
-    case ".png":
-      return "image/png" satisfies BookUploadContentType;
-    case ".webp":
-      return "image/webp" satisfies BookUploadContentType;
-    default:
-      return undefined;
-  }
-};
-
-const readCoverFile = Effect.fn("@goho/BookUploads.readCoverFile")(function* (filePath: string) {
-  const fileSystem = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
-  const extension = path.extname(filePath).toLowerCase();
-  const contentType = contentTypeForExtension(extension);
-  if (contentType === undefined) {
-    return yield* new CommandError({
-      message: "Book cover must be a JPEG, PNG, or WebP image.",
-      cause: extension,
-    });
-  }
-  const bytes = yield* fileSystem.readFile(filePath).pipe(
-    Effect.mapError(
-      (cause) =>
-        new CommandError({
-          message: `Book cover file could not be read: ${filePath}`,
-          cause,
-        }),
-    ),
-  );
-  return { bytes, contentType, fileName: path.basename(filePath) };
-});
+import { readImageFile } from "#src/utils/read-image-file.ts";
 
 /**
  * Uploads one book cover image for asynchronous processing.
@@ -57,7 +21,7 @@ export const uploadCommand = Command.make("upload", {
   Command.withHandler(({ filePath }) =>
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
-      const file = yield* readCoverFile(filePath);
+      const file = yield* readImageFile("Book cover", filePath);
       const payload = new FormData();
       payload.set("file", new File([file.bytes], file.fileName, { type: file.contentType }));
       const response = yield* client.bookUploads.create({ payload }).pipe(
