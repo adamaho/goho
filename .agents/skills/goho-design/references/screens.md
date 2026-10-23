@@ -291,7 +291,7 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 - Needs attention, empty: the shared “All good” state.
 - Load error: the shared load-error artwork and retry, “We couldn’t load your books. Let’s try again.”
 - Refresh: the shared pull-to-refresh with “Refresh books” and “Refreshing books…”. A failed refresh keeps the cached rows and shows only the indicator's warning triangle, as on Receipts.
-- Scanner notices: when Scan receipt is chosen from Books, “Opening scanner…” and scanner errors appear above the Books list as on Receipts.
+- Scanner: no inline notices while the scanner opens or when it fails, on Books or Receipts (removed October 23, 2026 at the user's request).
 
 **Large text:** at font scale ≥1.3 or narrow widths the category or upload tag moves beneath the metadata, end-aligned, and metadata may wrap. Titles stay on one line with an ellipsis.
 

@@ -21,7 +21,7 @@ Labelled actions and round `IconButton` controls share the same surface and pale
 
 ## Component names
 
-Name UI components by their role, never with a `Goho` prefix: `Tag`, `TagCount`, `CategoryIcon`, `CategoryTag`, `CategoryBreakdown`, `ActionButton`, `IconButton`, `SectionTitle`, `SectionMenu`, `SectionScreen`, `AddButton`, `AddMenu`, `FilterPager`, `ListFilter`, `ListCard`, `ListNotice`, `StatusContent`, `SkeletonScope` and `PullToRefresh`. Components shared by Receipts and Books are named for their list role. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
+Name UI components by their role, never with a `Goho` prefix: `Tag`, `TagCount`, `CategoryIcon`, `CategoryTag`, `CategoryBreakdown`, `ActionButton`, `IconButton`, `SectionTitle`, `SectionMenu`, `SectionScreen`, `AddButton`, `AddMenu`, `FilterPager`, `ListFilter`, `ListCard`, `StatusContent`, `SkeletonScope` and `PullToRefresh`. Components shared by Receipts and Books are named for their list role. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
 
 ## Category and upload tags
 

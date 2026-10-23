@@ -78,7 +78,6 @@ import okio.BufferedSink
 
 class MainActivity : ComponentActivity() {
     private var scannedImageUri by mutableStateOf<Uri?>(null)
-    private var scanError by mutableStateOf<Int?>(null)
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
@@ -113,10 +112,7 @@ class MainActivity : ComponentActivity() {
                         ?.imageUri
                 if (imageUri != null) {
                     scannedImageUri = imageUri
-                    scanError = null
                     uploadStatus = UploadStatus.Ready
-                } else {
-                    scanError = R.string.scan_no_image
                 }
             }
         }
@@ -195,8 +191,6 @@ class MainActivity : ComponentActivity() {
                                                                 },
                                                                 deleteReceipt = ::deleteReceipt,
                                                                 thumbnails = receiptThumbnails,
-                                                                isOpeningScanner = isOpeningScanner,
-                                                                scanError = scanError,
                                                                 onRetryClick = { refreshHistory() },
                                                                 onRefresh = {
                                                                     refreshHistory(
@@ -214,8 +208,6 @@ class MainActivity : ComponentActivity() {
                                                                 state = bookState,
                                                                 menuOpen = menuOpen,
                                                                 covers = books.covers,
-                                                                isOpeningScanner = isOpeningScanner,
-                                                                scanError = scanError,
                                                                 onRetryClick = { books.refresh() },
                                                                 onRefresh = {
                                                                     books.refresh(
@@ -260,7 +252,6 @@ class MainActivity : ComponentActivity() {
                                 if (uploadStatus != UploadStatus.Uploading) {
                                     scannedImageUri = null
                                     uploadStatus = UploadStatus.Ready
-                                    scanError = null
                                 }
                             },
                         )
@@ -428,7 +419,6 @@ class MainActivity : ComponentActivity() {
         if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
 
         isOpeningScanner = true
-        scanError = null
         val options =
             GmsDocumentScannerOptions.Builder()
                 .setGalleryImportAllowed(true)
@@ -445,7 +435,6 @@ class MainActivity : ComponentActivity() {
             }
             .addOnFailureListener { error ->
                 isOpeningScanner = false
-                scanError = R.string.scan_failed
                 Log.e("GohoScanner", "Could not open document scanner", error)
             }
     }

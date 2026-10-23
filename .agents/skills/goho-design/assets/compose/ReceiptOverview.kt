@@ -1,7 +1,6 @@
 package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.animateFloatAsState
@@ -55,8 +54,6 @@ data class ReceiptOverviewState(
 @Composable
 internal fun ReceiptOverview(
     state: ReceiptOverviewState,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onReceiptClick: (String) -> Unit,
     thumbnails: ThumbnailCache,
@@ -120,8 +117,6 @@ internal fun ReceiptOverview(
             locale = locale,
             zone = zone,
             listState = if (attentionOnly) attentionListState else allListState,
-            isOpeningScanner = isOpeningScanner,
-            scanError = scanError,
             onRetryClick = onRetryClick,
             onRefresh = onRefresh,
             onReceiptClick = onReceiptClick,
@@ -156,8 +151,6 @@ private fun ReceiptListPage(
     locale: Locale,
     zone: ZoneId,
     listState: LazyListState,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     onReceiptClick: (String) -> Unit,
@@ -204,10 +197,6 @@ private fun ReceiptListPage(
                         ),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (!error) {
-                        scanError?.let { ListNotice(stringResource(it)) }
-                        if (isOpeningScanner) ListNotice(stringResource(R.string.scan_opening))
-                    }
                     when {
                         error ->
                             LoadErrorState(
@@ -232,9 +221,6 @@ private fun ReceiptListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
-                if (isOpeningScanner)
-                    item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
                 if (!state.hasLoaded && state.loading)
                     item("loading") {
                         SkeletonScope(loading = true) {

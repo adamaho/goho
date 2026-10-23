@@ -1,6 +1,6 @@
 # Goho components
 
-Name UI components by their role, never with a `Goho` prefix: `Tag`, `ActionButton`, `IconButton`, `SectionTitle`, `SectionMenu`, `SectionScreen`, `AddButton`, `AddMenu`, `FilterPager`, `ListFilter`, `ListCard`, `ListNotice`, `StatusContent`, `SkeletonScope` and `PullToRefresh`. Components shared by Receipts and Books are named for their list role rather than for receipts. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
+Name UI components by their role, never with a `Goho` prefix: `Tag`, `ActionButton`, `IconButton`, `SectionTitle`, `SectionMenu`, `SectionScreen`, `AddButton`, `AddMenu`, `FilterPager`, `ListFilter`, `ListCard`, `StatusContent`, `SkeletonScope` and `PullToRefresh`. Components shared by Receipts and Books are named for their list role rather than for receipts. Use the same convention for component-specific types (`TagColor`, `ButtonColor`) and matching filenames. Keep call sites, examples and Compose references aligned.
 
 Deletion components and row interactions describe the October 2 v2 target design. Verify server support and implement them only as part of a requested deletion feature.
 

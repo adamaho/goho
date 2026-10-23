@@ -102,8 +102,6 @@ internal fun ReceiptsPreviewScreen(state: ReceiptOverviewState, previewTime: Ins
     ) { menuOpen ->
         ReceiptOverview(
             state,
-            false,
-            null,
             {},
             {},
             remember { ThumbnailCache { null } },

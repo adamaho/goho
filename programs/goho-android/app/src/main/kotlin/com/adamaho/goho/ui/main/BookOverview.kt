@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -35,8 +34,6 @@ data class BookListState(
 internal fun BookOverview(
     state: BookListState,
     covers: ThumbnailCache,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     onBookClick: (Book) -> Unit,
@@ -79,8 +76,6 @@ internal fun BookOverview(
             zone = zone,
             locale = locale,
             listState = if (attentionOnly) attentionListState else allListState,
-            isOpeningScanner = isOpeningScanner,
-            scanError = scanError,
             onRetryClick = onRetryClick,
             onRefresh = onRefresh,
             covers = covers,
@@ -101,8 +96,6 @@ private fun BookListPage(
     zone: ZoneId,
     locale: Locale,
     listState: LazyListState,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     covers: ThumbnailCache,
@@ -127,10 +120,6 @@ private fun BookListPage(
                         ),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (!error) {
-                        scanError?.let { ListNotice(stringResource(it)) }
-                        if (isOpeningScanner) ListNotice(stringResource(R.string.scan_opening))
-                    }
                     when {
                         error ->
                             LoadErrorState(
@@ -157,9 +146,6 @@ private fun BookListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
-                if (isOpeningScanner)
-                    item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
                 if (!state.hasLoaded && state.loading)
                     item("loading") {
                         SkeletonScope(loading = true) {
