@@ -287,7 +287,7 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 **States:**
 
 - Initial loading: four skeleton rows in the same card with one “Loading books…” announcement after the shared 200ms delay.
-- No books: text-only status content, “No books yet” / “Saved books will appear here.”, with no illustration and no instruction to scan.
+- No books: currently text-only status content, “No books yet” / “Saved books will appear here.” The approved [book-holding Bram](../assets/illustrations/status-no-books.png) awaits native integration. Render it unchanged in the shared 220×190dp illustration slot with a 4dp title gap, directly on either theme’s background without a card. Keep the existing copy and no instruction to scan.
 - Needs attention, empty: the shared “All good” state.
 - Load error: the shared load-error artwork and retry, “We couldn’t load your books. Let’s try again.”
 - Refresh: the shared pull-to-refresh with “Refresh books” and “Refreshing books…”. A failed refresh keeps the cached rows and shows only the indicator's warning triangle, as on Receipts.

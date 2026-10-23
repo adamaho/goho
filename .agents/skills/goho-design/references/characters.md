@@ -23,6 +23,10 @@ The [asset manifest](../assets/illustrations/family/manifest.json) records each 
 
 All three have a fine matte clay texture, soft studio light, smooth rounded volumes, glossy dark eyes, and restrained smiles. Preserve the approved warm, gentle character treatment without making the bodies look like shiny plastic, fur, or fabric. The original artwork wins over generic character-style references.
 
+## Approved Books empty-state pose
+
+[Bram holding a book](../assets/illustrations/status-no-books.png), approved October 23, 2026, is the selected “No books yet” illustration. He gently cradles one closed cream hardcover with a blank cover, visible ivory pages and a warm oatmeal spine. Keep his original face, long round arms, broad lilac body, tiny feet and ivory horns. The transparent master is 1350×1165 RGBA; [provenance and its SHA-256](../assets/illustrations/bram/no-books.prompts.json) identify the exact selected image. This is a status pose, not a replacement for the neutral identity master. It is approved design artwork awaiting app integration; the native empty Books state remains text-only.
+
 ## Family composition
 
 In the approved portrait, Bram is on the viewer's left, Mira on the right, and the smaller child slightly forward in the center. Bram is lower and wider; Mira is taller with her curl. Their inward poses feel affectionate while keeping the child's complete silhouette and all faces readable. Use this image for family relationships, palette, and scale; use the individual masters for precise character features. Do not transfer one family member's identifying features to another.
@@ -37,4 +41,4 @@ The launcher icons feature **Bram, Mira, and the child together**, following the
 
 Keep the approved PNG masters unchanged. PNG preserves their texture and alpha; converting them into SVG paths or embedding base64 in documentation does not improve future context. Reference the files directly and open them when a visual task needs them. Keep platform-sized exports separate from the master artwork.
 
-Commit only the current app artwork and the approved individual and family identity masters. When an approved design changes, update the relevant source, manifest, and this guide together. Keep unused candidates, exploration prompts, and review exports in ignored `.data/`; do not accumulate alternate versions in the repository. The committed masters and their hashes preserve identity across threads.
+Commit current app artwork, the approved individual and family identity masters, and the selected Books empty-state master above. When an approved design changes, update the relevant source, manifest, and this guide together. Keep unused candidates, exploration prompts, and review exports in ignored `.data/`; do not accumulate alternate versions in the repository. The committed masters and their hashes preserve identity across threads.

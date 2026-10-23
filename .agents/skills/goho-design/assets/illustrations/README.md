@@ -9,6 +9,12 @@ The app ships three Bram illustrations: the no-receipts empty state, calm “All
 
 All three PNGs are 1350×1165 RGBA. Render all three illustrations unchanged with ContentScale.Fit in the shared 220×190dp slot that can shrink proportionally on narrow screens, with a 4dp gap before the title. Artwork is decorative; text supplies the accessible meaning. Android names use underscores instead of hyphens. Load error retains its text-only Receipts header, no filters or Scan, and a stable disabled retry button while retrying. Additional character states and concept sheets are deferred until their feature is implemented.
 
+## Approved Books artwork awaiting integration
+
+[status-no-books.png](status-no-books.png) is the user-approved October 23, 2026 “No books yet” illustration: Bram gently holding one blank cream hardcover between his long rounded arms. The PNG is 1350×1165 RGBA, with true alpha transparency and a small contact shadow. Preserve its original bytes, face, proportions, texture and book. Its [provenance](bram/no-books.prompts.json) records the source references, prompts and SHA-256.
+
+This master is retained as the selected design source; it has no Android drawable copy yet. `NoBooksState` remains text-only. Future integration should use the same `StatusContent` slot and 4dp title gap as the existing illustrations, the same transparent artwork in both themes, and the unchanged “No books yet” / “Saved books will appear here.” copy. Do not add a surrounding card or a scan instruction. Keep discarded candidates and review exports in ignored `.data/`.
+
 The SVGs in `legacy/` are the October 2 paper-and-pastel illustrations. They are retained for provenance, not as editable sources for the Bram PNGs. Do not re-export them over the current artwork. No editable Bram source is included in this PR.
 
 The neutral Bram identity reference and generation prompts live in [bram/](bram/README.md). `status-no-receipts.png`, `status-needs-attention.png` and `status-load-error.png` are the approved masters; their Android drawables are production copies. Current screen captures live in [mockups/](../mockups/README.md). Earlier resources and review evidence remain in Git history at commit `69c44fb`. All three illustrations were created with built-in imagegen; they are raster sources, not editable 3D rigs.
