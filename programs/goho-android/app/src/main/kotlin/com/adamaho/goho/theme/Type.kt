@@ -30,6 +30,10 @@ data class GohoTypography(
     val title: TextStyle,
     val statusTitle: TextStyle,
     val screenTitle: TextStyle,
+    val bookTitle: TextStyle,
+    val bookAuthor: TextStyle,
+    val bookCoverTitle: TextStyle,
+    val bookCoverAuthor: TextStyle,
     val wordmark: TextStyle,
     val rowTitle: TextStyle,
     val button: TextStyle,
@@ -115,6 +119,41 @@ val GohoType =
                 fontSize = 24.sp,
                 lineHeight = 30.sp,
                 letterSpacing = (-0.015).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        bookTitle =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                letterSpacing = (-0.02).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        bookAuthor =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Normal,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        bookCoverTitle =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 22.sp,
+                lineHeight = 28.sp,
+                letterSpacing = (-0.01).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        bookCoverAuthor =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         buttonSecondary =

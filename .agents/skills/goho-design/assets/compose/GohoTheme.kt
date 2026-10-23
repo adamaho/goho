@@ -91,6 +91,7 @@ data class GohoColors(
     val buttonWideShadowAlpha: Float,
     val secondaryShadowAlpha: Float,
     val secondaryWideShadowAlpha: Float,
+    val bookCoverShadowAlpha: Float,
     val statusCard: Color,
     val statusCardRing: Color,
 )
@@ -160,6 +161,7 @@ val GohoDarkColors =
         buttonWideShadowAlpha = 0.6f,
         secondaryShadowAlpha = 0.12f,
         secondaryWideShadowAlpha = 0.2f,
+        bookCoverShadowAlpha = 0.45f,
         statusCard = Color.White.copy(alpha = 0.025f),
         statusCardRing = Color.White.copy(alpha = 0.07f),
     )
@@ -225,6 +227,7 @@ val GohoLightColors =
         buttonWideShadowAlpha = 0.18f,
         secondaryShadowAlpha = 0.05f,
         secondaryWideShadowAlpha = 0.18f,
+        bookCoverShadowAlpha = 0.3f,
         statusCard = Color.White.copy(alpha = 0.6f),
         statusCardRing = Color(0xFF26233A).copy(alpha = 0.06f),
     )

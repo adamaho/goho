@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -30,15 +29,14 @@ data class BookListState(
     val refreshError: Boolean = false,
 )
 
-/** Books content below the section title. Rows are display-only. */
+/** Books content below the section title. Saved rows open the book overlay. */
 @Composable
 internal fun BookOverview(
     state: BookListState,
     covers: ThumbnailCache,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
+    onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
 ) {
@@ -78,11 +76,10 @@ internal fun BookOverview(
             zone = zone,
             locale = locale,
             listState = if (attentionOnly) attentionListState else allListState,
-            isOpeningScanner = isOpeningScanner,
-            scanError = scanError,
             onRetryClick = onRetryClick,
             onRefresh = onRefresh,
             covers = covers,
+            onBookClick = onBookClick,
             modifier = pageModifier,
         )
     }
@@ -99,18 +96,15 @@ private fun BookListPage(
     zone: ZoneId,
     locale: Locale,
     listState: LazyListState,
-    isOpeningScanner: Boolean,
-    @StringRes scanError: Int?,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     covers: ThumbnailCache,
+    onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val showLoading = rememberLoadingVisible(state.loading)
-    val refreshFailed = stringResource(R.string.books_refresh_failed)
-    val retry = stringResource(R.string.retry)
     Column(modifier.fillMaxSize()) {
         if (error || (state.hasLoaded && entries.isEmpty())) {
             BoxWithConstraints(
@@ -126,11 +120,6 @@ private fun BookListPage(
                         ),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (state.refreshError) ListNotice(refreshFailed, retry, onRefresh)
-                    if (!error) {
-                        scanError?.let { ListNotice(stringResource(it)) }
-                        if (isOpeningScanner) ListNotice(stringResource(R.string.scan_opening))
-                    }
                     when {
                         error ->
                             LoadErrorState(
@@ -157,11 +146,6 @@ private fun BookListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (state.refreshError)
-                    item("refresh-error") { ListNotice(refreshFailed, retry, onRefresh) }
-                scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
-                if (isOpeningScanner)
-                    item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }
                 if (!state.hasLoaded && state.loading)
                     item("loading") {
                         SkeletonScope(loading = true) {
@@ -184,7 +168,15 @@ private fun BookListPage(
                             entries.forEachIndexed { index, entry ->
                                 key(entry.key) {
                                     if (index > 0) ListDivider()
-                                    BookRow(entry, now, zone, locale, expanded, covers)
+                                    BookRow(
+                                        entry,
+                                        now,
+                                        zone,
+                                        locale,
+                                        expanded,
+                                        covers,
+                                        onBookClick,
+                                    )
                                 }
                             }
                         }

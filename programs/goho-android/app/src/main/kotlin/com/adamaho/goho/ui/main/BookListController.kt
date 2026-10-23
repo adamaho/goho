@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.ImageBitmap
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.model.BookUpload
@@ -90,6 +91,10 @@ internal class BookListController(
                 }
             }
     }
+
+    /** The full-size cover for the book overlay and photo viewer, outside the thumbnail cache. */
+    suspend fun loadFullCover(bookId: String): ImageBitmap? =
+        loadCover(bookId)?.let { decodePhoto(it) }
 
     private fun failed() =
         state.copy(

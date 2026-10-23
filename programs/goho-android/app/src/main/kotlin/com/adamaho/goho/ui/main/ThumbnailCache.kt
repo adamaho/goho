@@ -41,6 +41,9 @@ internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArr
         }
     private val requests = Semaphore(3)
 
+    /** An already loaded image, without waiting, so a lifted cover starts from the row's image. */
+    fun peek(id: String): Bitmap? = cache.get(id)
+
     suspend fun get(id: String): Bitmap? =
         withContext(Dispatchers.IO) {
             cache.get(id)?.let {
@@ -72,6 +75,26 @@ internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArr
             }
         }
 }
+
+/**
+ * Decodes a full-size photo for receipt details and the book overlay, sampled down to at most
+ * 4096px on its longest side and 8MP in total. Null when the bytes aren't an image.
+ */
+internal suspend fun decodePhoto(bytes: ByteArray): ImageBitmap? =
+    withContext(Dispatchers.Default) {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
+        if (largestDimension <= 0) return@withContext null
+        val sampleSize =
+            generateSequence(1) { it * 2 }
+                .first {
+                    largestDimension / it <= 4096 &&
+                        bounds.outWidth.toLong() * bounds.outHeight / it / it <= 8_000_000
+                }
+        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+    }
 
 /** Bound the longest decoded side, including extreme receipt and cover aspect ratios. */
 internal fun thumbnailSampleSize(width: Int, height: Int): Int {

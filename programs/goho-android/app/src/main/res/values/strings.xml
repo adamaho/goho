@@ -6,11 +6,13 @@
     <string name="books_empty_body">Saved books will appear here.</string>
     <string name="books_refresh">Refresh books</string>
     <string name="books_refreshing">Refreshing books…</string>
-    <string name="books_refresh_failed">Couldn’t refresh books. Your previous list is still here.</string>
     <string name="book_new">New book</string>
     <string name="book_unknown">Unknown book</string>
     <string name="book_reading">Reading cover…</string>
     <string name="book_author_level">%1$s · %2$s</string>
+    <string name="book_close">Close</string>
+    <string name="book_cover_open">View book cover</string>
+    <string name="book_cover_description">Book cover, %1$s</string>
     <string name="section_title_description">Section: %1$s</string>
     <string name="section_menu_title">Sections</string>
     <string name="section_menu_expanded">Menu expanded</string>
@@ -21,9 +23,6 @@
     <string name="add_menu_close">Close add menu</string>
     <string name="scan_book">Scan book</string>
     <string name="scan_receipt">Scan receipt</string>
-    <string name="scan_opening">Opening scanner…</string>
-    <string name="scan_failed">Could not open the scanner. Please try again.</string>
-    <string name="scan_no_image">The scanner did not return an image. Please try again.</string>
     <string name="scan_image_description">Scanned receipt</string>
     <string name="upload_receipt">Upload receipt</string>
     <string name="upload_progress">Uploading receipt…</string>
@@ -80,13 +79,13 @@
     <string name="receipt_photo_loading">Loading photo…</string>
     <string name="receipt_photo_missing">No receipt photo available</string>
     <string name="receipt_photo_open">View receipt photo</string>
-    <string name="receipt_photo_close">Close photo</string>
+    <string name="photo_close">Close photo</string>
     <string name="receipt_photo_description">Receipt photo</string>
     <string name="receipt_photo_merchant_description">Receipt photo, %1$s</string>
-    <string name="receipt_photo_zoom_in">Zoom in</string>
-    <string name="receipt_photo_zoom_out">Zoom out</string>
-    <string name="receipt_photo_zoom_level">Zoom %1$d percent</string>
-    <string name="receipt_photo_toggle_controls">Show or hide controls</string>
+    <string name="photo_zoom_in">Zoom in</string>
+    <string name="photo_zoom_out">Zoom out</string>
+    <string name="photo_zoom_level">Zoom %1$d percent</string>
+    <string name="photo_toggle_controls">Show or hide controls</string>
     <string name="receipt_more_options">More options</string>
     <string name="receipt_options">Receipt options</string>
     <string name="receipt_delete">Delete receipt</string>
@@ -102,7 +101,6 @@
     <string name="receipts_refreshing">Refreshing receipts…</string>
     <string name="pull_to_refresh">Pull to refresh</string>
     <string name="release_to_refresh">Release to refresh</string>
-    <string name="receipts_refresh_failed">Couldn’t refresh receipts. Your previous list is still here.</string>
     <string name="refresh_failed_indicator">Refresh failed.</string>
     <string name="receipt_item_description">%1$s, %2$s, %3$s</string>
 </resources>

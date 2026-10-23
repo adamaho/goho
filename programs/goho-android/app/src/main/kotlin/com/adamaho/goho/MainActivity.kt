@@ -36,6 +36,7 @@ import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.main.BookListController
+import com.adamaho.goho.ui.main.BookOverlayHost
 import com.adamaho.goho.ui.main.BookOverview
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
@@ -77,7 +78,6 @@ import okio.BufferedSink
 
 class MainActivity : ComponentActivity() {
     private var scannedImageUri by mutableStateOf<Uri?>(null)
-    private var scanError by mutableStateOf<Int?>(null)
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
@@ -112,10 +112,7 @@ class MainActivity : ComponentActivity() {
                         ?.imageUri
                 if (imageUri != null) {
                     scannedImageUri = imageUri
-                    scanError = null
                     uploadStatus = UploadStatus.Ready
-                } else {
-                    scanError = R.string.scan_no_image
                 }
             }
         }
@@ -168,51 +165,58 @@ class MainActivity : ComponentActivity() {
                                                     else null
                                                 }
                                             val bookState = books.state
-                                            SectionScreen(
-                                                section = section,
-                                                onSectionChange = ::selectSection,
-                                                receiptCount = receiptCount,
-                                                bookCount =
-                                                    if (bookState.hasLoaded) bookState.books.size
-                                                    else null,
-                                                isOpeningScanner = isOpeningScanner,
-                                                onScanReceipt = ::openScanner,
-                                            ) { menuOpen ->
-                                                when (section) {
-                                                    Section.Receipts ->
-                                                        ReceiptOverview(
-                                                            state = overviewState,
-                                                            menuOpen = menuOpen,
-                                                            uploadToReveal = uploadToReveal,
-                                                            onUploadRevealed = {
-                                                                uploadToReveal = null
-                                                            },
-                                                            deleteReceipt = ::deleteReceipt,
-                                                            thumbnails = receiptThumbnails,
-                                                            isOpeningScanner = isOpeningScanner,
-                                                            scanError = scanError,
-                                                            onRetryClick = { refreshHistory() },
-                                                            onRefresh = {
-                                                                refreshHistory(userInitiated = true)
-                                                            },
-                                                            onReceiptClick = {
-                                                                backStack.add(
-                                                                    ReceiptDetailRoute(it)
-                                                                )
-                                                            },
-                                                        )
-                                                    Section.Books ->
-                                                        BookOverview(
-                                                            state = bookState,
-                                                            menuOpen = menuOpen,
-                                                            covers = books.covers,
-                                                            isOpeningScanner = isOpeningScanner,
-                                                            scanError = scanError,
-                                                            onRetryClick = { books.refresh() },
-                                                            onRefresh = {
-                                                                books.refresh(userInitiated = true)
-                                                            },
-                                                        )
+                                            BookOverlayHost(
+                                                covers = books.covers,
+                                                loadFullCover = books::loadFullCover,
+                                            ) { openBook ->
+                                                SectionScreen(
+                                                    section = section,
+                                                    onSectionChange = ::selectSection,
+                                                    receiptCount = receiptCount,
+                                                    bookCount =
+                                                        if (bookState.hasLoaded)
+                                                            bookState.books.size
+                                                        else null,
+                                                    isOpeningScanner = isOpeningScanner,
+                                                    onScanReceipt = ::openScanner,
+                                                ) { menuOpen ->
+                                                    when (section) {
+                                                        Section.Receipts ->
+                                                            ReceiptOverview(
+                                                                state = overviewState,
+                                                                menuOpen = menuOpen,
+                                                                uploadToReveal = uploadToReveal,
+                                                                onUploadRevealed = {
+                                                                    uploadToReveal = null
+                                                                },
+                                                                deleteReceipt = ::deleteReceipt,
+                                                                thumbnails = receiptThumbnails,
+                                                                onRetryClick = { refreshHistory() },
+                                                                onRefresh = {
+                                                                    refreshHistory(
+                                                                        userInitiated = true
+                                                                    )
+                                                                },
+                                                                onReceiptClick = {
+                                                                    backStack.add(
+                                                                        ReceiptDetailRoute(it)
+                                                                    )
+                                                                },
+                                                            )
+                                                        Section.Books ->
+                                                            BookOverview(
+                                                                state = bookState,
+                                                                menuOpen = menuOpen,
+                                                                covers = books.covers,
+                                                                onRetryClick = { books.refresh() },
+                                                                onRefresh = {
+                                                                    books.refresh(
+                                                                        userInitiated = true
+                                                                    )
+                                                                },
+                                                                onBookClick = openBook,
+                                                            )
+                                                    }
                                                 }
                                             }
                                         }
@@ -248,7 +252,6 @@ class MainActivity : ComponentActivity() {
                                 if (uploadStatus != UploadStatus.Uploading) {
                                     scannedImageUri = null
                                     uploadStatus = UploadStatus.Ready
-                                    scanError = null
                                 }
                             },
                         )
@@ -416,7 +419,6 @@ class MainActivity : ComponentActivity() {
         if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
 
         isOpeningScanner = true
-        scanError = null
         val options =
             GmsDocumentScannerOptions.Builder()
                 .setGalleryImportAllowed(true)
@@ -433,7 +435,6 @@ class MainActivity : ComponentActivity() {
             }
             .addOnFailureListener { error ->
                 isOpeningScanner = false
-                scanError = R.string.scan_failed
                 Log.e("GohoScanner", "Could not open document scanner", error)
             }
     }
