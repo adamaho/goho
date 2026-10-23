@@ -204,12 +204,6 @@ private fun ReceiptListPage(
                         ),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (state.refreshError)
-                        ListNotice(
-                            stringResource(R.string.receipts_refresh_failed),
-                            stringResource(R.string.retry),
-                            onRefresh,
-                        )
                     if (!error) {
                         scanError?.let { ListNotice(stringResource(it)) }
                         if (isOpeningScanner) ListNotice(stringResource(R.string.scan_opening))
@@ -238,14 +232,6 @@ private fun ReceiptListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (state.refreshError)
-                    item("refresh-error") {
-                        ListNotice(
-                            stringResource(R.string.receipts_refresh_failed),
-                            stringResource(R.string.retry),
-                            onRefresh,
-                        )
-                    }
                 scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
                 if (isOpeningScanner)
                     item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }

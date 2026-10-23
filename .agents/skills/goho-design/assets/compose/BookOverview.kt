@@ -112,8 +112,6 @@ private fun BookListPage(
     val config = LocalConfiguration.current
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val showLoading = rememberLoadingVisible(state.loading)
-    val refreshFailed = stringResource(R.string.books_refresh_failed)
-    val retry = stringResource(R.string.retry)
     Column(modifier.fillMaxSize()) {
         if (error || (state.hasLoaded && entries.isEmpty())) {
             BoxWithConstraints(
@@ -129,7 +127,6 @@ private fun BookListPage(
                         ),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (state.refreshError) ListNotice(refreshFailed, retry, onRefresh)
                     if (!error) {
                         scanError?.let { ListNotice(stringResource(it)) }
                         if (isOpeningScanner) ListNotice(stringResource(R.string.scan_opening))
@@ -160,8 +157,6 @@ private fun BookListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (state.refreshError)
-                    item("refresh-error") { ListNotice(refreshFailed, retry, onRefresh) }
                 scanError?.let { error -> item("scan-error") { ListNotice(stringResource(error)) } }
                 if (isOpeningScanner)
                     item("scanner") { ListNotice(stringResource(R.string.scan_opening)) }

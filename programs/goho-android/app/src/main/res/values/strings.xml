@@ -6,7 +6,6 @@
     <string name="books_empty_body">Saved books will appear here.</string>
     <string name="books_refresh">Refresh books</string>
     <string name="books_refreshing">Refreshing books…</string>
-    <string name="books_refresh_failed">Couldn’t refresh books. Your previous list is still here.</string>
     <string name="book_new">New book</string>
     <string name="book_unknown">Unknown book</string>
     <string name="book_reading">Reading cover…</string>
@@ -105,7 +104,6 @@
     <string name="receipts_refreshing">Refreshing receipts…</string>
     <string name="pull_to_refresh">Pull to refresh</string>
     <string name="release_to_refresh">Release to refresh</string>
-    <string name="receipts_refresh_failed">Couldn’t refresh receipts. Your previous list is still here.</string>
     <string name="refresh_failed_indicator">Refresh failed.</string>
     <string name="receipt_item_description">%1$s, %2$s, %3$s</string>
 </resources>

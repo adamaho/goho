@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.components
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -12,30 +11,19 @@ import androidx.compose.ui.semantics.semantics
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 
-/** Polite inline message above a list, with an optional secondary action. */
+/** Polite inline message above a list. */
 @Composable
-fun ListNotice(message: String, action: String? = null, onAction: () -> Unit = {}) {
-    val c = GohoTheme.colors
-    Column(
-        Modifier.fillMaxWidth()
-            .padding(
-                horizontal = GohoSpacing.textInsetFromMargin,
-                vertical = GohoSpacing.contentGap,
-            )
-    ) {
-        Text(
-            message,
-            style = GohoTheme.type.meta,
-            color = c.textSecondary,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        )
-        if (action != null)
-            ActionButton(
-                action,
-                onAction,
-                modifier = Modifier.padding(top = GohoSpacing.contentGap),
-                variant = 2,
-                color = ButtonColor.Grey,
-            )
-    }
+fun ListNotice(message: String) {
+    Text(
+        message,
+        style = GohoTheme.type.meta,
+        color = GohoTheme.colors.textSecondary,
+        modifier =
+            Modifier.fillMaxWidth()
+                .padding(
+                    horizontal = GohoSpacing.textInsetFromMargin,
+                    vertical = GohoSpacing.contentGap,
+                )
+                .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
