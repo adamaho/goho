@@ -284,7 +284,7 @@ private fun BookOverlay(
     val textMillis = GohoMotion.BOOK_OVERLAY_OPEN_MILLIS - textDelay
     val textExitMillis =
         (GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS * GohoMotion.BOOK_OVERLAY_TEXT_FRACTION).toInt()
-    // Text and Close fade in and rise over the last 30% of the flight, and leave first.
+    // Close fades in and rises over the last 30% of the flight, and leaves first.
     val arrive =
         with(visibility) {
             if (reduced) Modifier
@@ -298,6 +298,32 @@ private fun BookOverlay(
                             slideOutVertically(tween(textExitMillis)) { rise },
                 )
         }
+    // Each detail line fades in and settles down into place, staggered after the cover lands.
+    val settle = { index: Int ->
+        with(visibility) {
+            if (reduced) Modifier
+            else {
+                val delay =
+                    GohoMotion.BOOK_OVERLAY_DETAIL_DELAY_MILLIS +
+                        index * GohoMotion.BOOK_OVERLAY_DETAIL_STAGGER_MILLIS
+                val spec = tween<Float>(GohoMotion.BOOK_OVERLAY_DETAIL_MILLIS, delay)
+                Modifier.animateEnterExit(
+                    enter =
+                        fadeIn(spec) +
+                            slideInVertically(
+                                tween(
+                                    GohoMotion.BOOK_OVERLAY_DETAIL_MILLIS,
+                                    delay,
+                                    GohoMotion.emphasizedDecelerate,
+                                )
+                            ) {
+                                -rise
+                            },
+                    exit = fadeOut(tween(textExitMillis)),
+                )
+            }
+        }
+    }
     Box(
         Modifier.fillMaxSize().semantics {
             paneTitle = book.title
@@ -375,8 +401,8 @@ private fun BookOverlay(
                 }
                 BookOverlayText(
                     book,
-                    arrive
-                        .graphicsLayer { alpha = 1f - dragFraction() }
+                    settle,
+                    Modifier.graphicsLayer { alpha = 1f - dragFraction() }
                         .pointerInput(Unit) { detectTapGestures {} },
                 )
             }
@@ -460,7 +486,7 @@ private fun PhotoCover(
 }
 
 @Composable
-private fun BookOverlayText(book: Book, modifier: Modifier) {
+private fun BookOverlayText(book: Book, settle: (index: Int) -> Modifier, modifier: Modifier) {
     val c = GohoTheme.colors
     Column(
         modifier
@@ -474,7 +500,7 @@ private fun BookOverlayText(book: Book, modifier: Modifier) {
             style = GohoTheme.type.bookTitle,
             color = c.textPrimary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { heading() },
+            modifier = settle(0).semantics { heading() },
         )
         Text(
             book.readingLevel?.let { stringResource(R.string.book_author_level, book.author, it) }
@@ -482,8 +508,11 @@ private fun BookOverlayText(book: Book, modifier: Modifier) {
             style = GohoTheme.type.bookAuthor,
             color = c.textSecondary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop),
+            modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop).then(settle(1)),
         )
-        CategoryTag(book.category, Modifier.padding(top = GohoSpacing.bookOverlayTagTop))
+        CategoryTag(
+            book.category,
+            Modifier.padding(top = GohoSpacing.bookOverlayTagTop).then(settle(2)),
+        )
     }
 }
