@@ -1,6 +1,6 @@
 # Goho screens
 
-All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. The native app implements SectionTitle with its anchored menu, switching between Receipts and a Books list (section 8) whose saved books open the book overlay (section 9) with Delete book, and Add. Scan book in Add is an explicitly requested dismiss-only no-op. Title swiping, book scanning and further Books screens remain future design targets.
+All standard actions and the Add button use the October 14 glossy deep-periwinkle / frosted-secondary finishes in `tokens.md`. The native app implements SectionTitle with its anchored menu, switching between Receipts and a Books list (section 8) whose saved books open the book overlay (section 9) with Delete book, and Add with Scan receipt and Scan book through the shared scan preview (section 4). Title swiping and further Books screens remain future design targets.
 
 Three screens, a photo viewer, section navigation and the Add button (section 7), the Books list (section 8), the receipt options sheet, and the list's empty and error states. Widths assume a 412dp-wide phone; everything is fluid horizontally. Copy is final unless marked provisional. Anything not described here is out of scope (see "Scope" in `SKILL.md`).
 
@@ -105,9 +105,19 @@ Opened by tapping the photo area on the details screen. Mockups: `photo-viewer.p
 
 ## 4. Scan preview
 
-Shown after the ML Kit document scanner returns a capture, started from the Add menu’s Scan receipt. Replaces the current centered "Goho" layout.
+Shown after the ML Kit document scanner returns a capture, started from the Add menu’s Scan receipt or Scan book on either section. Both use the same single-page, gallery-enabled JPEG scanner and one native layout, `ScanPreviewScreen(kind, …)`; `ScanKind` (Receipt or Book) supplies only the copy below. The activity remembers the chosen kind while the scanner is open, including across activity recreation, and the kind alone chooses the upload endpoint, never the current section.
 
-**Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): "New receipt" (`screenTitle`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
+| Copy              | Receipt                          | Book                           |
+| ----------------- | -------------------------------- | ------------------------------ |
+| Title             | New receipt                      | New book                       |
+| Photo description | Scanned receipt                  | Scanned book cover             |
+| Upload action     | Upload receipt                   | Upload                         |
+| Uploading tag     | Uploading receipt…               | Uploading cover…               |
+| Submitted tag     | Receipt submitted for processing | Cover submitted for processing |
+
+Failure (“Upload failed. Please try again.”, Retry upload), the busy “Uploading…” label and Cancel are shared.
+
+**Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): the kind's title (`screenTitle`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
 
 **Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the available space above the footer. The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
 
@@ -115,10 +125,12 @@ Shown after the ML Kit document scanner returns a capture, started from the Add 
 
 **Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
 
-- ActionButton (`Primary`) "Upload receipt" with an upload icon. Keeps its current behavior.
-- ActionButton (`Secondary`) "Cancel", no icon. Discards the capture and returns to the Receipts list. System back does the same.
+- ActionButton (`Primary`) "Upload receipt" or "Upload" with an upload icon.
+- ActionButton (`Secondary`) "Cancel", no icon. Discards the capture without uploading and returns to the section the scan started from. System back does the same.
 
-After a successful upload, return to All at scroll position zero. Reset again when the refreshed list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. Failed uploads and cancelled scans do not reset scrolling.
+**Upload.** Both kinds stream the capture as one multipart `file` part with `image/jpeg`: `receipt.jpg` to `POST /receipt-uploads`, `book.jpg` to `POST /book-uploads`. Only HTTP 202 with an upload that has not failed is accepted; any other response, a malformed body, or a transport or file error keeps the same capture with the failure tag and Retry upload, with no navigation.
+
+After an accepted upload, select the kind's section and return to All at scroll position zero. Reset again when the list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. On Books the accepted scan joins the top of a loaded list at once, before uploads and books refresh, and a listing that began before the acceptance is discarded and reloaded so it can't drop the row. The request is consumed once the scan's row, or the book it saved or matched when processing already finished, is listed. Failed uploads and cancelled scans do not reset scrolling.
 
 While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
 
@@ -226,9 +238,9 @@ Wrap the pager in the shared pull-to-refresh container so both pages refresh the
 
 ## 7. Section navigation and add button
 
-Approved October 22, 2026. Add, the title menu and switching sections from the menu are implemented, with a Books list (section 8) and the book overlay (section 9). Scan book is a visible no-op that closes the Add menu, as requested by the user. Title swiping and the book scanning flow remain planned. The complete future book flow is described below. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
+Approved October 22, 2026. Add, the title menu and switching sections from the menu are implemented, with a Books list (section 8) and the book overlay (section 9). Scan receipt and Scan book open the scanner and shared scan preview (section 4). Title swiping remains planned. Mockups: `nav-title-*.png`, `nav-menu-receipts-*.png`, `nav-menu-books-*.png`, `nav-swipe-halfway-*.png`, `nav-add-closed-*.png`, `nav-add-menu-books-*.png` and `nav-add-menu-receipts-*.png` (light and dark). The list content in them is sample data.
 
-**Section order.** The native `Section` enum orders Receipts (receipt icon, count = All count), then Books (book icon, count = number of saved books, excluding unfinished or failed scans), and drives the menu. The Add stack lists Scan book above Scan receipt so Receipts remains nearest the button. When title swiping or book scanning arrives, the same order drives the swipe and each section supplies its scan action.
+**Section order.** The native `Section` enum orders Receipts (receipt icon, count = All count), then Books (book icon, count = number of saved books, excluding unfinished or failed scans), and drives the menu. The Add stack lists Scan book above Scan receipt so Receipts remains nearest the button. When title swiping arrives, the same order drives the swipe.
 
 **SectionTitle** (replaces the plain list title on every section root)
 
@@ -264,7 +276,7 @@ Approved October 22, 2026. Add, the title menu and switching sections from the m
 
 - The plus rotates 45° into a close mark (content description “Close add menu”). A full `scrim` fades in over the section content, below the button and menu.
 - Actions stack right-aligned above the button: bottom action 16dp above it, 10dp between actions. Order is fixed on every section, top to bottom: **Scan book**, **Scan receipt**. Each action is a 52dp pill (`pill`) on `sheet` with the sheet ring and shadow, 16dp start and 20dp end padding, a 20dp icon in `onAccentContainer`, 10dp gap and the label in `rowTitle` / `textPrimary`. Minimum width fits the label; large text grows the pill and wraps rather than truncates.
-- Choosing an action closes the menu immediately and opens the document scanner for that section. Scan receipt uses the existing scan preview and upload. Scan book uses the same preview titled “New book” with “Upload cover”, targeting `POST /book-uploads`; confirm backend support before implementation. After a successful upload, switch to that section if needed and show All at the top; a receipt upload from Books already does this. Cancel returns to the section the scan started from.
+- Choosing an action closes the menu immediately and opens the document scanner for that kind of scan. Both use the shared scan preview (section 4): Scan receipt with “New receipt” / “Upload receipt” to `POST /receipt-uploads`, Scan book with “New book” / “Upload” to `POST /book-uploads`. After a successful upload, switch to that section if needed and show All at the top. Cancel, in the scanner or the preview, returns to the section the scan started from. A scanner that fails to open only logs the error, with no notice.
 - Tap the scrim, the close mark or Back to dismiss. Semantics: `menu` with `menuitem` actions; focus moves to the first action on open and back to the Add button on close.
 
 **Motion**
@@ -276,11 +288,11 @@ Approved October 22, 2026. Add, the title menu and switching sections from the m
 
 ## 8. Books (list)
 
-Native list-only implementation of the October 22 design (`nav-add-closed-*.png`, `nav-menu-books-*.png`). Books follows the Receipts list patterns with its own data; saved rows open the book overlay (section 9) with the Goho pressed fill, where the book can be deleted; scan rows stay display-only. Book scanning, deleting failed scans, editing and search are not implemented.
+Native list-only implementation of the October 22 design (`nav-add-closed-*.png`, `nav-menu-books-*.png`). Books follows the Receipts list patterns with its own data; saved rows open the book overlay (section 9) with the Goho pressed fill, where the book can be deleted; scan rows stay display-only. New scans come from the Add menu’s Scan book (sections 4 and 7). Deleting failed scans, editing and search are not implemented.
 
 **Header:** `SectionTitle` “Books” with the shared menu, then the shared All / Needs attention tabs. All counts every displayed row, including scans in progress and failed scans; the menu's Books count is saved books only.
 
-**Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running.
+**Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running. An accepted cover upload appears at the top of a loaded list immediately and the list refreshes; a listing that began before it, or before a deletion, is discarded and reloaded.
 
 **List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”) come first, newest first. Saved books follow in server order, newest first; each shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag`. A succeeded scan never adds a second row. Needs attention lists failed scans. Covers load only for books with `hasImage`; books without one, or whose cover fails to load, show the small generated cloth cover in their category colour (approved October 22, 2026; see `BookCover` in `components.md` and section 9). See `BookRow` in `components.md`.
 

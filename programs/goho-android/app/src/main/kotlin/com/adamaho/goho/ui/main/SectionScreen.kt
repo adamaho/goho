@@ -45,6 +45,7 @@ fun SectionScreen(
     receiptCount: Int?,
     bookCount: Int?,
     isOpeningScanner: Boolean,
+    onScanBook: () -> Unit,
     onScanReceipt: () -> Unit,
     modifier: Modifier = Modifier,
     addAlpha: () -> Float = { 1f },
@@ -135,8 +136,7 @@ fun SectionScreen(
             open = addMenuOpen,
             actions =
                 listOf(
-                    // Book scanning is deliberately a no-op until its app flow is implemented.
-                    AddMenuAction(R.string.scan_book, R.drawable.ic_add_book) {},
+                    AddMenuAction(R.string.scan_book, R.drawable.ic_add_book, onScanBook),
                     AddMenuAction(R.string.scan_receipt, R.drawable.ic_add_receipt, onScanReceipt),
                 ),
             onDismiss = ::closeAddMenu,

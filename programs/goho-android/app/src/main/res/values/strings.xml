@@ -31,6 +31,10 @@
     <string name="upload_receipt">Upload receipt</string>
     <string name="upload_progress">Uploading receipt…</string>
     <string name="upload_submitted">Receipt submitted for processing</string>
+    <string name="scan_cover_description">Scanned book cover</string>
+    <string name="upload_cover">Upload</string>
+    <string name="upload_cover_progress">Uploading cover…</string>
+    <string name="upload_cover_submitted">Cover submitted for processing</string>
     <string name="upload_failed">Upload failed. Please try again.</string>
     <string name="upload_retry">Retry upload</string>
     <string name="receipts_loading">Loading receipts…</string>
