@@ -17,6 +17,10 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
+/**
+ * [contentColor] overrides the label and icon colour of [color]'s palette, as for the Grey Delete
+ * book action in `onDangerContainer`.
+ */
 @Composable
 fun ActionButton(
     text: String,
@@ -28,9 +32,10 @@ fun ActionButton(
     icon: (@Composable () -> Unit)? = null,
     reserveSpaceFor: List<String> = emptyList(),
     loading: Boolean = false,
+    contentColor: Color = Color.Unspecified,
 ) {
     val c = GohoTheme.colors
-    val contentColor = c.buttonPalette(color).content
+    val content = contentColor.takeOrElse { c.buttonPalette(color).content }
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
@@ -61,7 +66,7 @@ fun ActionButton(
         horizontalArrangement =
             Arrangement.spacedBy(GohoSpacing.buttonIconGap, Alignment.CenterHorizontally),
     ) {
-        CompositionLocalProvider(LocalContentColor provides contentColor) { icon?.invoke() }
+        CompositionLocalProvider(LocalContentColor provides content) { icon?.invoke() }
         Box(contentAlignment = Alignment.Center) {
             val style = if (variant == 1) GohoTheme.type.button else GohoTheme.type.buttonSecondary
             // Measure every label in the same constraints so asynchronous actions never resize.
@@ -76,14 +81,14 @@ fun ActionButton(
             Text(
                 text,
                 style = style,
-                color = contentColor,
+                color = content,
                 textAlign = TextAlign.Center,
                 modifier = if (loading) Modifier.clearAndSetSemantics {}.alpha(0f) else Modifier,
             )
             if (loading)
                 LoadingIcon(
                     modifier = Modifier.size(GohoSpacing.buttonIcon),
-                    color = contentColor,
+                    color = content,
                 )
         }
     }

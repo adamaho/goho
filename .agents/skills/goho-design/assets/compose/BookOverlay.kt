@@ -12,8 +12,11 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -55,12 +58,24 @@ import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
+ * Delete book in the overlay footer: the initial action, its confirmation, the request, failure.
+ */
+internal enum class BookDeletion {
+    Idle,
+    Confirming,
+    Deleting,
+    Failed,
+}
+
+/**
  * The lifted book shared by the overlay and the Books rows. The overlay keeps a snapshot of the
- * tapped [Book], so list refreshes and polling never change or close it.
+ * tapped [Book], so list refreshes and polling never change or close it. While its deletion is
+ * pending, nothing closes the overlay.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Stable
@@ -73,17 +88,51 @@ internal class BookOverlayState(val shared: SharedTransitionScope) {
     var open by mutableStateOf(false)
         private set
 
+    var deletion by mutableStateOf(BookDeletion.Idle)
+        private set
+
+    /**
+     * The book deleted from the overlay: the overlay fades out without the cover flying home, and
+     * its row keeps the empty cover slot while it folds away.
+     */
+    var deletedId by mutableStateOf<String?>(null)
+        private set
+
+    val deleting
+        get() = deletion == BookDeletion.Deleting
+
     fun open(book: Book) {
         this.book = book
+        deletion = BookDeletion.Idle
+        deletedId = null
         open = true
     }
 
     fun close() {
-        open = false
+        if (!deleting) open = false
+    }
+
+    fun confirmDeletion() {
+        if (deletion == BookDeletion.Idle) deletion = BookDeletion.Confirming
+    }
+
+    /**
+     * Sends one request for the snapshot book; a failure unlocks the overlay to retry or cancel.
+     */
+    fun delete(scope: CoroutineScope, deleteBook: suspend (Book) -> Boolean) {
+        val book = book
+        if (book == null || !open || deleting) return
+        deletion = BookDeletion.Deleting
+        scope.launch {
+            if (deleteBook(book)) {
+                deletedId = book.id
+                open = false
+            } else deletion = BookDeletion.Failed
+        }
     }
 
     /** Whether [bookId]'s cover is lifted out of its row. */
-    fun isLifted(bookId: String) = open && book?.id == bookId
+    fun isLifted(bookId: String) = (open && book?.id == bookId) || deletedId == bookId
 
     val coverBounds = BoundsTransform { _, _ ->
         tween(
@@ -107,22 +156,54 @@ private fun coverResize(photo: Boolean) =
     if (photo) SharedTransitionScope.ResizeMode.RemeasureToBounds
     else SharedTransitionScope.ResizeMode.scaleToBounds()
 
+/** Close and the footer leave over the first 30% of the close. */
+private val textExitMillis =
+    (GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS * GohoMotion.BOOK_OVERLAY_TEXT_FRACTION).toInt()
+
 /**
  * Hosts the book overlay above [content], including the section header and Add button. Rows and the
  * overlay share one [SharedTransitionLayout] so the cover flies between them; [content] receives
- * the action that lifts a saved book.
+ * the action that lifts a saved book and the opacity of the screen's floating action, which gives
+ * way to the overlay. [deleteBook] returns whether the server deleted it.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun BookOverlayHost(
     covers: ThumbnailCache,
     loadFullCover: suspend (String) -> ImageBitmap?,
-    content: @Composable (openBook: (Book) -> Unit) -> Unit,
+    deleteBook: suspend (Book) -> Boolean,
+    content: @Composable (openBook: (Book) -> Unit, actionAlpha: () -> Float) -> Unit,
 ) {
     val reduced = rememberReducedMotion()
+    val scope = rememberCoroutineScope()
     SharedTransitionLayout {
         val state = remember(this) { BookOverlayState(this) }
         SideEffect { state.reducedMotion = reduced }
+        // One transition presents the overlay and hides the screen's floating action, which would
+        // otherwise show through the frost behind the footer.
+        val presentation = updateTransition(state.open, label = "Book overlay")
+        val actionAlpha by
+            presentation.animateFloat(
+                transitionSpec = {
+                    when {
+                        // Gone at once; back as the overlay finishes fading.
+                        reduced ->
+                            if (targetState) snap()
+                            else snap(GohoMotion.BOOK_OVERLAY_REDUCED_MILLIS)
+                        // Fades out under the frost.
+                        targetState -> tween(GohoMotion.BOOK_OVERLAY_FROST_MILLIS)
+                        // Returns with the clearing frost once the footer has left.
+                        else ->
+                            tween(
+                                GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS - textExitMillis,
+                                textExitMillis,
+                            )
+                    }
+                },
+                label = "Book overlay floating action",
+            ) {
+                if (it) 0f else 1f
+            }
         val canBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         val blur by
             animateFloatAsState(
@@ -151,19 +232,26 @@ internal fun BookOverlayHost(
                         .focusGroup()
                         .then(if (state.open) Modifier.clearAndSetSemantics {} else Modifier)
                 ) {
-                    content(state::open)
+                    content(state::open) { actionAlpha }
                 }
-                AnimatedVisibility(
-                    visible = state.open,
+                presentation.AnimatedVisibility(
+                    visible = { it },
                     enter =
                         if (reduced) fadeIn(tween(GohoMotion.BOOK_OVERLAY_REDUCED_MILLIS))
                         else EnterTransition.None,
+                    // A deleted book has no row to fly home to, so the whole overlay fades.
                     exit =
-                        if (reduced) fadeOut(tween(GohoMotion.BOOK_OVERLAY_REDUCED_MILLIS))
-                        else ExitTransition.None,
+                        when {
+                            reduced -> fadeOut(tween(GohoMotion.BOOK_OVERLAY_REDUCED_MILLIS))
+                            state.deletedId != null ->
+                                fadeOut(tween(GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS))
+                            else -> ExitTransition.None
+                        },
                 ) {
                     state.book?.let { book ->
-                        BookOverlay(book, state, this, covers, loadFullCover, canBlur)
+                        BookOverlay(book, state, this, covers, loadFullCover, canBlur) {
+                            state.delete(scope, deleteBook)
+                        }
                     }
                 }
             }
@@ -220,6 +308,7 @@ private fun BookOverlay(
     covers: ThumbnailCache,
     loadFullCover: suspend (String) -> ImageBitmap?,
     canBlur: Boolean,
+    onDelete: () -> Unit,
 ) {
     val c = GohoTheme.colors
     val reduced = state.reducedMotion
@@ -252,13 +341,19 @@ private fun BookOverlay(
                     return Offset(0f, consumed)
                 }
 
-                // A downward drag the content can't scroll (at the top) moves the cover.
+                // A downward drag the content can't scroll (at the top) moves the cover, except
+                // while a deletion is pending.
                 override fun onPostScroll(
                     consumed: Offset,
                     available: Offset,
                     source: NestedScrollSource,
                 ): Offset {
-                    if (source != NestedScrollSource.UserInput || available.y <= 0f || !state.open)
+                    if (
+                        source != NestedScrollSource.UserInput ||
+                            available.y <= 0f ||
+                            !state.open ||
+                            state.deleting
+                    )
                         return Offset.Zero
                     drag += available.y
                     return Offset(0f, available.y)
@@ -266,7 +361,10 @@ private fun BookOverlay(
 
                 override suspend fun onPreFling(available: Velocity): Velocity {
                     if (drag <= 0f) return Velocity.Zero
-                    if (drag > dismissDistance || available.y > dismissVelocity) state.close()
+                    if (
+                        !state.deleting && (drag > dismissDistance || available.y > dismissVelocity)
+                    )
+                        state.close()
                     else
                         settle = scope.launch {
                             animate(drag, 0f, animationSpec = GohoPhotoMotion.settle) { value, _ ->
@@ -282,8 +380,6 @@ private fun BookOverlay(
     val textDelay =
         (GohoMotion.BOOK_OVERLAY_OPEN_MILLIS * (1f - GohoMotion.BOOK_OVERLAY_TEXT_FRACTION)).toInt()
     val textMillis = GohoMotion.BOOK_OVERLAY_OPEN_MILLIS - textDelay
-    val textExitMillis =
-        (GohoMotion.BOOK_OVERLAY_CLOSE_MILLIS * GohoMotion.BOOK_OVERLAY_TEXT_FRACTION).toInt()
     // Close fades in and rises over the last 30% of the flight, and leaves first.
     val arrive =
         with(visibility) {
@@ -354,19 +450,20 @@ private fun BookOverlay(
                     )
                 )
         )
-        // The cover and text are centred below the Close bar and above the navigation bar; when
-        // taller than that space they start at its top and scroll while Close stays fixed.
-        BoxWithConstraints(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize()
+                // Taps on the frost close; the cover, text and footer swallow theirs.
+                .pointerInput(state) { detectTapGestures { state.close() } }
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
+            // The cover starts 76dp below the top inset. When the cover and text are taller than
+            // the space above the footer they scroll, while Close and the footer stay fixed.
             Column(
-                Modifier.fillMaxSize()
-                    // Taps on the frost close; the cover and text block swallow theirs.
-                    .pointerInput(state) { detectTapGestures { state.close() } }
+                Modifier.weight(1f)
+                    .fillMaxWidth()
                     .nestedScroll(swipe)
                     .verticalScroll(rememberScrollState())
-                    .heightIn(min = maxHeight)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(top = GohoSpacing.detailTopBarHeight),
-                verticalArrangement = Arrangement.Center,
+                    .padding(top = GohoSpacing.bookOverlayCoverTop),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 val image = full ?: thumbnail
@@ -376,7 +473,7 @@ private fun BookOverlay(
                         with(state.shared) {
                             // Opaque for the whole flight out. On the way home it's drawn above
                             // the row cover and fades out over it (alone, when the row is off
-                            // screen).
+                            // screen or its book was deleted).
                             Modifier.sharedBounds(
                                 rememberSharedContentState(coverKey(book.id)),
                                 visibility,
@@ -396,7 +493,10 @@ private fun BookOverlay(
                         // A generated or still-loading cover isn't tappable and doesn't close.
                         .pointerInput(Unit) { detectTapGestures {} }
                 ) {
-                    if (image != null) PhotoCover(image, full, coverModifier) { viewerOpen = true }
+                    if (image != null)
+                        PhotoCover(image, full, !state.deleting, coverModifier) {
+                            viewerOpen = true
+                        }
                     else GeneratedBookCover(book, BookCoverSize.Large, coverModifier)
                 }
                 BookOverlayText(
@@ -406,10 +506,21 @@ private fun BookOverlay(
                         .pointerInput(Unit) { detectTapGestures {} },
                 )
             }
+            BookOverlayFooter(
+                deletion = state.deletion,
+                onDeleteClick = state::confirmDeletion,
+                onConfirm = onDelete,
+                onCancel = state::close,
+                modifier =
+                    Modifier.then(arrive)
+                        .graphicsLayer { alpha = 1f - dragFraction() }
+                        .pointerInput(Unit) { detectTapGestures {} },
+            )
         }
         IconButton(
             contentDescription = stringResource(R.string.book_close),
             onClick = state::close,
+            enabled = !state.deleting,
             modifier =
                 Modifier.align(Alignment.TopEnd)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
@@ -434,12 +545,14 @@ private fun BookOverlay(
 
 /**
  * A photo cover at its own aspect ratio inside the 260×292dp cover box, never cropped. The upscaled
- * thumbnail stands in until the [full] image arrives; only then does a tap open the viewer.
+ * thumbnail stands in until the [full] image arrives; only then does a tap open the viewer, unless
+ * [enabled] is false while a deletion is pending.
  */
 @Composable
 private fun PhotoCover(
     image: ImageBitmap,
     full: ImageBitmap?,
+    enabled: Boolean,
     modifier: Modifier,
     onOpen: () -> Unit,
 ) {
@@ -458,6 +571,7 @@ private fun PhotoCover(
                     Modifier.clickable(
                             interactionSource = interaction,
                             indication = null,
+                            enabled = enabled,
                             role = Role.Button,
                             onClickLabel = description,
                             onClick = onOpen,

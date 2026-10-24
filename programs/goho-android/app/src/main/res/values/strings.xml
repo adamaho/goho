@@ -13,6 +13,11 @@
     <string name="book_close">Close</string>
     <string name="book_cover_open">View book cover</string>
     <string name="book_cover_description">Book cover, %1$s</string>
+    <string name="book_options">Book options</string>
+    <string name="book_delete">Delete book</string>
+    <string name="book_deleting">Deleting…</string>
+    <string name="book_delete_failed">Couldn’t delete this book. Try again.</string>
+    <string name="book_cancel">Cancel</string>
     <string name="section_title_description">Section: %1$s</string>
     <string name="section_menu_title">Sections</string>
     <string name="section_menu_expanded">Menu expanded</string>
@@ -27,6 +32,10 @@
     <string name="upload_receipt">Upload receipt</string>
     <string name="upload_progress">Uploading receipt…</string>
     <string name="upload_submitted">Receipt submitted for processing</string>
+    <string name="scan_cover_description">Scanned book cover</string>
+    <string name="upload_cover">Upload</string>
+    <string name="upload_cover_progress">Uploading cover…</string>
+    <string name="upload_cover_submitted">Cover submitted for processing</string>
     <string name="upload_failed">Upload failed. Please try again.</string>
     <string name="upload_retry">Retry upload</string>
     <string name="receipts_loading">Loading receipts…</string>

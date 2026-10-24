@@ -25,7 +25,7 @@ All three have a fine matte clay texture, soft studio light, smooth rounded volu
 
 ## Approved Books empty-state pose
 
-[Bram holding a book](../assets/illustrations/status-no-books.png), approved October 23, 2026, is the selected “No books yet” illustration. He gently cradles one closed cream hardcover with a blank cover, visible ivory pages and a warm oatmeal spine. Keep his original face, long round arms, broad lilac body, tiny feet and ivory horns. The transparent master is 1350×1165 RGBA; [provenance and its SHA-256](../assets/illustrations/bram/no-books.prompts.json) identify the exact selected image. This is a status pose, not a replacement for the neutral identity master. It is approved design artwork awaiting app integration; the native empty Books state remains text-only.
+[Bram holding a book](../assets/illustrations/status-no-books.png), approved October 23, 2026, is the selected “No books yet” illustration. He gently cradles one closed cream hardcover with a blank cover, visible ivory pages and a warm oatmeal spine. Keep his original face, long round arms, broad lilac body, tiny feet and ivory horns. The transparent master is 1350×1165 RGBA; [provenance and its SHA-256](../assets/illustrations/bram/no-books.prompts.json) identify the exact selected image. This is a status pose, not a replacement for the neutral identity master. The native empty Books state uses this exact image in both themes through the shared `StatusContent` illustration slot.
 
 ## Approved search-empty-state pose
 
@@ -37,7 +37,7 @@ In the approved portrait, Bram is on the viewer's left, Mira on the right, and t
 
 ## Application scope
 
-The family images are durable **brand references**. They do not authorize new app screens, extra receipt states, or a replacement for the approved Bram status artwork. The supported in-app illustrations remain the no-receipts pose, calm “All good” thumbs-up, and gentle load-error shrug documented in [Bram sources](../assets/illustrations/bram/README.md). The Receipts header remains text-only.
+The family images are durable **brand references**. They do not authorize new app screens, extra receipt states, or a replacement for the approved Bram status artwork. The supported in-app illustrations are the no-receipts pose, book-holding “No books yet” pose, calm “All good” thumbs-up, and gentle load-error shrug documented in [Bram sources](../assets/illustrations/bram/README.md). The Receipts header remains text-only.
 
 The launcher icons feature **Bram, Mira, and the child together**, following the approved family portrait. Use the same compact family adaptation for production and development, with a small development badge. Preserve all three characters and express the build difference through the surrounding icon treatment. Launcher variants are derived assets, not new identity masters. Keep their generated review images in ignored `.data/launcher-preview/`. See [launcher icons](launcher-icons.md) for the shared source recipe, development badge, Android resources, and regeneration.
 

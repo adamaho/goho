@@ -21,18 +21,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.LayerOutsets
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.unit.DpOffset
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import kotlinx.coroutines.delay
@@ -159,7 +162,9 @@ fun AddMenu(
                         modifier =
                             Modifier.graphicsLayer {
                                     val reveal = actionProgress[index].value
-                                    compositingStrategy = CompositingStrategy.ModulateAlpha
+                                    // Keep the face and shadow together throughout the fade.
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                    outsets = LayerOutsets(GohoSpacing.addMenuShadowPadding)
                                     alpha = reveal.coerceIn(0f, 1f)
                                     translationY =
                                         if (reduced) 0f
@@ -198,12 +203,16 @@ private fun AddMenuRow(
         modifier
             .heightIn(min = GohoSpacing.buttonHeight)
             .pressFeedback { progress }
-            .shadow(
-                GohoSpacing.sheetElevation * (1f - pressed),
+            // Keep the shadow's falloff inside the scroll viewport's drawing padding.
+            // Elevation shadows grow with screen position and were cut off below the stack.
+            .dropShadow(
                 GohoShapes.pill,
-                clip = false,
-                ambientColor = colors.shadow,
-                spotColor = colors.shadow,
+                Shadow(
+                    radius = GohoSpacing.addMenuShadowRadius,
+                    offset = DpOffset(GohoSpacing.flatElevation, GohoSpacing.addMenuShadowY),
+                    color = colors.shadow,
+                    alpha = colors.secondaryWideShadowAlpha * (1f - pressed),
+                ),
             )
             .background(
                 lerp(

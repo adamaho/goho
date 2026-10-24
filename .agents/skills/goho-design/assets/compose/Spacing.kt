@@ -60,9 +60,11 @@ object GohoSpacing {
     val cardVerticalPadding = 4.dp
     val rowVertical = 12.dp
     val rowMinHeight = 72.dp
+    val rowPressInset = 6.dp // List row press fill inset: card radius - heldRow radius.
     val thumbWidth = 40.dp
     val thumbHeight = 48.dp
-    val coverHeight = 56.dp // Book covers share thumbWidth and the divider inset.
+    val coverWidth = 48.dp // Book row covers; receipts keep thumbWidth.
+    val coverHeight = 56.dp
     val coverIcon = 20.dp
     val coverDot = 8.dp
     val coverDotInset = 6.dp
@@ -89,6 +91,7 @@ object GohoSpacing {
     val bookCoverShadowRadius = 34.dp
     val bookCoverShadowY = 16.dp
     val bookCoverShadowSpread = (-12).dp
+    val bookOverlayCoverTop = 76.dp // Below the top inset, clearing the Close bar.
     val bookOverlayTextTop = 24.dp
     val bookOverlayTextSide = 24.dp
     val bookOverlayAuthorTop = 6.dp
@@ -97,7 +100,9 @@ object GohoSpacing {
     val bookOverlayRise = 8.dp
     val bookOverlayDismissDistance = 96.dp
     val thumbToText = 12.dp
+    val textToTag = 16.dp // Book rows: metadata to the end tag.
     val dividerStart = 68.dp // cardPadding + thumbWidth + thumbToText
+    val bookDividerStart = 76.dp // cardPadding + coverWidth + thumbToText
     val detailTopBarHeight = 56.dp
     val detailBackIcon = 20.dp
     val detailMenuDotRadius = 1.5.dp
@@ -157,6 +162,8 @@ object GohoSpacing {
     val addMenuStart = 16.dp
     val addMenuGap = 10.dp
     val addMenuButtonGap = 16.dp
+    val addMenuShadowRadius = 16.dp
+    val addMenuShadowY = 4.dp
     val addMenuShadowPadding = sheetElevation * 2
     val iconStroke = 2.dp
     val compactWidth = 360.dp

@@ -43,6 +43,7 @@ import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
+import com.adamaho.goho.ui.main.ScanKind
 import com.adamaho.goho.ui.main.ScanPreviewScreen
 import com.adamaho.goho.ui.main.Section
 import com.adamaho.goho.ui.main.SectionScreen
@@ -56,6 +57,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.IOException
 import java.time.ZoneId
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -76,12 +78,18 @@ import okio.BufferedSink
 
 @Serializable private data class ReceiptDetailRoute(val receiptId: String) : NavKey
 
+/** A scanned image waiting in the preview, with the kind of scan that decides its upload. */
+private data class Capture(val kind: ScanKind, val imageUri: Uri)
+
 class MainActivity : ComponentActivity() {
-    private var scannedImageUri by mutableStateOf<Uri?>(null)
+    private var capture by mutableStateOf<Capture?>(null)
+    /** The kind of the open scanner, saved in case this activity is recreated behind it. */
+    private var scannerKind: ScanKind? = null
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
-    private var uploadToReveal by mutableStateOf<String?>(null)
+    private var receiptUploadToReveal by mutableStateOf<String?>(null)
+    private var bookUploadToReveal by mutableStateOf<UUID?>(null)
     private var section by mutableStateOf(Section.Receipts)
     private var pollingJob: Job? = null
     private var refreshAfterCurrent = false
@@ -104,14 +112,16 @@ class MainActivity : ComponentActivity() {
 
     private val scannerLauncher =
         registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
+            val kind = scannerKind
+            scannerKind = null
+            if (result.resultCode == RESULT_OK && kind != null) {
                 val imageUri =
                     GmsDocumentScanningResult.fromActivityResultIntent(result.data)
                         ?.pages
                         ?.firstOrNull()
                         ?.imageUri
                 if (imageUri != null) {
-                    scannedImageUri = imageUri
+                    capture = Capture(kind, imageUri)
                     uploadStatus = UploadStatus.Ready
                 }
             }
@@ -121,6 +131,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+        scannerKind = savedInstanceState?.getString(SCANNER_KIND_KEY)?.let(ScanKind::valueOf)
         section =
             preferences.getString(SECTION_KEY, null)?.let { saved ->
                 Section.entries.find { it.name == saved }
@@ -132,8 +143,8 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    val capturedImage = scannedImageUri
-                    if (capturedImage == null) {
+                    val captured = capture
+                    if (captured == null) {
                         NavDisplay(
                             backStack = backStack,
                             onBack = { if (backStack.size > 1) backStack.removeLastOrNull() },
@@ -168,7 +179,8 @@ class MainActivity : ComponentActivity() {
                                             BookOverlayHost(
                                                 covers = books.covers,
                                                 loadFullCover = books::loadFullCover,
-                                            ) { openBook ->
+                                                deleteBook = { books.delete(it.id) },
+                                            ) { openBook, actionAlpha ->
                                                 SectionScreen(
                                                     section = section,
                                                     onSectionChange = ::selectSection,
@@ -178,16 +190,21 @@ class MainActivity : ComponentActivity() {
                                                             bookState.books.size
                                                         else null,
                                                     isOpeningScanner = isOpeningScanner,
-                                                    onScanReceipt = ::openScanner,
+                                                    onScanBook = { openScanner(ScanKind.Book) },
+                                                    onScanReceipt = {
+                                                        openScanner(ScanKind.Receipt)
+                                                    },
+                                                    addAlpha = actionAlpha,
                                                 ) { menuOpen ->
                                                     when (section) {
                                                         Section.Receipts ->
                                                             ReceiptOverview(
                                                                 state = overviewState,
                                                                 menuOpen = menuOpen,
-                                                                uploadToReveal = uploadToReveal,
+                                                                uploadToReveal =
+                                                                    receiptUploadToReveal,
                                                                 onUploadRevealed = {
-                                                                    uploadToReveal = null
+                                                                    receiptUploadToReveal = null
                                                                 },
                                                                 deleteReceipt = ::deleteReceipt,
                                                                 thumbnails = receiptThumbnails,
@@ -215,6 +232,13 @@ class MainActivity : ComponentActivity() {
                                                                     )
                                                                 },
                                                                 onBookClick = openBook,
+                                                                deleteBook = {
+                                                                    books.delete(it.id)
+                                                                },
+                                                                uploadToReveal = bookUploadToReveal,
+                                                                onUploadRevealed = {
+                                                                    bookUploadToReveal = null
+                                                                },
                                                             )
                                                     }
                                                 }
@@ -245,12 +269,13 @@ class MainActivity : ComponentActivity() {
                         )
                     } else {
                         ScanPreviewScreen(
-                            scannedImageUri = capturedImage,
+                            kind = captured.kind,
+                            scannedImageUri = captured.imageUri,
                             uploadStatus = uploadStatus,
-                            onUploadClick = ::uploadReceipt,
+                            onUploadClick = ::upload,
                             onCancelClick = {
                                 if (uploadStatus != UploadStatus.Uploading) {
-                                    scannedImageUri = null
+                                    capture = null
                                     uploadStatus = UploadStatus.Ready
                                 }
                             },
@@ -259,6 +284,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(SCANNER_KIND_KEY, scannerKind?.name)
     }
 
     override fun onStart() {
@@ -415,7 +445,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun openScanner() {
+    private fun openScanner(kind: ScanKind) {
         if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
 
         isOpeningScanner = true
@@ -431,6 +461,7 @@ class MainActivity : ComponentActivity() {
             .getStartScanIntent(this)
             .addOnSuccessListener { intentSender ->
                 isOpeningScanner = false
+                scannerKind = kind
                 scannerLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
             }
             .addOnFailureListener { error ->
@@ -439,8 +470,8 @@ class MainActivity : ComponentActivity() {
             }
     }
 
-    private fun uploadReceipt() {
-        val imageUri = scannedImageUri ?: return
+    private fun upload() {
+        val captured = capture ?: return
         if (
             isOpeningScanner ||
                 uploadStatus == UploadStatus.Uploading ||
@@ -449,6 +480,50 @@ class MainActivity : ComponentActivity() {
             return
 
         uploadStatus = UploadStatus.Uploading
+        lifecycleScope.launch {
+            val accepted =
+                when (captured.kind) {
+                    ScanKind.Receipt -> uploadReceipt(captured.imageUri)
+                    ScanKind.Book -> uploadBook(captured.imageUri)
+                }
+            uploadStatus =
+                if (accepted) {
+                    capture = null
+                    UploadStatus.Submitted
+                } else UploadStatus.Failed
+        }
+    }
+
+    private suspend fun uploadReceipt(imageUri: Uri): Boolean =
+        try {
+            val response = receiptUploadsApi.receiptUploadsCreate(jpegPart(imageUri, "receipt.jpg"))
+            val upload = response.body()?.data
+            if (
+                response.code() == 202 &&
+                    upload != null &&
+                    upload.status != ReceiptUploadsCreate202ResponseData.Status.failed
+            ) {
+                receiptUploadToReveal = upload.id.toString()
+                selectSection(Section.Receipts)
+                refreshHistory()
+                true
+            } else false
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoUpload", "Receipt upload failed", error)
+            false
+        }
+
+    /** Books lists an accepted scan right away, then reveals it at the top of All. */
+    private suspend fun uploadBook(imageUri: Uri): Boolean {
+        val uploadId = books.upload(jpegPart(imageUri, "book.jpg")) ?: return false
+        bookUploadToReveal = uploadId
+        selectSection(Section.Books)
+        return true
+    }
+
+    /** Streams the scanned JPEG as the single multipart file part both upload endpoints expect. */
+    private fun jpegPart(imageUri: Uri, fileName: String): MultipartBody.Part {
         val body =
             object : RequestBody() {
                 override fun contentType() = "image/jpeg".toMediaType()
@@ -458,38 +533,15 @@ class MainActivity : ComponentActivity() {
                 override fun writeTo(sink: BufferedSink) {
                     val input =
                         contentResolver.openInputStream(imageUri)
-                            ?: throw IOException("Scanned receipt image is unavailable")
+                            ?: throw IOException("Scanned image is unavailable")
                     input.use { it.copyTo(sink.outputStream()) }
                 }
             }
-        val file = MultipartBody.Part.createFormData("file", "receipt.jpg", body)
-        lifecycleScope.launch {
-            uploadStatus =
-                try {
-                    val response = receiptUploadsApi.receiptUploadsCreate(file)
-                    val status = response.body()?.data?.status
-                    if (
-                        response.code() == 202 &&
-                            status != null &&
-                            status != ReceiptUploadsCreate202ResponseData.Status.failed
-                    ) {
-                        uploadToReveal = response.body()?.data?.id?.toString()
-                        selectSection(Section.Receipts)
-                        scannedImageUri = null
-                        refreshHistory()
-                        UploadStatus.Submitted
-                    } else {
-                        UploadStatus.Failed
-                    }
-                } catch (error: Exception) {
-                    if (error is CancellationException) throw error
-                    Log.w("GohoUpload", "Receipt upload failed", error)
-                    UploadStatus.Failed
-                }
-        }
+        return MultipartBody.Part.createFormData("file", fileName, body)
     }
 
     private companion object {
         const val SECTION_KEY = "section"
+        const val SCANNER_KIND_KEY = "scannerKind"
     }
 }
