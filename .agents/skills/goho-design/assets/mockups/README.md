@@ -4,6 +4,18 @@
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
 
+## Book scanning (native preview)
+
+October 24, 2026: unedited captures from the Goho Dev APK's existing Compose preview tooling on the Pixel 9 API 36 emulator, at 720×1600px and 280dpi. They render the production shared `ScanPreviewScreen` with a synthetic cover; they are preview-layout evidence, not captures of a completed scanner or network upload. The ready book action is **Upload**, as requested.
+
+- [Ready, light](book-scanning-native/preview-light.png) and [Ready, dark](book-scanning-native/preview-dark.png): New book, the cover photo, Upload and Cancel.
+- [Ready, large dark](book-scanning-native/preview-large-dark.png): the same controls at 1.5× system text size.
+- [Uploading, light](book-scanning-native/uploading-light.png): Uploading cover… with the shared tag, disabled Uploading… and Cancel actions; Back stays on the preview. This state was selected through the existing preview's local callback.
+
+The ordinary app's Scan book action reached Google's document-scanner activity, but this emulator could not download its scanner module (Play Store/Phonesky unavailable). Full native capture/result delivery, upload retry and accepted-upload navigation remain unverified on a compatible device. Separately, two disposable JPEG covers sent to an isolated real backend returned 202, completed processing and matched one saved book. That checks the existing server contract, not the Android upload path. Android build, lint and Kotlin formatting passed; no automated Android tests or harnesses were added or run.
+
+`assets/compose/ScanPreviewScreen.kt`, `BookOverview.kt` and `SectionScreen.kt` mirror the native sources. See [Scan preview](../../references/screens.md#4-scan-preview) for the implemented flow and copy.
+
 ## Book overlay, lifted book (October 22, 2026, approved design)
 
 Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. `assets/compose/BookOverlay.kt`, `BookOverlayFooter.kt` and `GeneratedBookCover.kt` mirror the native implementation, including the Delete book states. These renders are design references, not native captures.
@@ -31,7 +43,7 @@ Native source mirrors: `BookOverlay.kt`, `BookOverlayFooter.kt`, `BookOverview.k
 
 ## Section navigation and add button (October 22, 2026, approved design)
 
-Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu, switching sections from it and the Books list with the lifted-book overlay are implemented; title swiping and book scanning remain planned. Native title-menu, Add and Books captures below show the implemented controls; older captures with Scan are historical for that control.
+Source: [October 22 design handoff](https://drive.google.com/file/d/1qV_D8jy56kDQ-hD3nW1luifS23GXKKEJ/view), `goho-design-2026-10-22.zip`. Design renders from the Goho brand canvas (“Goho navigation and add button”) at 360dp width and 2× (720×1480px), light and dark. They are approved design references, not emulator captures. The [section 7 spec](../../references/screens.md#7-section-navigation-and-add-button) wins where they differ. List rows are sample data; book rows follow the receipt row patterns and covers are illustrative. The generic Grey category tags in these navigation renders do not replace the server-provided category icons and colours. The title menu, switching sections from it, the Books list with the lifted-book overlay and book scanning are implemented; title swiping remains planned. Native title-menu, Add and Books captures below show the implemented controls; older captures with Scan are historical for that control.
 
 - `nav-title-light.png`, `nav-title-dark.png`: Receipts with the `SectionTitle` chevron and the round Add button.
 - `nav-menu-receipts-light.png`, `nav-menu-receipts-dark.png`, `nav-menu-books-light.png`, `nav-menu-books-dark.png`: the section menu open from each section, current section tinted, with counts.
@@ -97,7 +109,7 @@ The screen overlay fades linearly over 240ms in and 180ms out, independent of th
 
 The menu now springs from 0.92 scale and rises 8dp with 45ms between entries, nearest Add first. Opening gives one ContextClick haptic, then a lighter SegmentTick for each entry at 45ms and 90ms. Closing reverses the stagger; reduced motion snaps without entry ticks.
 
-Scan receipt calls the existing document scanner. Scan book deliberately only closes the menu, as requested by the user. No Books screen or book upload is implemented. Manual checks covered menu dismissal, the book no-op, scanner handoff, both themes, large text, reduced motion and loading placement. The emulator’s Google scanner returned a Play services error after handoff, so a complete capture/upload was not verified. Build, lint, Kotlin formatting and repository checks passed; no automated Android tests or harnesses were added or run.
+Scan receipt calls the existing document scanner. At the time of these captures, Scan book deliberately only closed the menu; it now opens the scanner and book upload (see [screens.md section 4](../../references/screens.md#4-scan-preview)). Manual checks covered menu dismissal, the book no-op, scanner handoff, both themes, large text, reduced motion and loading placement. The emulator’s Google scanner returned a Play services error after handoff, so a complete capture/upload was not verified. Build, lint, Kotlin formatting and repository checks passed; no automated Android tests or harnesses were added or run.
 
 Native source references: `assets/compose/AddButton.kt`, `AddMenu.kt`, `ReceiptOverview.kt`, `Spacing.kt` and `Motion.kt`. Menu icon vectors are in `assets/icons/navigation/`.
 
