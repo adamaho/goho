@@ -3,12 +3,9 @@ package com.adamaho.goho.ui.main
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -22,7 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
@@ -350,10 +346,8 @@ private fun ReceiptRow(
     onReceiptOptions: (ReceiptListEntry) -> Unit,
     thumbnails: ThumbnailCache,
 ) {
-    val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val reduced = rememberReducedMotion()
     var held by remember { mutableStateOf(false) }
     LaunchedEffect(pressed) {
         held = false
@@ -362,12 +356,6 @@ private fun ReceiptRow(
             held = true
         }
     }
-    val scale by
-        animateFloatAsState(
-            if (held) GohoMotion.HOLD_SCALE else 1f,
-            if (reduced) snap() else if (held) GohoMotion.pressIn else GohoMotion.pressOut,
-            label = "Receipt hold",
-        )
     val optionsLabel = stringResource(R.string.receipt_options)
     val clickable =
         if (entry != null && entry.status != ReceiptListStatus.Processing)
@@ -400,11 +388,7 @@ private fun ReceiptRow(
         modifier =
             Modifier.fillMaxWidth()
                 .then(clickable)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .background(c.surface)
+                .listRowPressFeedback(interaction, held)
                 .heightIn(min = GohoSpacing.rowMinHeight)
                 .semantics(mergeDescendants = true) {}
                 .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),

@@ -24,17 +24,24 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
-import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-/** One receipt header stays mounted while the actions below change inside the same sheet. */
+/**
+ * One item's header stays mounted while the actions below change inside the same sheet. The caller
+ * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
+ * menu action, the confirmation pane and its button.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReceiptOptionsSheet(
+internal fun OptionsSheet(
+    title: String,
+    deleteLabel: String,
+    deletingLabel: String,
+    deleteFailedMessage: String,
+    cancelLabel: String,
     header: @Composable () -> Unit,
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
@@ -52,8 +59,7 @@ internal fun ReceiptOptionsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { !deleting || deleted },
         )
-    val title =
-        stringResource(if (confirming) R.string.receipt_delete else R.string.receipt_options)
+    val pane = if (confirming) deleteLabel else title
     fun dismiss() {
         if (!deleting)
             scope.launch {
@@ -85,7 +91,7 @@ internal fun ReceiptOptionsSheet(
                 .clip(GohoShapes.sheet)
                 .background(c.sheet)
                 .verticalScroll(rememberScrollState())
-                .semantics { paneTitle = title }
+                .semantics { paneTitle = pane }
         ) {
             Box(
                 Modifier.align(Alignment.CenterHorizontally)
@@ -125,7 +131,7 @@ internal fun ReceiptOptionsSheet(
                             }
                         )
                 },
-                label = "Receipt sheet content",
+                label = "Options sheet content",
             ) { showConfirmation ->
                 if (!showConfirmation) {
                     Column(Modifier.fillMaxWidth()) {
@@ -168,7 +174,7 @@ internal fun ReceiptOptionsSheet(
                                 c.onDangerContainer,
                             )
                             Text(
-                                stringResource(R.string.receipt_delete),
+                                deleteLabel,
                                 style = GohoTheme.type.rowTitle,
                                 color = c.onDangerContainer,
                             )
@@ -185,7 +191,7 @@ internal fun ReceiptOptionsSheet(
                     ) {
                         if (failed) {
                             Text(
-                                stringResource(R.string.receipt_delete_failed),
+                                deleteFailedMessage,
                                 style = GohoTheme.type.body,
                                 color = c.onDangerContainer,
                                 modifier =
@@ -194,9 +200,7 @@ internal fun ReceiptOptionsSheet(
                             Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
                         }
                         ActionButton(
-                            stringResource(
-                                if (deleting) R.string.receipt_deleting else R.string.receipt_delete
-                            ),
+                            if (deleting) deletingLabel else deleteLabel,
                             onClick = {
                                 if (!deleting) {
                                     deleting = true
@@ -227,7 +231,7 @@ internal fun ReceiptOptionsSheet(
                         )
                         Spacer(Modifier.height(GohoSpacing.buttonGap))
                         ActionButton(
-                            stringResource(R.string.receipt_cancel),
+                            cancelLabel,
                             ::dismiss,
                             variant = 2,
                             color = ButtonColor.Grey,

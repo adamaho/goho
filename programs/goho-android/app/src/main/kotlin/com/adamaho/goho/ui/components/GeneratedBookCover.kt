@@ -22,7 +22,7 @@ import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 
 internal enum class BookCoverSize {
-    /** 40×56dp list cover with bars standing in for the title and author. */
+    /** 48×56dp list cover with bars standing in for the title and author. */
     Small,
     /** 200×292dp book overlay cover with the title and author printed on it, plus its shadow. */
     Large,
@@ -43,7 +43,7 @@ internal fun GeneratedBookCover(book: Book, size: BookCoverSize, modifier: Modif
             .clearAndSetSemantics {}
             .then(if (large) Modifier.bookCoverShadow(c, shape) else Modifier)
             .size(
-                if (large) GohoSpacing.generatedCoverWidth else GohoSpacing.thumbWidth,
+                if (large) GohoSpacing.generatedCoverWidth else GohoSpacing.coverWidth,
                 if (large) GohoSpacing.bookCoverHeight else GohoSpacing.coverHeight,
             )
             .clip(shape)

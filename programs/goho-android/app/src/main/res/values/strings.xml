@@ -13,6 +13,7 @@
     <string name="book_close">Close</string>
     <string name="book_cover_open">View book cover</string>
     <string name="book_cover_description">Book cover, %1$s</string>
+    <string name="book_options">Book options</string>
     <string name="book_delete">Delete book</string>
     <string name="book_deleting">Deleting…</string>
     <string name="book_delete_failed">Couldn’t delete this book. Try again.</string>

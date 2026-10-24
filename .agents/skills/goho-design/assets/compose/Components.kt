@@ -843,7 +843,7 @@ fun SheetMenuItem(text: String, icon: ImageVector, onClick: () -> Unit, modifier
 }
 
 // Receipt options headers now reuse the native list presentation from ReceiptSummary.kt.
-// See ReceiptOptions.kt and ReceiptOptionsSheet.kt for the canonical shared-header wiring.
+// See ReceiptOptions.kt and OptionsSheet.kt for the canonical shared-header wiring.
 
 /** Error line above confirmation buttons; the approved sheet omits the question heading. */
 @Composable

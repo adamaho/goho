@@ -1,5 +1,11 @@
 # Mockups
 
+## Shared list press feedback (October 24, 2026)
+
+[Receipt press, light](shared-row-feedback-native/receipt-pressed-light.png) and [Receipt press, dark](shared-row-feedback-native/receipt-pressed-dark.png) are unedited Goho Dev captures on the Pixel 9 API 36 emulator at 720×1600px and 280dpi, using the existing synthetic development receipts over Tailscale. Both show the inset rounded fill with card surface visible around the row. The existing [book press capture](book-list-options-native/pressed-light.png) remains current: its drawing and hold animation moved unchanged into `Modifier.listRowPressFeedback`, now used by both lists.
+
+Manual checks confirmed receipt taps open details, holds open the options sheet, and Back dismisses the sheet without changing data. Android build, lint and Kotlin formatting passed; an independent Claude Opus 5.5 source review found no blockers. Physical haptics and TalkBack execution were not exercised. No Android tests or harnesses were added.
+
 ## Launcher icons
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
@@ -81,6 +87,21 @@ October 23, 2026: Add actions use a bounded drop shadow and composite the face a
 
 Captured in the same emulator session as the empty state above. Back and outside taps dismiss; light/dark and compact large-text layouts were checked manually. No Android tests or test harnesses were added. Native source and tokens: `assets/compose/AddMenu.kt` and `Spacing.kt`.
 
+## Book list options and layout (native implementation)
+
+October 24, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator, 720×1600px at 280dpi. These are the current Books row and options-header references: 48×56dp covers, bottom-end tags, a 16dp text/tag gap, and dividers aligned with the text at 76dp. Saved books follow locale-aware A–Z title order; unfinished and failed scans stay pinned above them, with no new sort control.
+
+- [Light list](book-list-options-native/list-light.png) and [dark list](book-list-options-native/list-dark.png): generated covers, a synthetic photo cover, short authors and long-author ellipsis with a clear tag gap.
+- [Pressed row](book-list-options-native/pressed-light.png): the grey fill is inset 6dp from the row bounds, leaving white card surface visible all around; content and touch bounds stay in place.
+- [Light menu](book-list-options-native/menu-light.png) and [dark menu](book-list-options-native/menu-dark.png): holding a saved row opens Delete book under the shared `BookSummary` header. Normal tap still opens the lifted overlay.
+- [Dark confirmation](book-list-options-native/confirmation-dark.png): the same header stays mounted while shared Delete book and Cancel actions replace the menu.
+- [Large-text list](book-list-options-native/list-large-dark.png) and [large-text menu](book-list-options-native/menu-large-dark.png): 1.5× text, one-line titles, wrapped metadata and a stacked end-aligned tag.
+- [Last book deleted](book-list-options-native/empty-light.png): the existing Bram empty state after deleting the final saved book through its list menu; this capture predates the cover-width polish, which does not affect the empty state.
+
+Fixtures came from an isolated disposable database, including a locally created blue/yellow cover image; shared development and production records were untouched. Manual checks covered ordinary tap and long hold, cancellation, error/retry, a pending request with dismissal and repeated deletion blocked, removal of only the selected book and its associated successful scan, last-book empty state, receipt-sheet regression, pinned scans and A–Z ordering, both themes, large text and reduced motion. After the final geometry change, the list, pressed fill, sheet header, confirmation and ordinary photo-overlay tap were rechecked. Physical haptics and TalkBack action execution were not exercised. No Android automated tests or harnesses were added or run.
+
+`BookRow`, `BookSummary`, `BookOptions`, `OptionsSheet`, `ReceiptOptions`, `BookOverview`, `GeneratedBookCover`, `ListComponents` and `Spacing` in `assets/compose/` mirror the app. Older Books list captures retain their named state and interaction context but show the superseded cover width, tag alignment and ordering.
+
 ## Books list (native implementation)
 
 Historical captures of the original display-only Books list (before generated covers and the lifted-book overlay), reached from the title menu, using books from the local development seed (no covers). The dark and large-text captures also include temporary processing and failed upload rows; these were removed after manual validation. It follows [screens.md section 8](../../references/screens.md#8-books-list); the approved `nav-add-closed-*.png` and `nav-menu-books-*.png` renders above remain the design reference. Native captures from the Goho Dev emulator, added after validation:
@@ -158,7 +179,7 @@ These unedited native Goho Dev captures use the local dev server on the Pixel 9 
 - `receipt-summary-details-sheet-dark.png`: Details opens the same category-tag header.
 - `receipt-summary-large-text-dark.png`: The shared stacked layout at 320×640dp and 2× font scale (840×1680px), with the amount, date, icon and category visible.
 
-These supersede the larger, separate header in older sheet captures (including `receipt-tag-failed-sheet-dark.png`); older images remain references for their other named states. Canonical Compose sources are `ReceiptSummary.kt`, `ReceiptOptions.kt` and `ReceiptOptionsSheet.kt`.
+These supersede the larger, separate header in older sheet captures (including `receipt-tag-failed-sheet-dark.png`); older images remain references for their other named states. Canonical Compose sources are `ReceiptSummary.kt`, `ReceiptOptions.kt` and `OptionsSheet.kt` (formerly `ReceiptOptionsSheet.kt`).
 
 ## Shared category and upload tags (October 19, 2026, category display historical)
 
@@ -272,7 +293,7 @@ The remaining files were rendered from the older design canvas, usually at 824×
 - `list-hold-press.png`, `list-tap-not-processed.png`, `list-after-delete.png` (and `-light` variants): List interactions.
 - `tokens.png` / `tokens-light.png`: Historical token boards; use the Bram values in `references/tokens.md` and `assets/compose/GohoTheme.kt` instead.
 
-Written specs win over any older image. Preserve proportional figures, compact fixed filters, scale-only row holds, no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.
+Written specs win over any older image. Preserve proportional figures, compact fixed filters, the shared inset row press fill with its 0.98 hold scale (older list-hold images show scale only), no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.
 
 ## Section menu closing frames (October 22, 2026)
 

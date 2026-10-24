@@ -1,7 +1,10 @@
 package com.adamaho.goho.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -9,6 +12,7 @@ import androidx.compose.ui.draw.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.unit.Dp
 import com.adamaho.goho.theme.*
 
@@ -48,13 +52,47 @@ fun ListCard(
 }
 
 @Composable
-fun ListDivider() {
+fun ListDivider(start: Dp = GohoSpacing.dividerStart) {
     Box(
         Modifier.fillMaxWidth()
-            .padding(start = GohoSpacing.dividerStart)
+            .padding(start = start)
             .height(GohoSpacing.hairline)
             .background(GohoTheme.colors.divider)
     )
+}
+
+/**
+ * Tap and hold feedback shared by tappable rows in a [ListCard]; pair it with a clickable using
+ * [interaction] and `indication = null`. Pressing draws the `surfacePressed` fill inset
+ * `rowPressInset` with the `heldRow` shape, so the card surface stays visible on every side; [held]
+ * eases the row to `HOLD_SCALE`. Drawn only: row layout and the tap area are unchanged. Apply after
+ * the clickable and before the row padding.
+ */
+@Composable
+fun Modifier.listRowPressFeedback(interaction: MutableInteractionSource, held: Boolean): Modifier {
+    val c = GohoTheme.colors
+    val press by pressProgress(interaction)
+    val reduced = rememberReducedMotion()
+    val scale by
+        animateFloatAsState(
+            if (held) GohoMotion.HOLD_SCALE else 1f,
+            if (reduced) snap() else if (held) GohoMotion.pressIn else GohoMotion.pressOut,
+            label = "Row hold",
+        )
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+        .drawBehind {
+            val p = press.coerceIn(0f, 1f)
+            if (p > 0f)
+                inset(GohoSpacing.rowPressInset.toPx()) {
+                    drawOutline(
+                        GohoShapes.heldRow.createOutline(size, layoutDirection, this),
+                        lerp(c.surface, c.surfacePressed, p),
+                    )
+                }
+        }
 }
 
 /** Soften the fixed header edge without changing list layout or intercepting gestures. */
