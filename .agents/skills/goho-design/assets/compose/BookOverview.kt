@@ -38,8 +38,9 @@ data class BookListState(
 )
 
 /**
- * Books content below the section title. Saved rows open the book overlay. [uploadToReveal] shows
- * All at the top until that accepted scan, or the book it saved, is listed.
+ * Books content below the section title. Saved rows open the book overlay on tap and their options
+ * sheet on a hold; [deleteBook] returns whether the server deleted the held book. [uploadToReveal]
+ * shows All at the top until that accepted scan, or the book it saved, is listed.
  */
 @Composable
 internal fun BookOverview(
@@ -48,6 +49,7 @@ internal fun BookOverview(
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     onBookClick: (Book) -> Unit,
+    deleteBook: suspend (Book) -> Boolean,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
     uploadToReveal: UUID? = null,
@@ -57,7 +59,9 @@ internal fun BookOverview(
     val zone = ZoneId.systemDefault()
     val locale = LocalConfiguration.current.locales[0]
     val entries =
-        remember(state.books, state.uploads) { bookListEntries(state.books, state.uploads) }
+        remember(state.books, state.uploads, locale) {
+            bookListEntries(state.books, state.uploads, locale)
+        }
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
@@ -82,16 +86,24 @@ internal fun BookOverview(
         allListState.scrollToItem(0)
         if (uploadedEntryVisible) onUploadRevealed()
     }
+    // The held book's snapshot, so refreshes and its own deletion never change the open sheet.
+    var optionsBook by remember { mutableStateOf<Book?>(null) }
     FilterPager(
         state = pages,
         total = entries.size,
         attention = entries.count { it.needsAttention },
         showFilters = !state.error && state.hasLoaded,
-        swipeEnabled = state.hasLoaded && !state.error && !state.refreshing && !menuOpen,
+        swipeEnabled =
+            state.hasLoaded &&
+                !state.error &&
+                !state.refreshing &&
+                optionsBook == null &&
+                !menuOpen,
         error = state.error,
         refreshing = state.refreshing,
         refreshFailed = state.refreshError || state.error,
-        refreshEnabled = !menuOpen && !state.loading && (state.hasLoaded || state.error),
+        refreshEnabled =
+            !menuOpen && optionsBook == null && !state.loading && (state.hasLoaded || state.error),
         onRefresh = onRefresh,
         refreshLabel = stringResource(R.string.books_refresh),
         refreshProgressLabel = stringResource(R.string.books_refreshing),
@@ -114,8 +126,23 @@ internal fun BookOverview(
             onRefresh = onRefresh,
             covers = covers,
             onBookClick = onBookClick,
+            onBookOptions = { optionsBook = it },
+            optionsBookId = optionsBook?.id,
             modifier = pageModifier,
         )
+    }
+    optionsBook?.let { book ->
+        key(book.id) {
+            BookOptions(
+                book,
+                clock,
+                zone,
+                locale,
+                covers,
+                onDelete = { deleteBook(book) },
+                onDismiss = { optionsBook = null },
+            )
+        }
     }
 }
 
@@ -134,6 +161,8 @@ private fun BookListPage(
     onRefresh: () -> Unit,
     covers: ThumbnailCache,
     onBookClick: (Book) -> Unit,
+    onBookOptions: (Book) -> Unit,
+    optionsBookId: String?,
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
@@ -204,7 +233,7 @@ private fun BookListPage(
                                 )
                             ) {
                                 repeat(4) { index ->
-                                    if (index > 0) ListDivider()
+                                    if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
                                     BookRow(null, now, zone, locale, expanded, covers)
                                 }
                             }
@@ -235,14 +264,19 @@ private fun BookListPage(
                                                     expanded,
                                                     covers,
                                                     // A row folding away can't reopen its book.
-                                                    if (visible) onBookClick else null,
+                                                    onClick = if (visible) onBookClick else null,
+                                                    onOptions =
+                                                        if (visible) onBookOptions else null,
+                                                    optionsOpen =
+                                                        entry is BookListEntry.Saved &&
+                                                            entry.book.id == optionsBookId,
                                                 )
                                                 if (
                                                     displayed.drop(index + 1).any {
                                                         it.key in visibleKeys
                                                     }
                                                 )
-                                                    ListDivider()
+                                                    ListDivider(GohoSpacing.bookDividerStart)
                                             }
                                         }
                                     }
