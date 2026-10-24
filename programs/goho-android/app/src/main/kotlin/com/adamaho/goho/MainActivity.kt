@@ -168,7 +168,8 @@ class MainActivity : ComponentActivity() {
                                             BookOverlayHost(
                                                 covers = books.covers,
                                                 loadFullCover = books::loadFullCover,
-                                            ) { openBook ->
+                                                deleteBook = { books.delete(it.id) },
+                                            ) { openBook, actionAlpha ->
                                                 SectionScreen(
                                                     section = section,
                                                     onSectionChange = ::selectSection,
@@ -179,6 +180,7 @@ class MainActivity : ComponentActivity() {
                                                         else null,
                                                     isOpeningScanner = isOpeningScanner,
                                                     onScanReceipt = ::openScanner,
+                                                    addAlpha = actionAlpha,
                                                 ) { menuOpen ->
                                                     when (section) {
                                                         Section.Receipts ->

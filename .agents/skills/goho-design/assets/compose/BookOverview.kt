@@ -1,5 +1,10 @@
 package com.adamaho.goho.ui.main
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -7,6 +12,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -18,6 +24,7 @@ import com.adamaho.goho.ui.components.*
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 data class BookListState(
     val books: List<Book> = emptyList(),
@@ -105,8 +112,22 @@ private fun BookListPage(
     val config = LocalConfiguration.current
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val showLoading = rememberLoadingVisible(state.loading)
+    val reduced = rememberReducedMotion()
+    val removalDuration = if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS
+    val removal =
+        fadeOut(tween(removalDuration)) +
+            shrinkVertically(tween(removalDuration), shrinkTowards = Alignment.Top)
+    // Keep removed rows mounted in their place for their exit within this page.
+    var retained by remember(attentionOnly) { mutableStateOf(entries) }
+    val visibleKeys = entries.map { it.key }.toSet()
+    val displayed = withRemovedEntries(entries, retained)
+    LaunchedEffect(entries) {
+        if (retained.any { it.key !in visibleKeys } && !reduced)
+            delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
+        retained = entries
+    }
     Column(modifier.fillMaxSize()) {
-        if (error || (state.hasLoaded && entries.isEmpty())) {
+        if (error || (state.hasLoaded && displayed.isEmpty())) {
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth().padding(bottom = GohoSpacing.listBottom)
             ) {
@@ -162,25 +183,62 @@ private fun BookListPage(
                             }
                         }
                     }
-                if (entries.isNotEmpty())
+                if (displayed.isNotEmpty())
                     item("books") {
-                        ListCard {
-                            entries.forEachIndexed { index, entry ->
-                                key(entry.key) {
-                                    if (index > 0) ListDivider()
-                                    BookRow(
-                                        entry,
-                                        now,
-                                        zone,
-                                        locale,
-                                        expanded,
-                                        covers,
-                                        onBookClick,
-                                    )
+                        AnimatedVisibility(
+                            entries.isNotEmpty(),
+                            enter = EnterTransition.None,
+                            exit = removal,
+                        ) {
+                            ListCard {
+                                displayed.forEachIndexed { index, entry ->
+                                    key(entry.key) {
+                                        val visible = entry.key in visibleKeys
+                                        AnimatedVisibility(
+                                            visible,
+                                            enter = EnterTransition.None,
+                                            exit = removal,
+                                        ) {
+                                            Column {
+                                                BookRow(
+                                                    entry,
+                                                    now,
+                                                    zone,
+                                                    locale,
+                                                    expanded,
+                                                    covers,
+                                                    // A row folding away can't reopen its book.
+                                                    if (visible) onBookClick else null,
+                                                )
+                                                if (
+                                                    displayed.drop(index + 1).any {
+                                                        it.key in visibleKeys
+                                                    }
+                                                )
+                                                    ListDivider()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
             }
     }
+}
+
+/** [current] with the rows removed since [previous] kept after the row they followed. */
+private fun withRemovedEntries(
+    current: List<BookListEntry>,
+    previous: List<BookListEntry>,
+): List<BookListEntry> {
+    val keys = current.mapTo(HashSet()) { it.key }
+    if (previous.all { it.key in keys }) return current
+    val result = current.toMutableList()
+    var insertAt = 0
+    previous.forEach { entry ->
+        if (entry.key in keys) insertAt = result.indexOfFirst { it.key == entry.key } + 1
+        else result.add(insertAt++, entry)
+    }
+    return result
 }

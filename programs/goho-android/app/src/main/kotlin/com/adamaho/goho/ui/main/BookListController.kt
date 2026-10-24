@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 /**
  * Books data owned by the activity, independent of receipts. Books and their cover scans refresh
  * together; a refresh joins or queues behind one already running, and a failure keeps the cached
- * list.
+ * list. A refresh that began before a deletion never restores the deleted book.
  */
 internal class BookListController(
     private val scope: CoroutineScope,
@@ -31,6 +31,7 @@ internal class BookListController(
         private set
 
     private var refreshAfterCurrent = false
+    private var deletionRevision = 0L
 
     /** Keeps loaded covers across section switches; only books with a cover request one. */
     val covers = ThumbnailCache(::loadCover)
@@ -44,6 +45,7 @@ internal class BookListController(
             return
         }
 
+        val revision = deletionRevision
         state = state.copy(loading = true, refreshing = userInitiated, refreshError = false)
         scope.launch {
             try {
@@ -54,7 +56,8 @@ internal class BookListController(
                 val uploads = uploadsResponse.body()?.data
                 val books = booksResponse.body()?.data
                 state =
-                    if (
+                    if (revision != deletionRevision) reloadAfterDeletion()
+                    else if (
                         uploadsResponse.isSuccessful &&
                             booksResponse.isSuccessful &&
                             uploads != null &&
@@ -65,7 +68,7 @@ internal class BookListController(
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 Log.w("GohoBooks", "Book listing failed", error)
-                state = failed()
+                state = if (revision != deletionRevision) reloadAfterDeletion() else failed()
             } finally {
                 if (refreshAfterCurrent) {
                     refreshAfterCurrent = false
@@ -92,9 +95,46 @@ internal class BookListController(
             }
     }
 
+    /**
+     * Deletes a saved book; only the server's 204 counts as success. The book and its successful
+     * scans, which the server deletes with it, leave the local list; every other row stays as is.
+     */
+    suspend fun delete(bookId: String): Boolean =
+        try {
+            val response = booksApi.booksDelete(bookId)
+            if (response.code() == 204) {
+                deletionRevision++
+                state =
+                    state.copy(
+                        books = state.books.filterNot { it.id == bookId },
+                        uploads =
+                            state.uploads.filterNot {
+                                it.status == BookUpload.Status.succeeded && it.bookId == bookId
+                            },
+                    )
+                true
+            } else {
+                Log.w("GohoBooks", "Book deletion failed: ${response.code()}")
+                false
+            }
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoBooks", "Book deletion failed", error)
+            false
+        }
+
     /** The full-size cover for the book overlay and photo viewer, outside the thumbnail cache. */
     suspend fun loadFullCover(bookId: String): ImageBitmap? =
         loadCover(bookId)?.let { decodePhoto(it) }
+
+    /**
+     * A listing that began before a deletion may still include the removed book, so its result,
+     * success or failure, is dropped and the list reloads.
+     */
+    private fun reloadAfterDeletion(): BookListState {
+        refreshAfterCurrent = true
+        return state.copy(loading = false)
+    }
 
     private fun failed() =
         state.copy(

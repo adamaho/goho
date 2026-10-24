@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.LayerOutsets
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -31,7 +34,9 @@ enum class Section(@StringRes val title: Int, @DrawableRes val icon: Int) {
  * Section root shared by every section: the title menu, safe-area layout and one Add button stay
  * mounted while [content] changes with [section]. Each section's saveable state, such as its filter
  * page and scroll positions, is kept while another section is shown. [content] receives whether a
- * menu is open, so it can pause paging and pull-to-refresh. Null counts are unknown and omitted.
+ * menu is open, so it can pause paging and pull-to-refresh. Null counts are unknown and omitted. A
+ * modal overlay that owns the screen fades Add with [addAlpha]; at 0 Add is also hidden from touch,
+ * focus and accessibility.
  */
 @Composable
 fun SectionScreen(
@@ -42,6 +47,7 @@ fun SectionScreen(
     isOpeningScanner: Boolean,
     onScanReceipt: () -> Unit,
     modifier: Modifier = Modifier,
+    addAlpha: () -> Float = { 1f },
     content: @Composable (menuOpen: Boolean) -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
@@ -49,6 +55,7 @@ fun SectionScreen(
     var titleMenuOpen by rememberSaveable { mutableStateOf(false) }
     var pendingSection by remember { mutableStateOf<Section?>(null) }
     val menuOpen = addMenuOpen || titleMenuOpen
+    val addHidden by remember(addAlpha) { derivedStateOf { addAlpha() == 0f } }
     val addButtonFocus = remember { FocusRequester() }
     val titleFocus = remember { FocusRequester() }
     fun closeAddMenu() {
@@ -136,15 +143,26 @@ fun SectionScreen(
         )
         AddButton(
             open = addMenuOpen,
-            enabled = !isOpeningScanner,
+            enabled = !isOpeningScanner && !addHidden,
             onClick = { if (addMenuOpen) closeAddMenu() else addMenuOpen = true },
             modifier =
                 Modifier.align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
                     .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
+                    .graphicsLayer {
+                        alpha = addAlpha()
+                        // While fading, keep the face and its shadow together, unclipped.
+                        if (alpha < 1f) {
+                            compositingStrategy = CompositingStrategy.Offscreen
+                            outsets = LayerOutsets(GohoSpacing.addMenuShadowPadding)
+                        }
+                    }
                     .focusRequester(addButtonFocus)
-                    .focusProperties { canFocus = !titleMenuOpen }
-                    .then(if (titleMenuOpen) Modifier.clearAndSetSemantics {} else Modifier),
+                    .focusProperties { canFocus = !titleMenuOpen && !addHidden }
+                    .then(
+                        if (titleMenuOpen || addHidden) Modifier.clearAndSetSemantics {}
+                        else Modifier
+                    ),
         )
         SectionMenuScrim(open = titleMenuOpen, onDismiss = { titleMenuOpen = false })
     }

@@ -23,13 +23,22 @@ Use one shared component for standard actions. The finish is `variant: Int = 1`,
 ActionButton("Upload receipt", onUpload, variant = 1, color = ButtonColor.Purple)
 ActionButton("Cancel", onCancel, variant = 2, color = ButtonColor.Grey)
 ActionButton("Delete receipt", onDelete, variant = 1, color = ButtonColor.Red)
+ActionButton(
+    "Delete book",
+    onDeleteClick,
+    variant = 2,
+    color = ButtonColor.Grey,
+    contentColor = GohoTheme.colors.onDangerContainer,
+    icon = { TrashIcon(Modifier.size(GohoSpacing.buttonIcon)) },
+)
 ```
 
 - Variant 1: glossy face, bright upper rim, inset reflection, soft wide shadow; weight 600 label.
 - Variant 2: frosted finish in light mode, almost flat face with a dim grey outer rim meeting the face directly in dark mode; quieter shadows and weight 500 label. The base colour is still selected independently.
 - Purple uses `buttonPrimary` / `buttonPrimaryPressed` and white `onButtonPrimary`; red uses `danger` / `dangerPressed` and white `onDanger`; grey uses `buttonSecondary` / `buttonSecondaryPressed` with `textPrimary`. Red remains reserved for destructive actions in product flows.
 - Full width inside the screen margin, at least 52dp tall, shape `button` 20 (not a pill), horizontal padding 20.
-- Optional decorative icon slot: the button supplies `LocalContentColor` from the chosen palette. Material icons and `UploadIcon` inherit it; custom drawing should read it too. Use 18dp icons and an 8dp gap.
+- Optional decorative icon slot: the button supplies `LocalContentColor` from the chosen palette. Material icons, `UploadIcon` and `TrashIcon` inherit it; custom drawing should read it too. Use 18dp icons and an 8dp gap.
+- Optional `contentColor` overrides the palette's label and icon colour without changing the finish. Its only use is the book overlay's initial Delete book: variant 2/Grey with `onDangerContainer`, matching the receipt menu's Delete receipt row.
 - The shared `ButtonColor.kt` palette resolver owns fill, pressed fill, content tint, shadow colour and glossy lower shade. Purple uses a violet lower shade for both the face and inner edge. `ButtonSurface.kt` applies the numbered finish; screens do not implement their own styling.
 - Existing primary actions map to 1 / Purple, secondary actions to 2 / Grey, and destructive confirmation to 1 / Red. Stack actions with a 10dp gap.
 - Disabled: whole button at 40% alpha, no press, not clickable.
@@ -214,6 +223,8 @@ One formatter for every amount in the app (list rows, hero, items, total):
 
 Material Symbols **Rounded** (`material-icons-extended` `Icons.Rounded.*`) at weight around 500 so strokes match Geist: back `AutoMirrored.Rounded.ArrowBack`, close `Close`, overflow `MoreHoriz`, delete `Delete` (outlined trash), scan `DocumentScanner` (or a custom four-corner viewfinder with a center line, which is what the mockup shows).
 
+Natively, delete actions share the drawn `TrashIcon` (`ui/components/TrashIcon.kt`, mirrored) with the 2dp `iconStroke`: 22dp in the receipt menu's Delete receipt row and 18dp in the book overlay's Delete book button. It defaults to the current `LocalContentColor`; the receipt row passes `onDangerContainer`.
+
 ## PullToRefresh
 
 Keep the loading arc rotating continuously through the 200ms minimum and the entire bounce-to-zero exit. Stop only when it is invisible or changes to the warning triangle; honour Remove animations.
@@ -224,7 +235,8 @@ Use the production `ui/components/PullToRefresh.kt` and the matching `assets/com
 
 The same bottom safe-area position is retained during cold starts, loading, empty and error states and across section switches; the scrim covers the window while content and controls respect system bars and display cutouts.
 
-- `SectionScreen(section, onSectionChange, receiptCount, bookCount, isOpeningScanner, onScanReceipt, content)` in production `ui/main/SectionScreen.kt` (mirrored in `assets/compose/`) is the section root. It owns the background, safe-area insets, `SectionTitle` and `SectionMenu`, both menu-open flags, one `AddMenu` and `AddButton`, and `SectionMenuScrim`. `Section` is an ordered enum (Receipts, then Books) with each title and icon. The content slot receives `menuOpen` so the section can pause paging and pull-to-refresh; the shell hides its semantics and blocks focus while either menu is open.
+- `SectionScreen(section, onSectionChange, receiptCount, bookCount, isOpeningScanner, onScanReceipt, modifier, addAlpha, content)` in production `ui/main/SectionScreen.kt` (mirrored in `assets/compose/`) is the section root. It owns the background, safe-area insets, `SectionTitle` and `SectionMenu`, both menu-open flags, one `AddMenu` and `AddButton`, and `SectionMenuScrim`. `Section` is an ordered enum (Receipts, then Books) with each title and icon. The content slot receives `menuOpen` so the section can pause paging and pull-to-refresh; the shell hides its semantics and blocks focus while either menu is open.
+- `addAlpha: () -> Float = { 1f }` lets a modal overlay that owns the screen fade Add without unmounting it. The shell knows nothing about the overlay: `BookOverlayHost` passes the value from its presentation transition through its content slot, and the activity hands it on. Add fades as one offscreen layer with `LayerOutsets(addMenuShadowPadding)`, so its shadow isn’t clipped or seen through the face. At 0, Add is also disabled, unfocusable and hidden from accessibility. Its own menus never hide it.
 - The shell wraps the current section in a `SaveableStateHolder` keyed by section, so each section keeps its filter page and both page scroll positions while the other is shown. Only the visible section is composed; anything that must outlive a switch, such as the thumbnail caches of loaded images, is held by the activity.
 - `FilterPager` in `ui/main/FilterPager.kt` (mirrored) is the shared All / Needs attention presentation: `ListFilter` tabs, `PullToRefresh` and a two-page `HorizontalPager` with the recovery crossfade and inactive-page semantics. `rememberFilterPagerState()` saves the page and tracks which page already gave its settle haptic; `select(page, animate)` moves without a second haptic, as used by the upload reveal. Each section supplies counts, enabling rules, refresh copy and its own page content; there is no universal list.
 - `ReceiptOverview` and `BookOverview` are the section bodies. Receipts keeps its date sections, row taps and holds, options sheet and upload reveal. Keep the screen inset by system bars and display cutouts only: sections have no text input, so they must not reserve IME space left by the launcher during cold start. Do not create per-page or per-section Add buttons or reset a page’s scroll position when changing tabs or sections.
@@ -257,6 +269,7 @@ Native implementation of the October 22 design. `assets/compose/AddButton.kt` an
 Books rows in `ui/main/BookRow.kt` (mirrored, with the generated cover in `ui/components/GeneratedBookCover.kt`), inside one `ListCard` separated by `ListDivider`. `BookListEntry` is either `Saved(book)` or `Scan(uploadId, failed, uploadedAt)`; `bookListEntries` lists queued, processing and failed scans first in server order, then saved books in server order (newest first). Succeeded scans are represented by their book, which several scans can share. Saved rows key by book ID and scans by upload ID.
 
 - Row: `BookCover` | column(title, metadata) | tag, with the receipt row padding, 72dp minimum height and merged semantics. Saved rows open the book overlay on tap, with the Goho pressed fill (`surfacePressed`, no ripple) and a click action; focus returns to the row when the overlay closes. Scan rows have no tap, hold or options.
+- Removal: `BookOverview` keeps removed rows mounted in their previous place, as `ReceiptOverview` does, and folds them out (fade and shrink toward the top, `SHEET_CONTENT_MILLIS`; instant with Remove animations). A folding row has no click action, and a deleted book's cover slot stays empty, so nothing flies back into it. The card folds with the last row before the empty state appears.
 - Title: `rowTitle`, one line with ellipsis at every font size; `textPrimary` for saved books, `textSecondary` for “New book” and “Unknown book”.
 - Metadata (`meta`, `textTertiary`): author, or “author · reading level” when one is set. A processing scan shows a shimmering 12dp pill in the metadata line. A failed scan shows its upload time like receipt rows (“Today, 8:14 AM”, otherwise “Yesterday” or a short weekday date).
 - Tag: `CategoryTag` for saved books from the server's icon and colour keys; `BookUploadTag` for scans. Standard rows cap it at 160dp beside the text; at font scale ≥1.3 or narrow widths the tag moves under the metadata, end-aligned, and metadata may wrap.
