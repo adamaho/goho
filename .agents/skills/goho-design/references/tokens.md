@@ -109,7 +109,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 | `statusCard`  | 32     | Legacy status-card shape; unused by current states                   |
 | `sheet`       | 28     | Floating bottom sheet (all four corners)                             |
 | `sectionMenu` | 20     | Section menu dropped from the title                                  |
-| `heldRow`     | 14     | Pressed section-menu rows and the inset Books row press fill         |
+| `heldRow`     | 14     | Pressed section-menu rows and the inset receipt and Books row fill   |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
@@ -119,7 +119,7 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - `screenMargin` = 16: edges of cards and the filter. The Add button uses its separate 24dp end margin.
 - `textInset` = 20: text that sits directly on the background (screen title, section labels, detail hero). It is inset 4dp further than surfaces so it lines up optically with card content.
 - `cardPadding` = 16 horizontal; cards have 4dp vertical padding and rows supply their own.
-- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge. Book rows use a 48×56 cover (`coverWidth` × `coverHeight`), so their dividers start at 76dp (`bookDividerStart`, 16 + 48 + 12); a 16dp gap (`textToTag`) separates their text from the bottom-end tag. A pressed saved book row draws its `surfacePressed` fill inset 6dp (`rowPressInset`) on every side with the 14dp `heldRow` shape. The first and last rows also have the card’s 4dp vertical padding, leaving 10dp above the first highlight and below the last. The card surface stays visible around it, white in light mode and the themed card surface in dark mode. The inset is drawn only: row layout, content alignment and tap area are unchanged.
+- List row: min height 72, vertical padding 12, thumbnail 40×48, thumbnail-to-text gap 12. Dividers start at 68dp (16 + 40 + 12) and run to the card edge. Book rows use a 48×56 cover (`coverWidth` × `coverHeight`), so their dividers start at 76dp (`bookDividerStart`, 16 + 48 + 12); a 16dp gap (`textToTag`) separates their text from the bottom-end tag. A pressed receipt or saved book row draws its `surfacePressed` fill inset 6dp (`rowPressInset`) on every side with the 14dp `heldRow` shape. The first and last rows also have the card’s 4dp vertical padding, leaving 10dp above the first highlight and below the last. The card surface stays visible around it, white in light mode and the themed card surface in dark mode. The inset is drawn only: row layout, content alignment and tap area are unchanged.
 - Detail list row: min height 47, label left, value right.
 - Category icon: `categoryIcon` = 24 square with the 14dp `tagIcon`; `categoryIconGap` = 12 before the item or category name. In item rows, vertically center the tag, name and amount with no top offset. The native tokens are mirrored in `assets/compose/Spacing.kt`. The planned `TagCount` uses `tagCountHorizontal` = 6 and the 4dp gap `tagGap` after the category tag.
 - Category breakdown (mirrored in native `Spacing.kt`): `breakdownRowVertical` = 12, `breakdownBarHeight` = 3, `breakdownBarGap` = 8. Rows reuse `cardPadding` = 16 horizontally; the bar uses `divider` for its track and the category `TagColor` content colour for its fill.

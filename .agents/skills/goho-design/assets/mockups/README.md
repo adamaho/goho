@@ -1,5 +1,11 @@
 # Mockups
 
+## Shared list press feedback (October 24, 2026)
+
+[Receipt press, light](shared-row-feedback-native/receipt-pressed-light.png) and [Receipt press, dark](shared-row-feedback-native/receipt-pressed-dark.png) are unedited Goho Dev captures on the Pixel 9 API 36 emulator at 720×1600px and 280dpi, using the existing synthetic development receipts over Tailscale. Both show the inset rounded fill with card surface visible around the row. The existing [book press capture](book-list-options-native/pressed-light.png) remains current: its drawing and hold animation moved unchanged into `Modifier.listRowPressFeedback`, now used by both lists.
+
+Manual checks confirmed receipt taps open details, holds open the options sheet, and Back dismisses the sheet without changing data. Android build, lint and Kotlin formatting passed; an independent Claude Opus 5.5 source review found no blockers. Physical haptics and TalkBack execution were not exercised. No Android tests or harnesses were added.
+
 ## Launcher icons
 
 The current family icon sources and Android resources are documented in the [launcher guide](../../references/launcher-icons.md). Its generator writes a colour and themed review sheet to ignored `.data/launcher-preview/launcher-icons.png`. Launcher preview sheets, exports, and unused candidates are not committed. The [character guide](../../references/characters.md) links the preserved individual and family PNG masters.
@@ -287,7 +293,7 @@ The remaining files were rendered from the older design canvas, usually at 824×
 - `list-hold-press.png`, `list-tap-not-processed.png`, `list-after-delete.png` (and `-light` variants): List interactions.
 - `tokens.png` / `tokens-light.png`: Historical token boards; use the Bram values in `references/tokens.md` and `assets/compose/GohoTheme.kt` instead.
 
-Written specs win over any older image. Preserve proportional figures, compact fixed filters, scale-only row holds, no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.
+Written specs win over any older image. Preserve proportional figures, compact fixed filters, the shared inset row press fill with its 0.98 hold scale (older list-hold images show scale only), no bottom gradient, no separate photo expand button, no item count, and no confirmation heading. Keep the sheet header mounted and reveal confirmation content together without stagger or bounce. The ready scan preview has no status line.
 
 ## Section menu closing frames (October 22, 2026)
 

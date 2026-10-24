@@ -60,7 +60,7 @@ object GohoSpacing {
     val cardVerticalPadding = 4.dp
     val rowVertical = 12.dp
     val rowMinHeight = 72.dp
-    val rowPressInset = 6.dp // Book press fill inset: card radius - heldRow radius.
+    val rowPressInset = 6.dp // List row press fill inset: card radius - heldRow radius.
     val thumbWidth = 40.dp
     val thumbHeight = 48.dp
     val coverWidth = 48.dp // Book row covers; receipts keep thumbWidth.

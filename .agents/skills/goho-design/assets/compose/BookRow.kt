@@ -1,20 +1,13 @@
 package com.adamaho.goho.ui.main
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.inset
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import com.adamaho.goho.R
@@ -43,12 +36,9 @@ internal fun BookRow(
     onOptions: ((Book) -> Unit)? = null,
     optionsOpen: Boolean = false,
 ) {
-    val c = GohoTheme.colors
     val book = (entry as? BookListEntry.Saved)?.book
     val interaction = remember { MutableInteractionSource() }
-    val press by pressProgress(interaction)
     val pressed by interaction.collectIsPressedAsState()
-    val reduced = rememberReducedMotion()
     var held by remember { mutableStateOf(false) }
     LaunchedEffect(pressed) {
         held = false
@@ -57,12 +47,6 @@ internal fun BookRow(
             held = true
         }
     }
-    val scale by
-        animateFloatAsState(
-            if (held) GohoMotion.HOLD_SCALE else 1f,
-            if (reduced) snap() else if (held) GohoMotion.pressIn else GohoMotion.pressOut,
-            label = "Book hold",
-        )
     // Focus returns to the row when its book overlay or options sheet closes, unless it's leaving.
     val focus = remember { FocusRequester() }
     val selected =
@@ -103,22 +87,7 @@ internal fun BookRow(
         modifier =
             Modifier.fillMaxWidth()
                 .then(clickable)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                // The press fill sits inset in the card with rounded corners, so the card
-                // surface stays visible on every side; layout and the tap area are unchanged.
-                .drawBehind {
-                    val p = press.coerceIn(0f, 1f)
-                    if (p > 0f)
-                        inset(GohoSpacing.rowPressInset.toPx()) {
-                            drawOutline(
-                                GohoShapes.heldRow.createOutline(size, layoutDirection, this),
-                                lerp(c.surface, c.surfacePressed, p),
-                            )
-                        }
-                }
+                .listRowPressFeedback(interaction, held)
                 .heightIn(min = GohoSpacing.rowMinHeight)
                 .padding(horizontal = GohoSpacing.cardPadding, vertical = GohoSpacing.rowVertical),
     )

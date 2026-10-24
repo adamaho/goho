@@ -20,6 +20,7 @@ List and details receipt options and deletion use the same supported server endp
 - Processed rows show the top-spend category beneath the price as a labelled `Tag`, plus a Grey `TagCount` (“+N”) when the receipt has other categories (see components.md, Category tags). Processing and Not processed rows keep their upload tag and show no category. Large-text/narrow layouts stack the right-aligned amount and tags without squeezing the date. Mockups: `category-list-light.png`, `category-list-dark.png`.
 - A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
 - Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
+- Processed and Not processed rows use the Books row press feedback: an inset, rounded `surfacePressed` fill while pressed and scale 0.98 during a hold, no ripple (see `ReceiptRow` in components.md).
 - Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
 - Leave bottom padding in the list so the last row can scroll clear of the Add button.
 
@@ -290,7 +291,7 @@ Approved October 22, 2026. Add, the title menu and switching sections from the m
 
 ## 8. Books (list)
 
-Native list-only implementation of the October 22 design (`nav-add-closed-*.png`, `nav-menu-books-*.png`). Books follows the Receipts list patterns with its own data; saved rows open the book overlay (section 9) with the Goho pressed fill on tap (inset and rounded inside the card, see `BookRow` in `components.md`), and the book options sheet (section 5) on a hold; both can delete the book. Scan rows stay display-only. New scans come from the Add menu’s Scan book (sections 4 and 7). Deleting failed scans, editing and search are not implemented.
+Native list-only implementation of the October 22 design (`nav-add-closed-*.png`, `nav-menu-books-*.png`). Books follows the Receipts list patterns with its own data; saved rows open the book overlay (section 9) with the shared receipt and book row pressed fill on tap (inset and rounded inside the card, see `BookRow` in `components.md`), and the book options sheet (section 5) on a hold; both can delete the book. Scan rows stay display-only. New scans come from the Add menu’s Scan book (sections 4 and 7). Deleting failed scans, editing and search are not implemented.
 
 **Header:** `SectionTitle` “Books” with the shared menu, then the shared All / Needs attention tabs. All counts every displayed row, including scans in progress and failed scans; the menu's Books count is saved books only.
 
