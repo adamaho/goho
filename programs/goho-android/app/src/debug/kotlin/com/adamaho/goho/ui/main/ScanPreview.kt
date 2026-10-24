@@ -16,7 +16,7 @@ import androidx.core.view.WindowCompat
 import com.adamaho.goho.theme.GohoTheme
 import java.io.File
 
-// Synthetic capture for visual previews; no real receipt or server request is used.
+// Synthetic captures for visual previews; no real receipt, book or server request is used.
 private fun sampleReceipt(): Bitmap =
     Bitmap.createBitmap(480, 680, Bitmap.Config.ARGB_8888).apply {
         eraseColor(Color.rgb(238, 236, 230))
@@ -46,12 +46,29 @@ private fun sampleReceipt(): Bitmap =
         for (x in 88..390 step 7) canvas.drawRect(x.toFloat(), 550f, x + 3f, 616f, paint)
     }
 
+private fun sampleCover(): Bitmap =
+    Bitmap.createBitmap(460, 680, Bitmap.Config.ARGB_8888).apply {
+        eraseColor(Color.rgb(46, 94, 120))
+        val canvas = Canvas(this)
+        val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(244, 232, 200)
+                typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+                textSize = 44f
+                textAlign = Paint.Align.CENTER
+            }
+        canvas.drawText("The Little", 230f, 220f, paint)
+        canvas.drawText("Lighthouse", 230f, 276f, paint)
+        paint.textSize = 26f
+        canvas.drawText("A. Sample", 230f, 600f, paint)
+    }
+
 @Composable
-private fun PreviewCapture(initialStatus: UploadStatus) {
+private fun PreviewCapture(initialStatus: UploadStatus, kind: ScanKind = ScanKind.Receipt) {
     val context = LocalContext.current
     val uri = remember {
-        val file = File(context.cacheDir, "preview-receipt.png")
-        val bitmap = sampleReceipt()
+        val file = File(context.cacheDir, "preview-${kind.name.lowercase()}.png")
+        val bitmap = if (kind == ScanKind.Book) sampleCover() else sampleReceipt()
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
         Uri.fromFile(file)
@@ -73,6 +90,7 @@ private fun PreviewCapture(initialStatus: UploadStatus) {
         if (cancelled) ReceiptsPreviewScreen(receiptListPreviewState)
         else
             ScanPreviewScreen(
+                kind,
                 uri,
                 status,
                 { status = UploadStatus.Uploading },
@@ -90,3 +108,12 @@ fun ScanPreview() = PreviewCapture(UploadStatus.Ready)
 @Preview @Composable fun ScanUploadingPreview() = PreviewCapture(UploadStatus.Uploading)
 
 @Preview @Composable fun ScanUploadFailedPreview() = PreviewCapture(UploadStatus.Failed)
+
+@Preview(name = "Book light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Book dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ScanBookPreview() = PreviewCapture(UploadStatus.Ready, ScanKind.Book)
+
+@Preview
+@Composable
+fun ScanBookUploadingPreview() = PreviewCapture(UploadStatus.Uploading, ScanKind.Book)

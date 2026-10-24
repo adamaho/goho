@@ -3,6 +3,7 @@ package com.adamaho.goho.ui.main
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -40,8 +41,33 @@ enum class UploadStatus {
     Failed,
 }
 
+/** What a scan captures: it chooses the preview copy and, in the activity, the upload endpoint. */
+enum class ScanKind(
+    @StringRes val title: Int,
+    @StringRes val imageDescription: Int,
+    @StringRes val upload: Int,
+    @StringRes val progress: Int,
+    @StringRes val submitted: Int,
+) {
+    Receipt(
+        R.string.receipt_new,
+        R.string.scan_image_description,
+        R.string.upload_receipt,
+        R.string.upload_progress,
+        R.string.upload_submitted,
+    ),
+    Book(
+        R.string.book_new,
+        R.string.scan_cover_description,
+        R.string.upload_cover,
+        R.string.upload_cover_progress,
+        R.string.upload_cover_submitted,
+    ),
+}
+
 @Composable
 fun ScanPreviewScreen(
+    kind: ScanKind,
     scannedImageUri: Uri,
     uploadStatus: UploadStatus,
     onUploadClick: () -> Unit,
@@ -76,11 +102,12 @@ fun ScanPreviewScreen(
                 }
             loading = false
         }
-    ScanPreviewContent(preview, loading, uploadStatus, onUploadClick, onCancelClick)
+    ScanPreviewContent(kind, preview, loading, uploadStatus, onUploadClick, onCancelClick)
 }
 
 @Composable
 internal fun ScanPreviewContent(
+    kind: ScanKind,
     image: ImageBitmap?,
     loading: Boolean,
     uploadStatus: UploadStatus,
@@ -109,7 +136,7 @@ internal fun ScanPreviewContent(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Text(
-                    stringResource(R.string.receipt_new),
+                    stringResource(kind.title),
                     style = GohoTheme.type.title,
                     color = c.textPrimary,
                 )
@@ -117,14 +144,15 @@ internal fun ScanPreviewContent(
             Spacer(Modifier.height(GohoSpacing.contentGap))
             ScanPreviewPhoto(
                 image,
+                stringResource(kind.imageDescription),
                 loading,
                 Modifier.weight(1f).padding(horizontal = GohoSpacing.screenMargin),
             )
             val statusText =
                 when (uploadStatus) {
                     UploadStatus.Ready -> null
-                    UploadStatus.Uploading -> R.string.upload_progress
-                    UploadStatus.Submitted -> R.string.upload_submitted
+                    UploadStatus.Uploading -> kind.progress
+                    UploadStatus.Submitted -> kind.submitted
                     UploadStatus.Failed -> R.string.upload_failed
                 }
             if (statusText != null) {
@@ -154,7 +182,7 @@ internal fun ScanPreviewContent(
                     stringResource(
                         if (busy) R.string.upload_busy
                         else if (uploadStatus == UploadStatus.Failed) R.string.upload_retry
-                        else R.string.upload_receipt
+                        else kind.upload
                     ),
                     onUploadClick,
                     enabled = !busy,
@@ -173,7 +201,12 @@ internal fun ScanPreviewContent(
 }
 
 @Composable
-private fun ScanPreviewPhoto(image: ImageBitmap?, loading: Boolean, modifier: Modifier) {
+private fun ScanPreviewPhoto(
+    image: ImageBitmap?,
+    description: String,
+    loading: Boolean,
+    modifier: Modifier,
+) {
     val c = GohoTheme.colors
     BoxWithConstraints(
         modifier
@@ -188,7 +221,7 @@ private fun ScanPreviewPhoto(image: ImageBitmap?, loading: Boolean, modifier: Mo
             val width = minOf(maxWidth, maxHeight * ratio)
             Image(
                 image,
-                stringResource(R.string.scan_image_description),
+                description,
                 Modifier.size(width, width / ratio)
                     .shadow(
                         GohoSpacing.photoElevation,

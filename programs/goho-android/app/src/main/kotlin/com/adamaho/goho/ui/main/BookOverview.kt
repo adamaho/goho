@@ -24,6 +24,7 @@ import com.adamaho.goho.ui.components.*
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.delay
 
 data class BookListState(
@@ -36,7 +37,10 @@ data class BookListState(
     val refreshError: Boolean = false,
 )
 
-/** Books content below the section title. Saved rows open the book overlay. */
+/**
+ * Books content below the section title. Saved rows open the book overlay. [uploadToReveal] shows
+ * All at the top until that accepted scan, or the book it saved, is listed.
+ */
 @Composable
 internal fun BookOverview(
     state: BookListState,
@@ -46,6 +50,8 @@ internal fun BookOverview(
     onBookClick: (Book) -> Unit,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
+    uploadToReveal: UUID? = null,
+    onUploadRevealed: () -> Unit = {},
 ) {
     val clock by rememberClock()
     val zone = ZoneId.systemDefault()
@@ -55,6 +61,27 @@ internal fun BookOverview(
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
+    // A scan that already succeeded is listed as its book, which may be one saved before.
+    val uploadedEntryVisible =
+        state.uploads
+            .find { it.id == uploadToReveal }
+            ?.let { upload ->
+                entries.any {
+                    when (it) {
+                        is BookListEntry.Scan -> it.uploadId == upload.id
+                        is BookListEntry.Saved ->
+                            upload.status == BookUpload.Status.succeeded &&
+                                it.book.id == upload.bookId
+                    }
+                }
+            } ?: false
+    LaunchedEffect(uploadToReveal, uploadedEntryVisible) {
+        if (uploadToReveal == null) return@LaunchedEffect
+        // Reset on return, then again when the scan's row arrives, as on Receipts.
+        pages.select(0, animate = false)
+        allListState.scrollToItem(0)
+        if (uploadedEntryVisible) onUploadRevealed()
+    }
     FilterPager(
         state = pages,
         total = entries.size,
