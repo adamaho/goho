@@ -6,13 +6,28 @@ The current family icon sources and Android resources are documented in the [lau
 
 ## Book overlay, lifted book (October 22, 2026, approved design)
 
-Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. `assets/compose/BookOverlay.kt` and `GeneratedBookCover.kt` mirror the native implementation, which omits the approved Delete book states.
+Design renders from the Goho brand canvas (“Book overlay (lifted book)”) at 360dp width and 2× (720×1480px). The [section 9 spec](../../references/screens.md#9-book-overlay-lifted-book) wins where they differ. Books and covers are illustrative sample data. `assets/compose/BookOverlay.kt`, `BookOverlayFooter.kt` and `GeneratedBookCover.kt` mirror the native implementation, including the Delete book states. These renders are design references, not native captures.
 
 - `book-overlay-pressed-light.png`, `book-overlay-flight-light.png`, `book-overlay-light.png`: tap, the cover mid-flight from the row over the frosting list, and the lifted book with a generated cloth cover (also in `book-overlay-delete-error-dark.png`).
 - `book-overlay-dark.png`, `book-overlay-flight-dark.png`: a photo cover lifted and mid-flight on the dark palette.
 - `book-overlay-dismiss-dark.png`: swipe down to close, with the cover shrinking and the text fading.
 - `book-overlay-confirm-light.png`, `book-overlay-delete-error-dark.png`: Delete book confirmation in place, and its failure state.
 - `books-generated-covers-light.png`, `books-generated-covers-dark.png`: the Books list with the small generated cover for books without a cover image, in each category colour, beside an illustrative real cover.
+
+## Book deletion (native implementation)
+
+October 24, 2026: unedited captures from the built Goho Dev APK on the Pixel 9 API 36 emulator. The app used an isolated disposable backend and database with sample books; no production or shared development records were changed. Standard captures are 1080×2424px at 420dpi; the compact capture is 840×1680px (320×640dp) at 2× font scale. These show the implemented deletion flow and replace the design renders above as evidence of the native controls.
+
+- [Delete, light](book-deletion-native/delete-light.png) and [Delete, dark](book-deletion-native/delete-dark.png): generated and photo covers with the shared variant 2/Grey action. Add and its shadow fade away beneath the overlay, removing the purple patch behind the footer without changing the shared button shadow.
+- [Confirmation, dark](book-deletion-native/confirmation-dark.png): variant 1/Red Delete book and variant 2/Grey Cancel, with no extra heading.
+- [Failure, dark](book-deletion-native/failure-dark.png): inline retry message after a controlled storage failure; the book remains present.
+- [Deleting, light](book-deletion-native/deleting-light.png): the pending label and disabled actions while the real delete request waits for a temporary database lock.
+- [Last book deleted, light](book-deletion-native/last-book-deleted-light.png): All 0 and the existing book-holding Bram after the last saved row leaves.
+- [Confirmation, compact dark](book-deletion-native/confirmation-large-dark.png): 2× text on a 320×640dp screen. Close and the confirmation actions remain fixed while the cover, title, author and tag can scroll above the footer.
+
+Manual checks covered generated and photo covers, both themes, photo viewing, cancellation, failure and successful retry. While deletion was pending, Back, Close, frost taps, swipe-down, Cancel and repeated Delete taps could not dismiss or duplicate the action. Success removed only the selected book and its linked scan and cover; deleting the last book showed Bram. Captured motion frames confirmed that the cover fades in place without a return flight, and Add returns after the footer leaves. Android build, lint and Kotlin formatting passed; an independent Claude Opus 5.5 source review approved the implementation. No automated Android tests or harnesses were added or run.
+
+Native source mirrors: `BookOverlay.kt`, `BookOverlayFooter.kt`, `BookOverview.kt`, `SectionScreen.kt`, `ActionButton.kt`, `TrashIcon.kt` and `Spacing.kt` in `assets/compose/`. The [overlay spec](../../references/screens.md#9-book-overlay-lifted-book) remains the behavior reference.
 
 ## Section navigation and add button (October 22, 2026, approved design)
 
