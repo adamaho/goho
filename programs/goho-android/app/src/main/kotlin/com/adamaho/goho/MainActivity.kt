@@ -232,6 +232,9 @@ class MainActivity : ComponentActivity() {
                                                                     )
                                                                 },
                                                                 onBookClick = openBook,
+                                                                deleteBook = {
+                                                                    books.delete(it.id)
+                                                                },
                                                                 uploadToReveal = bookUploadToReveal,
                                                                 onUploadRevealed = {
                                                                     bookUploadToReveal = null

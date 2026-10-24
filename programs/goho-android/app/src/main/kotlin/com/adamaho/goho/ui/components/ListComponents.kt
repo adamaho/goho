@@ -48,10 +48,10 @@ fun ListCard(
 }
 
 @Composable
-fun ListDivider() {
+fun ListDivider(start: Dp = GohoSpacing.dividerStart) {
     Box(
         Modifier.fillMaxWidth()
-            .padding(start = GohoSpacing.dividerStart)
+            .padding(start = start)
             .height(GohoSpacing.hairline)
             .background(GohoTheme.colors.divider)
     )
