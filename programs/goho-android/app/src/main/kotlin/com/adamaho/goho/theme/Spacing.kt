@@ -157,6 +157,8 @@ object GohoSpacing {
     val addMenuStart = 16.dp
     val addMenuGap = 10.dp
     val addMenuButtonGap = 16.dp
+    val addMenuShadowRadius = 16.dp
+    val addMenuShadowY = 4.dp
     val addMenuShadowPadding = sheetElevation * 2
     val iconStroke = 2.dp
     val compactWidth = 360.dp

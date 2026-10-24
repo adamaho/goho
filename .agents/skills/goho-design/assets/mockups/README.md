@@ -36,6 +36,24 @@ Manual checks cover row, title, outside and Back dismissal; keyboard focus on Re
 
 Canonical source snapshots: `SectionTitle.kt`, `SectionMenu.kt`, `SectionScreen.kt`, `Spacing.kt`, `Shape.kt` and `Motion.kt` in `assets/compose/`. `SectionNavigation.kt` is a future title-swipe sketch, not the implementation.
 
+## Books empty state (native implementation)
+
+October 23, 2026: `NoBooksState` renders the approved book-holding Bram through the existing `StatusContent`, using the same unmodified transparent master in both themes. The copy remains “No books yet” / “Saved books will appear here.” These unedited native captures replace the earlier text-only Books empty-state reference.
+
+- `books-empty-bram-native-light.png`, `books-empty-bram-native-dark.png`: empty All page, with Add anchored at its usual safe-area position.
+- `books-empty-bram-native-large-dark.png`: 320×640dp at 2× font scale, scrolled to reveal all body text. The status content scrolls above the persistent Add button; the illustration can scroll behind the fixed header.
+
+Captured from the ordinary production-flavour app on the Pixel 9 API 36 emulator, using read-only API requests to an already-empty Books list. No server records were changed. Standard captures are 1080×2424px at 420dpi; compact captures are 840×1680px at 420dpi. Needs attention still showed its shared “All good” illustration. Native source: `assets/compose/NoBooksState.kt`.
+
+## Add menu shadow (native refinement)
+
+October 23, 2026: Add actions use a bounded drop shadow and composite the face and shadow together during fades. This removes the hard rectangular shadow cutoff below the stack while retaining the action positions, stagger, pressed Add appearance and 16dp gap.
+
+- `add-menu-shadow-native-light.png`, `add-menu-shadow-native-dark.png`: open menu over empty Books, with no hard shadow edge below Scan receipt.
+- `add-menu-shadow-native-large-dark.png`: 320×640dp, 2× text, animations disabled; both actions remain fully visible.
+
+Captured in the same emulator session as the empty state above. Back and outside taps dismiss; light/dark and compact large-text layouts were checked manually. No Android tests or test harnesses were added. Native source and tokens: `assets/compose/AddMenu.kt` and `Spacing.kt`.
+
 ## Books list (native implementation)
 
 Historical captures of the original display-only Books list (before generated covers and the lifted-book overlay), reached from the title menu, using books from the local development seed (no covers). The dark and large-text captures also include temporary processing and failed upload rows; these were removed after manual validation. It follows [screens.md section 8](../../references/screens.md#8-books-list); the approved `nav-add-closed-*.png` and `nav-menu-books-*.png` renders above remain the design reference. Native captures from the Goho Dev emulator, added after validation:
@@ -43,7 +61,7 @@ Historical captures of the original display-only Books list (before generated co
 - `books-native-light.png`, `books-native-dark.png`: seeded books with neutral cover placeholders (now superseded by the generated cover, `books-generated-covers-*.png`), one-line titles, author and optional reading level, and server category tags.
 - `books-menu-native-light.png`: the section menu opened from Books, Books selected, with Receipts' All count and the saved-book count.
 - `books-native-loading-light.png`: the initial skeleton rows with Add in its usual position.
-- `books-native-empty-light.png`: the text-only empty state.
+- `books-native-empty-light.png`: historical text-only empty state, superseded by the Bram captures above.
 - `books-native-error-light.png`: initial connection failure with the Books copy and retry action.
 - `books-native-large-dark.png`: 2× font scale; tags move beneath the metadata and titles stay on one line.
 
