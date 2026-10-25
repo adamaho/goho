@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 
@@ -30,11 +31,11 @@ internal fun PhotoControlButton(
     }
 }
 
-/** The X drawn in close buttons, in the current content colour. */
+/** The X drawn in close and clear buttons, in the current content colour. */
 @Composable
-internal fun CloseIcon() {
+internal fun CloseIcon(iconSize: Dp = GohoSpacing.photoCloseIcon) {
     val tint = LocalContentColor.current
-    Canvas(Modifier.size(GohoSpacing.photoCloseIcon)) {
+    Canvas(Modifier.size(iconSize)) {
         fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
             drawLine(
                 tint,

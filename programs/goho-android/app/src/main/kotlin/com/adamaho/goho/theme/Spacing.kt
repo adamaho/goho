@@ -132,6 +132,16 @@ object GohoSpacing {
     val sectionMenuRow = 48.dp
     val sectionMenuRowHorizontal = 14.dp
     val sectionMenuIcon = 20.dp
+    val searchIcon = 20.dp // Search button glyph; the field's is searchFieldIcon.
+    val searchCloseGap = 8.dp // Close search to the field.
+    val searchFieldStart = 14.dp
+    val searchFieldIcon = 18.dp
+    val searchFieldIconGap = 10.dp
+    val searchFocusRing = 2.dp
+    val searchClear = 28.dp // Visual clear control, centred in a headerHeight touch target.
+    val searchClearIcon = 14.dp
+    val searchCountTop = 10.dp
+    val searchCountBottom = 8.dp
     val headerHeight = 44.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp

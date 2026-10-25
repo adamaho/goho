@@ -29,7 +29,7 @@ All three have a fine matte clay texture, soft studio light, smooth rounded volu
 
 ## Approved search-empty-state pose
 
-[Bram with a magnifying glass](../assets/illustrations/status-no-search-results.png), approved October 24, 2026, is the selected illustration for no search matches, initially in Books. One long rounded arm holds a cream magnifying glass over one eye; the other hangs naturally. Preserve exactly two eyes, the gently enlarged eye inside the clear lens, visible smile, ivory horns, tiny feet and broad lilac body. The 1350×1165 RGBA master and [provenance with SHA-256](../assets/illustrations/bram/no-search-results.prompts.json) preserve the selected image. This is approved artwork awaiting search implementation, distinct from “No books yet” and the neutral identity master; final search copy is not defined.
+[Bram with a magnifying glass](../assets/illustrations/status-no-search-results.png), approved October 24, 2026, is the selected illustration for no search matches, initially in Books. One long rounded arm holds a cream magnifying glass over one eye; the other hangs naturally. Preserve exactly two eyes, the gently enlarged eye inside the clear lens, visible smile, ivory horns, tiny feet and broad lilac body. The 1350×1165 RGBA master and [provenance with SHA-256](../assets/illustrations/bram/no-search-results.prompts.json) preserve the selected image. It ships unchanged as Android `status_no_search_results.png` in the Books search no-matches state (“No books match “{query}”” / “Search looks at titles and authors.”), distinct from “No books yet” and the neutral identity master.
 
 ## Family composition
 

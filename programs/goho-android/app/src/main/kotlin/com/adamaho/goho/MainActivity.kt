@@ -50,6 +50,7 @@ import com.adamaho.goho.ui.main.SectionScreen
 import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
 import com.adamaho.goho.ui.main.receiptListEntries
+import com.adamaho.goho.ui.main.rememberSectionSearch
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
@@ -176,6 +177,11 @@ class MainActivity : ComponentActivity() {
                                                     else null
                                                 }
                                             val bookState = books.state
+                                            val bookSearch =
+                                                rememberSectionSearch(
+                                                    R.string.books_search,
+                                                    R.string.books_search_placeholder,
+                                                )
                                             BookOverlayHost(
                                                 covers = books.covers,
                                                 loadFullCover = books::loadFullCover,
@@ -195,6 +201,13 @@ class MainActivity : ComponentActivity() {
                                                         openScanner(ScanKind.Receipt)
                                                     },
                                                     addAlpha = actionAlpha,
+                                                    search =
+                                                        bookSearch.takeIf {
+                                                            section == Section.Books
+                                                        },
+                                                    canSearch =
+                                                        bookState.hasLoaded &&
+                                                            bookState.books.isNotEmpty(),
                                                 ) { menuOpen ->
                                                     when (section) {
                                                         Section.Receipts ->
@@ -235,6 +248,7 @@ class MainActivity : ComponentActivity() {
                                                                 deleteBook = {
                                                                     books.delete(it.id)
                                                                 },
+                                                                search = bookSearch,
                                                                 uploadToReveal = bookUploadToReveal,
                                                                 onUploadRevealed = {
                                                                     bookUploadToReveal = null
