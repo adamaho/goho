@@ -259,6 +259,7 @@ data class GohoTypography(
     val meta: TextStyle,
     val section: TextStyle,
     val label: TextStyle,
+    val input: TextStyle,
 )
 
 val GohoType = GohoTypography(
@@ -276,6 +277,7 @@ val GohoType = GohoTypography(
     meta = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     section = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     label = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    input = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
 )
 
 // ---------- Shape ----------
