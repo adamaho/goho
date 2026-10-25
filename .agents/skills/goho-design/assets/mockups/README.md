@@ -1,5 +1,9 @@
 # Mockups
 
+## Book search motion (October 25, 2026, approved design)
+
+Filmstrips of the approved shared-axis motion for opening and closing book search ([section 10](../../references/screens.md#10-book-search)), captured from the canvas prototype (option C) at 2×, cropped to the header and the top of the list. They are design references, not native captures, and the spec's timings win (the prototype staggers Close search and the field by 30ms; natively they move together). `book-search-motion-open-light.png` and `-dark.png` show 0, 100, 200, 300 and 450ms after tapping Search; `book-search-motion-close-light.png` and `-dark.png` show 0, 100, 200 and 400ms after Close search.
+
 ## Book search (October 25, 2026, approved design)
 
 Design renders from the Goho brand canvas (“Book search”) at 360dp width and 2× (720×1480px), in light and dark. They are design references, not native captures; books and covers are sample data and the keyboard is a schematic stand-in. The [section 10 spec](../../references/screens.md#10-book-search) wins where they differ. Book search is implemented natively; these renders remain the design reference.

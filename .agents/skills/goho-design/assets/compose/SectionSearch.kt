@@ -1,6 +1,17 @@
 package com.adamaho.goho.ui.main
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.input.TextFieldState
@@ -18,6 +29,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
@@ -117,4 +129,57 @@ private fun BackChevron() {
         drawLine(tint, point(0.62f, 0.2f), point(0.32f, 0.5f), stroke, StrokeCap.Round)
         drawLine(tint, point(0.32f, 0.5f), point(0.62f, 0.8f), stroke, StrokeCap.Round)
     }
+}
+
+/**
+ * Shared-axis motion between the title row and the search header. Opening, the title row leaves
+ * toward the start as the search header arrives from the end; closing reverses it. [shift] is the
+ * distance in pixels, positive toward the end in the current layout direction.
+ */
+internal fun searchHeaderTransform(
+    opening: Boolean,
+    shift: Int,
+    reduced: Boolean,
+): ContentTransform {
+    if (reduced) return EnterTransition.None togetherWith ExitTransition.None
+    val toward = if (opening) -shift else shift
+    val delay =
+        if (opening) GohoMotion.SEARCH_HEADER_OPEN_DELAY_MILLIS
+        else GohoMotion.SEARCH_HEADER_CLOSE_DELAY_MILLIS
+    val duration =
+        if (opening) GohoMotion.SEARCH_HEADER_OPEN_MILLIS else GohoMotion.SEARCH_HEADER_CLOSE_MILLIS
+    val exit = GohoMotion.SEARCH_EXIT_MILLIS
+    return (fadeIn(tween(duration, delay, GohoMotion.emphasizedDecelerate)) +
+        slideInHorizontally(tween(duration, delay, GohoMotion.emphasizedDecelerate)) {
+            -toward
+        }) togetherWith
+        (fadeOut(tween(exit, easing = GohoMotion.emphasizedAccelerate)) +
+            slideOutHorizontally(tween<IntOffset>(exit, easing = GohoMotion.emphasizedAccelerate)) {
+                toward
+            })
+}
+
+/**
+ * The content beneath the header crossfades between the filter pages and the results, both drifting
+ * [shift] pixels the same way (up while opening, down while closing) so rows stay roughly in
+ * register instead of jumping.
+ */
+internal fun searchContentTransform(
+    opening: Boolean,
+    shift: Int,
+    reduced: Boolean,
+): ContentTransform {
+    if (reduced) return EnterTransition.None togetherWith ExitTransition.None
+    val toward = if (opening) -shift else shift
+    val exit =
+        if (opening) GohoMotion.SEARCH_CONTENT_OPEN_EXIT_MILLIS else GohoMotion.SEARCH_EXIT_MILLIS
+    val exitEasing = if (opening) GohoMotion.standard else GohoMotion.emphasizedAccelerate
+    val enter = GohoMotion.SEARCH_CONTENT_ENTER_MILLIS
+    val delay = GohoMotion.SEARCH_CONTENT_ENTER_DELAY_MILLIS
+    return (fadeIn(tween(enter, delay, GohoMotion.emphasizedDecelerate)) +
+        slideInVertically(tween(enter, delay, GohoMotion.emphasizedDecelerate)) {
+            -toward
+        }) togetherWith
+        (fadeOut(tween(exit, easing = exitEasing)) +
+            slideOutVertically(tween<IntOffset>(exit, easing = exitEasing)) { toward })
 }
