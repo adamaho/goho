@@ -18,6 +18,9 @@ import androidx.compose.ui.text.style.TextAlign
 import com.adamaho.goho.theme.*
 
 /**
+ * [size] picks the full-width [ButtonSize.Regular] action or the compact [ButtonSize.Small] one,
+ * which hugs its label, as for Clear search on the empty search state.
+ *
  * [contentColor] overrides the label and icon colour of [color]'s palette, as for the Grey Delete
  * book action in `onDangerContainer`.
  */
@@ -33,18 +36,23 @@ fun ActionButton(
     reserveSpaceFor: List<String> = emptyList(),
     loading: Boolean = false,
     contentColor: Color = Color.Unspecified,
+    size: ButtonSize = ButtonSize.Regular,
 ) {
     val c = GohoTheme.colors
     val content = contentColor.takeOrElse { c.buttonPalette(color).content }
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
+    val small = size == ButtonSize.Small
+    val shape = if (small) GohoShapes.buttonSmall else GohoShapes.button
+    val minHeight = if (small) GohoSpacing.buttonSmallHeight else GohoSpacing.buttonHeight
+    val horizontal = if (small) GohoSpacing.buttonSmallHorizontal else GohoSpacing.buttonHorizontal
     Row(
         modifier
-            .fillMaxWidth()
+            .then(if (small) Modifier else Modifier.fillMaxWidth())
             .pressFeedback { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .buttonSurface(c, GohoShapes.button, p, variant, color)
+            .buttonSurface(c, shape, p, variant, color)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -60,15 +68,21 @@ fun ActionButton(
                     }
                 else Modifier
             )
-            .heightIn(min = GohoSpacing.buttonHeight)
-            .padding(horizontal = GohoSpacing.buttonHorizontal, vertical = GohoSpacing.contentGap),
+            .heightIn(min = minHeight)
+            .padding(horizontal = horizontal, vertical = GohoSpacing.contentGap),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement =
             Arrangement.spacedBy(GohoSpacing.buttonIconGap, Alignment.CenterHorizontally),
     ) {
         CompositionLocalProvider(LocalContentColor provides content) { icon?.invoke() }
         Box(contentAlignment = Alignment.Center) {
-            val style = if (variant == 1) GohoTheme.type.button else GohoTheme.type.buttonSecondary
+            val style =
+                when {
+                    small && variant == 1 -> GohoTheme.type.buttonSmall
+                    small -> GohoTheme.type.buttonSecondarySmall
+                    variant == 1 -> GohoTheme.type.button
+                    else -> GohoTheme.type.buttonSecondary
+                }
             // Measure every label in the same constraints so asynchronous actions never resize.
             reserveSpaceFor.forEach { label ->
                 Text(
@@ -92,6 +106,12 @@ fun ActionButton(
                 )
         }
     }
+}
+
+/** [Small] is 44dp tall with 16dp corners and a 15sp label, sized to its content. */
+enum class ButtonSize {
+    Regular,
+    Small,
 }
 
 @Composable

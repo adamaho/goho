@@ -44,12 +44,15 @@ fun ActionButton(
     val progress by pressProgress(interaction)
     val p = if (enabled) progress.coerceIn(0f, 1f) else 0f
     val small = size == ButtonSize.Small
+    val shape = if (small) GohoShapes.buttonSmall else GohoShapes.button
+    val minHeight = if (small) GohoSpacing.buttonSmallHeight else GohoSpacing.buttonHeight
+    val horizontal = if (small) GohoSpacing.buttonSmallHorizontal else GohoSpacing.buttonHorizontal
     Row(
         modifier
             .then(if (small) Modifier else Modifier.fillMaxWidth())
             .pressFeedback { if (enabled) progress else 0f }
             .alpha(if (enabled) 1f else 0.4f)
-            .buttonSurface(c, if (small) GohoShapes.buttonSmall else GohoShapes.button, p, variant, color)
+            .buttonSurface(c, shape, p, variant, color)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -65,11 +68,8 @@ fun ActionButton(
                     }
                 else Modifier
             )
-            .heightIn(min = if (small) GohoSpacing.buttonSmallHeight else GohoSpacing.buttonHeight)
-            .padding(
-                horizontal = if (small) GohoSpacing.buttonSmallHorizontal else GohoSpacing.buttonHorizontal,
-                vertical = GohoSpacing.contentGap,
-            ),
+            .heightIn(min = minHeight)
+            .padding(horizontal = horizontal, vertical = GohoSpacing.contentGap),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement =
             Arrangement.spacedBy(GohoSpacing.buttonIconGap, Alignment.CenterHorizontally),
