@@ -1,5 +1,14 @@
 # Mockups
 
+## Book search (October 25, 2026, approved design)
+
+Design renders from the Goho brand canvas (“Book search”) at 360dp width and 2× (720×1480px), in light and dark. They are design references, not native captures; books and covers are sample data and the keyboard is a schematic stand-in. The [section 10 spec](../../references/screens.md#10-book-search) wins where they differ. Search is not implemented.
+
+- `book-search-idle-*.png`: Books with the round search button at the end of the title row.
+- `book-search-open-*.png`: search entered, the focused field with every saved book A–Z and the keyboard up; filters and Add stepped aside.
+- `book-search-typing-*.png`, `book-search-results-*.png`: results narrowing for “dav” (author matches, no highlighting), with the keyboard up and then dismissed.
+- `book-search-no-matches-*.png`: the magnifying-glass Bram, “No books match “octo”” and the small variant 2/Grey Clear search button.
+
 ## Shared list press feedback (October 24, 2026)
 
 [Receipt press, light](shared-row-feedback-native/receipt-pressed-light.png) and [Receipt press, dark](shared-row-feedback-native/receipt-pressed-dark.png) are unedited Goho Dev captures on the Pixel 9 API 36 emulator at 720×1600px and 280dpi, using the existing synthetic development receipts over Tailscale. Both show the inset rounded fill with card surface visible around the row. The existing [book press capture](book-list-options-native/pressed-light.png) remains current: its drawing and hold animation moved unchanged into `Modifier.listRowPressFeedback`, now used by both lists.

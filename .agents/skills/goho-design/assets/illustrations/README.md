@@ -19,7 +19,7 @@ The Android `status_no_books.png` is a byte-for-byte copy of this master. `NoBoo
 
 [status-no-search-results.png](status-no-search-results.png) is the user-approved October 24, 2026 pose for no matching search results, initially for Books: Bram holds a cream magnifying glass over one eye with a gentle smile and his original rounded arms. The selected 1350×1165 RGBA master is preserved unchanged; its [provenance](bram/no-search-results.prompts.json) records the references, prompt and SHA-256. It is distinct from the “No books yet” book-holding pose.
 
-Search is not implemented, and this asset has no Android drawable copy. The approval covers artwork only; final copy and search UI are not specified. Future integration should use the shared 220×190dp `StatusContent` illustration slot with `ContentScale.Fit`, a 4dp title gap, the same transparent PNG in both themes and no surrounding card. Keep this illustration decorative and let the state’s text supply its accessible meaning.
+Search is not implemented, and this asset has no Android drawable copy. The book search design in [screens.md section 10](../../references/screens.md#10-book-search) specifies its copy and Clear search action. Future integration should use the shared 220×190dp `StatusContent` illustration slot with `ContentScale.Fit`, a 4dp title gap, the same transparent PNG in both themes and no surrounding card. Keep this illustration decorative and let the state’s text supply its accessible meaning.
 
 The SVGs in `legacy/` are the October 2 paper-and-pastel illustrations. They are retained for provenance, not as editable sources for the Bram PNGs. Do not re-export them over the current artwork. No editable Bram source is included in this PR.
 
