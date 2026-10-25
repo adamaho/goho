@@ -4,12 +4,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -20,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
@@ -116,12 +114,11 @@ internal fun BookOverview(
             )
         }
     val saved = remember(entries) { entries.filterIsInstance<BookListEntry.Saved>() }
-    val fade =
-        tween<Float>(if (reduced) 0 else GohoMotion.SEARCH_MILLIS, easing = FastOutSlowInEasing)
+    val contentShift = with(LocalDensity.current) { GohoMotion.searchContentShift.roundToPx() }
     AnimatedContent(
         search.open,
         modifier = modifier,
-        transitionSpec = { (fadeIn(fade) togetherWith fadeOut(fade)).using(null) },
+        transitionSpec = { searchContentTransform(targetState, contentShift, reduced).using(null) },
         label = "Book search",
     ) { searching ->
         val leaving = searching != search.open

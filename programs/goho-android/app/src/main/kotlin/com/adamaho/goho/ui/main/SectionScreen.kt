@@ -3,12 +3,9 @@ package com.adamaho.goho.ui.main
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
@@ -26,9 +23,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.LayoutDirection
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
@@ -79,10 +79,25 @@ fun SectionScreen(
     val searchButtonFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val searching = search?.open == true
-    val searchFade =
-        tween<Float>(if (reduced) 0 else GohoMotion.SEARCH_MILLIS, easing = FastOutSlowInEasing)
+    val axisShift =
+        with(LocalDensity.current) { GohoMotion.searchAxisShift.roundToPx() }
+            .let { if (LocalLayoutDirection.current == LayoutDirection.Rtl) -it else it }
+    // Add shrinks away as search opens and returns once the title row has landed.
     val searchAddAlpha =
-        animateFloatAsState(if (searching) 0f else 1f, searchFade, label = "Search Add")
+        animateFloatAsState(
+            if (searching) 0f else 1f,
+            when {
+                reduced -> snap()
+                searching -> tween(GohoMotion.SEARCH_ADD_OUT_MILLIS, easing = GohoMotion.standard)
+                else ->
+                    tween(
+                        GohoMotion.SEARCH_ADD_IN_MILLIS,
+                        GohoMotion.SEARCH_ADD_IN_DELAY_MILLIS,
+                        GohoMotion.emphasizedDecelerate,
+                    )
+            },
+            label = "Search Add",
+        )
     // Add takes no taps, focus or accessibility from the moment search opens.
     val addInactive = addHidden || searching
     var wasSearching by remember { mutableStateOf(searching) }
@@ -109,11 +124,12 @@ fun SectionScreen(
                 .focusGroup()
                 .then(if (menuOpen) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
-            // The title row and the search header crossfade; only the incoming one is interactive.
+            // The title row and the search header share a horizontal axis; only the incoming one
+            // is interactive.
             AnimatedContent(
                 searching,
                 transitionSpec = {
-                    (fadeIn(searchFade) togetherWith fadeOut(searchFade)).using(null)
+                    searchHeaderTransform(targetState, axisShift, reduced).using(null)
                 },
                 label = "Section header",
             ) { open ->
@@ -208,7 +224,11 @@ fun SectionScreen(
                     .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
                     .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
                     .graphicsLayer {
-                        alpha = addAlpha() * searchAddAlpha.value
+                        val shown = searchAddAlpha.value
+                        alpha = addAlpha() * shown
+                        scaleX =
+                            GohoMotion.SEARCH_ADD_SCALE + (1f - GohoMotion.SEARCH_ADD_SCALE) * shown
+                        scaleY = scaleX
                         // While fading, keep the face and its shadow together, unclipped.
                         if (alpha < 1f) {
                             compositingStrategy = CompositingStrategy.Offscreen
