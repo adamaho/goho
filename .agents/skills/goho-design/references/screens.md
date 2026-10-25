@@ -176,7 +176,7 @@ One Sheet, opened from the details screen's overflow button, by pressing and hol
 
 ## 6. Loading, empty and error states
 
-Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts, empty Needs attention and load error each share one transparent Bram asset across both themes. Render each unchanged in the shared 220×190dp slot, with a 4dp gap before the title. The Receipts header is text-only in every state. Load error includes the retry action. Dedicated character artwork for other states is deferred until its feature is implemented. Older SVG illustrations are historical.
+Mockups: `empty-needs-attention*.png`, `empty-no-receipts*.png`, `load-error*.png` (dark and `-light`). All three use the shared status content layout (components.md), directly on the screen background without an enclosing card fill, border or rounded clipping. No receipts, empty Needs attention and load error each share one transparent Bram asset across both themes. Render each unchanged in the shared 220×190dp slot, with a 4dp gap before the title. The Receipts header is text-only in every state. Load error includes the retry action. The approved search artwork below is retained for future integration; other dedicated character artwork is deferred until its feature is implemented. Older SVG illustrations are historical.
 
 **Layout and transitions**
 
@@ -302,6 +302,7 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 **States:**
 
 - Initial loading: four skeleton rows in the same card with one “Loading books…” announcement after the shared 200ms delay.
+- Search with no matches (approved artwork only): [magnifying-glass Bram](../assets/illustrations/status-no-search-results.png) is selected for empty search results. This is separate from having no saved books. Search is not implemented; the artwork approval does not define final copy, controls or search behaviour. Future integration uses the shared status illustration slot and spacing.
 - No books or unfinished scans on All: the approved [book-holding Bram](../assets/illustrations/status-no-books.png), “No books yet” / “Saved books will appear here.” Render it unchanged in the shared 220×190dp illustration slot with a 4dp title gap, directly on either theme’s background without a card. Keep the existing copy and no instruction to scan.
 - Needs attention, empty: the shared “All good” state.
 - Load error: the shared load-error artwork and retry, “We couldn’t load your books. Let’s try again.”

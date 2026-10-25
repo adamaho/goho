@@ -27,6 +27,10 @@ All three have a fine matte clay texture, soft studio light, smooth rounded volu
 
 [Bram holding a book](../assets/illustrations/status-no-books.png), approved October 23, 2026, is the selected “No books yet” illustration. He gently cradles one closed cream hardcover with a blank cover, visible ivory pages and a warm oatmeal spine. Keep his original face, long round arms, broad lilac body, tiny feet and ivory horns. The transparent master is 1350×1165 RGBA; [provenance and its SHA-256](../assets/illustrations/bram/no-books.prompts.json) identify the exact selected image. This is a status pose, not a replacement for the neutral identity master. The native empty Books state uses this exact image in both themes through the shared `StatusContent` illustration slot.
 
+## Approved search-empty-state pose
+
+[Bram with a magnifying glass](../assets/illustrations/status-no-search-results.png), approved October 24, 2026, is the selected illustration for no search matches, initially in Books. One long rounded arm holds a cream magnifying glass over one eye; the other hangs naturally. Preserve exactly two eyes, the gently enlarged eye inside the clear lens, visible smile, ivory horns, tiny feet and broad lilac body. The 1350×1165 RGBA master and [provenance with SHA-256](../assets/illustrations/bram/no-search-results.prompts.json) preserve the selected image. This is approved artwork awaiting search implementation, distinct from “No books yet” and the neutral identity master; final search copy is not defined.
+
 ## Family composition
 
 In the approved portrait, Bram is on the viewer's left, Mira on the right, and the smaller child slightly forward in the center. Bram is lower and wider; Mira is taller with her curl. Their inward poses feel affectionate while keeping the child's complete silhouette and all faces readable. Use this image for family relationships, palette, and scale; use the individual masters for precise character features. Do not transfer one family member's identifying features to another.
@@ -41,4 +45,4 @@ The launcher icons feature **Bram, Mira, and the child together**, following the
 
 Keep the approved PNG masters unchanged. PNG preserves their texture and alpha; converting them into SVG paths or embedding base64 in documentation does not improve future context. Reference the files directly and open them when a visual task needs them. Keep platform-sized exports separate from the master artwork.
 
-Commit current app artwork, the approved individual and family identity masters, and the selected Books empty-state master above. When an approved design changes, update the relevant source, manifest, and this guide together. Keep unused candidates, exploration prompts, and review exports in ignored `.data/`; do not accumulate alternate versions in the repository. The committed masters and their hashes preserve identity across threads.
+Commit current app artwork, the approved individual and family identity masters, and the selected Books and search empty-state masters above. When an approved design changes, update the relevant source, manifest, and this guide together. Keep unused candidates, exploration prompts, and review exports in ignored `.data/`; do not accumulate alternate versions in the repository. The committed masters and their hashes preserve identity across threads.
