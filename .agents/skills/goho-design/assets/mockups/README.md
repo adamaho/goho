@@ -2,12 +2,16 @@
 
 ## Book search (October 25, 2026, approved design)
 
-Design renders from the Goho brand canvas (“Book search”) at 360dp width and 2× (720×1480px), in light and dark. They are design references, not native captures; books and covers are sample data and the keyboard is a schematic stand-in. The [section 10 spec](../../references/screens.md#10-book-search) wins where they differ. Search is not implemented.
+Design renders from the Goho brand canvas (“Book search”) at 360dp width and 2× (720×1480px), in light and dark. They are design references, not native captures; books and covers are sample data and the keyboard is a schematic stand-in. The [section 10 spec](../../references/screens.md#10-book-search) wins where they differ. Book search is implemented natively; these renders remain the design reference.
 
 - `book-search-idle-*.png`: Books with the round search button at the end of the title row.
 - `book-search-open-*.png`: search entered, the focused field with every saved book A–Z and the keyboard up; filters and Add stepped aside.
 - `book-search-typing-*.png`, `book-search-results-*.png`: results narrowing for “dav” (author matches, no highlighting), with the keyboard up and then dismissed.
 - `book-search-no-matches-*.png`: the magnifying-glass Bram, “No books match “octo”” and the small variant 2/Grey Clear search button.
+
+## Book search (native implementation)
+
+See [native captures and provenance](book-search-native/README.md) for the actual light/dark search header, saved-book results, no-matches Bram and compact 2×-text state. These use synthetic data in the ordinary development app.
 
 ## Shared list press feedback (October 24, 2026)
 
