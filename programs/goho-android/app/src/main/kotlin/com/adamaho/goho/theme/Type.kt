@@ -38,6 +38,8 @@ data class GohoTypography(
     val rowTitle: TextStyle,
     val button: TextStyle,
     val buttonSecondary: TextStyle,
+    val buttonSmall: TextStyle,
+    val buttonSecondarySmall: TextStyle,
     val listRow: TextStyle,
     val listValue: TextStyle,
     val body: TextStyle,
@@ -161,6 +163,22 @@ val GohoType =
                 fontFamily = Geist,
                 fontWeight = FontWeight.Medium,
                 fontSize = 16.sp,
+                lineHeight = 20.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        buttonSmall =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        buttonSecondarySmall =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
                 lineHeight = 20.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),

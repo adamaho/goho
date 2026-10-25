@@ -302,7 +302,7 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 **States:**
 
 - Initial loading: four skeleton rows in the same card with one “Loading books…” announcement after the shared 200ms delay.
-- Search with no matches (approved artwork only): [magnifying-glass Bram](../assets/illustrations/status-no-search-results.png) is selected for empty search results. This is separate from having no saved books. Search is not implemented; the artwork approval does not define final copy, controls or search behaviour. Future integration uses the shared status illustration slot and spacing.
+- Search with no matches: see [section 10](#10-book-search) (approved design, not implemented). This is separate from having no saved books.
 - No books or unfinished scans on All: the approved [book-holding Bram](../assets/illustrations/status-no-books.png), “No books yet” / “Saved books will appear here.” Render it unchanged in the shared 220×190dp illustration slot with a 4dp title gap, directly on either theme’s background without a card. Keep the existing copy and no instruction to scan.
 - Needs attention, empty: the shared “All good” state.
 - Load error: the shared load-error artwork and retry, “We couldn’t load your books. Let’s try again.”
@@ -347,4 +347,31 @@ Opened by tapping a saved book row. Rows still reading a cover are not tappable.
 - Only 204 counts as success. Any other response (including 404) or a network error keeps the overlay open and unlocks it, with “Couldn’t delete this book. Try again.” (`body`, `onDangerContainer`, centered, polite live region) 18dp above the buttons. Retry deletes the same book; Cancel, Close, Back, frost and swipe close it as usual.
 - Success fades the whole overlay out (220ms; 150ms with Remove animations) without flying the cover home, and the row folds out of the Books list (section 8). `DELETE /books/{bookId}` also removes the book’s scans and cover; there is no undo.
 
-Not part of Books: editing, cover replacement, search or manual entry.
+Not part of Books: editing, cover replacement or manual entry. Search is section 10.
+
+## 10. Book search
+
+Approved design, October 24–25, 2026. Not implemented: build it only when requested. Mockups (design renders at 360dp and 2×, sample data, not native captures): `book-search-idle-*.png`, `book-search-open-*.png`, `book-search-typing-*.png`, `book-search-results-*.png` and `book-search-no-matches-*.png`, light and dark. The spec wins where they differ. Receipts has no search; reuse this pattern if it is ever requested.
+
+**Search button** (Books only): a 44dp variant 2/Grey round `IconButton` with a 20dp search glyph (2dp stroke), at the end of the `SectionTitle` row, 16dp from the end edge and vertically centred on the title. Content description “Search books”. Shown once the list has loaded with at least one saved book; hidden during initial loading, load error and the no-books state. It doesn't move the title, filters or list, and is disabled while the section or Add menu is open. Tapping it enters search on the current filter page.
+
+**Search header** (replaces the title row; same top inset and 44dp row):
+
+- Leading: variant 2/Grey round `IconButton` with the back chevron, content description “Close search”, 16dp from the start edge, then an 8dp gap.
+- `SearchField`, filling the rest of the row to the 16dp end margin: 44dp tall (grows with large text), shape `pill`, fill `surface`, a 1dp `outline` ring at rest and a 2dp `accent` ring while focused. 14dp start padding, an 18dp search glyph in `textTertiary`, 10dp gap, then the query in 16/22sp Regular `textPrimary` (one line, scrolls horizontally) with the placeholder “Search title or author” in `textTertiary`. When the query isn't empty, a 28dp round clear control (`surfaceMuted`, 14dp X in `textSecondary`, 8dp end padding, content description “Clear search”) empties it and keeps focus.
+- Entering search focuses the field and opens the keyboard. The IME action is Search, which only hides the keyboard. Scrolling the results also hides it. The field keeps the query either way and returns to the rest ring.
+
+**Results:**
+
+- The filters, unfinished and failed scans, pull-to-refresh and the Add button step aside while searching; Add fades out with the header change and back in on exit. Search covers saved books only.
+- A count line, “1 book” / “{n} books”, in `section` / `textTertiary` at the 20dp text inset, 10dp above and 8dp below, then one `ListCard` of the matching saved books as standard `BookRow`s in the list order (A–Z by title). An empty query shows every saved book.
+- Matching: case-insensitive, whitespace-collapsed substring of the title or the author, the same rule as the server's `GET /books?search=`. Filter the already-loaded saved books on every change, with no request per keystroke. Matches are not highlighted.
+- Rows behave as on the list: tap opens the book overlay (section 9) with its cover flight, hold opens the book options sheet (section 5). A deleted book folds out of the results and the count drops. Background refreshes update results in place without moving the scroll position.
+- Announce the count as a polite live region once typing pauses for 500ms.
+
+**No matches** (non-empty query, no saved book matches):
+
+- The shared `StatusContent` below the search header, starting at the status top padding (not centred, so it clears the keyboard; it scrolls on short screens): the [magnifying-glass Bram](../assets/illustrations/status-no-search-results.png) unchanged in the 220×190dp slot, same asset in both themes, no card; 4dp gap; title “No books match “{query}”” (the trimmed query, in curly quotes; the title wraps); 6dp gap; body “Search looks at titles and authors.”; then 22dp below, a small variant 2/Grey `ActionButton` “Clear search” (`ButtonSize.Small`, centred, components.md). Clear search empties the query, focuses the field and shows every saved book again.
+- No status entrance replay while typing: the state appears with the shared 200ms fade only when the results first become empty, and swaps back without animation.
+
+**Leaving search:** Close search or system Back (after the system hides an open keyboard) clears the query and restores the title row, filters, the same filter page and its scroll position, and the Add button. Entering and leaving crossfade the header row and content over 180ms (standard easing); Remove animations snaps. Focus returns to the search button on exit. Switching sections from elsewhere is impossible while searching, since the title is hidden.

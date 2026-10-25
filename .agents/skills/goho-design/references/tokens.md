@@ -78,18 +78,19 @@ Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only. Bundle the T
 
 Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, tags and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
 
-| Style      | Size / line height | Weight | Tracking | Use                                                                                          |
-| ---------- | ------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
-| `display`  | 44 / 48            | 600    | −0.035em | Receipt amount on details                                                                    |
-| `title`    | 22 / 28            | 600    | −0.025em | Screen title ("New receipt")                                                                 |
-| `wordmark` | 32 / 36            | 600    | −0.035em | Legacy wordmark; the app uses `screenTitle` “Receipts”                                       |
-| `rowTitle` | 16 / 22            | 500    | −0.01em  | Merchant and amount in list rows; merchant on details (in `textSecondary`); sheet menu items |
-| `button`   | 16 / 20            | 600    | 0        | Scan, primary and danger button labels (secondary buttons use 500)                           |
-| `listRow`  | 15 / 20            | 400    | 0        | Detail list and item names (values use 500)                                                  |
-| `body`     | 15 / 22            | 400    | 0        | Error line above the confirmation buttons                                                    |
-| `meta`     | 13 / 18            | 400    | 0        | Dates, sub-lines                                                                             |
-| `section`  | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
-| `label`    | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
+| Style         | Size / line height | Weight | Tracking | Use                                                                                          |
+| ------------- | ------------------ | ------ | -------- | -------------------------------------------------------------------------------------------- |
+| `display`     | 44 / 48            | 600    | −0.035em | Receipt amount on details                                                                    |
+| `title`       | 22 / 28            | 600    | −0.025em | Screen title ("New receipt")                                                                 |
+| `wordmark`    | 32 / 36            | 600    | −0.035em | Legacy wordmark; the app uses `screenTitle` “Receipts”                                       |
+| `rowTitle`    | 16 / 22            | 500    | −0.01em  | Merchant and amount in list rows; merchant on details (in `textSecondary`); sheet menu items |
+| `button`      | 16 / 20            | 600    | 0        | Scan, primary and danger button labels (secondary buttons use 500)                           |
+| `buttonSmall` | 15 / 20            | 600    | 0        | Small `ActionButton` labels (variant 2 uses `buttonSecondarySmall`, 500)                     |
+| `listRow`     | 15 / 20            | 400    | 0        | Detail list and item names (values use 500)                                                  |
+| `body`        | 15 / 22            | 400    | 0        | Error line above the confirmation buttons                                                    |
+| `meta`        | 13 / 18            | 400    | 0        | Dates, sub-lines                                                                             |
+| `section`     | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
+| `label`       | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
 
 Sheet headers reuse their list row's typography and spacing, with a 12dp thumbnail-to-text gap and 5dp line gap. Receipt headers use the 40×48dp thumbnail, merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and upload tag `label` 12/16 Medium. Book headers use the 48×56dp cover, a 16dp text-to-tag gap with the tag at the bottom end, title `rowTitle` 16/22 Medium, author with optional reading level `meta` 13/18 Regular and category tag `label` 12/16 Medium. There are no separate sheet-summary typography, thumbnail or cover tokens.
 
@@ -102,6 +103,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 | `thumb`       | 8      | Receipt thumbnails and book covers in rows                           |
 | `cover`       | 8      | Book cover and generated cover in the book overlay                   |
 | `button`      | 20     | Primary and secondary buttons (not fully round)                      |
+| `buttonSmall` | 16     | Small `ActionButton` (not fully round)                               |
 | `card`        | 20     | Grouped list cards, detail card, photo frame                         |
 | `fab`         | 24     | Historical Scan button (Add button is `pill`)                        |
 | `tag`         | 4      | Display-only category and upload-state tags                          |

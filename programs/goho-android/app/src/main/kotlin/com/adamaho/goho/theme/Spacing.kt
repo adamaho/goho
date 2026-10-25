@@ -28,6 +28,8 @@ object GohoSpacing {
     val sheetButtonsTop = 18.dp
     val buttonHeight = 52.dp
     val buttonHorizontal = 20.dp
+    val buttonSmallHeight = 44.dp
+    val buttonSmallHorizontal = 18.dp
     val buttonGap = 10.dp
     val refreshThreshold = 80.dp
     val refreshIndicator = 44.dp
