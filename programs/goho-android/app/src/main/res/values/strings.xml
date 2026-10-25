@@ -6,6 +6,16 @@
     <string name="books_empty_body">Saved books will appear here.</string>
     <string name="books_refresh">Refresh books</string>
     <string name="books_refreshing">Refreshing books…</string>
+    <string name="books_search">Search books</string>
+    <string name="books_search_placeholder">Search title or author</string>
+    <plurals name="books_count">
+        <item quantity="one">%1$s book</item>
+        <item quantity="other">%1$s books</item>
+    </plurals>
+    <string name="books_search_empty_title">No books match “%1$s”</string>
+    <string name="books_search_empty_body">Search looks at titles and authors.</string>
+    <string name="search_close">Close search</string>
+    <string name="search_clear">Clear search</string>
     <string name="book_new">New book</string>
     <string name="book_unknown">Unknown book</string>
     <string name="book_reading">Reading cover…</string>

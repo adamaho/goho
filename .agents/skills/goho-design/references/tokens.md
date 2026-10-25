@@ -91,6 +91,7 @@ Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and bi
 | `meta`        | 13 / 18            | 400    | 0        | Dates, sub-lines                                                                             |
 | `section`     | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
 | `label`       | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
+| `input`       | 16 / 22            | 400    | 0        | Search field query and placeholder                                                           |
 
 Sheet headers reuse their list row's typography and spacing, with a 12dp thumbnail-to-text gap and 5dp line gap. Receipt headers use the 40×48dp thumbnail, merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and upload tag `label` 12/16 Medium. Book headers use the 48×56dp cover, a 16dp text-to-tag gap with the tag at the bottom end, title `rowTitle` 16/22 Medium, author with optional reading level `meta` 13/18 Regular and category tag `label` 12/16 Medium. There are no separate sheet-summary typography, thumbnail or cover tokens.
 
@@ -128,7 +129,8 @@ Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (
 - Tag: `tagHeight` = 24 minimum, `tagHorizontal` = 8, `tagVertical` = 4, `tagIcon` = 14, `tagIconGap` = 5. Standard rows use `tagMaxWidth` = 160; stacked layouts allow the available width and wrap long labels. All sizes remain theme tokens.
 - Section spacing: 24 above a section label, 8 below it.
 - Header: text-only title row is at least 44 tall at status bar inset + 4dp. The Receipts title uses the 20dp text inset in every state; no Bram header mark.
-- Status illustrations: no receipts, no books, empty Needs attention and load error use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
+- Status illustrations: no receipts, no books, empty Needs attention, load error and search with no matches use the existing 220×190 slot and 4dp title gap. Fit each transparent asset unchanged in both themes.
+- Book search: `searchIcon` = 20 (search button glyph), `searchCloseGap` = 8 (Close search to the field), `searchFieldStart` = 14, `searchFieldIcon` = 18, `searchFieldIconGap` = 10, `searchFocusRing` = 2 (`hairline` at rest), `searchClear` = 28 in a 44dp (`headerHeight`) target, `searchClearIcon` = 14, and the count line’s `searchCountTop` = 10 / `searchCountBottom` = 8 at the 20dp text inset. Motion: `SEARCH_MILLIS` = 180 with `FastOutSlowInEasing` for the header, content and Add crossfade (snaps with Remove animations); `SEARCH_ANNOUNCE_DELAY_MILLIS` = 500 before announcing the count.
 - Loading: `loadingIcon` = 24dp for initial receipt loading; retry reuses `buttonIcon` = 18dp. Both use `iconStroke` = 2dp.
 - Bottom: the Add button sits 28dp above the navigation bar inset and 24dp from the end edge (`fabMarginEnd`), 8dp farther inward than the receipt cards.
 

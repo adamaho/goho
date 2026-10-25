@@ -42,6 +42,10 @@ object GohoMotion {
     const val REFRESH_MORPH_MILLIS = 240
     const val REFRESH_FAILURE_MILLIS = 3000L
     const val STATUS_ENTER_MILLIS = 200
+    // Entering and leaving search crossfade the header, content and Add; the result count is
+    // announced once typing pauses.
+    const val SEARCH_MILLIS = 180
+    const val SEARCH_ANNOUNCE_DELAY_MILLIS = 500L
     const val STATUS_CROSSFADE_MILLIS = 200
     val statusEnterTranslation = 6.dp
     const val SHEET_CONTENT_MILLIS = 280

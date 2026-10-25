@@ -2,6 +2,13 @@ package com.adamaho.goho.ui.main
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
@@ -16,7 +23,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.LayerOutsets
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.adamaho.goho.R
@@ -37,6 +47,10 @@ enum class Section(@StringRes val title: Int, @DrawableRes val icon: Int) {
  * menu is open, so it can pause paging and pull-to-refresh. Null counts are unknown and omitted. A
  * modal overlay that owns the screen fades Add with [addAlpha]; at 0 Add is also hidden from touch,
  * focus and accessibility.
+ *
+ * A section with a [search] shows its button at the end of the title row while [canSearch]. Open
+ * search replaces the title row with Close search and the field, and Add gives way; [content] shows
+ * the results. Focus returns to the search button on exit.
  */
 @Composable
 fun SectionScreen(
@@ -49,9 +63,12 @@ fun SectionScreen(
     onScanReceipt: () -> Unit,
     modifier: Modifier = Modifier,
     addAlpha: () -> Float = { 1f },
+    search: SectionSearch? = null,
+    canSearch: Boolean = false,
     content: @Composable (menuOpen: Boolean) -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val reduced = rememberReducedMotion()
     var addMenuOpen by rememberSaveable { mutableStateOf(false) }
     var titleMenuOpen by rememberSaveable { mutableStateOf(false) }
     var pendingSection by remember { mutableStateOf<Section?>(null) }
@@ -59,14 +76,31 @@ fun SectionScreen(
     val addHidden by remember(addAlpha) { derivedStateOf { addAlpha() == 0f } }
     val addButtonFocus = remember { FocusRequester() }
     val titleFocus = remember { FocusRequester() }
+    val searchButtonFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val searching = search?.open == true
+    val searchFade =
+        tween<Float>(if (reduced) 0 else GohoMotion.SEARCH_MILLIS, easing = FastOutSlowInEasing)
+    val searchAddAlpha =
+        animateFloatAsState(if (searching) 0f else 1f, searchFade, label = "Search Add")
+    // Add takes no taps, focus or accessibility from the moment search opens.
+    val addInactive = addHidden || searching
+    var wasSearching by remember { mutableStateOf(searching) }
+    LaunchedEffect(searching) {
+        if (wasSearching && !searching) {
+            focusManager.clearFocus()
+            if (canSearch) searchButtonFocus.requestFocus()
+        }
+        wasSearching = searching
+    }
     fun closeAddMenu() {
         addMenuOpen = false
         addButtonFocus.requestFocus()
     }
     LaunchedEffect(isOpeningScanner) { if (isOpeningScanner) addMenuOpen = false }
     val sections = rememberSaveableStateHolder()
-    // Sections have no text input. Ignore an outgoing launcher keyboard's insets so Add stays
-    // anchored to the window during cold start, before the IME finishes hiding.
+    // Ignore keyboard insets so Add stays anchored to the window, including during cold start
+    // before an outgoing launcher keyboard finishes hiding. Search results pad for the keyboard.
     Box(modifier.fillMaxSize().background(GohoTheme.colors.background)) {
         Column(
             Modifier.fillMaxSize()
@@ -75,57 +109,81 @@ fun SectionScreen(
                 .focusGroup()
                 .then(if (menuOpen) Modifier.clearAndSetSemantics {} else Modifier)
         ) {
-            Box(
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = GohoSpacing.screenMargin)
-                    .padding(top = GohoSpacing.headerTop)
-            ) {
-                SectionTitle(
-                    title = stringResource(section.title),
-                    open = titleMenuOpen,
-                    onClick = {
-                        if (!titleMenuOpen) {
-                            addMenuOpen = false
-                            pendingSection = null
-                        }
-                        titleMenuOpen = !titleMenuOpen
-                    },
-                    modifier =
-                        Modifier.padding(start = GohoSpacing.textInsetFromMargin)
-                            .focusRequester(titleFocus),
-                )
-                SectionMenu(
-                    open = titleMenuOpen,
-                    entries =
-                        Section.entries.map { entry ->
-                            val count =
-                                when (entry) {
-                                    Section.Receipts -> receiptCount
-                                    Section.Books -> bookCount
+            // The title row and the search header crossfade; only the incoming one is interactive.
+            AnimatedContent(
+                searching,
+                transitionSpec = {
+                    (fadeIn(searchFade) togetherWith fadeOut(searchFade)).using(null)
+                },
+                label = "Section header",
+            ) { open ->
+                val leaving = open != searching
+                if (open && search != null) SearchHeader(search, Modifier.leaving(leaving))
+                else
+                    Box(
+                        Modifier.leaving(leaving)
+                            .fillMaxWidth()
+                            .padding(horizontal = GohoSpacing.screenMargin)
+                            .padding(top = GohoSpacing.headerTop)
+                    ) {
+                        SectionTitle(
+                            title = stringResource(section.title),
+                            open = titleMenuOpen,
+                            onClick = {
+                                if (!titleMenuOpen) {
+                                    addMenuOpen = false
+                                    pendingSection = null
                                 }
-                            SectionMenuEntry(
-                                entry.title,
-                                entry.icon,
-                                selected = entry == section,
-                                count =
-                                    count?.let {
-                                        NumberFormat.getIntegerInstance(locale).format(it)
-                                    },
+                                titleMenuOpen = !titleMenuOpen
+                            },
+                            modifier =
+                                Modifier.padding(start = GohoSpacing.textInsetFromMargin)
+                                    .focusRequester(titleFocus),
+                        )
+                        if (search != null && canSearch)
+                            IconButton(
+                                contentDescription = stringResource(search.label),
+                                onClick = search::open,
+                                enabled = !menuOpen,
+                                modifier =
+                                    Modifier.align(Alignment.CenterEnd)
+                                        .focusRequester(searchButtonFocus),
                             ) {
-                                // Keep the title, selected row and page stable during exit.
-                                if (entry != section) pendingSection = entry
+                                SearchIcon(GohoSpacing.searchIcon)
                             }
-                        },
-                    onDismiss = { titleMenuOpen = false },
-                    onClosed = {
-                        // Compose the next page only after the popup has finished closing.
-                        pendingSection?.let { next ->
-                            pendingSection = null
-                            onSectionChange(next)
-                        }
-                        titleFocus.requestFocus()
-                    },
-                )
+                        SectionMenu(
+                            open = titleMenuOpen,
+                            entries =
+                                Section.entries.map { entry ->
+                                    val count =
+                                        when (entry) {
+                                            Section.Receipts -> receiptCount
+                                            Section.Books -> bookCount
+                                        }
+                                    SectionMenuEntry(
+                                        entry.title,
+                                        entry.icon,
+                                        selected = entry == section,
+                                        count =
+                                            count?.let {
+                                                NumberFormat.getIntegerInstance(locale).format(it)
+                                            },
+                                    ) {
+                                        // Keep the title, selected row and page stable during exit.
+                                        if (entry != section) pendingSection = entry
+                                    }
+                                },
+                            onDismiss = { titleMenuOpen = false },
+                            onClosed = {
+                                // Compose the next page only after the popup has finished closing.
+                                pendingSection?.let { next ->
+                                    pendingSection = null
+                                    onSectionChange(next)
+                                }
+                                titleFocus.requestFocus()
+                            },
+                        )
+                    }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 sections.SaveableStateProvider(section.name) { content(menuOpen) }
@@ -143,14 +201,14 @@ fun SectionScreen(
         )
         AddButton(
             open = addMenuOpen,
-            enabled = !isOpeningScanner && !addHidden,
+            enabled = !isOpeningScanner && !addInactive,
             onClick = { if (addMenuOpen) closeAddMenu() else addMenuOpen = true },
             modifier =
                 Modifier.align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
                     .padding(end = GohoSpacing.fabMarginEnd, bottom = GohoSpacing.fabBottom)
                     .graphicsLayer {
-                        alpha = addAlpha()
+                        alpha = addAlpha() * searchAddAlpha.value
                         // While fading, keep the face and its shadow together, unclipped.
                         if (alpha < 1f) {
                             compositingStrategy = CompositingStrategy.Offscreen
@@ -158,12 +216,33 @@ fun SectionScreen(
                         }
                     }
                     .focusRequester(addButtonFocus)
-                    .focusProperties { canFocus = !titleMenuOpen && !addHidden }
+                    .focusProperties { canFocus = !titleMenuOpen && !addInactive }
                     .then(
-                        if (titleMenuOpen || addHidden) Modifier.clearAndSetSemantics {}
+                        if (titleMenuOpen || addInactive) Modifier.clearAndSetSemantics {}
                         else Modifier
                     ),
         )
         SectionMenuScrim(open = titleMenuOpen, onDismiss = { titleMenuOpen = false })
     }
 }
+
+/**
+ * Content leaving a crossfade while the incoming content takes over: it takes no touches, focus or
+ * accessibility actions.
+ */
+internal fun Modifier.leaving(leaving: Boolean): Modifier = focusProperties {
+    onEnter = { if (leaving) cancelFocusChange() }
+}
+    .focusGroup()
+    .then(
+        if (leaving)
+            Modifier.clearAndSetSemantics {}
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach {
+                            it.consume()
+                        }
+                    }
+                }
+        else Modifier
+    )
