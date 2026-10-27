@@ -12,6 +12,10 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
@@ -19,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
@@ -34,10 +39,15 @@ import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
+import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
+import com.adamaho.goho.ui.components.DeletionFeedback
 import com.adamaho.goho.ui.main.BookListController
 import com.adamaho.goho.ui.main.BookOverlayHost
 import com.adamaho.goho.ui.main.BookOverview
+import com.adamaho.goho.ui.main.DeletionKey
+import com.adamaho.goho.ui.main.DeletionKind
+import com.adamaho.goho.ui.main.PendingDeletions
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
@@ -49,6 +59,7 @@ import com.adamaho.goho.ui.main.Section
 import com.adamaho.goho.ui.main.SectionScreen
 import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
+import com.adamaho.goho.ui.main.deleteAndConfirm
 import com.adamaho.goho.ui.main.receiptListEntries
 import com.adamaho.goho.ui.main.rememberSectionSearch
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -99,8 +110,14 @@ class MainActivity : ComponentActivity() {
     private val receiptUploadsApi by lazy { service<ReceiptUploadsApi>() }
     private val receiptsApi by lazy { service<ReceiptsApi>() }
     private val receiptThumbnails = ThumbnailCache { loadReceiptImage(it) }
+    private val deletions by lazy { PendingDeletions(lifecycleScope) }
     private val books by lazy {
-        BookListController(lifecycleScope, service<BooksApi>(), service<BookUploadsApi>())
+        BookListController(
+            lifecycleScope,
+            service<BooksApi>(),
+            service<BookUploadsApi>(),
+            deletions,
+        )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
 
@@ -165,18 +182,19 @@ class MainActivity : ComponentActivity() {
                                 when (route) {
                                     SectionRoute ->
                                         NavEntry(route) {
+                                            val receiptState = visibleReceiptState
                                             val receiptCount =
-                                                remember(overviewState) {
-                                                    if (overviewState.hasLoaded)
+                                                remember(receiptState) {
+                                                    if (receiptState.hasLoaded)
                                                         receiptListEntries(
-                                                                overviewState.receipts,
-                                                                overviewState.uploads,
+                                                                receiptState.receipts,
+                                                                receiptState.uploads,
                                                                 ZoneId.systemDefault(),
                                                             )
                                                             .size
                                                     else null
                                                 }
-                                            val bookState = books.state
+                                            val bookState = books.visibleState
                                             val bookSearch =
                                                 rememberSectionSearch(
                                                     R.string.books_search,
@@ -212,7 +230,7 @@ class MainActivity : ComponentActivity() {
                                                     when (section) {
                                                         Section.Receipts ->
                                                             ReceiptOverview(
-                                                                state = overviewState,
+                                                                state = receiptState,
                                                                 menuOpen = menuOpen,
                                                                 uploadToReveal =
                                                                     receiptUploadToReveal,
@@ -295,6 +313,21 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                     }
+                    DeletionFeedback(
+                        deletions,
+                        Modifier.fillMaxSize()
+                            .navigationBarsPadding()
+                            .imePadding()
+                            .padding(
+                                bottom =
+                                    if (captured == null && backStack.lastOrNull() == SectionRoute)
+                                        GohoSpacing.fabBottom +
+                                            GohoSpacing.addButton +
+                                            GohoSpacing.contentGap
+                                    else GohoSpacing.screenMargin
+                            )
+                            .wrapContentSize(Alignment.BottomCenter),
+                    )
                 }
             }
         }
@@ -367,32 +400,62 @@ class MainActivity : ComponentActivity() {
             null
         }
 
+    /** Pending IDs are removed only from presentation, including counts and related scan rows. */
+    private val visibleReceiptState: ReceiptOverviewState
+        get() =
+            overviewState.copy(
+                receipts =
+                    overviewState.receipts.filterNot {
+                        deletions.contains(DeletionKey(DeletionKind.Receipt, it.id))
+                    },
+                uploads =
+                    overviewState.uploads.filterNot {
+                        deletions.contains(
+                            DeletionKey(DeletionKind.ReceiptUpload, it.id.toString())
+                        ) ||
+                            (it.receiptId?.let { id ->
+                                deletions.contains(DeletionKey(DeletionKind.Receipt, id))
+                            } == true)
+                    },
+            )
+
+    /** Accepts confirmation immediately; network work belongs to the activity, not the sheet. */
     private suspend fun deleteReceipt(entry: ReceiptListEntry): Boolean {
         if (entry.status == ReceiptListStatus.Processing) return false
-        return try {
-            val response =
-                when {
-                    entry.receiptId != null -> receiptsApi.receiptsDelete(entry.receiptId)
-                    entry.status == ReceiptListStatus.NotProcessed && entry.uploadId != null ->
-                        receiptUploadsApi.receiptUploadsDelete(entry.uploadId)
-                    else -> return false
+        val key =
+            when {
+                entry.receiptId != null -> DeletionKey(DeletionKind.Receipt, entry.receiptId)
+                entry.status == ReceiptListStatus.NotProcessed && entry.uploadId != null ->
+                    DeletionKey(DeletionKind.ReceiptUpload, entry.uploadId.toString())
+                else -> return false
+            }
+        return deletions.start(key) {
+            val absent =
+                if (key.kind == DeletionKind.Receipt)
+                    deleteAndConfirm(
+                        delete = { receiptsApi.receiptsDelete(key.id) },
+                        lookup = { receiptsApi.receiptsGet(key.id) },
+                    )
+                else {
+                    val uploadId = UUID.fromString(key.id)
+                    deleteAndConfirm(
+                        delete = { receiptUploadsApi.receiptUploadsDelete(uploadId) },
+                        lookup = { receiptUploadsApi.receiptUploadsGet(uploadId) },
+                    )
                 }
-            if (response.code() != 204) return false
-            historyRevision++
-            overviewState =
-                overviewState.copy(
-                    receipts = overviewState.receipts.filterNot { it.id == entry.receiptId },
-                    uploads =
-                        overviewState.uploads.filterNot {
-                            it.id == entry.uploadId ||
-                                (entry.receiptId != null && it.receiptId == entry.receiptId)
-                        },
-                )
-            true
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            Log.w("GohoReceipts", "Receipt deletion failed", error)
-            false
+            if (absent) {
+                historyRevision++
+                overviewState =
+                    overviewState.copy(
+                        receipts = overviewState.receipts.filterNot { it.id == entry.receiptId },
+                        uploads =
+                            overviewState.uploads.filterNot {
+                                it.id == entry.uploadId ||
+                                    (entry.receiptId != null && it.receiptId == entry.receiptId)
+                            },
+                    )
+            } else refreshHistory()
+            absent
         }
     }
 
