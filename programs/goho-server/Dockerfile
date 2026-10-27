@@ -3,7 +3,7 @@
 # Build from the repository root: docker build -f programs/goho-server/Dockerfile .
 FROM node:24.22.1-bookworm-slim AS base
 # Keep in sync with packageManager in the root package.json.
-RUN npm install --global pnpm@12.14.0 && npm cache clean --force
+RUN npm install --global pnpm@12.15.0 && npm cache clean --force
 WORKDIR /app
 
 FROM base AS pruner
