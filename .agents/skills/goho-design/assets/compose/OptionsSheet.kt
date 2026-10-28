@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
 /**
  * One item's header stays mounted while the actions below change inside the same sheet. The caller
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
- * menu action, the confirmation pane and its button.
+ * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
+ * request and any later failure belong to the activity. The sheet only awaits its own exit.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

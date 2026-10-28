@@ -62,9 +62,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-/**
- * Delete book in the overlay footer: the initial action, its confirmation, the request, failure.
- */
+/** Delete book in the overlay footer: the initial action, its confirmation and handoff. */
 internal enum class BookDeletion {
     Idle,
     Confirming,
@@ -74,8 +72,8 @@ internal enum class BookDeletion {
 
 /**
  * The lifted book shared by the overlay and the Books rows. The overlay keeps a snapshot of the
- * tapped [Book], so list refreshes and polling never change or close it. While its deletion is
- * pending, nothing closes the overlay.
+ * tapped [Book], so list refreshes and polling never change or close it. An accepted deletion
+ * closes the overlay while the activity-owned operation continues.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Stable
@@ -117,7 +115,7 @@ internal class BookOverlayState(val shared: SharedTransitionScope) {
     }
 
     /**
-     * Sends one request for the snapshot book; a failure unlocks the overlay to retry or cancel.
+     * Hands off one confirmed deletion for the snapshot book, then fades without a return flight.
      */
     fun delete(scope: CoroutineScope, deleteBook: suspend (Book) -> Boolean) {
         val book = book
@@ -129,6 +127,14 @@ internal class BookOverlayState(val shared: SharedTransitionScope) {
                 open = false
             } else deletion = BookDeletion.Failed
         }
+    }
+
+    /** Release the lifted cover only after the exit, including when deletion later rolls back. */
+    fun onClosed() {
+        if (open) return
+        book = null
+        deletedId = null
+        deletion = BookDeletion.Idle
     }
 
     /** Whether [bookId]'s cover is lifted out of its row. */
@@ -164,7 +170,7 @@ private val textExitMillis =
  * Hosts the book overlay above [content], including the section header and Add button. Rows and the
  * overlay share one [SharedTransitionLayout] so the cover flies between them; [content] receives
  * the action that lifts a saved book and the opacity of the screen's floating action, which gives
- * way to the overlay. [deleteBook] returns whether the server deleted it.
+ * way to the overlay. [deleteBook] returns whether the background deletion was accepted.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -182,6 +188,15 @@ internal fun BookOverlayHost(
         // One transition presents the overlay and hides the screen's floating action, which would
         // otherwise show through the frost behind the footer.
         val presentation = updateTransition(state.open, label = "Book overlay")
+        LaunchedEffect(
+            presentation.currentState,
+            presentation.targetState,
+            presentation.isRunning,
+            state.open,
+        ) {
+            if (!presentation.currentState && !presentation.targetState && !presentation.isRunning)
+                state.onClosed()
+        }
         val actionAlpha by
             presentation.animateFloat(
                 transitionSpec = {

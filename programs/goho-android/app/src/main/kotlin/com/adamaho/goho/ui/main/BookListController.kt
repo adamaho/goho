@@ -29,9 +29,27 @@ internal class BookListController(
     private val scope: CoroutineScope,
     private val booksApi: BooksApi,
     private val uploadsApi: BookUploadsApi,
+    private val deletions: PendingDeletions,
 ) {
     var state by mutableStateOf(BookListState())
         private set
+
+    /** Pending deletions stay hidden even when an overlapping refresh still returns them. */
+    val visibleState: BookListState
+        get() =
+            state.copy(
+                books =
+                    state.books.filterNot {
+                        deletions.contains(DeletionKey(DeletionKind.Book, it.id))
+                    },
+                uploads =
+                    state.uploads.filterNot {
+                        it.status == BookUpload.Status.succeeded &&
+                            it.bookId?.let { id ->
+                                deletions.contains(DeletionKey(DeletionKind.Book, id))
+                            } == true
+                    },
+            )
 
     private var refreshAfterCurrent = false
     /** Counts local changes that a listing started earlier would miss. */
@@ -133,13 +151,17 @@ internal class BookListController(
         }
 
     /**
-     * Deletes a saved book; only the server's 204 counts as success. The book and its successful
-     * scans, which the server deletes with it, leave the local list; every other row stays as is.
+     * Accepts a confirmed deletion immediately; the activity-owned operation reconciles failures
+     * before restoring the book. Raw data changes only once its absence is confirmed.
      */
     suspend fun delete(bookId: String): Boolean =
-        try {
-            val response = booksApi.booksDelete(bookId)
-            if (response.code() == 204) {
+        deletions.start(DeletionKey(DeletionKind.Book, bookId)) {
+            val deleted =
+                deleteAndConfirm(
+                    delete = { booksApi.booksDelete(bookId) },
+                    lookup = { booksApi.booksGet(bookId) },
+                )
+            if (deleted) {
                 changeRevision++
                 state =
                     state.copy(
@@ -149,15 +171,8 @@ internal class BookListController(
                                 it.status == BookUpload.Status.succeeded && it.bookId == bookId
                             },
                     )
-                true
-            } else {
-                Log.w("GohoBooks", "Book deletion failed: ${response.code()}")
-                false
-            }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            Log.w("GohoBooks", "Book deletion failed", error)
-            false
+            } else refresh()
+            deleted
         }
 
     /** The full-size cover for the book overlay and photo viewer, outside the thumbnail cache. */
