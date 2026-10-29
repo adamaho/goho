@@ -33,6 +33,10 @@ import kotlinx.coroutines.delay
 data class BookListState(
     val books: List<Book> = emptyList(),
     val uploads: List<BookUpload> = emptyList(),
+    /** This device's cover scans that the server hasn't accepted yet. */
+    val localUploads: List<LocalUpload> = emptyList(),
+    /** Row keys that accepted uploads keep from their local rows. */
+    val uploadKeys: Map<UUID, String> = emptyMap(),
     val hasLoaded: Boolean = false,
     val loading: Boolean = false,
     val error: Boolean = false,
@@ -42,9 +46,10 @@ data class BookListState(
 
 /**
  * Books content below the section title. Saved rows open the book overlay on tap and their options
- * sheet on a hold; [deleteBook] returns whether the server deleted the held book. [uploadToReveal]
- * shows All at the top until that accepted scan, or the book it saved, is listed. While [search] is
- * open its results replace the pages, which keep their filter and scroll positions for its exit.
+ * sheet on a hold; [deleteBook] returns whether the server deleted the held book. A failed upload
+ * from this device opens its own options to [retryUpload] or [discardUpload]. [uploadToReveal] is
+ * the key of a new row: All shows at the top until it is listed. While [search] is open its results
+ * replace the pages, which keep their filter and scroll positions for its exit.
  */
 @Composable
 internal fun BookOverview(
@@ -56,8 +61,10 @@ internal fun BookOverview(
     deleteBook: suspend (Book) -> Boolean,
     search: SectionSearch,
     modifier: Modifier = Modifier,
+    retryUpload: (LocalUpload) -> Unit = {},
+    discardUpload: (LocalUpload) -> Boolean = { false },
     menuOpen: Boolean = false,
-    uploadToReveal: UUID? = null,
+    uploadToReveal: String? = null,
     onUploadRevealed: () -> Unit = {},
 ) {
     val clock by rememberClock()
@@ -65,26 +72,19 @@ internal fun BookOverview(
     val locale = LocalConfiguration.current.locales[0]
     val reduced = rememberReducedMotion()
     val entries =
-        remember(state.books, state.uploads, locale) {
-            bookListEntries(state.books, state.uploads, locale)
+        remember(state.books, state.uploads, state.localUploads, state.uploadKeys, locale) {
+            bookListEntries(
+                state.books,
+                state.uploads,
+                locale,
+                state.localUploads,
+                state.uploadKeys,
+            )
         }
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
-    // A scan that already succeeded is listed as its book, which may be one saved before.
-    val uploadedEntryVisible =
-        state.uploads
-            .find { it.id == uploadToReveal }
-            ?.let { upload ->
-                entries.any {
-                    when (it) {
-                        is BookListEntry.Scan -> it.uploadId == upload.id
-                        is BookListEntry.Saved ->
-                            upload.status == BookUpload.Status.succeeded &&
-                                it.book.id == upload.bookId
-                    }
-                }
-            } ?: false
+    val uploadedEntryVisible = uploadToReveal != null && entries.any { it.key == uploadToReveal }
     LaunchedEffect(uploadToReveal, uploadedEntryVisible) {
         if (uploadToReveal == null) return@LaunchedEffect
         // Reset on return, then again when the scan's row arrives, as on Receipts.
@@ -94,6 +94,7 @@ internal fun BookOverview(
     }
     // The held book's snapshot, so refreshes and its own deletion never change the open sheet.
     var optionsBook by remember { mutableStateOf<Book?>(null) }
+    var optionsUpload by remember { mutableStateOf<LocalUpload?>(null) }
     val overlay = LocalBookOverlay.current
     // The open overlay and options sheet handle Back first, including while they delete.
     BackHandler(enabled = search.open && overlay?.open != true) { search.close() }
@@ -111,6 +112,7 @@ internal fun BookOverview(
                 onBookClick = onBookClick,
                 onBookOptions = { optionsBook = it },
                 optionsBookId = optionsBookId,
+                onUploadOptions = { optionsUpload = it },
             )
         }
     val saved = remember(entries) { entries.filterIsInstance<BookListEntry.Saved>() }
@@ -142,6 +144,7 @@ internal fun BookOverview(
                             !state.error &&
                             !state.refreshing &&
                             optionsBook == null &&
+                            optionsUpload == null &&
                             !menuOpen,
                     error = state.error,
                     refreshing = state.refreshing,
@@ -149,6 +152,7 @@ internal fun BookOverview(
                     refreshEnabled =
                         !menuOpen &&
                             optionsBook == null &&
+                            optionsUpload == null &&
                             !state.loading &&
                             (state.hasLoaded || state.error),
                     onRefresh = onRefresh,
@@ -186,6 +190,20 @@ internal fun BookOverview(
             )
         }
     }
+    optionsUpload?.let { upload ->
+        key(upload.id) {
+            BookUploadOptions(
+                upload,
+                clock,
+                zone,
+                locale,
+                covers,
+                onRetry = { retryUpload(upload) },
+                onDiscard = { discardUpload(upload) },
+                onDismiss = { optionsUpload = null },
+            )
+        }
+    }
 }
 
 /** What every Books row shares, on the pages and in the search results. */
@@ -198,6 +216,7 @@ internal data class BookRowContext(
     val onBookClick: (Book) -> Unit,
     val onBookOptions: (Book) -> Unit,
     val optionsBookId: String?,
+    val onUploadOptions: (LocalUpload) -> Unit = {},
 )
 
 @Composable
@@ -214,8 +233,9 @@ private fun BookListPage(
 ) {
     val showLoading = rememberLoadingVisible(state.loading)
     val displayed = rememberRemovingEntries(entries, resetKey = attentionOnly)
+    val hasLocalUploads = entries.any { it is BookListEntry.Local }
     Column(modifier.fillMaxSize()) {
-        if (error || (state.hasLoaded && displayed.isEmpty())) {
+        if ((error && !hasLocalUploads) || (state.hasLoaded && displayed.isEmpty())) {
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth().padding(bottom = GohoSpacing.listBottom)
             ) {
@@ -255,7 +275,7 @@ private fun BookListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (!state.hasLoaded && state.loading)
+                if (!state.hasLoaded && state.loading && !hasLocalUploads)
                     item("loading") {
                         SkeletonScope(loading = true) {
                             ListCard(
@@ -336,6 +356,7 @@ internal fun BookListCard(
                                 // A row folding away can't reopen its book.
                                 onClick = if (visible) rows.onBookClick else null,
                                 onOptions = if (visible) rows.onBookOptions else null,
+                                onUploadOptions = if (visible) rows.onUploadOptions else null,
                                 optionsOpen =
                                     entry is BookListEntry.Saved &&
                                         entry.book.id == rows.optionsBookId,

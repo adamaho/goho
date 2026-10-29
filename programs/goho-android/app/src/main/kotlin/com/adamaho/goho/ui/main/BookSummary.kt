@@ -57,6 +57,7 @@ internal fun BookSummary(
             is BookListEntry.Saved -> entry.book.title
             is BookListEntry.Scan ->
                 stringResource(if (entry.failed) R.string.book_unknown else R.string.book_new)
+            is BookListEntry.Local -> stringResource(R.string.book_new)
         }
     Row(
         modifier.semantics(mergeDescendants = true) {},
@@ -99,7 +100,10 @@ private fun BookMetadata(
 ) {
     val c = GohoTheme.colors
     val style = GohoTheme.type.meta
-    if (entry is BookListEntry.Scan && !entry.failed) {
+    if (
+        (entry is BookListEntry.Scan && !entry.failed) ||
+            (entry is BookListEntry.Local && entry.upload.uploading)
+    ) {
         // A scan has no author yet: keep one metadata line with a shimmering placeholder.
         Box(contentAlignment = Alignment.CenterStart) {
             Text("", style = style, modifier = Modifier.clearAndSetSemantics {})
@@ -122,6 +126,7 @@ private fun BookMetadata(
                     } ?: entry.book.author
                 )
             is BookListEntry.Scan -> uploadTime(entry.uploadedAt, now, zone, locale)
+            is BookListEntry.Local -> uploadTime(entry.upload.createdAt, now, zone, locale)
         }
     Text(
         text,
@@ -173,14 +178,15 @@ private fun BookTag(entry: BookListEntry?, modifier: Modifier = Modifier) {
             )
         is BookListEntry.Saved -> CategoryTag(entry.book.category, modifier)
         is BookListEntry.Scan -> BookUploadTag(processing = !entry.failed, modifier)
+        is BookListEntry.Local -> LocalUploadTag(failed = !entry.upload.uploading, modifier)
     }
 }
 
 /**
  * Loads a saved cover once visible. Saved books without one, or whose cover fails to load, show the
- * small generated cover; scans in progress show a lavender scan mark, and failed scans an orange
- * book with an attention dot. Decorative: the row text and tag describe the state. A [lift] cover
- * flies into the book overlay.
+ * small generated cover; scans in progress show a lavender scan mark, scans still uploading a
+ * neutral book, and failed scans an orange book with an attention dot. Decorative: the row text and
+ * tag describe the state. A [lift] cover flies into the book overlay.
  */
 @Composable
 private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache, lift: Boolean) {

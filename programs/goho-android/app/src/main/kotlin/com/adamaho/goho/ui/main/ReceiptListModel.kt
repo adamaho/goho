@@ -17,6 +17,10 @@ enum class ReceiptListStatus {
     Processed,
     Processing,
     NotProcessed,
+    /** Saved on this device and sending to the server. */
+    Uploading,
+    /** Saved on this device after the server didn't accept it; it can be retried or discarded. */
+    UploadFailed,
 }
 
 data class ReceiptListEntry(
@@ -29,7 +33,11 @@ data class ReceiptListEntry(
     val currency: String?,
     val status: ReceiptListStatus,
     val uploadId: java.util.UUID? = null,
+    val localId: java.util.UUID? = null,
 )
+
+val ReceiptListEntry.needsAttention: Boolean
+    get() = status == ReceiptListStatus.NotProcessed || status == ReceiptListStatus.UploadFailed
 
 enum class ReceiptDatePeriod {
     Today,
@@ -48,6 +56,8 @@ fun receiptListEntries(
     receipts: List<Receipt>,
     uploads: List<ReceiptUploadsList200ResponseDataInner>,
     zone: ZoneId,
+    local: List<LocalUpload> = emptyList(),
+    keys: Map<java.util.UUID, String> = emptyMap(),
 ): List<ReceiptListEntry> {
     val completed =
         uploads
@@ -56,7 +66,7 @@ fun receiptListEntries(
     val saved = receipts.map { receipt ->
         val upload = completed[receipt.id]
         ReceiptListEntry(
-            key = upload?.let { "upload:${it.id}" } ?: "receipt:${receipt.id}",
+            key = upload?.let { keys[it.id] ?: "upload:${it.id}" } ?: "receipt:${receipt.id}",
             receiptId = receipt.id,
             merchant = receipt.storeName,
             date = runCatching { LocalDate.parse(receipt.receiptDate) }.getOrNull(),
@@ -72,7 +82,7 @@ fun receiptListEntries(
             .map { upload ->
                 val instant = uploadInstant(upload.createdAt)
                 ReceiptListEntry(
-                    key = "upload:${upload.id}",
+                    key = keys[upload.id] ?: "upload:${upload.id}",
                     uploadId = upload.id,
                     receiptId = null,
                     merchant = null,
@@ -86,8 +96,23 @@ fun receiptListEntries(
                         else ReceiptListStatus.Processing,
                 )
             }
+    val saving = local.map { upload ->
+        ReceiptListEntry(
+            key = upload.key,
+            localId = upload.id,
+            receiptId = null,
+            merchant = null,
+            date = upload.createdAt.atZone(zone).toLocalDate(),
+            uploadedAt = upload.createdAt,
+            total = null,
+            currency = null,
+            status =
+                if (upload.uploading) ReceiptListStatus.Uploading
+                else ReceiptListStatus.UploadFailed,
+        )
+    }
     // Stable ties preserve the server's newest-created-first order for manual receipts.
-    return (saved + unfinished).sortedWith(
+    return (saved + unfinished + saving).sortedWith(
         compareByDescending<ReceiptListEntry> { it.date }.thenByDescending { it.uploadedAt }
     )
 }
@@ -140,5 +165,4 @@ internal fun uploadInstant(value: String): Instant? = runCatching {
 fun filterReceiptEntries(
     entries: List<ReceiptListEntry>,
     attentionOnly: Boolean,
-): List<ReceiptListEntry> =
-    if (attentionOnly) entries.filter { it.status == ReceiptListStatus.NotProcessed } else entries
+): List<ReceiptListEntry> = if (attentionOnly) entries.filter { it.needsAttention } else entries

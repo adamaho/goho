@@ -31,3 +31,21 @@ private fun UploadTag(processing: Boolean, @StringRes reading: Int, modifier: Mo
         shimmer = processing,
     )
 }
+
+/**
+ * A scan saved on this device: Grey while it uploads, before the server is processing it, and
+ * Orange once the upload fails.
+ */
+@Composable
+fun LocalUploadTag(failed: Boolean, modifier: Modifier = Modifier) {
+    Tag(
+        label =
+            stringResource(
+                if (failed) R.string.upload_local_failed else R.string.upload_local_uploading
+            ),
+        icon = painterResource(if (failed) R.drawable.ic_tag_failed else R.drawable.ic_tag_upload),
+        color = if (failed) TagColor.Orange else TagColor.Grey,
+        modifier = modifier,
+        shimmer = !failed,
+    )
+}

@@ -119,8 +119,8 @@ internal class BookListController(
 
     /**
      * Uploads a cover scan; only the server's 202 with a scan that hasn't failed counts as
-     * accepted. The accepted scan joins the top of a loaded list right away, then the list
-     * refreshes. Returns its ID, or null when the upload wasn't accepted.
+     * accepted. The accepted scan joins the top of the list right away, then the list refreshes.
+     * Returns its ID, or null when the upload wasn't accepted.
      */
     suspend fun upload(cover: MultipartBody.Part): UUID? =
         try {
@@ -132,12 +132,12 @@ internal class BookListController(
                     upload.status != BookUpload.Status.failed
             ) {
                 changeRevision++
-                if (state.hasLoaded)
-                    state =
-                        state.copy(
-                            uploads =
-                                listOf(upload) + state.uploads.filterNot { it.id == upload.id }
-                        )
+                // Added even before the first listing, so the device's row it replaces never
+                // leaves a gap.
+                state =
+                    state.copy(
+                        uploads = listOf(upload) + state.uploads.filterNot { it.id == upload.id }
+                    )
                 refresh()
                 upload.id
             } else {

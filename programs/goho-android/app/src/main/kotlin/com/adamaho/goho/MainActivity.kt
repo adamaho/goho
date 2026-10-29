@@ -47,7 +47,9 @@ import com.adamaho.goho.ui.main.BookOverlayHost
 import com.adamaho.goho.ui.main.BookOverview
 import com.adamaho.goho.ui.main.DeletionKey
 import com.adamaho.goho.ui.main.DeletionKind
+import com.adamaho.goho.ui.main.LocalUpload
 import com.adamaho.goho.ui.main.PendingDeletions
+import com.adamaho.goho.ui.main.PendingUploads
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
@@ -67,7 +69,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
-import java.io.IOException
+import java.io.File
 import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -100,8 +102,9 @@ class MainActivity : ComponentActivity() {
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
+    /** Keys of the rows a new upload adds, to show at the top of All. */
     private var receiptUploadToReveal by mutableStateOf<String?>(null)
-    private var bookUploadToReveal by mutableStateOf<UUID?>(null)
+    private var bookUploadToReveal by mutableStateOf<String?>(null)
     private var section by mutableStateOf(Section.Receipts)
     private var pollingJob: Job? = null
     private var refreshAfterCurrent = false
@@ -120,6 +123,9 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
+    private val pendingUploads by lazy {
+        PendingUploads(lifecycleScope, File(filesDir, "pending-uploads"), ::sendUpload)
+    }
 
     private inline fun <reified T> service(): T =
         ApiClient(
@@ -190,11 +196,17 @@ class MainActivity : ComponentActivity() {
                                                                 receiptState.receipts,
                                                                 receiptState.uploads,
                                                                 ZoneId.systemDefault(),
+                                                                receiptState.localUploads,
+                                                                receiptState.uploadKeys,
                                                             )
                                                             .size
                                                     else null
                                                 }
-                                            val bookState = books.visibleState
+                                            val bookState =
+                                                books.visibleState.copy(
+                                                    localUploads = pendingUploads.of(ScanKind.Book),
+                                                    uploadKeys = pendingUploads.rowKeys,
+                                                )
                                             val bookSearch =
                                                 rememberSectionSearch(
                                                     R.string.books_search,
@@ -238,6 +250,11 @@ class MainActivity : ComponentActivity() {
                                                                     receiptUploadToReveal = null
                                                                 },
                                                                 deleteReceipt = ::deleteReceipt,
+                                                                retryUpload = {
+                                                                    it.localId?.let(
+                                                                        pendingUploads::retry
+                                                                    )
+                                                                },
                                                                 thumbnails = receiptThumbnails,
                                                                 onRetryClick = { refreshHistory() },
                                                                 onRefresh = {
@@ -267,6 +284,12 @@ class MainActivity : ComponentActivity() {
                                                                     books.delete(it.id)
                                                                 },
                                                                 search = bookSearch,
+                                                                retryUpload = {
+                                                                    pendingUploads.retry(it.id)
+                                                                },
+                                                                discardUpload = {
+                                                                    pendingUploads.discard(it.id)
+                                                                },
                                                                 uploadToReveal = bookUploadToReveal,
                                                                 onUploadRevealed = {
                                                                     bookUploadToReveal = null
@@ -400,10 +423,15 @@ class MainActivity : ComponentActivity() {
             null
         }
 
-    /** Pending IDs are removed only from presentation, including counts and related scan rows. */
+    /**
+     * Pending IDs are removed only from presentation, including counts and related scan rows. This
+     * device's unaccepted scans are added.
+     */
     private val visibleReceiptState: ReceiptOverviewState
         get() =
             overviewState.copy(
+                localUploads = pendingUploads.of(ScanKind.Receipt),
+                uploadKeys = pendingUploads.rowKeys,
                 receipts =
                     overviewState.receipts.filterNot {
                         deletions.contains(DeletionKey(DeletionKind.Receipt, it.id))
@@ -421,6 +449,9 @@ class MainActivity : ComponentActivity() {
 
     /** Accepts confirmation immediately; network work belongs to the activity, not the sheet. */
     private suspend fun deleteReceipt(entry: ReceiptListEntry): Boolean {
+        entry.localId?.let {
+            return pendingUploads.discard(it)
+        }
         if (entry.status == ReceiptListStatus.Processing) return false
         val key =
             when {
@@ -547,6 +578,10 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    /**
+     * Saves the capture on this device, then returns to its kind's section at once with the new
+     * row; the upload continues there. Only a capture that can't be saved stays for Retry upload.
+     */
     private fun upload() {
         val captured = capture ?: return
         if (
@@ -558,60 +593,95 @@ class MainActivity : ComponentActivity() {
 
         uploadStatus = UploadStatus.Uploading
         lifecycleScope.launch {
-            val accepted =
-                when (captured.kind) {
-                    ScanKind.Receipt -> uploadReceipt(captured.imageUri)
-                    ScanKind.Book -> uploadBook(captured.imageUri)
+            val upload =
+                pendingUploads.add(captured.kind) {
+                    contentResolver.openInputStream(captured.imageUri)
                 }
-            uploadStatus =
-                if (accepted) {
-                    capture = null
-                    UploadStatus.Submitted
-                } else UploadStatus.Failed
+            if (upload == null) {
+                uploadStatus = UploadStatus.Failed
+                return@launch
+            }
+            when (captured.kind) {
+                ScanKind.Receipt -> {
+                    receiptUploadToReveal = upload.key
+                    selectSection(Section.Receipts)
+                }
+                ScanKind.Book -> {
+                    bookUploadToReveal = upload.key
+                    selectSection(Section.Books)
+                }
+            }
+            capture = null
+            uploadStatus = UploadStatus.Submitted
         }
     }
 
-    private suspend fun uploadReceipt(imageUri: Uri): Boolean =
-        try {
-            val response = receiptUploadsApi.receiptUploadsCreate(jpegPart(imageUri, "receipt.jpg"))
-            val upload = response.body()?.data
-            if (
-                response.code() == 202 &&
-                    upload != null &&
-                    upload.status != ReceiptUploadsCreate202ResponseData.Status.failed
-            ) {
-                receiptUploadToReveal = upload.id.toString()
-                selectSection(Section.Receipts)
-                refreshHistory()
-                true
-            } else false
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            Log.w("GohoUpload", "Receipt upload failed", error)
-            false
+    /** Sends a saved scan to the endpoint for its kind; returns the accepted upload's ID. */
+    private suspend fun sendUpload(upload: LocalUpload, image: File): UUID? =
+        when (upload.kind) {
+            ScanKind.Receipt -> sendReceipt(image)
+            ScanKind.Book -> books.upload(jpegPart(image, "book.jpg"))
         }
 
-    /** Books lists an accepted scan right away, then reveals it at the top of All. */
-    private suspend fun uploadBook(imageUri: Uri): Boolean {
-        val uploadId = books.upload(jpegPart(imageUri, "book.jpg")) ?: return false
-        bookUploadToReveal = uploadId
-        selectSection(Section.Books)
-        return true
+    /**
+     * Only the server's 202 with an upload that hasn't failed counts as accepted. The accepted scan
+     * joins the list right away, replacing the local row, and a listing that began earlier is
+     * dropped so it can't remove the scan again.
+     */
+    private suspend fun sendReceipt(image: File): UUID? {
+        val response = receiptUploadsApi.receiptUploadsCreate(jpegPart(image, "receipt.jpg"))
+        val upload = response.body()?.data
+        if (
+            response.code() != 202 ||
+                upload == null ||
+                upload.status == ReceiptUploadsCreate202ResponseData.Status.failed
+        ) {
+            Log.w("GohoUpload", "Receipt upload was not accepted: ${response.code()}")
+            return null
+        }
+        historyRevision++
+        overviewState =
+            overviewState.copy(
+                uploads =
+                    listOf(
+                        ReceiptUploadsList200ResponseDataInner(
+                            id = upload.id,
+                            fileName = upload.fileName,
+                            contentType =
+                                ReceiptUploadsList200ResponseDataInner.ContentType.valueOf(
+                                    upload.contentType.name
+                                ),
+                            status =
+                                ReceiptUploadsList200ResponseDataInner.Status.valueOf(
+                                    upload.status.name
+                                ),
+                            receiptId = upload.receiptId,
+                            failureCode =
+                                upload.failureCode?.let {
+                                    ReceiptUploadsList200ResponseDataInner.FailureCode.valueOf(
+                                        it.name
+                                    )
+                                },
+                            createdAt = upload.createdAt,
+                            updatedAt = upload.updatedAt,
+                        )
+                    ) + overviewState.uploads.filterNot { it.id == upload.id }
+            )
+        refreshHistory()
+        return upload.id
     }
 
-    /** Streams the scanned JPEG as the single multipart file part both upload endpoints expect. */
-    private fun jpegPart(imageUri: Uri, fileName: String): MultipartBody.Part {
+    /** Streams a saved JPEG as the single multipart file part both upload endpoints expect. */
+    private fun jpegPart(image: File, fileName: String): MultipartBody.Part {
         val body =
             object : RequestBody() {
                 override fun contentType() = "image/jpeg".toMediaType()
 
+                // One-shot, so a dropped connection isn't silently sent again as a second upload.
                 override fun isOneShot() = true
 
                 override fun writeTo(sink: BufferedSink) {
-                    val input =
-                        contentResolver.openInputStream(imageUri)
-                            ?: throw IOException("Scanned image is unavailable")
-                    input.use { it.copyTo(sink.outputStream()) }
+                    image.inputStream().use { it.copyTo(sink.outputStream()) }
                 }
             }
         return MultipartBody.Part.createFormData("file", fileName, body)

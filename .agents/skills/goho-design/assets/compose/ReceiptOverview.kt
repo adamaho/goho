@@ -31,11 +31,16 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.delay
 
 data class ReceiptOverviewState(
     val uploads: List<ReceiptUploadsList200ResponseDataInner> = emptyList(),
     val receipts: List<Receipt> = emptyList(),
+    /** This device's receipt scans that the server hasn't accepted yet. */
+    val localUploads: List<LocalUpload> = emptyList(),
+    /** Row keys that accepted uploads keep from their local rows. */
+    val uploadKeys: Map<UUID, String> = emptyMap(),
     val hasLoaded: Boolean = false,
     val loading: Boolean = false,
     val error: Boolean = false,
@@ -45,7 +50,8 @@ data class ReceiptOverviewState(
 
 /**
  * Receipts content below the section title. [thumbnails] outlives section switches so returning to
- * Receipts does not reload photos that already loaded.
+ * Receipts does not reload photos that already loaded. [uploadToReveal] is the key of a new row to
+ * show at the top of All.
  */
 @Composable
 internal fun ReceiptOverview(
@@ -57,6 +63,7 @@ internal fun ReceiptOverview(
     menuOpen: Boolean = false,
     previewTime: Instant? = null,
     deleteReceipt: suspend (ReceiptListEntry) -> Boolean = { false },
+    retryUpload: (ReceiptListEntry) -> Unit = {},
     onRefresh: () -> Unit = onRetryClick,
     uploadToReveal: String? = null,
     onUploadRevealed: () -> Unit = {},
@@ -66,14 +73,19 @@ internal fun ReceiptOverview(
     val locale = config.locales[0]
     val zone = ZoneId.systemDefault()
     val entries =
-        remember(state.receipts, state.uploads, zone) {
-            receiptListEntries(state.receipts, state.uploads, zone)
+        remember(state.receipts, state.uploads, state.localUploads, state.uploadKeys, zone) {
+            receiptListEntries(
+                state.receipts,
+                state.uploads,
+                zone,
+                state.localUploads,
+                state.uploadKeys,
+            )
         }
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
-    val uploadedEntryVisible =
-        uploadToReveal != null && entries.any { it.key == "upload:$uploadToReveal" }
+    val uploadedEntryVisible = uploadToReveal != null && entries.any { it.key == uploadToReveal }
     LaunchedEffect(uploadToReveal, uploadedEntryVisible) {
         if (uploadToReveal == null) return@LaunchedEffect
         // Reset on return, then again when the uploaded row arrives: stable item keys
@@ -86,7 +98,7 @@ internal fun ReceiptOverview(
     FilterPager(
         state = pages,
         total = entries.size,
-        attention = entries.count { it.status == ReceiptListStatus.NotProcessed },
+        attention = entries.count { it.needsAttention },
         showFilters = !state.error && state.hasLoaded,
         swipeEnabled =
             state.hasLoaded &&
@@ -131,6 +143,7 @@ internal fun ReceiptOverview(
                 thumbnail = { ReceiptThumbnail(entry.receiptId, entry.status, thumbnails) },
                 onDelete = { deleteReceipt(entry) },
                 onDismiss = { optionsEntry = null },
+                onRetry = { retryUpload(entry) },
             )
         }
     }
@@ -177,7 +190,10 @@ private fun ReceiptListPage(
     val sections = receiptListSections(displayed, today, locale)
     val c = GohoTheme.colors
     val showLoading = rememberLoadingVisible(state.loading)
-    val showStatus = error || (state.hasLoaded && filtered.isEmpty() && displayed.isEmpty())
+    val hasLocalUploads = filtered.any { it.localId != null }
+    val showStatus =
+        (error && !hasLocalUploads) ||
+            (state.hasLoaded && filtered.isEmpty() && displayed.isEmpty())
     Column(modifier.fillMaxSize()) {
         if (showStatus) {
             BoxWithConstraints(
@@ -217,7 +233,7 @@ private fun ReceiptListPage(
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (!state.hasLoaded && state.loading)
+                if (!state.hasLoaded && state.loading && !hasLocalUploads)
                     item("loading") {
                         SkeletonScope(loading = true) {
                             Column(
@@ -358,7 +374,11 @@ private fun ReceiptRow(
     }
     val optionsLabel = stringResource(R.string.receipt_options)
     val clickable =
-        if (entry != null && entry.status != ReceiptListStatus.Processing)
+        if (
+            entry != null &&
+                entry.status != ReceiptListStatus.Processing &&
+                entry.status != ReceiptListStatus.Uploading
+        )
             Modifier.combinedClickable(
                 interactionSource = interaction,
                 indication = null,

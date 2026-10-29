@@ -20,13 +20,21 @@ internal fun ReceiptOptions(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
+    onRetry: () -> Unit = {},
 ) {
     val config = LocalConfiguration.current
+    // A scan the server never accepted is only on this device: retry it or discard it.
+    val local = entry.status == ReceiptListStatus.UploadFailed
     OptionsSheet(
-        title = stringResource(R.string.receipt_options),
-        deleteLabel = stringResource(R.string.receipt_delete),
-        deletingLabel = stringResource(R.string.receipt_deleting),
-        deleteFailedMessage = stringResource(R.string.receipt_delete_failed),
+        title = stringResource(if (local) R.string.upload_options else R.string.receipt_options),
+        deleteLabel =
+            stringResource(if (local) R.string.upload_discard else R.string.receipt_delete),
+        deletingLabel =
+            stringResource(if (local) R.string.upload_discarding else R.string.receipt_deleting),
+        deleteFailedMessage =
+            stringResource(
+                if (local) R.string.upload_discard_failed else R.string.receipt_delete_failed
+            ),
         cancelLabel = stringResource(R.string.receipt_cancel),
         header = {
             ReceiptSummary(
@@ -43,5 +51,7 @@ internal fun ReceiptOptions(
         onDelete = onDelete,
         onDismiss = onDismiss,
         onDeleted = onDeleted,
+        retryLabel = if (local) stringResource(R.string.upload_retry) else null,
+        onRetry = onRetry.takeIf { local },
     )
 }

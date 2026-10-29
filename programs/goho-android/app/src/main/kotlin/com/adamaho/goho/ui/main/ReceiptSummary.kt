@@ -39,8 +39,12 @@ internal fun ReceiptSummary(
         else
             entry.merchant
                 ?: stringResource(
-                    if (entry?.status == ReceiptListStatus.Processing) R.string.receipt_new
-                    else R.string.receipt_unknown
+                    if (
+                        entry.status == ReceiptListStatus.Processed ||
+                            entry.status == ReceiptListStatus.NotProcessed
+                    )
+                        R.string.receipt_unknown
+                    else R.string.receipt_new
                 )
     val today = now.atZone(zone).toLocalDate()
     val date =
@@ -50,7 +54,8 @@ internal fun ReceiptSummary(
             else -> relativeDate(entry.date, today, locale)
         }
     val justNow =
-        entry?.status == ReceiptListStatus.Processing &&
+        (entry?.status == ReceiptListStatus.Processing ||
+            entry?.status == ReceiptListStatus.Uploading) &&
             entry.uploadedAt != null &&
             entry.uploadedAt <= now &&
             now.epochSecond - entry.uploadedAt.epochSecond < 60
@@ -152,6 +157,8 @@ private fun ReceiptEntryTag(entry: ReceiptListEntry?, modifier: Modifier = Modif
                 color = TagColor.Grey,
                 modifier = modifier.skeleton(GohoSpacing.skeletonWidth, block = true),
             )
+        entry.status == ReceiptListStatus.Uploading -> LocalUploadTag(failed = false, modifier)
+        entry.status == ReceiptListStatus.UploadFailed -> LocalUploadTag(failed = true, modifier)
         entry.status != ReceiptListStatus.Processed ->
             ReceiptUploadTag(entry.status == ReceiptListStatus.Processing, modifier)
     }
@@ -160,7 +167,10 @@ private fun ReceiptEntryTag(entry: ReceiptListEntry?, modifier: Modifier = Modif
 @Composable
 private fun ReceiptRowAmount(entry: ReceiptListEntry?, locale: Locale) {
     val c = GohoTheme.colors
-    if (entry?.status == ReceiptListStatus.Processing) {
+    if (
+        entry?.status == ReceiptListStatus.Processing ||
+            entry?.status == ReceiptListStatus.Uploading
+    ) {
         Box(
             Modifier.size(GohoSpacing.skeletonWidth, GohoSpacing.skeletonHeight)
                 .clip(GohoShapes.pill)

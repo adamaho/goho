@@ -132,9 +132,11 @@ internal fun ReceiptThumbnail(
     val shape = GohoShapes.thumb
     val background =
         when (status) {
-            ReceiptListStatus.Processed -> c.surfaceMuted
+            ReceiptListStatus.Processed,
+            ReceiptListStatus.Uploading -> c.surfaceMuted
             ReceiptListStatus.Processing -> c.accentContainer
-            ReceiptListStatus.NotProcessed -> c.attentionContainer
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> c.attentionContainer
         }
     Box(
         modifier
@@ -161,9 +163,11 @@ private fun ReceiptPlaceholder(status: ReceiptListStatus) {
     val c = GohoTheme.colors
     val color =
         when (status) {
-            ReceiptListStatus.Processed -> c.textSecondary
+            ReceiptListStatus.Processed,
+            ReceiptListStatus.Uploading -> c.textSecondary
             ReceiptListStatus.Processing -> c.onAccentContainer
-            ReceiptListStatus.NotProcessed -> c.attention
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> c.attention
         }
     Canvas(Modifier.size(GohoSpacing.placeholderWidth, GohoSpacing.placeholderHeight)) {
         val stroke = GohoSpacing.placeholderStroke.toPx()
@@ -183,7 +187,8 @@ private fun ReceiptPlaceholder(status: ReceiptListStatus) {
             }
         drawPath(paper, color, style = Stroke(stroke))
         when (status) {
-            ReceiptListStatus.NotProcessed -> {
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> {
                 line(0.5f, 0.3f, 0.5f, 0.52f)
                 drawCircle(color, stroke / 2, point(0.5f, 0.66f))
             }
@@ -192,7 +197,8 @@ private fun ReceiptPlaceholder(status: ReceiptListStatus) {
                 line(0.02f, 0.49f, 0.98f, 0.49f)
                 line(0.3f, 0.69f, 0.56f, 0.69f)
             }
-            ReceiptListStatus.Processed -> {
+            ReceiptListStatus.Processed,
+            ReceiptListStatus.Uploading -> {
                 line(0.3f, 0.29f, 0.7f, 0.29f)
                 line(0.3f, 0.47f, 0.7f, 0.47f)
                 line(0.3f, 0.65f, 0.56f, 0.65f)

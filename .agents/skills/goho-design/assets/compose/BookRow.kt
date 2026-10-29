@@ -21,8 +21,9 @@ import kotlinx.coroutines.delay
 
 /**
  * Books row around [BookSummary]. Saved books open the book overlay through [onClick] and, on a
- * hold, their options sheet through [onOptions]; scans are display-only. A null [entry] keeps the
- * same layout for skeleton loading. [optionsOpen] marks the row whose options sheet is open.
+ * hold, their options sheet through [onOptions]. A failed upload from this device opens its options
+ * through [onUploadOptions] on a tap or hold; other scans are display-only. A null [entry] keeps
+ * the same layout for skeleton loading. [optionsOpen] marks the row whose options sheet is open.
  */
 @Composable
 internal fun BookRow(
@@ -34,9 +35,11 @@ internal fun BookRow(
     covers: ThumbnailCache,
     onClick: ((Book) -> Unit)? = null,
     onOptions: ((Book) -> Unit)? = null,
+    onUploadOptions: ((LocalUpload) -> Unit)? = null,
     optionsOpen: Boolean = false,
 ) {
     val book = (entry as? BookListEntry.Saved)?.book
+    val failedUpload = (entry as? BookListEntry.Local)?.upload?.takeUnless { it.uploading }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var held by remember { mutableStateOf(false) }
@@ -75,6 +78,18 @@ internal fun BookRow(
                             }
                         },
                 )
+        else if (failedUpload != null && onUploadOptions != null)
+            Modifier.combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                role = Role.Button,
+                onClick = { onUploadOptions(failedUpload) },
+                onLongClickLabel = stringResource(R.string.upload_options),
+                onLongClick = {
+                    held = false
+                    onUploadOptions(failedUpload)
+                },
+            )
         else Modifier
     BookSummary(
         entry = entry,

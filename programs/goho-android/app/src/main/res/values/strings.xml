@@ -125,4 +125,10 @@
     <string name="book_delete_unconfirmed">Something went wrong deleting this book. Please refresh and try again.</string>
     <string name="receipt_delete_unconfirmed">Something went wrong deleting this receipt. Please refresh and try again.</string>
     <string name="deletion_dismiss">Dismiss</string>
+    <string name="upload_local_uploading">Uploading…</string>
+    <string name="upload_local_failed">Upload failed</string>
+    <string name="upload_options">Upload options</string>
+    <string name="upload_discard">Discard upload</string>
+    <string name="upload_discarding">Discarding…</string>
+    <string name="upload_discard_failed">Couldn’t discard this upload. Try again.</string>
 </resources>

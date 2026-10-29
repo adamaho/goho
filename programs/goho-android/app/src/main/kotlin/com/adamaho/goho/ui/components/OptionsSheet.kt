@@ -24,7 +24,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
+import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -33,7 +35,8 @@ import kotlinx.coroutines.launch
  * One item's header stays mounted while the actions below change inside the same sheet. The caller
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
  * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
- * request and any later failure belong to the activity. The sheet only awaits its own exit.
+ * request and any later failure belong to the activity. The sheet only awaits its own exit. An
+ * [onRetry] action, listed above delete, starts at once and closes the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +50,8 @@ internal fun OptionsSheet(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
+    retryLabel: String? = null,
+    onRetry: (() -> Unit)? = null,
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
@@ -143,41 +148,32 @@ internal fun OptionsSheet(
                                 .background(c.divider)
                         )
                         Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
-                        val interaction = remember { MutableInteractionSource() }
-                        val progress by pressProgress(interaction)
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .background(
-                                    lerp(
-                                        c.sheet,
-                                        if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
-                                        progress.coerceIn(0f, 1f),
-                                    )
+                        if (retryLabel != null && onRetry != null)
+                            SheetMenuItem(
+                                retryLabel,
+                                c.textPrimary,
+                                enabled = !confirming,
+                                onClick = {
+                                    onRetry()
+                                    dismiss()
+                                },
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_retry),
+                                    contentDescription = null,
+                                    tint = c.textPrimary,
+                                    modifier = Modifier.size(GohoSpacing.sheetActionIcon),
                                 )
-                                .clickable(
-                                    interaction,
-                                    indication = null,
-                                    role = Role.Button,
-                                    enabled = !confirming,
-                                    onClick = { confirming = true },
-                                )
-                                .heightIn(min = GohoSpacing.sheetActionHeight)
-                                .padding(
-                                    horizontal = GohoSpacing.sheetPadding,
-                                    vertical = GohoSpacing.sheetInset,
-                                ),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(GohoSpacing.sheetActionGap),
-                            verticalAlignment = Alignment.CenterVertically,
+                            }
+                        SheetMenuItem(
+                            deleteLabel,
+                            c.onDangerContainer,
+                            enabled = !confirming,
+                            onClick = { confirming = true },
                         ) {
                             TrashIcon(
                                 Modifier.size(GohoSpacing.sheetActionIcon),
                                 c.onDangerContainer,
-                            )
-                            Text(
-                                deleteLabel,
-                                style = GohoTheme.type.rowTitle,
-                                color = c.onDangerContainer,
                             )
                         }
                         Spacer(Modifier.height(GohoSpacing.sheetInset))
@@ -243,5 +239,43 @@ internal fun OptionsSheet(
                 }
             }
         }
+    }
+}
+
+/** One menu row: a leading [icon] and [label] in [color], pressed without a ripple. */
+@Composable
+private fun SheetMenuItem(
+    label: String,
+    color: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    Row(
+        Modifier.fillMaxWidth()
+            .background(
+                lerp(
+                    c.sheet,
+                    if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
+                    progress.coerceIn(0f, 1f),
+                )
+            )
+            .clickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .heightIn(min = GohoSpacing.sheetActionHeight)
+            .padding(horizontal = GohoSpacing.sheetPadding, vertical = GohoSpacing.sheetInset),
+        horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sheetActionGap),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon()
+        Text(label, style = GohoTheme.type.rowTitle, color = color)
     }
 }
