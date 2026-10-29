@@ -7,6 +7,7 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.Conflict
+import com.adamaho.goho.api.generated.model.Gone
 import com.adamaho.goho.api.generated.model.InternalServerError
 import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
@@ -18,18 +19,20 @@ interface ReceiptUploadsApi {
     /**
      * POST receipt-uploads
      * Upload a receipt image
-     * Stores one receipt image and returns its queued status before processing starts.
+     * Stores one receipt image and returns its queued status before processing starts. An optional &#x60;idempotencyKey&#x60; part, a version 4 UUID sent before &#x60;file&#x60;, becomes the upload&#39;s ID so a retry can&#39;t double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.
      * Responses:
      *  - 202: Success
-     *  - 400: The upload is missing a supported receipt image.
+     *  - 400: The upload is missing a supported receipt image, or its idempotency key is not a version 4 UUID.
+     *  - 410: That idempotency key's upload was already accepted and has since been deleted; keys are never reused. Nothing was stored.
      *  - 500: The server could not store or queue the receipt image.
      *
+     * @param idempotencyKey  (optional)
      * @param file 
      * @return [ReceiptUploadsCreate202Response]
      */
     @Multipart
     @POST("receipt-uploads")
-    suspend fun receiptUploadsCreate(@Part file: MultipartBody.Part): Response<ReceiptUploadsCreate202Response>
+    suspend fun receiptUploadsCreate(@Part("idempotencyKey") idempotencyKey: java.util.UUID? = null, @Part file: MultipartBody.Part): Response<ReceiptUploadsCreate202Response>
 
     /**
      * DELETE receipt-uploads/{uploadId}

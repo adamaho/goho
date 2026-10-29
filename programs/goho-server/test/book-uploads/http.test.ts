@@ -3,6 +3,7 @@ import { it } from "@effect/vitest";
 import {
   BookUpload,
   BookUploadConflict,
+  BookUploadGone,
   BookUploadId,
   BookUploadNotFound,
   BookUploadsUnavailable,
@@ -39,9 +40,9 @@ const testLayer = (uploads: Partial<BookUploads.Interface> = {}) => {
         Layer.succeed(
           BookUploads.Service,
           BookUploads.Service.of({
-            create: (input) =>
+            create: (input, idempotencyKey) =>
               Effect.sync(() => {
-                calls.push(["create", { ...input, bytes: [...input.bytes] }]);
+                calls.push(["create", { ...input, bytes: [...input.bytes] }, idempotencyKey]);
                 return bookUpload;
               }),
             delete: (uploadId) =>
@@ -69,8 +70,9 @@ const testLayer = (uploads: Partial<BookUploads.Interface> = {}) => {
   return { calls, layer };
 };
 
-const coverForm = (file: File) => {
+const coverForm = (file: File, idempotencyKey?: string) => {
   const form = new FormData();
+  if (idempotencyKey !== undefined) form.append("idempotencyKey", idempotencyKey);
   form.append("file", file);
   return form;
 };
@@ -94,12 +96,42 @@ it.effect("uploads, lists, gets, and deletes cover scans through the generated c
     expect(yield* deleted.text).toBe("");
     const upload = { name: "cover.webp", contentType: "image/webp", bytes: [1, 2, 3] };
     expect(calls).toEqual([
-      ["create", upload],
-      ["create", upload],
+      ["create", upload, undefined],
+      ["create", upload, undefined],
       ["list"],
       ["get", bookUpload.id],
       ["delete", bookUpload.id],
     ]);
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("passes an idempotency key part to the service as the upload ID", () => {
+  const { calls, layer } = testLayer();
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const file = new File([new Uint8Array([1])], "cover.png", { type: "image/png" });
+    expect(yield* client.bookUploads.create({ payload: coverForm(file, bookUpload.id) })).toEqual({
+      data: bookUpload,
+    });
+    expect(calls).toEqual([
+      ["create", { name: "cover.png", contentType: "image/png", bytes: [1] }, bookUpload.id],
+    ]);
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("reports a deleted scan's key as gone", () => {
+  const { layer } = testLayer({ create: () => Effect.fail(new BookUploadGone()) });
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const file = new File([new Uint8Array([1])], "cover.png", { type: "image/png" });
+    const error = yield* Effect.flip(
+      client.bookUploads.create({ payload: coverForm(file, bookUpload.id) }),
+    );
+    expect(error._tag).toBe("BookUploadGone");
+    const response = yield* HttpClient.post("/book-uploads", {
+      body: HttpBody.formData(coverForm(file, bookUpload.id)),
+    });
+    expect(response.status).toBe(410);
   }).pipe(Effect.provide(layer));
 });
 
@@ -115,6 +147,22 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
       });
       expect(response.status, file.name).toBe(400);
     }
+    const cover = new File([new Uint8Array([1])], "cover.png", { type: "image/png" });
+    for (const [label, form] of [
+      ["malformed key", coverForm(cover, "not-a-uuid")],
+      ["version 1 key", coverForm(cover, "6ba7b810-9dad-11d1-80b4-00c04fd430c8")],
+    ] as const) {
+      const response = yield* HttpClient.post("/book-uploads", { body: HttpBody.formData(form) });
+      expect(response.status, label).toBe(400);
+    }
+    // The parts limit is what makes servers from before the key, which allow
+    // one part, reject a keyed upload rather than store it unprotected.
+    const extraPart = coverForm(cover, bookUpload.id);
+    extraPart.append("idempotencyKey", bookUpload.id);
+    const tooManyParts = yield* HttpClient.post("/book-uploads", {
+      body: HttpBody.formData(extraPart),
+    });
+    expect(tooManyParts.status).toBe(413);
     for (const request of [
       HttpClient.get("/book-uploads/not-a-uuid"),
       HttpClient.del("/book-uploads/not-a-uuid"),

@@ -115,9 +115,9 @@ enum class ButtonSize {
 }
 
 @Composable
-fun UploadIcon() {
+fun UploadIcon(modifier: Modifier = Modifier.size(GohoSpacing.buttonIcon)) {
     val color = LocalContentColor.current
-    Canvas(Modifier.size(GohoSpacing.buttonIcon)) {
+    Canvas(modifier) {
         val stroke = GohoSpacing.iconStroke.toPx()
         fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
             drawLine(

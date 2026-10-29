@@ -38,6 +38,8 @@ data class BookListState(
     val error: Boolean = false,
     val refreshing: Boolean = false,
     val refreshError: Boolean = false,
+    /** Cover photos saved on the phone that the server has not listed yet. */
+    val local: List<PendingUpload> = emptyList(),
 )
 
 /**
@@ -45,6 +47,8 @@ data class BookListState(
  * sheet on a hold; [deleteBook] returns whether the server deleted the held book. [uploadToReveal]
  * shows All at the top until that accepted scan, or the book it saved, is listed. While [search] is
  * open its results replace the pages, which keep their filter and scroll positions for its exit.
+ * Covers still on the phone show [localPhotos]; one whose transfer failed opens a sheet with
+ * [retryUpload] and [removeUpload]. Local rows stay visible when the list can't load.
  */
 @Composable
 internal fun BookOverview(
@@ -59,32 +63,36 @@ internal fun BookOverview(
     menuOpen: Boolean = false,
     uploadToReveal: UUID? = null,
     onUploadRevealed: () -> Unit = {},
+    localPhotos: ThumbnailCache? = null,
+    retryUpload: (UUID) -> Unit = {},
+    removeUpload: (UUID) -> Unit = {},
 ) {
     val clock by rememberClock()
     val zone = ZoneId.systemDefault()
     val locale = LocalConfiguration.current.locales[0]
     val reduced = rememberReducedMotion()
     val entries =
-        remember(state.books, state.uploads, locale) {
-            bookListEntries(state.books, state.uploads, locale)
+        remember(state.books, state.uploads, state.local, locale) {
+            bookListEntries(state.books, state.uploads, locale, state.local)
         }
+    val error = state.error && entries.isEmpty()
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
     // A scan that already succeeded is listed as its book, which may be one saved before.
     val uploadedEntryVisible =
-        state.uploads
-            .find { it.id == uploadToReveal }
-            ?.let { upload ->
-                entries.any {
-                    when (it) {
-                        is BookListEntry.Scan -> it.uploadId == upload.id
-                        is BookListEntry.Saved ->
-                            upload.status == BookUpload.Status.succeeded &&
-                                it.book.id == upload.bookId
-                    }
+        uploadToReveal != null &&
+            entries.any { entry ->
+                when (entry) {
+                    is BookListEntry.Scan -> entry.uploadId == uploadToReveal
+                    is BookListEntry.Saved ->
+                        state.uploads.any {
+                            it.id == uploadToReveal &&
+                                it.status == BookUpload.Status.succeeded &&
+                                it.bookId == entry.book.id
+                        }
                 }
-            } ?: false
+            }
     LaunchedEffect(uploadToReveal, uploadedEntryVisible) {
         if (uploadToReveal == null) return@LaunchedEffect
         // Reset on return, then again when the scan's row arrives, as on Receipts.
@@ -94,6 +102,7 @@ internal fun BookOverview(
     }
     // The held book's snapshot, so refreshes and its own deletion never change the open sheet.
     var optionsBook by remember { mutableStateOf<Book?>(null) }
+    var failedScan by remember { mutableStateOf<BookListEntry.Scan?>(null) }
     val overlay = LocalBookOverlay.current
     // The open overlay and options sheet handle Back first, including while they delete.
     BackHandler(enabled = search.open && overlay?.open != true) { search.close() }
@@ -101,7 +110,7 @@ internal fun BookOverview(
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val optionsBookId = optionsBook?.id
     val rows =
-        remember(clock, zone, locale, expanded, covers, onBookClick, optionsBookId) {
+        remember(clock, zone, locale, expanded, covers, onBookClick, optionsBookId, localPhotos) {
             BookRowContext(
                 now = clock,
                 zone = zone,
@@ -111,6 +120,8 @@ internal fun BookOverview(
                 onBookClick = onBookClick,
                 onBookOptions = { optionsBook = it },
                 optionsBookId = optionsBookId,
+                localPhotos = localPhotos,
+                onUploadOptions = { failedScan = it },
             )
         }
     val saved = remember(entries) { entries.filterIsInstance<BookListEntry.Saved>() }
@@ -142,13 +153,15 @@ internal fun BookOverview(
                             !state.error &&
                             !state.refreshing &&
                             optionsBook == null &&
+                            failedScan == null &&
                             !menuOpen,
-                    error = state.error,
+                    error = error,
                     refreshing = state.refreshing,
                     refreshFailed = state.refreshError || state.error,
                     refreshEnabled =
                         !menuOpen &&
                             optionsBook == null &&
+                            failedScan == null &&
                             !state.loading &&
                             (state.hasLoaded || state.error),
                     onRefresh = onRefresh,
@@ -186,6 +199,26 @@ internal fun BookOverview(
             )
         }
     }
+    failedScan?.let { scan ->
+        key(scan.key) {
+            FailedUploadOptions(
+                header = {
+                    BookSummary(
+                        entry = scan,
+                        now = clock,
+                        zone = zone,
+                        locale = locale,
+                        expanded = expanded,
+                        covers = covers,
+                        localPhotos = localPhotos,
+                    )
+                },
+                onRetry = { retryUpload(scan.uploadId) },
+                onRemove = { removeUpload(scan.uploadId) },
+                onDismiss = { failedScan = null },
+            )
+        }
+    }
 }
 
 /** What every Books row shares, on the pages and in the search results. */
@@ -198,6 +231,8 @@ internal data class BookRowContext(
     val onBookClick: (Book) -> Unit,
     val onBookOptions: (Book) -> Unit,
     val optionsBookId: String?,
+    val localPhotos: ThumbnailCache? = null,
+    val onUploadOptions: (BookListEntry.Scan) -> Unit = {},
 )
 
 @Composable
@@ -339,6 +374,8 @@ internal fun BookListCard(
                                 optionsOpen =
                                     entry is BookListEntry.Saved &&
                                         entry.book.id == rows.optionsBookId,
+                                localPhotos = rows.localPhotos,
+                                onUploadOptions = if (visible) rows.onUploadOptions else null,
                             )
                             if (displayed.drop(index + 1).any { it.key in visibleKeys })
                                 ListDivider(GohoSpacing.bookDividerStart)

@@ -32,7 +32,7 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
             contentType: payload.file.contentType,
             bytes,
           }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
-          return yield* uploads.create(input).pipe(Effect.map(withData));
+          return yield* uploads.create(input, payload.idempotencyKey).pipe(Effect.map(withData));
         }),
       )
       .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))
@@ -62,7 +62,7 @@ const BookUploadsLive = HttpApiBuilder.group(api, "bookUploads", (handlers) =>
             contentType: payload.file.contentType,
             bytes,
           }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
-          return yield* uploads.create(input).pipe(Effect.map(withData));
+          return yield* uploads.create(input, payload.idempotencyKey).pipe(Effect.map(withData));
         }),
       )
       .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))

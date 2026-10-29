@@ -9,7 +9,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.model.BookUpload
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,19 +16,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.MultipartBody
 
 /**
  * Books data owned by the activity, independent of receipts. Books and their cover scans refresh
  * together; a refresh joins or queues behind one already running, and a failure keeps the cached
- * list. A refresh that began before an accepted scan or a deletion never drops the scan or restores
- * the deleted book.
+ * list. A refresh that began before a deletion never restores the deleted book. Covers still on the
+ * phone come from [pendingUploads] until a successful listing has them.
  */
 internal class BookListController(
     private val scope: CoroutineScope,
     private val booksApi: BooksApi,
     private val uploadsApi: BookUploadsApi,
     private val deletions: PendingDeletions,
+    private val pendingUploads: PendingUploads,
 ) {
     var state by mutableStateOf(BookListState())
         private set
@@ -49,6 +48,7 @@ internal class BookListController(
                                 deletions.contains(DeletionKey(DeletionKind.Book, id))
                             } == true
                     },
+                local = pendingUploads.entries.filter { it.kind == ScanKind.Book },
             )
 
     private var refreshAfterCurrent = false
@@ -68,6 +68,7 @@ internal class BookListController(
         }
 
         val revision = changeRevision
+        val accepted = pendingUploads.acceptedIds(ScanKind.Book)
         state = state.copy(loading = true, refreshing = userInitiated, refreshError = false)
         scope.launch {
             try {
@@ -84,9 +85,13 @@ internal class BookListController(
                             booksResponse.isSuccessful &&
                             uploads != null &&
                             books != null
-                    )
+                    ) {
+                        pendingUploads.reconcile(
+                            ScanKind.Book,
+                            accepted + uploads.map { it.id },
+                        )
                         BookListState(books = books, uploads = uploads, hasLoaded = true)
-                    else failed()
+                    } else failed()
             } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 Log.w("GohoBooks", "Book listing failed", error)
@@ -100,12 +105,15 @@ internal class BookListController(
         }
     }
 
-    /** Polls while a scan is queued or processing. Run it only while the activity is started. */
+    /**
+     * Polls while a scan is queued or processing, or accepted but not yet listed. Run it only while
+     * the activity is started.
+     */
     suspend fun pollPendingUploads() {
         snapshotFlow {
             state.uploads.any {
                 it.status == BookUpload.Status.queued || it.status == BookUpload.Status.processing
-            }
+            } || pendingUploads.acceptedIds(ScanKind.Book).isNotEmpty()
         }
             .collectLatest { hasPendingUploads ->
                 if (hasPendingUploads) {
@@ -116,39 +124,6 @@ internal class BookListController(
                 }
             }
     }
-
-    /**
-     * Uploads a cover scan; only the server's 202 with a scan that hasn't failed counts as
-     * accepted. The accepted scan joins the top of a loaded list right away, then the list
-     * refreshes. Returns its ID, or null when the upload wasn't accepted.
-     */
-    suspend fun upload(cover: MultipartBody.Part): UUID? =
-        try {
-            val response = uploadsApi.bookUploadsCreate(cover)
-            val upload = response.body()?.data
-            if (
-                response.code() == 202 &&
-                    upload != null &&
-                    upload.status != BookUpload.Status.failed
-            ) {
-                changeRevision++
-                if (state.hasLoaded)
-                    state =
-                        state.copy(
-                            uploads =
-                                listOf(upload) + state.uploads.filterNot { it.id == upload.id }
-                        )
-                refresh()
-                upload.id
-            } else {
-                Log.w("GohoBooks", "Book upload was not accepted: ${response.code()}")
-                null
-            }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            Log.w("GohoBooks", "Book upload failed", error)
-            null
-        }
 
     /**
      * Accepts a confirmed deletion immediately; the activity-owned operation reconciles failures

@@ -62,6 +62,18 @@ export class DeletionNotAllowed extends Schema.TaggedError<DeletionNotAllowed>()
   { uploadId: ReceiptUploadId, currentStatus: ReceiptUploadStatus },
 ) {}
 
+/**
+ * The requested ID was already issued to a receipt upload, which may since
+ * have been deleted. Upload IDs are never reused.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class UploadIdTaken extends Schema.TaggedError<UploadIdTaken>()(
+  "GohoServer.ReceiptUploadRepository.UploadIdTaken",
+  { uploadId: ReceiptUploadId },
+) {}
+
 type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
 
 /**
@@ -75,9 +87,16 @@ export interface Interface {
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<FileId, PersistenceError | UploadNotFound | DeletionNotAllowed>;
   readonly list: Effect.Effect<ReadonlyArray<ReceiptUpload>, PersistenceError>;
+  /**
+   * Records the ID as issued and inserts the queued upload, together. Fails with
+   * `UploadIdTaken`, inserting nothing, when the ID was issued before, even to
+   * a deleted upload. Joins the caller's transaction as a savepoint.
+   */
   readonly createQueued: (
     upload: QueuedReceiptUpload,
-  ) => Effect.Effect<ReceiptUpload, PersistenceError>;
+  ) => Effect.Effect<ReceiptUpload, PersistenceError | UploadIdTaken>;
+  /** Whether the ID was ever issued, including to an upload since deleted. */
+  readonly hasIssuedId: (uploadId: ReceiptUploadId) => Effect.Effect<boolean, PersistenceError>;
   readonly findById: (
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<Option.Option<ReceiptUpload>, PersistenceError>;
@@ -200,6 +219,26 @@ export const layer = Layer.effect(
       `,
     });
 
+    // A reservation racing another transaction's for the same ID waits for it to
+    // finish, then reserves nothing if that one committed.
+    const reserveId = SqlSchema.findOneOption({
+      Request: ReceiptUploadId,
+      Result: Schema.Struct({ id: Schema.String }),
+      execute: (uploadId) => sql`
+        INSERT INTO issued_upload_ids (kind, id) VALUES ('receipt', ${uploadId})
+        ON CONFLICT DO NOTHING
+        RETURNING id
+      `,
+    });
+
+    const selectIssuedId = SqlSchema.findOneOption({
+      Request: ReceiptUploadId,
+      Result: Schema.Struct({ id: Schema.String }),
+      execute: (uploadId) => sql`
+        SELECT id FROM issued_upload_ids WHERE kind = 'receipt' AND id = ${uploadId}
+      `,
+    });
+
     const updateToProcessing = SqlSchema.findOneOption({
       Request: ReceiptUploadId,
       Result: ReceiptUploadRow,
@@ -282,12 +321,28 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/ReceiptUploadRepository.list"),
     );
 
-    const createQueued = Effect.fn("@goho/ReceiptUploadRepository.createQueued")(function* (
-      input: QueuedReceiptUpload,
-    ) {
-      const upload = yield* Schema.decodeEffect(QueuedReceiptUpload)(input);
-      return fromRow(yield* insertQueued(upload));
-    }, persistenceError("createQueued"));
+    const createQueued = Effect.fn("@goho/ReceiptUploadRepository.createQueued")(
+      (input: QueuedReceiptUpload) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const upload = yield* Schema.decodeEffect(QueuedReceiptUpload)(input).pipe(
+              persistenceError("createQueued"),
+            );
+            const reserved = yield* reserveId(upload.id).pipe(persistenceError("createQueued"));
+            if (Option.isNone(reserved)) return yield* new UploadIdTaken({ uploadId: upload.id });
+            return fromRow(yield* insertQueued(upload).pipe(persistenceError("createQueued")));
+          }),
+        ),
+      Effect.catchTag("SqlError", (cause) =>
+        Effect.fail(new PersistenceError({ operation: "createQueued", cause })),
+      ),
+    );
+
+    const hasIssuedId = Effect.fn("@goho/ReceiptUploadRepository.hasIssuedId")(
+      (uploadId: ReceiptUploadId) => selectIssuedId(uploadId).pipe(Effect.map(Option.isSome)),
+      persistenceError("hasIssuedId"),
+    );
+
     // A guarded update that matched no row either lost the upload or found it in
     // a state that does not allow the requested transition.
 
@@ -345,6 +400,7 @@ export const layer = Layer.effect(
       createQueued,
       deleteFailed,
       findById,
+      hasIssuedId,
       findByReceiptId,
       list,
       markAbandonedFailed,

@@ -8,26 +8,48 @@ import androidx.compose.ui.res.stringResource
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.TagColor
 
+/**
+ * A scan that has no finished record yet: sending from the phone, kept on the phone after its
+ * transfer failed, processing on the server, or not processed there.
+ */
+enum class ScanStatus {
+    Uploading,
+    UploadFailed,
+    Processing,
+    NotProcessed,
+}
+
+val ScanStatus.failed: Boolean
+    get() = this == ScanStatus.UploadFailed || this == ScanStatus.NotProcessed
+
 @Composable
-fun ReceiptUploadTag(processing: Boolean, modifier: Modifier = Modifier) {
-    UploadTag(processing, R.string.receipt_reading, modifier)
+fun ReceiptUploadTag(status: ScanStatus, modifier: Modifier = Modifier) {
+    UploadTag(status, R.string.receipt_reading, modifier)
 }
 
 @Composable
-fun BookUploadTag(processing: Boolean, modifier: Modifier = Modifier) {
-    UploadTag(processing, R.string.book_reading, modifier)
+fun BookUploadTag(status: ScanStatus, modifier: Modifier = Modifier) {
+    UploadTag(status, R.string.book_reading, modifier)
 }
 
 @Composable
-private fun UploadTag(processing: Boolean, @StringRes reading: Int, modifier: Modifier) {
+private fun UploadTag(status: ScanStatus, @StringRes reading: Int, modifier: Modifier) {
     Tag(
-        label = stringResource(if (processing) reading else R.string.not_processed),
+        label =
+            stringResource(
+                when (status) {
+                    ScanStatus.Uploading -> R.string.upload_uploading
+                    ScanStatus.UploadFailed -> R.string.upload_failed
+                    ScanStatus.Processing -> reading
+                    ScanStatus.NotProcessed -> R.string.not_processed
+                }
+            ),
         icon =
             painterResource(
-                if (processing) R.drawable.ic_tag_processing else R.drawable.ic_tag_failed
+                if (status.failed) R.drawable.ic_tag_failed else R.drawable.ic_tag_processing
             ),
-        color = if (processing) TagColor.Purple else TagColor.Orange,
+        color = if (status.failed) TagColor.Orange else TagColor.Purple,
         modifier = modifier,
-        shimmer = processing,
+        shimmer = !status.failed,
     )
 }

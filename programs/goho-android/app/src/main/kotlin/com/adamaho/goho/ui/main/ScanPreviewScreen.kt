@@ -34,11 +34,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * Upload saves the photo on the phone before the preview closes; the transfer continues from its
+ * list row. A failed save keeps the preview so the photo is not lost.
+ */
 enum class UploadStatus {
     Ready,
-    Uploading,
-    Submitted,
-    Failed,
+    Saving,
+    SaveFailed,
 }
 
 /** What a scan captures: it chooses the preview copy and, in the activity, the upload endpoint. */
@@ -46,23 +49,9 @@ enum class ScanKind(
     @StringRes val title: Int,
     @StringRes val imageDescription: Int,
     @StringRes val upload: Int,
-    @StringRes val progress: Int,
-    @StringRes val submitted: Int,
 ) {
-    Receipt(
-        R.string.receipt_new,
-        R.string.scan_image_description,
-        R.string.upload_receipt,
-        R.string.upload_progress,
-        R.string.upload_submitted,
-    ),
-    Book(
-        R.string.book_new,
-        R.string.scan_cover_description,
-        R.string.upload_cover,
-        R.string.upload_cover_progress,
-        R.string.upload_cover_submitted,
-    ),
+    Receipt(R.string.receipt_new, R.string.scan_image_description, R.string.upload_receipt),
+    Book(R.string.book_new, R.string.scan_cover_description, R.string.upload_cover),
 }
 
 @Composable
@@ -116,8 +105,8 @@ internal fun ScanPreviewContent(
     modifier: Modifier = Modifier,
 ) {
     val c = GohoTheme.colors
-    val busy = uploadStatus == UploadStatus.Uploading || uploadStatus == UploadStatus.Submitted
-    // Keep the capture on screen until the existing upload completes.
+    val busy = uploadStatus == UploadStatus.Saving
+    // Keep the capture on screen until its local copy is saved.
     BackHandler { if (!busy) onCancelClick() }
     val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(modifier.fillMaxSize().background(c.background).safeDrawingPadding()) {
@@ -148,29 +137,15 @@ internal fun ScanPreviewContent(
                 loading,
                 Modifier.weight(1f).padding(horizontal = GohoSpacing.screenMargin),
             )
-            val statusText =
-                when (uploadStatus) {
-                    UploadStatus.Ready -> null
-                    UploadStatus.Uploading -> kind.progress
-                    UploadStatus.Submitted -> kind.submitted
-                    UploadStatus.Failed -> R.string.upload_failed
-                }
-            if (statusText != null) {
+            if (uploadStatus == UploadStatus.SaveFailed) {
                 Tag(
-                    label = stringResource(statusText),
-                    icon =
-                        painterResource(
-                            if (uploadStatus == UploadStatus.Failed) R.drawable.ic_tag_failed
-                            else R.drawable.ic_tag_processing
-                        ),
-                    color =
-                        if (uploadStatus == UploadStatus.Failed) TagColor.Orange
-                        else TagColor.Purple,
+                    label = stringResource(R.string.upload_save_failed),
+                    icon = painterResource(R.drawable.ic_tag_failed),
+                    color = TagColor.Orange,
                     modifier =
                         Modifier.padding(horizontal = GohoSpacing.textInset)
                             .padding(top = GohoSpacing.contentGap)
                             .semantics { liveRegion = LiveRegionMode.Polite },
-                    shimmer = busy,
                 )
             }
             Column(
@@ -180,8 +155,7 @@ internal fun ScanPreviewContent(
             ) {
                 ActionButton(
                     stringResource(
-                        if (busy) R.string.upload_busy
-                        else if (uploadStatus == UploadStatus.Failed) R.string.upload_retry
+                        if (uploadStatus == UploadStatus.SaveFailed) R.string.upload_retry
                         else kind.upload
                     ),
                     onUploadClick,

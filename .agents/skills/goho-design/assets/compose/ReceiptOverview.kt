@@ -31,6 +31,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.delay
 
 data class ReceiptOverviewState(
@@ -41,11 +42,15 @@ data class ReceiptOverviewState(
     val error: Boolean = false,
     val refreshing: Boolean = false,
     val refreshError: Boolean = false,
+    /** Receipt photos saved on the phone that the server has not listed yet. */
+    val local: List<PendingUpload> = emptyList(),
 )
 
 /**
  * Receipts content below the section title. [thumbnails] outlives section switches so returning to
- * Receipts does not reload photos that already loaded.
+ * Receipts does not reload photos that already loaded; [localPhotos] shows photos still on the
+ * phone. A row whose transfer failed offers [retryUpload] and [removeUpload]. Local rows stay
+ * visible when the list can't load, in place of the load error.
  */
 @Composable
 internal fun ReceiptOverview(
@@ -60,15 +65,19 @@ internal fun ReceiptOverview(
     onRefresh: () -> Unit = onRetryClick,
     uploadToReveal: String? = null,
     onUploadRevealed: () -> Unit = {},
+    localPhotos: ThumbnailCache? = null,
+    retryUpload: (UUID) -> Unit = {},
+    removeUpload: (UUID) -> Unit = {},
 ) {
     val clock by rememberClock(previewTime)
     val config = LocalConfiguration.current
     val locale = config.locales[0]
     val zone = ZoneId.systemDefault()
     val entries =
-        remember(state.receipts, state.uploads, zone) {
-            receiptListEntries(state.receipts, state.uploads, zone)
+        remember(state.receipts, state.uploads, state.local, zone) {
+            receiptListEntries(state.receipts, state.uploads, zone, state.local)
         }
+    val error = state.error && entries.isEmpty()
     val pages = rememberFilterPagerState()
     val allListState = rememberLazyListState()
     val attentionListState = rememberLazyListState()
@@ -86,7 +95,7 @@ internal fun ReceiptOverview(
     FilterPager(
         state = pages,
         total = entries.size,
-        attention = entries.count { it.status == ReceiptListStatus.NotProcessed },
+        attention = entries.count { it.needsAttention },
         showFilters = !state.error && state.hasLoaded,
         swipeEnabled =
             state.hasLoaded &&
@@ -94,7 +103,7 @@ internal fun ReceiptOverview(
                 !state.refreshing &&
                 optionsEntry == null &&
                 !menuOpen,
-        error = state.error,
+        error = error,
         refreshing = state.refreshing,
         refreshFailed = state.refreshError || state.error,
         refreshEnabled = !menuOpen && !state.loading && (state.hasLoaded || state.error),
@@ -118,22 +127,58 @@ internal fun ReceiptOverview(
             onReceiptClick = onReceiptClick,
             onOptions = { optionsEntry = it },
             thumbnails = thumbnails,
+            localPhotos = localPhotos,
             modifier = pageModifier,
         )
     }
     optionsEntry?.let { entry ->
         key(entry.key) {
-            ReceiptOptions(
-                entry,
-                locale,
-                clock,
-                zone,
-                thumbnail = { ReceiptThumbnail(entry.receiptId, entry.status, thumbnails) },
-                onDelete = { deleteReceipt(entry) },
-                onDismiss = { optionsEntry = null },
-            )
+            val thumbnail = @Composable { EntryThumbnail(entry, thumbnails, localPhotos) }
+            val uploadId = entry.uploadId
+            if (entry.status == ReceiptListStatus.UploadFailed && uploadId != null)
+                FailedUploadOptions(
+                    header = {
+                        ReceiptSummary(
+                            entry = entry,
+                            now = clock,
+                            locale = locale,
+                            zone = zone,
+                            expanded =
+                                config.fontScale >= 1.3f ||
+                                    config.screenWidthDp < GohoSpacing.compactWidth.value,
+                            thumbnail = thumbnail,
+                        )
+                    },
+                    onRetry = { retryUpload(uploadId) },
+                    onRemove = { removeUpload(uploadId) },
+                    onDismiss = { optionsEntry = null },
+                )
+            else
+                ReceiptOptions(
+                    entry,
+                    locale,
+                    clock,
+                    zone,
+                    thumbnail = thumbnail,
+                    onDelete = { deleteReceipt(entry) },
+                    onDismiss = { optionsEntry = null },
+                )
         }
     }
+}
+
+/** A row's photo: from the server once it has a receipt, or from the phone while uploading. */
+@Composable
+private fun EntryThumbnail(
+    entry: ReceiptListEntry?,
+    thumbnails: ThumbnailCache,
+    localPhotos: ThumbnailCache?,
+) {
+    val status = entry?.status ?: ReceiptListStatus.Processed
+    val local = status == ReceiptListStatus.Uploading || status == ReceiptListStatus.UploadFailed
+    if (local && localPhotos != null)
+        ReceiptThumbnail(entry?.uploadId?.toString(), status, localPhotos)
+    else ReceiptThumbnail(entry?.receiptId, status, thumbnails)
 }
 
 @Composable
@@ -152,6 +197,7 @@ private fun ReceiptListPage(
     onReceiptClick: (String) -> Unit,
     onOptions: (ReceiptListEntry) -> Unit,
     thumbnails: ThumbnailCache,
+    localPhotos: ThumbnailCache?,
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
@@ -241,6 +287,7 @@ private fun ReceiptListPage(
                                             onReceiptClick,
                                             onOptions,
                                             thumbnails,
+                                            localPhotos,
                                         )
                                     }
                                 }
@@ -278,6 +325,7 @@ private fun ReceiptListPage(
                                                         onReceiptClick,
                                                         onOptions,
                                                         thumbnails,
+                                                        localPhotos,
                                                     )
                                                     if (
                                                         section.entries.drop(index + 1).any {
@@ -345,6 +393,7 @@ private fun ReceiptRow(
     onReceiptClick: (String) -> Unit,
     onReceiptOptions: (ReceiptListEntry) -> Unit,
     thumbnails: ThumbnailCache,
+    localPhotos: ThumbnailCache?,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -358,7 +407,11 @@ private fun ReceiptRow(
     }
     val optionsLabel = stringResource(R.string.receipt_options)
     val clickable =
-        if (entry != null && entry.status != ReceiptListStatus.Processing)
+        if (
+            entry != null &&
+                entry.status != ReceiptListStatus.Processing &&
+                entry.status != ReceiptListStatus.Uploading
+        )
             Modifier.combinedClickable(
                 interactionSource = interaction,
                 indication = null,
@@ -378,13 +431,7 @@ private fun ReceiptRow(
         locale = locale,
         zone = zone,
         expanded = expanded,
-        thumbnail = {
-            ReceiptThumbnail(
-                entry?.receiptId,
-                entry?.status ?: ReceiptListStatus.Processed,
-                thumbnails,
-            )
-        },
+        thumbnail = { EntryThumbnail(entry, thumbnails, localPhotos) },
         modifier =
             Modifier.fillMaxWidth()
                 .then(clickable)

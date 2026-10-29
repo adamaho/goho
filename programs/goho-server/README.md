@@ -36,6 +36,28 @@ WebP image no larger than 20 MB. It stores the original, creates a durable uploa
 record, queues processing, and immediately returns HTTP 202 with the upload
 resource under `data`.
 
+#### Safe retries
+
+Both upload endpoints take an optional `idempotencyKey` text part: a version 4
+UUID chosen by the client, sent before `file`. It becomes the upload's ID.
+
+- Repeating a key returns that upload with HTTP 202 as it is now, whether
+  queued, processing, succeeded, or failed. Nothing else is stored or queued,
+  even if the repeat carries a different image.
+- Requests with the same key that overlap create one upload, one stored file,
+  and one queue job; the others wait for it and return it.
+- A key that is not a version 4 UUID, or a repeated key part, is rejected with
+  HTTP 400 or 413 before anything is stored. Requests without a key behave as
+  before: each creates a new upload.
+- Keys are never reused. Once an upload is deleted, by deleting a failed upload
+  or its receipt or book, its key returns HTTP 410 without storing anything,
+  even after queue history is cleaned up. Clients treat 410 as done: the upload
+  was accepted and someone removed it.
+- Servers from before the key accept one multipart part, so they reject a keyed
+  upload with HTTP 413 instead of storing it without retry protection. Deploy
+  the server, and run its `0017_issued_upload_ids` migration, before clients
+  that send keys, such as the Android app.
+
 Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
 be retained. File names are opaque IDs; original names and MIME types are stored
 with the upload record in PostgreSQL.

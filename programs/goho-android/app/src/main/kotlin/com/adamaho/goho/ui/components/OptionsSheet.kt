@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
  * One item's header stays mounted while the actions below change inside the same sheet. The caller
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
  * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
- * request and any later failure belong to the activity. The sheet only awaits its own exit.
+ * request and any later failure belong to the activity. The sheet only awaits its own exit. A
+ * [retryLabel] adds a menu action above Delete that runs [onRetry] and closes the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +48,8 @@ internal fun OptionsSheet(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
+    retryLabel: String? = null,
+    onRetry: () -> Unit = {},
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
@@ -143,43 +146,26 @@ internal fun OptionsSheet(
                                 .background(c.divider)
                         )
                         Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
-                        val interaction = remember { MutableInteractionSource() }
-                        val progress by pressProgress(interaction)
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .background(
-                                    lerp(
-                                        c.sheet,
-                                        if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
-                                        progress.coerceIn(0f, 1f),
-                                    )
-                                )
-                                .clickable(
-                                    interaction,
-                                    indication = null,
-                                    role = Role.Button,
-                                    enabled = !confirming,
-                                    onClick = { confirming = true },
-                                )
-                                .heightIn(min = GohoSpacing.sheetActionHeight)
-                                .padding(
-                                    horizontal = GohoSpacing.sheetPadding,
-                                    vertical = GohoSpacing.sheetInset,
-                                ),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(GohoSpacing.sheetActionGap),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            TrashIcon(
-                                Modifier.size(GohoSpacing.sheetActionIcon),
-                                c.onDangerContainer,
-                            )
-                            Text(
-                                deleteLabel,
-                                style = GohoTheme.type.rowTitle,
-                                color = c.onDangerContainer,
-                            )
-                        }
+                        if (retryLabel != null)
+                            SheetAction(retryLabel, c.textPrimary, enabled = !confirming) {
+                                if (!deleting) {
+                                    // Hands off like a deletion: no further input while it exits.
+                                    deleting = true
+                                    deleted = true
+                                    onRetry()
+                                    scope.launch {
+                                        state.hide()
+                                        onDismiss()
+                                    }
+                                }
+                            }
+                        SheetAction(
+                            deleteLabel,
+                            c.onDangerContainer,
+                            enabled = !confirming,
+                            onClick = { confirming = true },
+                            trash = true,
+                        )
                         Spacer(Modifier.height(GohoSpacing.sheetInset))
                     }
                 } else {
@@ -243,5 +229,46 @@ internal fun OptionsSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SheetAction(
+    label: String,
+    color: Color,
+    enabled: Boolean,
+    trash: Boolean = false,
+    onClick: () -> Unit,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    Row(
+        Modifier.fillMaxWidth()
+            .background(
+                lerp(
+                    c.sheet,
+                    if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
+                    progress.coerceIn(0f, 1f),
+                )
+            )
+            .clickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .heightIn(min = GohoSpacing.sheetActionHeight)
+            .padding(horizontal = GohoSpacing.sheetPadding, vertical = GohoSpacing.sheetInset),
+        horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sheetActionGap),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (trash) TrashIcon(Modifier.size(GohoSpacing.sheetActionIcon), color)
+        else
+            CompositionLocalProvider(LocalContentColor provides color) {
+                UploadIcon(Modifier.size(GohoSpacing.sheetActionIcon))
+            }
+        Text(label, style = GohoTheme.type.rowTitle, color = color)
     }
 }

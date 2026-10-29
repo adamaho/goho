@@ -103,16 +103,19 @@ internal fun thumbnailSampleSize(width: Int, height: Int): Int {
     return sample
 }
 
+/**
+ * Loads the photo for [imageId], a receipt ID or a local upload ID, from its cache once visible.
+ */
 @Composable
 internal fun ReceiptThumbnail(
-    receiptId: String?,
+    imageId: String?,
     status: ReceiptListStatus,
     thumbnails: ThumbnailCache,
 ) {
     var visible by remember { mutableStateOf(false) }
     val bitmap by
-        produceState<Bitmap?>(null, receiptId, visible, thumbnails) {
-            value = if (visible && receiptId != null) thumbnails.get(receiptId) else null
+        produceState<Bitmap?>(null, imageId, visible, thumbnails) {
+            value = if (visible && imageId != null) thumbnails.get(imageId) else null
         }
     ReceiptThumbnail(
         image = bitmap?.asImageBitmap(),
@@ -133,8 +136,10 @@ internal fun ReceiptThumbnail(
     val background =
         when (status) {
             ReceiptListStatus.Processed -> c.surfaceMuted
-            ReceiptListStatus.Processing -> c.accentContainer
-            ReceiptListStatus.NotProcessed -> c.attentionContainer
+            ReceiptListStatus.Processing,
+            ReceiptListStatus.Uploading -> c.accentContainer
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> c.attentionContainer
         }
     Box(
         modifier
@@ -162,8 +167,10 @@ private fun ReceiptPlaceholder(status: ReceiptListStatus) {
     val color =
         when (status) {
             ReceiptListStatus.Processed -> c.textSecondary
-            ReceiptListStatus.Processing -> c.onAccentContainer
-            ReceiptListStatus.NotProcessed -> c.attention
+            ReceiptListStatus.Processing,
+            ReceiptListStatus.Uploading -> c.onAccentContainer
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> c.attention
         }
     Canvas(Modifier.size(GohoSpacing.placeholderWidth, GohoSpacing.placeholderHeight)) {
         val stroke = GohoSpacing.placeholderStroke.toPx()
@@ -183,11 +190,13 @@ private fun ReceiptPlaceholder(status: ReceiptListStatus) {
             }
         drawPath(paper, color, style = Stroke(stroke))
         when (status) {
-            ReceiptListStatus.NotProcessed -> {
+            ReceiptListStatus.NotProcessed,
+            ReceiptListStatus.UploadFailed -> {
                 line(0.5f, 0.3f, 0.5f, 0.52f)
                 drawCircle(color, stroke / 2, point(0.5f, 0.66f))
             }
-            ReceiptListStatus.Processing -> {
+            ReceiptListStatus.Processing,
+            ReceiptListStatus.Uploading -> {
                 line(0.3f, 0.29f, 0.7f, 0.29f)
                 line(0.02f, 0.49f, 0.98f, 0.49f)
                 line(0.3f, 0.69f, 0.56f, 0.69f)

@@ -209,6 +209,27 @@ and each keeps its original file.
 `receipt_uploads` links each processed upload to its receipt. Once the upload
 succeeds, it records the extraction version and the validated extraction JSON.
 
+An upload POST with an `idempotencyKey` uses the key as the upload ID.
+`issued_upload_ids` records every receipt and book upload ID ever issued, keyed
+by kind. Its rows outlive their uploads and `goho_queues` cleanup, because the
+queue ignores a second job with an ID it has seen, so a reused ID would leave an
+upload that never runs.
+
+- Before storing a file, the service checks whether the key was issued. If so,
+  it returns that upload, or HTTP 410 when the upload has since been deleted.
+- Otherwise it stores the file, then `createQueued` reserves the ID with
+  `INSERT … ON CONFLICT DO NOTHING`, inserts the upload row and offers the queue
+  job, all in one transaction.
+- When an overlapping request with the same key committed first, the
+  reservation waits for it and inserts nothing. The transaction rolls back
+  without a row or job, the request deletes its own file, and returns the
+  committed upload, or 410 if it was already deleted.
+- A transaction that rolls back releases its reservation, so a retry after a
+  failed handoff can still use the key.
+
+Migration `0017_issued_upload_ids` creates the table and records the IDs of
+existing uploads and of upload jobs still in `goho_queues`.
+
 The repository inserts a receipt and all its items in one transaction. Inside a
 caller's transaction, the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction. That

@@ -151,6 +151,22 @@ export class BookUploadConflict extends Schema.Error<BookUploadConflict>("BookUp
 ) {}
 
 /**
+ * The idempotency key belonged to a cover upload that has since been deleted.
+ * Keys are never reused, so nothing was stored.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class BookUploadGone extends Schema.Error<BookUploadGone>("BookUploadGone")(
+  Schema.TaggedStruct("BookUploadGone", {}).annotate({ identifier: "BookUploadGone" }),
+  {
+    httpApiStatus: 410,
+    description:
+      "That idempotency key's scan was already accepted and has since been deleted; keys don't get a second shift. Nothing was stored.",
+  },
+) {}
+
+/**
  * Cover uploads could not be stored, read, or deleted; details stay in the
  * server logs.
  *

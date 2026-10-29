@@ -49,6 +49,7 @@ internal fun BookSummary(
     covers: ThumbnailCache,
     modifier: Modifier = Modifier,
     liftCover: Boolean = false,
+    localPhotos: ThumbnailCache? = null,
 ) {
     val c = GohoTheme.colors
     val title =
@@ -56,13 +57,16 @@ internal fun BookSummary(
             null -> ""
             is BookListEntry.Saved -> entry.book.title
             is BookListEntry.Scan ->
-                stringResource(if (entry.failed) R.string.book_unknown else R.string.book_new)
+                stringResource(
+                    if (entry.status == ScanStatus.NotProcessed) R.string.book_unknown
+                    else R.string.book_new
+                )
         }
     Row(
         modifier.semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BookCover(entry, covers, liftCover)
+        BookCover(entry, covers, liftCover, localPhotos)
         Spacer(Modifier.width(GohoSpacing.thumbToText))
         Column(
             Modifier.weight(1f),
@@ -99,7 +103,7 @@ private fun BookMetadata(
 ) {
     val c = GohoTheme.colors
     val style = GohoTheme.type.meta
-    if (entry is BookListEntry.Scan && !entry.failed) {
+    if (entry is BookListEntry.Scan && !entry.status.failed) {
         // A scan has no author yet: keep one metadata line with a shimmering placeholder.
         Box(contentAlignment = Alignment.CenterStart) {
             Text("", style = style, modifier = Modifier.clearAndSetSemantics {})
@@ -172,28 +176,40 @@ private fun BookTag(entry: BookListEntry?, modifier: Modifier = Modifier) {
                 modifier = modifier.skeleton(GohoSpacing.skeletonWidth, block = true),
             )
         is BookListEntry.Saved -> CategoryTag(entry.book.category, modifier)
-        is BookListEntry.Scan -> BookUploadTag(processing = !entry.failed, modifier)
+        is BookListEntry.Scan -> BookUploadTag(entry.status, modifier)
     }
 }
 
 /**
  * Loads a saved cover once visible. Saved books without one, or whose cover fails to load, show the
- * small generated cover; scans in progress show a lavender scan mark, and failed scans an orange
- * book with an attention dot. Decorative: the row text and tag describe the state. A [lift] cover
- * flies into the book overlay.
+ * small generated cover. Scans still on the phone show their photo from [localPhotos]; other scans
+ * in progress show a lavender scan mark, and failed scans an orange book with an attention dot.
+ * Decorative: the row text and tag describe the state. A [lift] cover flies into the book overlay.
  */
 @Composable
-private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache, lift: Boolean) {
+private fun BookCover(
+    entry: BookListEntry?,
+    covers: ThumbnailCache,
+    lift: Boolean,
+    localPhotos: ThumbnailCache?,
+) {
     val book = (entry as? BookListEntry.Saved)?.book
     val bookId = book?.takeIf { it.hasImage }?.id
+    val localId =
+        (entry as? BookListEntry.Scan)
+            ?.takeIf { it.status == ScanStatus.Uploading || it.status == ScanStatus.UploadFailed }
+            ?.uploadId
+            ?.toString()
+    val cache = if (localId != null) localPhotos else covers
+    val imageId = localId ?: bookId
     var visible by remember { mutableStateOf(false) }
     // A cover still loading keeps the neutral placeholder rather than flashing the generated one.
     var loading by remember(bookId) { mutableStateOf(bookId != null) }
     val bitmap by
-        produceState<Bitmap?>(null, bookId, visible, covers) {
+        produceState<Bitmap?>(null, imageId, visible, cache) {
             // Keep a loaded cover while off screen so it doesn't flash the generated one on return.
-            if (bookId == null) value = null
-            else if (visible) value = covers.get(bookId).also { loading = false }
+            if (imageId == null || cache == null) value = null
+            else if (visible) value = cache.get(imageId).also { loading = false }
         }
     val image = bitmap
     @Composable
@@ -235,7 +251,7 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache, lift: Boole
 private fun CoverPlaceholder(entry: BookListEntry?, modifier: Modifier = Modifier) {
     val c = GohoTheme.colors
     val shape = GohoShapes.thumb
-    val processing = entry is BookListEntry.Scan && !entry.failed
+    val processing = entry is BookListEntry.Scan && !entry.status.failed
     val failed = entry?.needsAttention == true
     Box(
         modifier

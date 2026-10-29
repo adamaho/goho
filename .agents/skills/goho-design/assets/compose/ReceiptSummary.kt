@@ -1,8 +1,5 @@
-// Snapshot before the October 21 category handoff. Adapt category tags and ranking
-// from references/components.md before refreshing this copy with the native implementation.
 package com.adamaho.goho.ui.main
 
-import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -42,28 +39,20 @@ internal fun ReceiptSummary(
         else
             entry.merchant
                 ?: stringResource(
-                    if (entry?.status == ReceiptListStatus.Processing) R.string.receipt_new
-                    else R.string.receipt_unknown
+                    if (entry.status == ReceiptListStatus.NotProcessed) R.string.receipt_unknown
+                    else R.string.receipt_new
                 )
     val today = now.atZone(zone).toLocalDate()
     val date =
-        when (entry?.date) {
-            null -> if (entry == null) "" else stringResource(R.string.date_unknown)
-            today -> stringResource(R.string.date_today)
-            today.minusDays(1) -> stringResource(R.string.date_yesterday)
-            else ->
-                entry.date.format(
-                    DateTimeFormatter.ofPattern(
-                        DateFormat.getBestDateTimePattern(
-                            locale,
-                            if (entry.date.year == today.year) "EEEMMMd" else "EEEMMMdy",
-                        ),
-                        locale,
-                    )
-                )
+        when {
+            entry == null -> ""
+            entry.date == null -> stringResource(R.string.date_unknown)
+            else -> relativeDate(entry.date, today, locale)
         }
     val justNow =
-        entry?.status == ReceiptListStatus.Processing &&
+        entry != null &&
+            (entry.status == ReceiptListStatus.Processing ||
+                entry.status == ReceiptListStatus.Uploading) &&
             entry.uploadedAt != null &&
             entry.uploadedAt <= now &&
             now.epochSecond - entry.uploadedAt.epochSecond < 60
@@ -165,15 +154,17 @@ private fun ReceiptEntryTag(entry: ReceiptListEntry?, modifier: Modifier = Modif
                 color = TagColor.Grey,
                 modifier = modifier.skeleton(GohoSpacing.skeletonWidth, block = true),
             )
-        entry.status != ReceiptListStatus.Processed ->
-            ReceiptUploadTag(entry.status == ReceiptListStatus.Processing, modifier)
+        else -> entry.status.scanStatus?.let { ReceiptUploadTag(it, modifier) }
     }
 }
 
 @Composable
 private fun ReceiptRowAmount(entry: ReceiptListEntry?, locale: Locale) {
     val c = GohoTheme.colors
-    if (entry?.status == ReceiptListStatus.Processing) {
+    if (
+        entry?.status == ReceiptListStatus.Processing ||
+            entry?.status == ReceiptListStatus.Uploading
+    ) {
         Box(
             Modifier.size(GohoSpacing.skeletonWidth, GohoSpacing.skeletonHeight)
                 .clip(GohoShapes.pill)

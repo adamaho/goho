@@ -23,6 +23,7 @@ import { expect } from "vitest";
 
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
+import issuedUploadIds from "#src/database/migrations/0017-issued-upload-ids.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import { FileId } from "#src/file-storage.ts";
 import * as FileStorage from "#src/file-storage.ts";
@@ -32,6 +33,7 @@ import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
+import { behindOpenTransaction } from "#test/helpers/locks.ts";
 import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const DatabaseLive = Layer.effectContext(
@@ -150,6 +152,7 @@ it.effect("creates the upload row and queue job in one workflow", () =>
 
 it.effect("deletes the stored file when the database handoff fails", () =>
   Effect.gen(function* () {
+    const repository = yield* ReceiptUploadRepository.Service;
     const deleted = yield* Ref.make<ReadonlyArray<FileStorage.FileId>>([]);
     const storage = Layer.succeed(FileStorage.Service, {
       put: () => Effect.succeed(FileStorage.FileId.make("orphaned-drive-file")),
@@ -174,17 +177,232 @@ it.effect("deletes the stored file when the database handoff fails", () =>
       ),
     );
 
+    const { uploadId: key } = yield* makeJob;
     const result = yield* uploads
-      .create({
-        name: "receipt.png",
-        contentType: "image/png",
-        bytes: new Uint8Array([1, 2, 3]),
-      })
+      .create(
+        {
+          name: "receipt.png",
+          contentType: "image/png",
+          bytes: new Uint8Array([1, 2, 3]),
+        },
+        key,
+      )
       .pipe(Effect.result);
 
     expect(result._tag).toBe("Failure");
     expect(yield* Ref.get(deleted)).toEqual(["orphaned-drive-file"]);
-  }).pipe(Effect.provide(DatabaseLive)),
+    // The rolled-back key was never issued, so a retry can still use it.
+    expect(yield* repository.hasIssuedId(key)).toBe(false);
+  }).pipe(Effect.provide([RepositoryLive, DatabaseLive])),
+);
+
+// Distinct file IDs, with every stored and deleted ID recorded.
+const RecordingUploads = Effect.gen(function* () {
+  const put = yield* Ref.make<ReadonlyArray<FileId>>([]);
+  const deleted = yield* Ref.make<ReadonlyArray<FileId>>([]);
+  const uploads = yield* ReceiptUploads.Service.pipe(
+    Effect.provide(
+      ReceiptUploads.layer.pipe(
+        Layer.provide([
+          NodeCrypto.layer,
+          QueueLive,
+          RepositoryLive,
+          Transaction.layer.pipe(Layer.provide(DatabaseLive)),
+          Layer.succeed(FileStorage.Service, {
+            put: () =>
+              Ref.modify(put, (ids) => {
+                const fileId = FileId.make(`drive-file-${ids.length + 1}`);
+                return [fileId, [...ids, fileId]];
+              }),
+            get: () => Effect.die("Unexpected storage.get call"),
+            delete: (fileId) => Ref.update(deleted, (ids) => [...ids, fileId]),
+          }),
+        ]),
+      ),
+    ),
+  );
+  return { uploads, put, deleted };
+});
+
+const receiptImage: ReceiptUploads.UploadInput = {
+  name: "receipt.png",
+  contentType: "image/png",
+  bytes: new Uint8Array([1]),
+};
+
+const countRows = (table: "receipt_uploads" | typeof QueueConstants.tableName, id: string) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const rows =
+      yield* sql`SELECT count(*)::int AS count FROM ${sql(table)} WHERE id::text = ${id}`;
+    const [row] = yield* Schema.decodeUnknownEffect(
+      Schema.Array(Schema.Struct({ count: Schema.Int })),
+    )(rows);
+    return row?.count;
+  });
+
+// Processes an upload into a new receipt, as the worker would.
+const succeed = (uploadId: ReceiptUploadId) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const repo = yield* ReceiptUploadRepository.Service;
+    yield* repo.markProcessing(uploadId);
+    const [receipt] = yield* sql`
+      INSERT INTO receipts (store_name, receipt_date, subtotal, tax, total, currency)
+      VALUES ('Example Store', '2026-09-20', 10, 1, 11, 'CAD')
+      RETURNING id::text AS id
+    `.pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(Schema.Tuple([Schema.Struct({ id: ReceiptId })]))),
+    );
+    yield* repo.markSucceeded(uploadId, receipt.id, { version: 2, payload: parsedReceipt });
+    return receipt.id;
+  });
+
+it.effect("returns the existing upload for a repeated key without storing or queueing again", () =>
+  Effect.gen(function* () {
+    const repo = yield* ReceiptUploadRepository.Service;
+    const { uploads, put, deleted } = yield* RecordingUploads;
+    const { uploadId: key } = yield* makeJob;
+
+    const created = yield* uploads.create(receiptImage, key);
+    expect(created).toMatchObject({ id: key, status: "queued", fileName: "receipt.png" });
+    expect(yield* uploads.create({ ...receiptImage, name: "retry.png" }, key)).toEqual(created);
+
+    // A retry after processing finished returns the outcome, success or failure.
+    const receiptId = yield* succeed(key);
+    expect(yield* uploads.create(receiptImage, key)).toMatchObject({
+      id: key,
+      status: "succeeded",
+      receiptId,
+    });
+    const { uploadId: failedKey } = yield* makeJob;
+    yield* uploads.create(receiptImage, failedKey);
+    yield* repo.markFailed(failedKey, "processing_failed");
+    expect(yield* uploads.create(receiptImage, failedKey)).toMatchObject({
+      id: failedKey,
+      status: "failed",
+      failureCode: "processing_failed",
+    });
+
+    // Without a key, every request is a new upload, as before keys existed.
+    const first = yield* uploads.create(receiptImage);
+    const second = yield* uploads.create(receiptImage);
+    expect(first.id).not.toBe(second.id);
+
+    expect(yield* Ref.get(put)).toHaveLength(4);
+    expect(yield* Ref.get(deleted)).toEqual([]);
+    for (const id of [key, failedKey]) {
+      expect(yield* countRows("receipt_uploads", id)).toBe(1);
+      expect(yield* countRows(QueueConstants.tableName, id)).toBe(1);
+    }
+  }).pipe(Effect.provide([RepositoryLive, DatabaseLive])),
+);
+
+it.effect("keeps one upload, file and job when requests with one key overlap", () =>
+  Effect.gen(function* () {
+    const repo = yield* ReceiptUploadRepository.Service;
+    const { uploads, put, deleted } = yield* RecordingUploads;
+    const { uploadId: key } = yield* makeJob;
+
+    // The second request stores its file, then waits on the first's uncommitted ID.
+    const [first, second] = yield* behindOpenTransaction(
+      uploads.create(receiptImage, key),
+      uploads.create(receiptImage, key),
+      "INSERT INTO issued_upload_ids",
+    );
+
+    expect(second).toEqual(first);
+    const [kept, lost] = yield* Ref.get(put);
+    expect(Option.map(yield* repo.findById(key), ({ fileId }) => fileId)).toEqual(
+      Option.some(kept),
+    );
+    expect(yield* Ref.get(deleted)).toEqual([lost]);
+    expect(yield* countRows("receipt_uploads", key)).toBe(1);
+    expect(yield* countRows(QueueConstants.tableName, key)).toBe(1);
+  }).pipe(Effect.provide([RepositoryLive, DatabaseLive])),
+);
+
+it.effect("refuses a deleted upload's key, even once its queue job is cleaned up", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const repo = yield* ReceiptUploadRepository.Service;
+    const receipts = yield* ReceiptRepository.Service;
+    const { uploads, put } = yield* RecordingUploads;
+    const { uploadId: failedKey } = yield* makeJob;
+    const { uploadId: savedKey } = yield* makeJob;
+
+    yield* uploads.create(receiptImage, failedKey);
+    yield* repo.markFailed(failedKey, "processing_failed");
+    yield* uploads.delete(failedKey);
+    yield* uploads.create(receiptImage, savedKey);
+    yield* receipts.delete(yield* succeed(savedKey));
+    // Queue cleanup drops finished jobs, so the job can't be what keeps a key spent.
+    yield* sql`DELETE FROM ${sql(QueueConstants.tableName)} WHERE id = ${failedKey}`;
+
+    for (const key of [failedKey, savedKey]) {
+      expect((yield* Effect.flip(uploads.create(receiptImage, key)))._tag).toBe("Gone");
+      expect(yield* countRows("receipt_uploads", key)).toBe(0);
+    }
+    expect(yield* Ref.get(put)).toHaveLength(2);
+    expect(yield* countRows(QueueConstants.tableName, failedKey)).toBe(0);
+    expect(yield* countRows(QueueConstants.tableName, savedKey)).toBe(1);
+  }).pipe(
+    Effect.provide([
+      RepositoryLive,
+      ReceiptRepository.layer.pipe(
+        Layer.provide(CategoryRepository.layer),
+        Layer.provide(DatabaseLive),
+      ),
+      DatabaseLive,
+    ]),
+  ),
+);
+
+it.effect("refuses a key whose upload an overlapping request created and deleted", () =>
+  Effect.gen(function* () {
+    const repo = yield* ReceiptUploadRepository.Service;
+    const { uploads, put, deleted } = yield* RecordingUploads;
+    const { uploadId: key } = yield* makeJob;
+
+    // The second request stores its file, then waits on the first's uncommitted ID.
+    const [, gone] = yield* behindOpenTransaction(
+      uploads
+        .create(receiptImage, key)
+        .pipe(
+          Effect.andThen(repo.markFailed(key, "processing_failed")),
+          Effect.andThen(uploads.delete(key)),
+        ),
+      Effect.flip(uploads.create(receiptImage, key)),
+      "INSERT INTO issued_upload_ids",
+    );
+
+    expect(gone._tag).toBe("Gone");
+    expect(yield* Ref.get(deleted)).toEqual(yield* Ref.get(put));
+    expect(yield* Ref.get(put)).toHaveLength(2);
+    expect(yield* countRows("receipt_uploads", key)).toBe(0);
+    expect(yield* countRows(QueueConstants.tableName, key)).toBe(1);
+  }).pipe(Effect.provide([RepositoryLive, DatabaseLive])),
+);
+
+it.effect("issues the IDs of existing uploads and of deleted uploads' jobs when migrating", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const uploads = yield* ReceiptUploads.Service;
+    const repo = yield* ReceiptUploadRepository.Service;
+    const live = yield* uploads.create(receiptImage);
+    const deleted = yield* uploads.create(receiptImage);
+    yield* repo.markFailed(deleted.id, "processing_failed");
+    yield* uploads.delete(deleted.id);
+    yield* sql`DROP TABLE issued_upload_ids`;
+
+    yield* issuedUploadIds;
+
+    expect(yield* repo.hasIssuedId(live.id)).toBe(true);
+    expect(yield* repo.hasIssuedId(deleted.id)).toBe(true);
+    expect(yield* repo.hasIssuedId(yield* makeJob.pipe(Effect.map((job) => job.uploadId)))).toBe(
+      false,
+    );
+  }).pipe(Effect.provide([ReceiptUploadsLive, RepositoryLive, DatabaseLive])),
 );
 
 it.effect("keeps pending work across queue layer restarts", () =>

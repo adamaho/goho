@@ -198,6 +198,62 @@ it.effect("uploads one receipt image and retrieves its status through the genera
     });
   }).pipe(Effect.provide(TestLive)),
 );
+
+it.effect("passes an optional idempotency key part to the upload service", () => {
+  const keys: Array<ReceiptUploadId | undefined> = [];
+  return Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const file = new File([new Uint8Array([1])], "receipt.png", { type: "image/png" });
+    const keyed = new FormData();
+    keyed.append("idempotencyKey", receiptUpload.id);
+    keyed.append("file", file);
+    const keyless = new FormData();
+    keyless.append("file", file);
+
+    expect(yield* client.receiptUploads.create({ payload: keyed })).toEqual({
+      data: receiptUpload,
+    });
+    yield* client.receiptUploads.create({ payload: keyless });
+    expect(keys).toEqual([receiptUpload.id, undefined]);
+
+    const malformed = new FormData();
+    malformed.append("idempotencyKey", "not-a-uuid");
+    malformed.append("file", file);
+    const response = yield* HttpClient.post("/receipt-uploads", {
+      body: HttpBody.formData(malformed),
+    });
+    expect(response.status).toBe(400);
+    expect(keys).toHaveLength(2);
+  }).pipe(
+    Effect.provide(
+      testLayer(
+        {},
+        {
+          create: (_input, idempotencyKey) =>
+            Effect.sync(() => {
+              keys.push(idempotencyKey);
+              return receiptUpload;
+            }),
+        },
+      ),
+    ),
+  );
+});
+
+it.effect("reports a deleted upload's key as gone", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const file = new File([new Uint8Array([1])], "receipt.png", { type: "image/png" });
+    const form = new FormData();
+    form.append("idempotencyKey", receiptUpload.id);
+    form.append("file", file);
+    const error = yield* Effect.flip(client.receiptUploads.create({ payload: form }));
+    expect(error._tag).toBe("Gone");
+    const response = yield* HttpClient.post("/receipt-uploads", { body: HttpBody.formData(form) });
+    expect(response.status).toBe(410);
+  }).pipe(Effect.provide(testLayer({}, { create: () => Effect.fail(new HttpApiError.Gone()) }))),
+);
+
 it.effect("lists receipt uploads through the generated client", () =>
   Effect.gen(function* () {
     const client = yield* Client.make("");

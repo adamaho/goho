@@ -546,3 +546,162 @@ it.effect("fails book uploads their queue abandoned and leaves other queues' job
     expect(yield* repo.findById(abandoned.id)).toEqual(Option.none());
   }).pipe(Effect.provide(TestLive)),
 );
+
+// Uploads through real storage, recording each stored file ID in order.
+const RecordingUploads = Effect.gen(function* () {
+  const storage = yield* FileStorage.Service;
+  const put = yield* Ref.make<ReadonlyArray<FileStorage.FileId>>([]);
+  const uploads = yield* BookUploads.Service.pipe(
+    Effect.provide(
+      Layer.fresh(BookUploads.layer).pipe(
+        Layer.provide(
+          Layer.succeed(FileStorage.Service, {
+            ...storage,
+            put: (file) =>
+              storage
+                .put(file)
+                .pipe(Effect.tap((fileId) => Ref.update(put, (ids) => [...ids, fileId]))),
+          }),
+        ),
+      ),
+    ),
+  );
+  return { uploads, put };
+});
+
+const cover = (byte: number): BookUploads.UploadInput => ({
+  name: `cover-${byte}.png`,
+  contentType: "image/png",
+  bytes: image(byte),
+});
+
+const jobCount = (uploadId: BookUploadId) =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const rows = yield* sql<{ readonly count: number }>`
+      SELECT count(*)::int AS count FROM ${sql(QueueConstants.tableName)}
+      WHERE queue_name = ${BookUploadQueue.name} AND id = ${uploadId}
+    `;
+    return rows[0]?.count;
+  });
+
+it.effect("returns the existing scan for a repeated key without storing or queueing again", () =>
+  Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
+    const repo = yield* BookUploadRepository.Service;
+    const { uploads, put } = yield* RecordingUploads;
+    const key = BookUploadId.make(yield* crypto.randomUUIDv4());
+
+    const created = yield* uploads.create(cover(1), key);
+    expect(created).toMatchObject({ id: key, status: "queued", fileName: "cover-1.png" });
+    expect(yield* uploads.create(cover(2), key)).toEqual(created);
+
+    // A retry after processing finished returns the outcome, success or failure.
+    yield* attempt(key);
+    const succeeded = yield* uploads.create(cover(3), key);
+    expect(succeeded).toMatchObject({ id: key, status: "succeeded" });
+    expect(succeeded.bookId).not.toBeNull();
+    const failedKey = BookUploadId.make(yield* crypto.randomUUIDv4());
+    yield* uploads.create(cover(4), failedKey);
+    yield* repo.markFailed(failedKey, "processing_failed");
+    expect(yield* uploads.create(cover(5), failedKey)).toMatchObject({
+      id: failedKey,
+      status: "failed",
+      failureCode: "processing_failed",
+    });
+
+    // Without a key, every request is a new scan, as before keys existed.
+    const first = yield* uploads.create(cover(6));
+    const second = yield* uploads.create(cover(6));
+    expect(first.id).not.toBe(second.id);
+
+    const fileIds = yield* Ref.get(put);
+    expect(yield* Effect.forEach(fileIds, stored)).toEqual(
+      [1, 4, 6, 6].map((byte) => Option.some(image(byte))),
+    );
+    expect(yield* fileOf(key)).toBe(fileIds[0]);
+    expect(yield* jobCount(key)).toBe(1);
+    expect(yield* jobCount(failedKey)).toBe(1);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("keeps one scan, file and job when requests with one key overlap", () =>
+  Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
+    const repo = yield* BookUploadRepository.Service;
+    const { uploads, put } = yield* RecordingUploads;
+    const key = BookUploadId.make(yield* crypto.randomUUIDv4());
+
+    // The second request stores its file, then waits on the first's uncommitted ID.
+    const [first, second] = yield* behindOpenTransaction(
+      uploads.create(cover(1), key),
+      uploads.create(cover(2), key),
+      "INSERT INTO issued_upload_ids",
+    );
+
+    expect(second).toEqual(first);
+    const fileIds = yield* Ref.get(put);
+    expect(yield* fileOf(key)).toBe(fileIds[0]);
+    expect(yield* Effect.forEach(fileIds, stored)).toEqual([Option.some(image(1)), Option.none()]);
+    expect((yield* repo.list).map(({ id }) => id)).toEqual([key]);
+    expect(yield* jobCount(key)).toBe(1);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("refuses a deleted scan's key, even once its queue job is cleaned up", () =>
+  Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
+    const sql = yield* SqlClient.SqlClient;
+    const repo = yield* BookUploadRepository.Service;
+    const books = yield* Books.Service;
+    const { uploads, put } = yield* RecordingUploads;
+    const failedKey = BookUploadId.make(yield* crypto.randomUUIDv4());
+    const savedKey = BookUploadId.make(yield* crypto.randomUUIDv4());
+
+    yield* uploads.create(cover(1), failedKey);
+    yield* repo.markFailed(failedKey, "processing_failed");
+    yield* uploads.delete(failedKey);
+    yield* uploads.create(cover(2), savedKey);
+    yield* attempt(savedKey);
+    yield* books.delete(yield* bookOf(yield* uploads.get(savedKey)));
+    // Queue cleanup drops finished jobs, so the job can't be what keeps a key spent.
+    yield* sql`DELETE FROM ${sql(QueueConstants.tableName)} WHERE id = ${failedKey}`;
+
+    for (const key of [failedKey, savedKey]) {
+      expect(yield* failureTag(uploads.create(cover(3), key))).toBe("BookUploadGone");
+      expect(yield* repo.findById(key)).toEqual(Option.none());
+    }
+    expect(yield* Ref.get(put)).toHaveLength(2);
+    expect(yield* jobCount(failedKey)).toBe(0);
+    expect(yield* jobCount(savedKey)).toBe(1);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("refuses a key whose scan an overlapping request created and deleted", () =>
+  Effect.gen(function* () {
+    const crypto = yield* Crypto.Crypto;
+    const repo = yield* BookUploadRepository.Service;
+    const { uploads, put } = yield* RecordingUploads;
+    const key = BookUploadId.make(yield* crypto.randomUUIDv4());
+
+    // The second request stores its file, then waits on the first's uncommitted ID.
+    const [, gone] = yield* behindOpenTransaction(
+      uploads
+        .create(cover(1), key)
+        .pipe(
+          Effect.andThen(repo.markFailed(key, "processing_failed")),
+          Effect.andThen(uploads.delete(key)),
+        ),
+      failureTag(uploads.create(cover(2), key)),
+      "INSERT INTO issued_upload_ids",
+    );
+
+    expect(gone).toBe("BookUploadGone");
+    expect(yield* Effect.forEach(yield* Ref.get(put), stored)).toEqual([
+      Option.none(),
+      Option.none(),
+    ]);
+    expect(yield* repo.findById(key)).toEqual(Option.none());
+    expect(yield* jobCount(key)).toBe(1);
+  }).pipe(Effect.provide(TestLive)),
+);

@@ -7,6 +7,7 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BookUploadConflict
+import com.adamaho.goho.api.generated.model.BookUploadGone
 import com.adamaho.goho.api.generated.model.BookUploadNotFound
 import com.adamaho.goho.api.generated.model.BookUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.BookUploadsGet200Response
@@ -19,18 +20,20 @@ interface BookUploadsApi {
     /**
      * POST book-uploads
      * Upload a book cover
-     * Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.
+     * Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. An optional &#x60;idempotencyKey&#x60; part, a version 4 UUID sent before &#x60;file&#x60;, becomes the upload&#39;s ID so a retry can&#39;t double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.
      * Responses:
      *  - 202: Success
-     *  - 400: The upload is missing a supported cover image.
+     *  - 400: The upload is missing a supported cover image, or its idempotency key is not a version 4 UUID.
+     *  - 410: That idempotency key's scan was already accepted and has since been deleted; keys don't get a second shift. Nothing was stored.
      *  - 500: The server could not store or queue the cover image.
      *
+     * @param idempotencyKey The cover scan&#39;s version 4 UUID; use it to check on this upload. (optional)
      * @param file 
      * @return [BookUploadsCreate202Response]
      */
     @Multipart
     @POST("book-uploads")
-    suspend fun bookUploadsCreate(@Part file: MultipartBody.Part): Response<BookUploadsCreate202Response>
+    suspend fun bookUploadsCreate(@Part("idempotencyKey") idempotencyKey: java.util.UUID? = null, @Part file: MultipartBody.Part): Response<BookUploadsCreate202Response>
 
     /**
      * DELETE book-uploads/{uploadId}

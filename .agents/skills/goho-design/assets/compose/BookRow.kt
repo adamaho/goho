@@ -21,8 +21,10 @@ import kotlinx.coroutines.delay
 
 /**
  * Books row around [BookSummary]. Saved books open the book overlay through [onClick] and, on a
- * hold, their options sheet through [onOptions]; scans are display-only. A null [entry] keeps the
- * same layout for skeleton loading. [optionsOpen] marks the row whose options sheet is open.
+ * hold, their options sheet through [onOptions]. A scan whose upload failed on the phone opens its
+ * Retry and Remove sheet through [onUploadOptions] on a tap or hold; other scans are display-only.
+ * A null [entry] keeps the same layout for skeleton loading. [optionsOpen] marks the row whose
+ * options sheet is open.
  */
 @Composable
 internal fun BookRow(
@@ -35,8 +37,12 @@ internal fun BookRow(
     onClick: ((Book) -> Unit)? = null,
     onOptions: ((Book) -> Unit)? = null,
     optionsOpen: Boolean = false,
+    localPhotos: ThumbnailCache? = null,
+    onUploadOptions: ((BookListEntry.Scan) -> Unit)? = null,
 ) {
     val book = (entry as? BookListEntry.Saved)?.book
+    val failedUpload =
+        (entry as? BookListEntry.Scan)?.takeIf { it.status == ScanStatus.UploadFailed }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var held by remember { mutableStateOf(false) }
@@ -57,8 +63,21 @@ internal fun BookRow(
         wasSelected = selected
     }
     val optionsLabel = stringResource(R.string.book_options)
+    val uploadOptionsLabel = stringResource(R.string.upload_options)
     val clickable =
-        if (book != null && onClick != null)
+        if (failedUpload != null && onUploadOptions != null)
+            Modifier.combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                role = Role.Button,
+                onClick = { onUploadOptions(failedUpload) },
+                onLongClickLabel = uploadOptionsLabel,
+                onLongClick = {
+                    held = false
+                    onUploadOptions(failedUpload)
+                },
+            )
+        else if (book != null && onClick != null)
             Modifier.focusRequester(focus)
                 .combinedClickable(
                     interactionSource = interaction,
@@ -84,6 +103,7 @@ internal fun BookRow(
         expanded = expanded,
         covers = covers,
         liftCover = true,
+        localPhotos = localPhotos,
         modifier =
             Modifier.fillMaxWidth()
                 .then(clickable)

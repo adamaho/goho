@@ -44,6 +44,9 @@ openApiGenerate {
             "dateLibrary" to "string",
             "serializationLibrary" to "moshi",
             "useCoroutines" to "true",
+            // Keep multipart parts in contract order: an upload's idempotencyKey
+            // goes before its file.
+            "sortParamsByRequiredFlag" to "false",
         )
     )
     globalProperties.set(

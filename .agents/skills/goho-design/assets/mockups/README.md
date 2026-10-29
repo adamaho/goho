@@ -1,5 +1,9 @@
 # Mockups
 
+## Optimistic receipt and book uploads (native implementation, October 29, 2026)
+
+See [native captures and validation limits](native-optimistic-uploads/README.md) for immediate list navigation, saved-photo Uploading and Upload failed rows, and shared Retry/Remove sheets. The final captures include the actual preview Upload path and large text with reduced motion; Google scanner capture itself remains unavailable on this emulator. The [current scan-preview spec](../../references/screens.md#4-scan-preview) supersedes the historical blocking upload state shown by older preview captures below.
+
 ## Book search motion (October 25, 2026, approved design)
 
 Filmstrips of the approved shared-axis motion for opening and closing book search ([section 10](../../references/screens.md#10-book-search)), captured from the canvas prototype (option C) at 2×, cropped to the header and the top of the list. They are design references, not native captures, and the spec's timings win (the prototype staggers Close search and the field by 30ms; natively they move together). `book-search-motion-open-light.png` and `-dark.png` show 0, 100, 200, 300 and 450ms after tapping Search; `book-search-motion-close-light.png` and `-dark.png` show 0, 100, 200 and 400ms after Close search.
@@ -33,7 +37,7 @@ October 24, 2026: unedited captures from the Goho Dev APK's existing Compose pre
 
 - [Ready, light](book-scanning-native/preview-light.png) and [Ready, dark](book-scanning-native/preview-dark.png): New book, the cover photo, Upload and Cancel.
 - [Ready, large dark](book-scanning-native/preview-large-dark.png): the same controls at 1.5× system text size.
-- [Uploading, light](book-scanning-native/uploading-light.png): Uploading cover… with the shared tag, disabled Uploading… and Cancel actions; Back stays on the preview. This state was selected through the existing preview's local callback.
+- [Historical uploading preview, light](book-scanning-native/uploading-light.png): Uploading cover… with the shared tag, disabled Uploading… and Cancel actions; Back stays on the preview. This state was selected through the existing preview's local callback.
 
 The ordinary app's Scan book action reached Google's document-scanner activity, but this emulator could not download its scanner module (Play Store/Phonesky unavailable). Full native capture/result delivery, upload retry and accepted-upload navigation remain unverified on a compatible device. Separately, two disposable JPEG covers sent to an isolated real backend returned 202, completed processing and matched one saved book. That checks the existing server contract, not the Android upload path. Android build, lint and Kotlin formatting passed; no automated Android tests or harnesses were added or run.
 

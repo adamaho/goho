@@ -93,7 +93,7 @@ private fun PreviewCapture(initialStatus: UploadStatus, kind: ScanKind = ScanKin
                 kind,
                 uri,
                 status,
-                { status = UploadStatus.Uploading },
+                { status = UploadStatus.Saving },
                 { cancelled = true },
             )
     }
@@ -105,9 +105,9 @@ private fun PreviewCapture(initialStatus: UploadStatus, kind: ScanKind = ScanKin
 @Composable
 fun ScanPreview() = PreviewCapture(UploadStatus.Ready)
 
-@Preview @Composable fun ScanUploadingPreview() = PreviewCapture(UploadStatus.Uploading)
+@Preview @Composable fun ScanSavingPreview() = PreviewCapture(UploadStatus.Saving)
 
-@Preview @Composable fun ScanUploadFailedPreview() = PreviewCapture(UploadStatus.Failed)
+@Preview @Composable fun ScanSaveFailedPreview() = PreviewCapture(UploadStatus.SaveFailed)
 
 @Preview(name = "Book light", uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Preview(name = "Book dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -116,4 +116,4 @@ fun ScanBookPreview() = PreviewCapture(UploadStatus.Ready, ScanKind.Book)
 
 @Preview
 @Composable
-fun ScanBookUploadingPreview() = PreviewCapture(UploadStatus.Uploading, ScanKind.Book)
+fun ScanBookSaveFailedPreview() = PreviewCapture(UploadStatus.SaveFailed, ScanKind.Book)

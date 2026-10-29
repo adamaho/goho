@@ -12,6 +12,7 @@ import {
 import {
   BookUpload,
   BookUploadConflict,
+  BookUploadGone,
   BookUploadId,
   BookUploadNotFound,
   BookUploadsUnavailable,
@@ -40,14 +41,20 @@ import { DataResponse } from "./response.ts";
 
 // Payload schemas
 
-// Receipt and book cover uploads share one image upload policy.
-const ImageUploadPayload = Schema.Struct({ file: Multipart.SingleFileSchema }).pipe(
-  HttpApiSchema.asMultipart({
-    maxParts: 1,
-    maxFileSize: "20 megabytes",
-    maxTotalSize: "21 megabytes",
-  }),
-);
+// Receipt and book cover uploads share one image upload policy. The optional key
+// is a second part, so servers from before it, which allow one part, reject a
+// keyed upload instead of storing it without the key's retry protection.
+const imageUploadPayload = <S extends Schema.Top>(uploadId: S) =>
+  Schema.Struct({
+    idempotencyKey: Schema.optionalKey(uploadId),
+    file: Multipart.SingleFileSchema,
+  }).pipe(
+    HttpApiSchema.asMultipart({
+      maxParts: 2,
+      maxFileSize: "20 megabytes",
+      maxTotalSize: "21 megabytes",
+    }),
+  );
 
 const ImageResponse = HttpApiSchema.WithHeaders(
   Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: "application/octet-stream" })),
@@ -63,6 +70,7 @@ const strictPayload = { onExcessProperty: "error" } as const;
 // Built-in error bodies have no name of their own, so OpenAPI would call them `…Encoded`.
 const NotFound = HttpApiError.NotFound.pipe(Schema.annotateEncoded({ identifier: "NotFound" }));
 const Conflict = HttpApiError.Conflict.pipe(Schema.annotateEncoded({ identifier: "Conflict" }));
+const Gone = HttpApiError.Gone.pipe(Schema.annotateEncoded({ identifier: "Gone" }));
 const InternalServerError = HttpApiError.InternalServerError.pipe(
   Schema.annotateEncoded({ identifier: "InternalServerError" }),
 );
@@ -111,11 +119,16 @@ export const api = HttpApi.make("goho-server")
       .annotate(OpenApi.Description, "Single-file receipt uploads and their processing status.")
       .add(
         HttpApiEndpoint.post("create", "/receipt-uploads", {
-          payload: ImageUploadPayload,
+          payload: imageUploadPayload(ReceiptUploadId),
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload is missing a supported receipt image.",
+              description:
+                "The upload is missing a supported receipt image, or its idempotency key is not a version 4 UUID.",
+            }),
+            Gone.annotate({
+              description:
+                "That idempotency key's upload was already accepted and has since been deleted; keys are never reused. Nothing was stored.",
             }),
             InternalServerError.annotate({
               description: "The server could not store or queue the receipt image.",
@@ -125,7 +138,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Upload a receipt image")
           .annotate(
             OpenApi.Description,
-            "Stores one receipt image and returns its queued status before processing starts.",
+            "Stores one receipt image and returns its queued status before processing starts. An optional `idempotencyKey` part, a version 4 UUID sent before `file`, becomes the upload's ID so a retry can't double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.",
           ),
       )
       .add(
@@ -498,12 +511,14 @@ export const api = HttpApi.make("goho-server")
       .annotate(OpenApi.Description, "Single-file book cover scans and their processing status.")
       .add(
         HttpApiEndpoint.post("create", "/book-uploads", {
-          payload: ImageUploadPayload,
+          payload: imageUploadPayload(BookUploadId),
           success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
           error: [
             HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload is missing a supported cover image.",
+              description:
+                "The upload is missing a supported cover image, or its idempotency key is not a version 4 UUID.",
             }),
+            BookUploadGone,
             BookUploadsUnavailable.annotate({
               description: "The server could not store or queue the cover image.",
             }),
@@ -512,7 +527,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Upload a book cover")
           .annotate(
             OpenApi.Description,
-            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. An optional `idempotencyKey` part, a version 4 UUID sent before `file`, becomes the upload's ID so a retry can't double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.",
           ),
       )
       .add(

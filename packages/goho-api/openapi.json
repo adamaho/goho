@@ -122,7 +122,17 @@
             }
           },
           "400": {
-            "description": "The upload is missing a supported receipt image."
+            "description": "The upload is missing a supported receipt image, or its idempotency key is not a version 4 UUID."
+          },
+          "410": {
+            "description": "That idempotency key's upload was already accepted and has since been deleted; keys are never reused. Nothing was stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gone"
+                }
+              }
+            }
           },
           "500": {
             "description": "The server could not store or queue the receipt image.",
@@ -135,7 +145,7 @@
             }
           }
         },
-        "description": "Stores one receipt image and returns its queued status before processing starts.",
+        "description": "Stores one receipt image and returns its queued status before processing starts. An optional `idempotencyKey` part, a version 4 UUID sent before `file`, becomes the upload's ID so a retry can't double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.",
         "summary": "Upload a receipt image",
         "requestBody": {
           "content": {
@@ -143,6 +153,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "idempotencyKey": {
+                    "type": "string",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+                    "format": "uuid"
+                  },
                   "file": {
                     "type": "string",
                     "format": "binary"
@@ -1230,7 +1245,17 @@
             }
           },
           "400": {
-            "description": "The upload is missing a supported cover image."
+            "description": "The upload is missing a supported cover image, or its idempotency key is not a version 4 UUID."
+          },
+          "410": {
+            "description": "That idempotency key's scan was already accepted and has since been deleted; keys don't get a second shift. Nothing was stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookUploadGone"
+                }
+              }
+            }
           },
           "500": {
             "description": "The server could not store or queue the cover image.",
@@ -1243,7 +1268,7 @@
             }
           }
         },
-        "description": "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+        "description": "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. An optional `idempotencyKey` part, a version 4 UUID sent before `file`, becomes the upload's ID so a retry can't double up: repeating it returns that upload as it stands now, even succeeded or failed, without storing another image or queueing more work. Once that upload is deleted, its key returns 410.",
         "summary": "Upload a book cover",
         "requestBody": {
           "content": {
@@ -1251,6 +1276,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "idempotencyKey": {
+                    "$ref": "#/components/schemas/BookUploadId"
+                  },
                   "file": {
                     "type": "string",
                     "format": "binary"
@@ -1551,6 +1579,17 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
+      },
+      "BookUploadGone": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BookUploadGone"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
       },
       "BooksUnavailable": {
         "type": "object",
@@ -2267,6 +2306,17 @@
           "_tag": {
             "type": "string",
             "enum": ["Conflict"]
+          }
+        },
+        "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "Gone": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["Gone"]
           }
         },
         "required": ["_tag"],

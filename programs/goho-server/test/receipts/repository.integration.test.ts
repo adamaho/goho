@@ -301,6 +301,7 @@ it.effect("applies migrations from empty and does not reapply completed migratio
       { name: "category_kinds" },
       { name: "books" },
       { name: "book_uploads" },
+      { name: "issued_upload_ids" },
     ]);
     // The canonical catalog is seeded with its display metadata.
     expect(yield* sql`SELECT name, icon, color FROM categories ORDER BY id`).toEqual([
@@ -1892,6 +1893,7 @@ it.effect("adds edit history to populated databases without baselines or changed
       { name: "category_kinds" },
       { name: "books" },
       { name: "book_uploads" },
+      { name: "issued_upload_ids" },
     ]);
     expect(yield* snapshot).toEqual(before);
     expect(yield* history).toEqual([]);

@@ -2,6 +2,7 @@ import {
   type BookUpload as PublicBookUpload,
   BookUploadConflict,
   BookUploadContentType,
+  BookUploadGone,
   BookUploadId,
   BookUploadNotFound,
   BookUploadsUnavailable,
@@ -63,7 +64,17 @@ export interface Interface {
     uploadId: BookUploadId,
   ) => Effect.Effect<void, BookUploadNotFound | BookUploadConflict | BookUploadsUnavailable>;
   readonly list: Effect.Effect<ReadonlyArray<PublicBookUpload>, BookUploadsUnavailable>;
-  readonly create: (input: UploadInput) => Effect.Effect<PublicBookUpload, BookUploadsUnavailable>;
+  /**
+   * Stores and queues one upload. An `idempotencyKey` becomes the upload's ID;
+   * when that upload already exists, including one a concurrent request is
+   * creating, it is returned as it stands and nothing more is stored or queued.
+   * A key whose upload was deleted fails with `BookUploadGone`, since IDs are
+   * never reused.
+   */
+  readonly create: (
+    input: UploadInput,
+    idempotencyKey?: BookUploadId,
+  ) => Effect.Effect<PublicBookUpload, BookUploadGone | BookUploadsUnavailable>;
   readonly get: (
     uploadId: BookUploadId,
   ) => Effect.Effect<PublicBookUpload, BookUploadNotFound | BookUploadsUnavailable>;
@@ -116,11 +127,17 @@ export const layer = Layer.effect(
     );
 
     const create = Effect.fn("@goho/BookUploads.create")(
-      function* (input: UploadInput) {
-        const uploadId = BookUploadId.make(yield* crypto.randomUUIDv4());
+      // Succeeds with none when the key's upload was accepted and since deleted.
+      function* (input: UploadInput, idempotencyKey?: BookUploadId) {
+        // An ID is issued in the same transaction as its upload row, so an issued
+        // key without a row means the upload was deleted.
+        if (idempotencyKey !== undefined && (yield* repository.hasIssuedId(idempotencyKey))) {
+          return yield* repository.findById(idempotencyKey);
+        }
+        const uploadId = idempotencyKey ?? BookUploadId.make(yield* crypto.randomUUIDv4());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
-        const upload = yield* transaction
+        return yield* transaction
           .run(
             Effect.gen(function* () {
               const created = yield* repository.createQueued({
@@ -130,7 +147,7 @@ export const layer = Layer.effect(
                 contentType: file.contentType,
               });
               yield* queue.offer({ uploadId });
-              return created;
+              return Option.some(created);
             }),
           )
           .pipe(
@@ -145,13 +162,26 @@ export const layer = Layer.effect(
                 Effect.andThen(Effect.failCause(cause)),
               ),
             ),
+            // A concurrent request with the same key committed first; its upload
+            // keeps the only file and queue job, so this request returns it.
+            Effect.catchTag("GohoServer.BookUploadRepository.UploadIdTaken", (error) =>
+              Effect.gen(function* () {
+                if (idempotencyKey === undefined) return yield* error;
+                return yield* repository.findById(uploadId);
+              }),
+            ),
           );
-        return toPublic(upload);
       },
       Effect.catchCause((cause) =>
         Effect.logError("Book upload could not be stored and queued", cause).pipe(
           Effect.andThen(Effect.fail(new BookUploadsUnavailable())),
         ),
+      ),
+      Effect.flatMap(
+        Option.match({
+          onNone: () => Effect.fail(new BookUploadGone()),
+          onSome: (upload) => Effect.succeed(toPublic(upload)),
+        }),
       ),
       Effect.uninterruptible,
     );

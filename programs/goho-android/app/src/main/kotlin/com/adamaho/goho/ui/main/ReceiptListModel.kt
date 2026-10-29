@@ -2,6 +2,8 @@ package com.adamaho.goho.ui.main
 
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
+import com.adamaho.goho.ui.components.ScanStatus
+import com.adamaho.goho.ui.components.failed
 import java.math.RoundingMode
 import java.text.NumberFormat
 import java.time.Instant
@@ -17,7 +19,23 @@ enum class ReceiptListStatus {
     Processed,
     Processing,
     NotProcessed,
+    Uploading,
+    UploadFailed,
 }
+
+/** A row's tag before its receipt exists, or null once processed. */
+val ReceiptListStatus.scanStatus: ScanStatus?
+    get() =
+        when (this) {
+            ReceiptListStatus.Processed -> null
+            ReceiptListStatus.Processing -> ScanStatus.Processing
+            ReceiptListStatus.NotProcessed -> ScanStatus.NotProcessed
+            ReceiptListStatus.Uploading -> ScanStatus.Uploading
+            ReceiptListStatus.UploadFailed -> ScanStatus.UploadFailed
+        }
+
+val ReceiptListEntry.needsAttention: Boolean
+    get() = status.scanStatus?.failed == true
 
 data class ReceiptListEntry(
     val key: String,
@@ -44,10 +62,15 @@ data class ReceiptDateGroup(val period: ReceiptDatePeriod, val month: YearMonth?
 
 data class ReceiptListSection(val group: ReceiptDateGroup, val entries: List<ReceiptListEntry>)
 
+/**
+ * Receipts, server uploads that have no receipt yet, and photos still on the phone. A local upload
+ * uses its server upload's key, so the row stays in place once the server lists it.
+ */
 fun receiptListEntries(
     receipts: List<Receipt>,
     uploads: List<ReceiptUploadsList200ResponseDataInner>,
     zone: ZoneId,
+    local: List<PendingUpload> = emptyList(),
 ): List<ReceiptListEntry> {
     val completed =
         uploads
@@ -86,8 +109,27 @@ fun receiptListEntries(
                         else ReceiptListStatus.Processing,
                 )
             }
+    val listed = uploads.mapTo(HashSet()) { it.id }
+    val sending =
+        local
+            .filter { it.id !in listed }
+            .map { upload ->
+                ReceiptListEntry(
+                    key = "upload:${upload.id}",
+                    uploadId = upload.id,
+                    receiptId = null,
+                    merchant = null,
+                    date = upload.createdAt.atZone(zone).toLocalDate(),
+                    uploadedAt = upload.createdAt,
+                    total = null,
+                    currency = null,
+                    status =
+                        if (upload.state == TransferState.Failed) ReceiptListStatus.UploadFailed
+                        else ReceiptListStatus.Uploading,
+                )
+            }
     // Stable ties preserve the server's newest-created-first order for manual receipts.
-    return (saved + unfinished).sortedWith(
+    return (saved + unfinished + sending).sortedWith(
         compareByDescending<ReceiptListEntry> { it.date }.thenByDescending { it.uploadedAt }
     )
 }
@@ -140,5 +182,4 @@ internal fun uploadInstant(value: String): Instant? = runCatching {
 fun filterReceiptEntries(
     entries: List<ReceiptListEntry>,
     attentionOnly: Boolean,
-): List<ReceiptListEntry> =
-    if (attentionOnly) entries.filter { it.status == ReceiptListStatus.NotProcessed } else entries
+): List<ReceiptListEntry> = if (attentionOnly) entries.filter { it.needsAttention } else entries

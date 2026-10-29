@@ -57,6 +57,18 @@ export class DeletionNotAllowed extends Schema.TaggedError<DeletionNotAllowed>()
   { uploadId: BookUploadId, currentStatus: BookUploadStatus },
 ) {}
 
+/**
+ * The requested ID was already issued to a cover upload, which may since have been
+ * deleted. Upload IDs are never reused.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class UploadIdTaken extends Schema.TaggedError<UploadIdTaken>()(
+  "GohoServer.BookUploadRepository.UploadIdTaken",
+  { uploadId: BookUploadId },
+) {}
+
 type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
 
 /**
@@ -71,7 +83,16 @@ export interface Interface {
     uploadId: BookUploadId,
   ) => Effect.Effect<FileId, PersistenceError | UploadNotFound | DeletionNotAllowed>;
   readonly list: Effect.Effect<ReadonlyArray<BookUpload>, PersistenceError>;
-  readonly createQueued: (upload: QueuedBookUpload) => Effect.Effect<BookUpload, PersistenceError>;
+  /**
+   * Records the ID as issued and inserts the queued upload, together. Fails with
+   * `UploadIdTaken`, inserting nothing, when the ID was issued before, even to
+   * a deleted upload. Joins the caller's transaction as a savepoint.
+   */
+  readonly createQueued: (
+    upload: QueuedBookUpload,
+  ) => Effect.Effect<BookUpload, PersistenceError | UploadIdTaken>;
+  /** Whether the ID was ever issued, including to an upload since deleted. */
+  readonly hasIssuedId: (uploadId: BookUploadId) => Effect.Effect<boolean, PersistenceError>;
   readonly findById: (
     uploadId: BookUploadId,
   ) => Effect.Effect<Option.Option<BookUpload>, PersistenceError>;
@@ -188,6 +209,26 @@ export const layer = Layer.effect(
       `,
     });
 
+    // A reservation racing another transaction's for the same ID waits for it to
+    // finish, then reserves nothing if that one committed.
+    const reserveId = SqlSchema.findOneOption({
+      Request: BookUploadId,
+      Result: Schema.Struct({ id: Schema.String }),
+      execute: (uploadId) => sql`
+        INSERT INTO issued_upload_ids (kind, id) VALUES ('book', ${uploadId})
+        ON CONFLICT DO NOTHING
+        RETURNING id
+      `,
+    });
+
+    const selectIssuedId = SqlSchema.findOneOption({
+      Request: BookUploadId,
+      Result: Schema.Struct({ id: Schema.String }),
+      execute: (uploadId) => sql`
+        SELECT id FROM issued_upload_ids WHERE kind = 'book' AND id = ${uploadId}
+      `,
+    });
+
     const updateToProcessing = SqlSchema.findOneOption({
       Request: BookUploadId,
       Result: BookUploadRow,
@@ -275,12 +316,27 @@ export const layer = Layer.effect(
       Effect.withSpan("@goho/BookUploadRepository.list"),
     );
 
-    const createQueued = Effect.fn("@goho/BookUploadRepository.createQueued")(function* (
-      input: QueuedBookUpload,
-    ) {
-      const upload = yield* Schema.decodeEffect(QueuedBookUpload)(input);
-      return fromRow(yield* insertQueued(upload));
-    }, persistenceError("createQueued"));
+    const createQueued = Effect.fn("@goho/BookUploadRepository.createQueued")(
+      (input: QueuedBookUpload) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const upload = yield* Schema.decodeEffect(QueuedBookUpload)(input).pipe(
+              persistenceError("createQueued"),
+            );
+            const reserved = yield* reserveId(upload.id).pipe(persistenceError("createQueued"));
+            if (Option.isNone(reserved)) return yield* new UploadIdTaken({ uploadId: upload.id });
+            return fromRow(yield* insertQueued(upload).pipe(persistenceError("createQueued")));
+          }),
+        ),
+      Effect.catchTag("SqlError", (cause) =>
+        Effect.fail(new PersistenceError({ operation: "createQueued", cause })),
+      ),
+    );
+
+    const hasIssuedId = Effect.fn("@goho/BookUploadRepository.hasIssuedId")(
+      (uploadId: BookUploadId) => selectIssuedId(uploadId).pipe(Effect.map(Option.isSome)),
+      persistenceError("hasIssuedId"),
+    );
 
     // A guarded update that matched no row either lost the upload or found it in
     // a state that does not allow the requested transition.
@@ -352,6 +408,7 @@ export const layer = Layer.effect(
       createQueued,
       deleteFailed,
       findById,
+      hasIssuedId,
       list,
       markAbandonedFailed,
       markFailed,

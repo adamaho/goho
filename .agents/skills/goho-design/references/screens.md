@@ -11,17 +11,17 @@ List and details receipt options and deletion use the same supported server endp
 **Header** (status bar inset + 4dp top, `screenMargin` sides)
 
 - Title “Receipts” (`screenTitle`, `textPrimary`) at the 20dp text inset (4dp inside the screen margin), in a row at least 44dp tall, rendered as the shared `SectionTitle` with its chevron (section 7). The header is text-only in every state, with no Bram mark.
-- Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed state.
+- Keep compact filter tabs below the title: “All {count}” and “Needs attention {badge}”. Only the selected tab has a pill surface; there is no enclosing track. Keep the header fixed while the list scrolls, without moving or resizing the filters. Needs attention shows receipts in the Not processed and Upload failed states.
 
 **List**
 
 - Sections in reverse chronological order: "Today", "Yesterday", "Earlier this week", "Last week", then month names ("August", "July 2025" once the year differs). Each section is a label plus a ListCard, 24dp above each label.
 - Row date labels: today → "Today, 8:14 AM"; processing and under a minute old → "Just now"; otherwise "Sun, Sep 27" (locale-aware skeleton `EEEMMMd`).
 - Processed rows show the top-spend category beneath the price as a labelled `Tag`, plus a Grey `TagCount` (“+N”) when the receipt has other categories (see components.md, Category tags). Processing and Not processed rows keep their upload tag and show no category. Large-text/narrow layouts stack the right-aligned amount and tags without squeezing the date. Mockups: `category-list-light.png`, `category-list-dark.png`.
-- A new scan is inserted at the top of Today immediately in the Processing state, then changes in place to Processed or Not processed. Use `ReceiptUploadTag` for the Purple scan-icon “Reading receipt…” and Orange warning-icon “Not processed” states.
-- Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Processing rows aren't tappable.
-- Processed and Not processed rows use the Books row press feedback: an inset, rounded `surfacePressed` fill while pressed and scale 0.98 during a hold, no ripple (see `ReceiptRow` in components.md).
-- Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt. Processing rows ignore it.
+- A new scan is inserted at the top of Today as soon as its photo is saved on the phone, showing that photo and a Purple scan-icon “Uploading…” tag (text shimmer, amount shimmer, “New receipt”, “Just now”). Once the server lists it, the same row (same key, no gap or duplicate) becomes the processing row, then changes in place to Processed or Not processed. If the transfer fails, the row keeps its photo with an Orange warning-icon “Upload failed” tag and an em dash amount; it stays after restarting Goho. Use `ReceiptUploadTag` for the Uploading…, Upload failed, Purple “Reading receipt…” and Orange “Not processed” states. See [Optimistic uploads](#optimistic-uploads).
+- Processed rows open Receipt details. Not processed rows open the receipt options sheet (see "Deleting from the list" below). Upload failed rows open the upload options sheet with Retry upload and Remove upload (section 5). Uploading and Processing rows aren't tappable.
+- Processed, Not processed and Upload failed rows use the Books row press feedback: an inset, rounded `surfacePressed` fill while pressed and scale 0.98 during a hold, no ripple (see `ReceiptRow` in components.md).
+- Press and hold on any Processed or Not processed row also opens the receipt options sheet for that receipt, and on an Upload failed row its upload options sheet. Uploading and Processing rows ignore it.
 - Leave bottom padding in the list so the last row can scroll clear of the Add button.
 
 **Add button** bottom right, with no bottom gradient over the list. Opens the Add menu; Scan receipt opens the existing scan flow (section 7).
@@ -108,36 +108,45 @@ Opened by tapping the photo area on the details screen. Mockups: `photo-viewer.p
 
 Shown after the ML Kit document scanner returns a capture, started from the Add menu’s Scan receipt or Scan book on either section. Both use the same single-page, gallery-enabled JPEG scanner and one native layout, `ScanPreviewScreen(kind, …)`; `ScanKind` (Receipt or Book) supplies only the copy below. The activity remembers the chosen kind while the scanner is open, including across activity recreation, and the kind alone chooses the upload endpoint, never the current section.
 
-| Copy              | Receipt                          | Book                           |
-| ----------------- | -------------------------------- | ------------------------------ |
-| Title             | New receipt                      | New book                       |
-| Photo description | Scanned receipt                  | Scanned book cover             |
-| Upload action     | Upload receipt                   | Upload                         |
-| Uploading tag     | Uploading receipt…               | Uploading cover…               |
-| Submitted tag     | Receipt submitted for processing | Cover submitted for processing |
+| Copy              | Receipt         | Book               |
+| ----------------- | --------------- | ------------------ |
+| Title             | New receipt     | New book           |
+| Photo description | Scanned receipt | Scanned book cover |
+| Upload action     | Upload receipt  | Upload             |
 
-Failure (“Upload failed. Please try again.”, Retry upload), the busy “Uploading…” label and Cancel are shared.
+The save failure tag (“Couldn’t save this photo. Try again.”), Retry upload and Cancel are shared.
 
 **Header** (status bar inset + 4dp top, `screenMargin` sides, 44 tall): the kind's title (`screenTitle`, `textPrimary`) inset 4dp on the left. Nothing else in the header; no server status.
 
 **Photo** (12 below the header, `screenMargin` sides): PhotoFrame without the expand button, filling the available space above the footer. The capture is drawn with `ContentScale.Fit`, centered, with a soft drop shadow. Same dark well in both themes.
 
-**Status tag:** use `Tag` for the existing upload progress/submitted copy (Purple, scan icon, text shimmer) or upload failure (Orange, warning icon). Keep the polite status announcement. The ready state has no status line or warning about the receipt not being uploaded. This approved refinement supersedes the status line in the supplied mockups.
+**Status tag:** only when the photo can't be saved on the phone: `Tag` “Couldn’t save this photo. Try again.” (Orange, warning icon) with a polite announcement, and the primary action reads Retry upload. The ready state has no status line. Upload progress and transfer failures appear on the list row, not here. This supersedes the status line in the supplied mockups.
 
 **Footer** (no background, padding 16 top, `screenMargin` sides, 28 + nav inset bottom), stacked with a 10dp gap:
 
 - ActionButton (`Primary`) "Upload receipt" or "Upload" with an upload icon.
 - ActionButton (`Secondary`) "Cancel", no icon. Discards the capture without uploading and returns to the section the scan started from. System back does the same.
 
-**Upload.** Both kinds stream the capture as one multipart `file` part with `image/jpeg`: `receipt.jpg` to `POST /receipt-uploads`, `book.jpg` to `POST /book-uploads`. Only HTTP 202 with an upload that has not failed is accepted; any other response, a malformed body, or a transport or file error keeps the same capture with the failure tag and Retry upload, with no navigation.
+**Upload.** Tapping Upload saves a copy of the capture on the phone, briefly disabling both buttons, then closes the preview: select the kind's section and return to All at scroll position zero, where the new row already shows the photo and Uploading…. The transfer continues from the list (see [Optimistic uploads](#optimistic-uploads)); Add stays available for the next scan. If the copy can't be saved, the preview stays open with the save failure tag and Retry upload, and nothing is kept.
 
-After an accepted upload, select the kind's section and return to All at scroll position zero. Reset again when the list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. On Books the accepted scan joins the top of a loaded list at once, before uploads and books refresh, and a listing that began before the acceptance is discarded and reloaded so it can't drop the row. The request is consumed once the scan's row, or the book it saved or matched when processing already finished, is listed. Failed uploads and cancelled scans do not reset scrolling.
+Reset scrolling again when the list includes that upload, then consume the request so later polling, tab changes and back navigation preserve their positions. On Books the request is consumed once the scan's row, or the book it saved or matched when processing already finished, is listed. Cancelled scans do not reset scrolling.
 
-While an upload is in progress, keep the existing behavior; if the button needs a busy state, show the label "Uploading…" with the button disabled rather than adding new UI.
+### Optimistic uploads
+
+- `GohoApplication` owns `PendingUploads`, so section switches, navigation and activity recreation never cancel a transfer. Each upload is a copied JPEG and a small record in app-private storage that Android backup and device transfer skip, kept per configured server. Files are written off the main thread; the record is written last so only complete uploads load.
+- Each upload has a random UUID sent as the multipart `idempotencyKey` part before `file` (`receipt.jpg` to `POST /receipt-uploads`, `book.jpg` to `POST /book-uploads`). The server uses it as the upload ID, so the local row and the server row share the key `upload:{id}`. Retry, and resuming after Goho restarts, send the same key; the server returns the existing upload instead of creating another.
+- Any HTTP 202 with an upload is acceptance, whatever its status. The upload is then never sent again; the matching list refreshes, and a successful listing that includes it, or that started after the acceptance, removes the local photo and record. A listing that includes an upload's ID also confirms one whose response was lost.
+- HTTP 410 means the server accepted that key earlier and the upload has since been deleted, for example from another device. It is final: the local photo and record are deleted, the row folds away, the matching list refreshes, and the upload is never sent again.
+- Any other response, including a 400 or a 413 from a server older than the key, or a transport error, makes the row Upload failed. Failed uploads are not retried automatically. Uploads that were sending resume when Goho starts; nothing runs while it is closed.
+- Three different outcomes: Uploading… then Reading… is a transfer the server accepted; Upload failed is a transfer that never reached acceptance and is still on the phone; Not processed is an accepted upload whose server processing failed, handled by the existing receipt and book flows.
+- When the list can't load, local rows stay visible in place of the load error, with the refresh failure indicator.
+- Deploy the server and run its migrations before an app that sends keys: older servers allow one multipart part, so they reject keyed uploads, which then show Upload failed.
 
 ## 5. Receipt and book options sheet and delete confirmation
 
-One Sheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed receipt row. Book scan rows, including Not processed ones, stay display-only. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
+One Sheet, opened from the details screen's overflow button, by pressing and holding a list row, or by tapping a Not processed receipt row. Book scan rows, including Not processed ones, stay display-only, except Upload failed rows (below).
+
+**Upload options** (`FailedUploadOptions`, shared by Receipts and Books): tapping or holding an Upload failed row opens the same sheet with that row's summary as its header and two menu items. “Retry upload” (upload icon and label in `textPrimary`) sends the photo again with the same key and closes the sheet; the row returns to Uploading…. “Remove upload” (trash, `onDangerContainer`) opens the usual confirmation with a Destructive “Remove upload” and Cancel; confirming deletes the photo and record from the phone and the row folds away. Neither claims to cancel anything on the server: if an earlier attempt actually reached it, its row appears with the next refresh. Mockups: `sheet-menu-*.png` and `sheet-confirm-*.png` (from the list, from details, not processed; dark and `-light`), motion storyboards `motion-1` to `motion-5`.
 
 **Book options** (native): pressing and holding a saved Books row opens the same sheet for that book (section 8). The header is the row’s `BookSummary`: the 48×56dp cover, title, author with optional reading level and the bottom-end category tag 16dp past the text, stacked like the row at font scale ≥1.3 or narrow widths. It draws a plain cover that never joins the book overlay’s cover flight. Copy: pane “Book options”, then “Delete book”, “Deleting…”, “Couldn’t delete this book. Try again.” and “Cancel”. Layout, behavior and motion follow the receipt sheet below. Confirming accepts one background `DELETE /books/{bookId}` for the held book’s snapshot, closes the sheet and folds its row out immediately (section 8). The sheet only locks duplicate input during handoff and its own exit, not for the network request. Cancel, Back, scrim and drag-down keep the book, and focus returns to its row. Page swipes and pull-to-refresh are disabled while the sheet is open. Queued, processing and failed scans have no hold.
 
@@ -300,9 +309,9 @@ Native list-only implementation of the October 22 design (`nav-add-closed-*.png`
 
 **Header:** `SectionTitle` “Books” with the shared menu, then the shared All / Needs attention tabs. All counts every displayed row, including scans in progress and failed scans; the menu's Books count is saved books only.
 
-**Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running. An accepted cover upload appears at the top of a loaded list immediately and the list refreshes; a listing that began before it, or before a deletion, is discarded and reloaded.
+**Data:** `GET /book-uploads` then `GET /books`, together on start, return to the foreground, pull and retry, independently of receipts. Listing scans first means each succeeded scan's book is already saved. While a scan is queued or processing, Books polls quietly every 5s only while the app is in the foreground. A refresh joins or queues behind one already running. A cover photo appears at the top as soon as it is saved on the phone; once the server accepts it the list refreshes and the same row continues as the server scan (section 4, Optimistic uploads). A listing that began before a deletion is discarded and reloaded.
 
-**List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”) come first, newest first. Saved books follow A–Z by title, ignoring case and ordered for the app locale, with equal titles in server order (newest first); scans stay pinned above them and there is no sort control. Each saved book shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag` anchored to the row’s bottom end, 16dp past the text; book dividers start at 76dp, aligned with the text after the 48×56dp cover. A succeeded scan never adds a second row. Needs attention lists failed scans. Covers load only for books with `hasImage`; books without one, or whose cover fails to load, show the small generated cloth cover in their category colour (approved October 22, 2026; see `BookCover` in `components.md` and section 9). See `BookRow` in `components.md`.
+**List:** one ungrouped `ListCard`, 12dp below the header fade so its top edge stays visible; no date or category headings. Scans without a book come first, newest first: covers still uploading from the phone (“New book”, their photo, a shimmering metadata pill, Purple “Uploading…”), covers whose transfer failed (“New book”, their photo, upload time, Orange “Upload failed”; tap or hold for Retry upload and Remove upload, section 5), queued and processing scans (“New book”, a shimmering metadata pill, Purple “Reading cover…”) and failed scans (“Unknown book”, upload time, Orange “Not processed”). Saved books follow A–Z by title, ignoring case and ordered for the app locale, with equal titles in server order (newest first); scans stay pinned above them and there is no sort control. Each saved book shows its cover, one-line title, author with optional “· reading level”, and its server category as a labelled `Tag` anchored to the row’s bottom end, 16dp past the text; book dividers start at 76dp, aligned with the text after the 48×56dp cover. A succeeded scan never adds a second row. Needs attention lists failed scans and failed uploads. Covers load only for books with `hasImage`; books without one, or whose cover fails to load, show the small generated cloth cover in their category colour (approved October 22, 2026; see `BookCover` in `components.md` and section 9). See `BookRow` in `components.md`.
 
 **States:**
 

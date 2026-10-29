@@ -35,9 +35,7 @@ import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
-import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Receipt
-import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
@@ -67,10 +65,8 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
-import java.io.IOException
 import java.time.ZoneId
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -79,11 +75,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.RequestBody
-import okio.BufferedSink
 
 /** The section root; the selected section is activity state, so Back does not switch sections. */
 @Serializable private data object SectionRoute : NavKey
@@ -107,26 +98,22 @@ class MainActivity : ComponentActivity() {
     private var refreshAfterCurrent = false
     private var historyRevision = 0L
 
-    private val receiptUploadsApi by lazy { service<ReceiptUploadsApi>() }
-    private val receiptsApi by lazy { service<ReceiptsApi>() }
+    private val receiptUploadsApi by lazy { gohoApi<ReceiptUploadsApi>() }
+    private val receiptsApi by lazy { gohoApi<ReceiptsApi>() }
     private val receiptThumbnails = ThumbnailCache { loadReceiptImage(it) }
+    private val pendingUploads by lazy { (application as GohoApplication).pendingUploads }
+    private val localPhotos = ThumbnailCache { pendingUploads.readPhoto(UUID.fromString(it)) }
     private val deletions by lazy { PendingDeletions(lifecycleScope) }
     private val books by lazy {
         BookListController(
             lifecycleScope,
-            service<BooksApi>(),
-            service<BookUploadsApi>(),
+            gohoApi<BooksApi>(),
+            gohoApi<BookUploadsApi>(),
             deletions,
+            pendingUploads,
         )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
-
-    private inline fun <reified T> service(): T =
-        ApiClient(
-                baseUrl = BuildConfig.GOHO_SERVER_URL,
-                okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
-            )
-            .createService(T::class.java)
 
     private val scannerLauncher =
         registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -190,6 +177,7 @@ class MainActivity : ComponentActivity() {
                                                                 receiptState.receipts,
                                                                 receiptState.uploads,
                                                                 ZoneId.systemDefault(),
+                                                                receiptState.local,
                                                             )
                                                             .size
                                                     else null
@@ -250,6 +238,10 @@ class MainActivity : ComponentActivity() {
                                                                         ReceiptDetailRoute(it)
                                                                     )
                                                                 },
+                                                                localPhotos = localPhotos,
+                                                                retryUpload = pendingUploads::retry,
+                                                                removeUpload =
+                                                                    pendingUploads::remove,
                                                             )
                                                         Section.Books ->
                                                             BookOverview(
@@ -271,6 +263,10 @@ class MainActivity : ComponentActivity() {
                                                                 onUploadRevealed = {
                                                                     bookUploadToReveal = null
                                                                 },
+                                                                localPhotos = localPhotos,
+                                                                retryUpload = pendingUploads::retry,
+                                                                removeUpload =
+                                                                    pendingUploads::remove,
                                                             )
                                                     }
                                                 }
@@ -306,7 +302,7 @@ class MainActivity : ComponentActivity() {
                             uploadStatus = uploadStatus,
                             onUploadClick = ::upload,
                             onCancelClick = {
-                                if (uploadStatus != UploadStatus.Uploading) {
+                                if (uploadStatus != UploadStatus.Saving) {
                                     capture = null
                                     uploadStatus = UploadStatus.Ready
                                 }
@@ -344,11 +340,20 @@ class MainActivity : ComponentActivity() {
         books.refresh()
         pollingJob = lifecycleScope.launch {
             launch { books.pollPendingUploads() }
+            // An answered upload's list refreshes now, replacing its local row with the server's.
+            launch {
+                pendingUploads.refreshes.collect { kind ->
+                    when (kind) {
+                        ScanKind.Receipt -> refreshHistory()
+                        ScanKind.Book -> books.refresh()
+                    }
+                }
+            }
             snapshotFlow {
                 overviewState.uploads.any {
                     it.status == ReceiptUploadsList200ResponseDataInner.Status.queued ||
                         it.status == ReceiptUploadsList200ResponseDataInner.Status.processing
-                }
+                } || pendingUploads.acceptedIds(ScanKind.Receipt).isNotEmpty()
             }
                 .collectLatest { hasPendingUploads ->
                     if (hasPendingUploads) {
@@ -417,6 +422,7 @@ class MainActivity : ComponentActivity() {
                                 deletions.contains(DeletionKey(DeletionKind.Receipt, id))
                             } == true)
                     },
+                local = pendingUploads.entries.filter { it.kind == ScanKind.Receipt },
             )
 
     /** Accepts confirmation immediately; network work belongs to the activity, not the sheet. */
@@ -469,6 +475,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val revision = historyRevision
+        val accepted = pendingUploads.acceptedIds(ScanKind.Receipt)
         overviewState =
             overviewState.copy(loading = true, refreshing = userInitiated, refreshError = false)
         lifecycleScope.launch {
@@ -490,6 +497,10 @@ class MainActivity : ComponentActivity() {
                             uploads != null &&
                             receipts != null
                     ) {
+                        pendingUploads.reconcile(
+                            ScanKind.Receipt,
+                            accepted + uploads.map { it.id },
+                        )
                         ReceiptOverviewState(
                             uploads = uploads,
                             receipts = receipts,
@@ -523,7 +534,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openScanner(kind: ScanKind) {
-        if (isOpeningScanner || uploadStatus == UploadStatus.Uploading) return
+        if (isOpeningScanner || uploadStatus == UploadStatus.Saving) return
 
         isOpeningScanner = true
         val options =
@@ -547,74 +558,34 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    /**
+     * Saves the photo on the phone, then opens its section at the top of All while the transfer
+     * continues from the list. A failed save keeps the preview open.
+     */
     private fun upload() {
         val captured = capture ?: return
-        if (
-            isOpeningScanner ||
-                uploadStatus == UploadStatus.Uploading ||
-                uploadStatus == UploadStatus.Submitted
-        )
-            return
+        if (isOpeningScanner || uploadStatus == UploadStatus.Saving) return
 
-        uploadStatus = UploadStatus.Uploading
+        uploadStatus = UploadStatus.Saving
         lifecycleScope.launch {
-            val accepted =
-                when (captured.kind) {
-                    ScanKind.Receipt -> uploadReceipt(captured.imageUri)
-                    ScanKind.Book -> uploadBook(captured.imageUri)
+            val upload = pendingUploads.add(captured.kind, captured.imageUri)
+            if (upload == null) {
+                uploadStatus = UploadStatus.SaveFailed
+                return@launch
+            }
+            capture = null
+            uploadStatus = UploadStatus.Ready
+            when (captured.kind) {
+                ScanKind.Receipt -> {
+                    receiptUploadToReveal = upload.id.toString()
+                    selectSection(Section.Receipts)
                 }
-            uploadStatus =
-                if (accepted) {
-                    capture = null
-                    UploadStatus.Submitted
-                } else UploadStatus.Failed
-        }
-    }
-
-    private suspend fun uploadReceipt(imageUri: Uri): Boolean =
-        try {
-            val response = receiptUploadsApi.receiptUploadsCreate(jpegPart(imageUri, "receipt.jpg"))
-            val upload = response.body()?.data
-            if (
-                response.code() == 202 &&
-                    upload != null &&
-                    upload.status != ReceiptUploadsCreate202ResponseData.Status.failed
-            ) {
-                receiptUploadToReveal = upload.id.toString()
-                selectSection(Section.Receipts)
-                refreshHistory()
-                true
-            } else false
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
-            Log.w("GohoUpload", "Receipt upload failed", error)
-            false
-        }
-
-    /** Books lists an accepted scan right away, then reveals it at the top of All. */
-    private suspend fun uploadBook(imageUri: Uri): Boolean {
-        val uploadId = books.upload(jpegPart(imageUri, "book.jpg")) ?: return false
-        bookUploadToReveal = uploadId
-        selectSection(Section.Books)
-        return true
-    }
-
-    /** Streams the scanned JPEG as the single multipart file part both upload endpoints expect. */
-    private fun jpegPart(imageUri: Uri, fileName: String): MultipartBody.Part {
-        val body =
-            object : RequestBody() {
-                override fun contentType() = "image/jpeg".toMediaType()
-
-                override fun isOneShot() = true
-
-                override fun writeTo(sink: BufferedSink) {
-                    val input =
-                        contentResolver.openInputStream(imageUri)
-                            ?: throw IOException("Scanned image is unavailable")
-                    input.use { it.copyTo(sink.outputStream()) }
+                ScanKind.Book -> {
+                    bookUploadToReveal = upload.id
+                    selectSection(Section.Books)
                 }
             }
-        return MultipartBody.Part.createFormData("file", fileName, body)
+        }
     }
 
     private companion object {

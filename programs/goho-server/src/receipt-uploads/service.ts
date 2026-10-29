@@ -68,9 +68,16 @@ export interface Interface {
     ReadonlyArray<PublicReceiptUpload>,
     HttpApiError.InternalServerError
   >;
+  /**
+   * Stores and queues one upload. An `idempotencyKey` becomes the upload's ID;
+   * when that upload already exists, including one a concurrent request is
+   * creating, it is returned as it stands and nothing more is stored or queued.
+   * A key whose upload was deleted fails with `Gone`, since IDs are never reused.
+   */
   readonly create: (
     input: UploadInput,
-  ) => Effect.Effect<PublicReceiptUpload, HttpApiError.InternalServerError>;
+    idempotencyKey?: ReceiptUploadId,
+  ) => Effect.Effect<PublicReceiptUpload, HttpApiError.Gone | HttpApiError.InternalServerError>;
   readonly get: (
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<PublicReceiptUpload, HttpApiError.NotFound | HttpApiError.InternalServerError>;
@@ -127,11 +134,17 @@ export const layer = Layer.effect(
     );
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
-      function* (input: UploadInput) {
-        const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4());
+      // Succeeds with none when the key's upload was accepted and since deleted.
+      function* (input: UploadInput, idempotencyKey?: ReceiptUploadId) {
+        // An ID is issued in the same transaction as its upload row, so an issued
+        // key without a row means the upload was deleted.
+        if (idempotencyKey !== undefined && (yield* repository.hasIssuedId(idempotencyKey))) {
+          return yield* repository.findById(idempotencyKey);
+        }
+        const uploadId = idempotencyKey ?? ReceiptUploadId.make(yield* crypto.randomUUIDv4());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
-        const upload = yield* transaction
+        return yield* transaction
           .run(
             Effect.gen(function* () {
               const created = yield* repository.createQueued({
@@ -141,7 +154,7 @@ export const layer = Layer.effect(
                 contentType: file.contentType,
               });
               yield* queue.offer({ uploadId });
-              return created;
+              return Option.some(created);
             }),
           )
           .pipe(
@@ -156,13 +169,26 @@ export const layer = Layer.effect(
                 Effect.andThen(Effect.failCause(cause)),
               ),
             ),
+            // A concurrent request with the same key committed first; its upload
+            // keeps the only file and queue job, so this request returns it.
+            Effect.catchTag("GohoServer.ReceiptUploadRepository.UploadIdTaken", (error) =>
+              Effect.gen(function* () {
+                if (idempotencyKey === undefined) return yield* error;
+                return yield* repository.findById(uploadId);
+              }),
+            ),
           );
-        return toPublic(upload);
       },
       Effect.catchCause((cause) =>
         Effect.logError("Receipt upload could not be stored and queued", cause).pipe(
           Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
         ),
+      ),
+      Effect.flatMap(
+        Option.match({
+          onNone: () => Effect.fail(new HttpApiError.Gone()),
+          onSome: (upload) => Effect.succeed(toPublic(upload)),
+        }),
       ),
       Effect.uninterruptible,
     );

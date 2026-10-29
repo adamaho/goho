@@ -84,6 +84,7 @@ const dependencies = (options: {
       deleteFailed: () => Effect.die("Unexpected upload deletion"),
       list: Effect.die("Unexpected upload listing"),
       createQueued: () => Effect.die("Unexpected createQueued call"),
+      hasIssuedId: () => Effect.die("Unexpected hasIssuedId call"),
       findById: () => Effect.die("Unexpected upload lookup"),
       markProcessing: options.markProcessing ?? (() => Effect.succeed(upload)),
       markSucceeded:

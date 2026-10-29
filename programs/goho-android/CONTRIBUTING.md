@@ -136,7 +136,13 @@ fails when that copy is stale.
 ## Code organization and style
 
 Keep this app small. `MainActivity` owns the Android entry point, receipt data
-and the selected section. `ui/main` owns the screens: the shared `SectionScreen`
+and the selected section. `GohoApplication` owns `PendingUploads`: scanned
+photos saved in app-private, backup-excluded storage per server, and their
+transfers, which outlive the activity and resume when the process starts. Each
+upload's UUID is sent as the server's `idempotencyKey`, so deploy the server
+and its migrations first; older servers reject keyed uploads, which then stay on
+the phone as failed uploads. A 410 means the upload was accepted and later
+deleted elsewhere, so its photo and record are removed instead of resent. `ui/main` owns the screens: the shared `SectionScreen`
 root with its Receipts and Books content, `BookListController` for Books data,
 receipt details and the scan preview. `theme` owns Compose theming. As
 features grow, follow the official [Guide to app architecture](https://developer.android.com/topic/architecture)
