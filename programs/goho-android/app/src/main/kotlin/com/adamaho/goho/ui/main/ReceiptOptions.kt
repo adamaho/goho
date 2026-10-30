@@ -22,11 +22,15 @@ internal fun ReceiptOptions(
     onDeleted: () -> Unit = onDismiss,
 ) {
     val config = LocalConfiguration.current
+    val scan = entry.receiptId == null
     OptionsSheet(
-        title = stringResource(R.string.receipt_options),
-        deleteLabel = stringResource(R.string.receipt_delete),
+        title = stringResource(if (scan) R.string.scan_options else R.string.receipt_options),
+        deleteLabel = stringResource(if (scan) R.string.scan_delete else R.string.receipt_delete),
         deletingLabel = stringResource(R.string.receipt_deleting),
-        deleteFailedMessage = stringResource(R.string.receipt_delete_failed),
+        deleteFailedMessage =
+            stringResource(
+                if (scan) R.string.scan_delete_failed else R.string.receipt_delete_failed
+            ),
         cancelLabel = stringResource(R.string.receipt_cancel),
         header = {
             ReceiptSummary(

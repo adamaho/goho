@@ -27,13 +27,11 @@ internal fun BookOptions(
     val config = LocalConfiguration.current
     val scan = entry is BookListEntry.Scan
     OptionsSheet(
-        title = stringResource(if (scan) R.string.book_scan_options else R.string.book_options),
-        deleteLabel = stringResource(if (scan) R.string.book_scan_delete else R.string.book_delete),
+        title = stringResource(if (scan) R.string.scan_options else R.string.book_options),
+        deleteLabel = stringResource(if (scan) R.string.scan_delete else R.string.book_delete),
         deletingLabel = stringResource(R.string.book_deleting),
         deleteFailedMessage =
-            stringResource(
-                if (scan) R.string.book_scan_delete_failed else R.string.book_delete_failed
-            ),
+            stringResource(if (scan) R.string.scan_delete_failed else R.string.book_delete_failed),
         cancelLabel = stringResource(R.string.book_cancel),
         header = {
             BookSummary(

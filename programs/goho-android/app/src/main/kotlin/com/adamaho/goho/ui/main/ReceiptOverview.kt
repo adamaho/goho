@@ -356,7 +356,10 @@ private fun ReceiptRow(
             held = true
         }
     }
-    val optionsLabel = stringResource(R.string.receipt_options)
+    val optionsLabel =
+        stringResource(
+            if (entry?.receiptId == null) R.string.scan_options else R.string.receipt_options
+        )
     val clickable =
         if (entry != null && entry.status != ReceiptListStatus.Processing)
             Modifier.combinedClickable(

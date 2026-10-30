@@ -59,7 +59,7 @@ internal fun BookRow(
         wasSelected = selected
     }
     val optionsLabel =
-        stringResource(if (failedScan) R.string.book_scan_options else R.string.book_options)
+        stringResource(if (failedScan) R.string.scan_options else R.string.book_options)
     val open: (() -> Unit)? =
         when {
             book != null -> onClick?.let { { it(book) } }
