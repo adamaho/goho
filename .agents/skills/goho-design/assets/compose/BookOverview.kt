@@ -42,9 +42,10 @@ data class BookListState(
 
 /**
  * Books content below the section title. Saved rows open the book overlay on tap and their options
- * sheet on a hold; [deleteBook] returns whether the server deleted the held book. [uploadToReveal]
- * shows All at the top until that accepted scan, or the book it saved, is listed. While [search] is
- * open its results replace the pages, which keep their filter and scroll positions for its exit.
+ * sheet on a hold, and failed scans open theirs on a tap or hold; [deleteEntry] returns whether the
+ * deletion of the held book or scan was accepted. [uploadToReveal] shows All at the top until that
+ * accepted scan, or the book it saved, is listed. While [search] is open its results replace the
+ * pages, which keep their filter and scroll positions for its exit.
  */
 @Composable
 internal fun BookOverview(
@@ -53,7 +54,7 @@ internal fun BookOverview(
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     onBookClick: (Book) -> Unit,
-    deleteBook: suspend (Book) -> Boolean,
+    deleteEntry: suspend (BookListEntry) -> Boolean,
     search: SectionSearch,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
@@ -92,16 +93,16 @@ internal fun BookOverview(
         allListState.scrollToItem(0)
         if (uploadedEntryVisible) onUploadRevealed()
     }
-    // The held book's snapshot, so refreshes and its own deletion never change the open sheet.
-    var optionsBook by remember { mutableStateOf<Book?>(null) }
+    // The held row's snapshot, so refreshes and its own deletion never change the open sheet.
+    var optionsEntry by remember { mutableStateOf<BookListEntry?>(null) }
     val overlay = LocalBookOverlay.current
     // The open overlay and options sheet handle Back first, including while they delete.
     BackHandler(enabled = search.open && overlay?.open != true) { search.close() }
     val config = LocalConfiguration.current
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
-    val optionsBookId = optionsBook?.id
+    val optionsKey = optionsEntry?.key
     val rows =
-        remember(clock, zone, locale, expanded, covers, onBookClick, optionsBookId) {
+        remember(clock, zone, locale, expanded, covers, onBookClick, optionsKey) {
             BookRowContext(
                 now = clock,
                 zone = zone,
@@ -109,8 +110,8 @@ internal fun BookOverview(
                 expanded = expanded,
                 covers = covers,
                 onBookClick = onBookClick,
-                onBookOptions = { optionsBook = it },
-                optionsBookId = optionsBookId,
+                onBookOptions = { optionsEntry = it },
+                optionsKey = optionsKey,
             )
         }
     val saved = remember(entries) { entries.filterIsInstance<BookListEntry.Saved>() }
@@ -141,14 +142,14 @@ internal fun BookOverview(
                         state.hasLoaded &&
                             !state.error &&
                             !state.refreshing &&
-                            optionsBook == null &&
+                            optionsEntry == null &&
                             !menuOpen,
                     error = state.error,
                     refreshing = state.refreshing,
                     refreshFailed = state.refreshError || state.error,
                     refreshEnabled =
                         !menuOpen &&
-                            optionsBook == null &&
+                            optionsEntry == null &&
                             !state.loading &&
                             (state.hasLoaded || state.error),
                     onRefresh = onRefresh,
@@ -173,16 +174,16 @@ internal fun BookOverview(
                 }
         }
     }
-    optionsBook?.let { book ->
-        key(book.id) {
+    optionsEntry?.let { entry ->
+        key(entry.key) {
             BookOptions(
-                book,
+                entry,
                 clock,
                 zone,
                 locale,
                 covers,
-                onDelete = { deleteBook(book) },
-                onDismiss = { optionsBook = null },
+                onDelete = { deleteEntry(entry) },
+                onDismiss = { optionsEntry = null },
             )
         }
     }
@@ -196,8 +197,8 @@ internal data class BookRowContext(
     val expanded: Boolean,
     val covers: ThumbnailCache,
     val onBookClick: (Book) -> Unit,
-    val onBookOptions: (Book) -> Unit,
-    val optionsBookId: String?,
+    val onBookOptions: (BookListEntry) -> Unit,
+    val optionsKey: String?,
 )
 
 @Composable
@@ -336,9 +337,7 @@ internal fun BookListCard(
                                 // A row folding away can't reopen its book.
                                 onClick = if (visible) rows.onBookClick else null,
                                 onOptions = if (visible) rows.onBookOptions else null,
-                                optionsOpen =
-                                    entry is BookListEntry.Saved &&
-                                        entry.book.id == rows.optionsBookId,
+                                optionsOpen = entry.key == rows.optionsKey,
                             )
                             if (displayed.drop(index + 1).any { it.key in visibleKeys })
                                 ListDivider(GohoSpacing.bookDividerStart)

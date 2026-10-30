@@ -4,17 +4,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.adamaho.goho.R
-import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.ui.components.OptionsSheet
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 
-/** A saved book's options sheet, headed by its Books row summary with a plain cover. */
+/**
+ * A saved book's or failed scan's options sheet, headed by its Books row summary with a plain
+ * cover.
+ */
 @Composable
 internal fun BookOptions(
-    book: Book,
+    entry: BookListEntry,
     now: Instant,
     zone: ZoneId,
     locale: Locale,
@@ -23,15 +25,19 @@ internal fun BookOptions(
     onDismiss: () -> Unit,
 ) {
     val config = LocalConfiguration.current
+    val scan = entry is BookListEntry.Scan
     OptionsSheet(
-        title = stringResource(R.string.book_options),
-        deleteLabel = stringResource(R.string.book_delete),
+        title = stringResource(if (scan) R.string.book_scan_options else R.string.book_options),
+        deleteLabel = stringResource(if (scan) R.string.book_scan_delete else R.string.book_delete),
         deletingLabel = stringResource(R.string.book_deleting),
-        deleteFailedMessage = stringResource(R.string.book_delete_failed),
+        deleteFailedMessage =
+            stringResource(
+                if (scan) R.string.book_scan_delete_failed else R.string.book_delete_failed
+            ),
         cancelLabel = stringResource(R.string.book_cancel),
         header = {
             BookSummary(
-                entry = BookListEntry.Saved(book),
+                entry = entry,
                 now = now,
                 zone = zone,
                 locale = locale,

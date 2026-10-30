@@ -23,7 +23,7 @@ import okhttp3.MultipartBody
  * Books data owned by the activity, independent of receipts. Books and their cover scans refresh
  * together; a refresh joins or queues behind one already running, and a failure keeps the cached
  * list. A refresh that began before an accepted scan or a deletion never drops the scan or restores
- * the deleted book.
+ * the deleted book or failed scan.
  */
 internal class BookListController(
     private val scope: CoroutineScope,
@@ -44,10 +44,13 @@ internal class BookListController(
                     },
                 uploads =
                     state.uploads.filterNot {
-                        it.status == BookUpload.Status.succeeded &&
-                            it.bookId?.let { id ->
-                                deletions.contains(DeletionKey(DeletionKind.Book, id))
-                            } == true
+                        deletions.contains(
+                            DeletionKey(DeletionKind.BookUpload, it.id.toString())
+                        ) ||
+                            (it.status == BookUpload.Status.succeeded &&
+                                it.bookId?.let { id ->
+                                    deletions.contains(DeletionKey(DeletionKind.Book, id))
+                                } == true)
                     },
             )
 
@@ -174,6 +177,33 @@ internal class BookListController(
             } else refresh()
             deleted
         }
+
+    /** Deletes a held Books row: a saved book, or a failed scan. */
+    suspend fun delete(entry: BookListEntry): Boolean =
+        when (entry) {
+            is BookListEntry.Saved -> delete(entry.book.id)
+            is BookListEntry.Scan -> deleteUpload(entry)
+        }
+
+    /**
+     * Deletes a failed cover scan in the same way as a book; queued and processing scans can't be
+     * deleted, so they're never accepted.
+     */
+    private suspend fun deleteUpload(scan: BookListEntry.Scan): Boolean {
+        if (!scan.failed) return false
+        return deletions.start(DeletionKey(DeletionKind.BookUpload, scan.uploadId.toString())) {
+            val deleted =
+                deleteAndConfirm(
+                    delete = { uploadsApi.bookUploadsDelete(scan.uploadId) },
+                    lookup = { uploadsApi.bookUploadsGet(scan.uploadId) },
+                )
+            if (deleted) {
+                changeRevision++
+                state = state.copy(uploads = state.uploads.filterNot { it.id == scan.uploadId })
+            } else refresh()
+            deleted
+        }
+    }
 
     /** The full-size cover for the book overlay and photo viewer, outside the thumbnail cache. */
     suspend fun loadFullCover(bookId: String): ImageBitmap? =
