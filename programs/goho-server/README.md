@@ -138,15 +138,19 @@ retrying deletion completes the cleanup.
 ### Books
 
 Books form one shared list. Each book has `id` (a decimal string like receipt
-IDs), `title`, `author`, a `category` object as on receipt items, a nullable
-`readingLevel`, and `hasImage`, which is whether a cover scan is on file.
+IDs), `title`, a nullable `author`, a `category` object as on receipt items, a
+nullable `readingLevel`, and `hasImage`, which is whether a cover scan is on file.
 Create, correction, retrieval, and listing all return this same shape under `data`.
+Clients built before `author` became nullable fail to decode book responses
+once any book has no author, so release updated clients before or with a server
+that saves one.
 
 A book's identity is its title and author, ignoring case and extra whitespace;
 the spelling it was first saved with is shown. The same title by another author
-is a different book.
+is a different book. A null author is unknown: one book per title can have no
+author, and it differs from every book of that title with one.
 
-- `POST /books` takes `title`, `author`, `category`, and an optional
+- `POST /books` takes `title`, `category`, and optional `author` and
   `readingLevel` (null or omitted when unknown). Values are trimmed and must stay
   nonempty, and unsupported fields are rejected. The category is saved in
   lowercase and joins the shared catalog if it is new. If the identity is already
@@ -161,8 +165,8 @@ is a different book.
   `Cache-Control: private, no-store`. A book without a cover, or a missing book,
   returns HTTP 404 with `{"_tag":"BookImageNotFound"}`.
 - `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
-  `readingLevel`; omitted fields keep their values and `null` clears the reading
-  level. Taking another book's title and author returns HTTP 409 with
+  `readingLevel`; omitted fields keep their values and `null` clears the author
+  or reading level. Taking another book's title and author returns HTTP 409 with
   `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
 - `DELETE /books/:bookId` removes the book with all its successful cover
   uploads, their original images, and extraction data, and returns HTTP 204. Its
@@ -181,7 +185,9 @@ in `GOHO_UPLOADS_DIRECTORY`, queues processing, and returns HTTP 202 with the
 upload under `data`. Other file types return HTTP 400, and files over the limit
 return HTTP 413.
 
-Processing reads the title, author, and category from the cover. The category is
+Processing reads the title, author, and category from the cover. The author is
+the printed authors, never illustrators, translators, or editors; with no author
+printed, the printed publisher is saved as the author; with neither, it is null. The category is
 one of the current book categories; nothing else, such as a reading level, is
 read. A new book is saved without a reading level. A book with the same title
 and author is reused exactly as saved, and the scan becomes its cover only when

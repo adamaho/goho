@@ -423,7 +423,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Add a book")
           .annotate(
             OpenApi.Description,
-            "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
+            "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes. A book with no author only matches another with none.",
           ),
       )
       .add(
@@ -512,7 +512,7 @@ export const api = HttpApi.make("goho-server")
           .annotate(OpenApi.Summary, "Upload a book cover")
           .annotate(
             OpenApi.Description,
-            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+            "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. No author on the cover? The publisher printed there steps in, and with neither the author stays null.",
           ),
       )
       .add(

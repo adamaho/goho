@@ -1,4 +1,5 @@
 import { NodeCrypto, NodeHttpServer, NodeServices } from "@effect/platform-node";
+import { PgMigrator } from "@effect/sql-pg";
 import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { Book, BookId, type CreateBookRequest } from "@goho/goho-api/books";
@@ -30,28 +31,31 @@ const hobbit: CreateBookRequest = {
 const RepositoriesLive = BookRepository.layer.pipe(Layer.provideMerge(CategoryRepository.layer));
 
 // Each test owns a schema and pool, so concurrent saves use separate connections.
-const DatabaseLive = Layer.effectContext(
-  Effect.gen(function* () {
-    const url = yield* Config.Redacted("TEST_DATABASE_URL");
-    const adminContext = yield* Layer.build(Postgres.layer({ url }));
-    const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
-    yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
-      admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
-    );
-    const testUrl = new URL(Redacted.value(url));
-    const options = testUrl.searchParams.get("options") ?? "";
-    testUrl.searchParams.set("options", `${options} -c search_path=${schema}`.trim());
-    const services = yield* Layer.build(
-      RepositoriesLive.pipe(
-        Layer.provideMerge(Postgres.layer({ url: Redacted.make(testUrl.toString()) })),
-      ),
-    );
-    yield* Migrations.run().pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
-    return services;
-  }),
-).pipe(Layer.provide(NodeCrypto.layer));
+const databaseMigratedBy = <E, R>(migrate: Effect.Effect<unknown, E, R>) =>
+  Layer.effectContext(
+    Effect.gen(function* () {
+      const url = yield* Config.Redacted("TEST_DATABASE_URL");
+      const adminContext = yield* Layer.build(Postgres.layer({ url }));
+      const admin = Context.get(adminContext, SqlClient.SqlClient);
+      const crypto = yield* Crypto.Crypto;
+      const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+      yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
+        admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
+      );
+      const testUrl = new URL(Redacted.value(url));
+      const options = testUrl.searchParams.get("options") ?? "";
+      testUrl.searchParams.set("options", `${options} -c search_path=${schema}`.trim());
+      const services = yield* Layer.build(
+        RepositoriesLive.pipe(
+          Layer.provideMerge(Postgres.layer({ url: Redacted.make(testUrl.toString()) })),
+        ),
+      );
+      yield* migrate.pipe(Effect.provide(services), Effect.provide(NodeServices.layer));
+      return services;
+    }),
+  ).pipe(Layer.provide(NodeCrypto.layer));
+
+const DatabaseLive = databaseMigratedBy(Migrations.run());
 
 const categoryNamed = (name: string) =>
   Effect.gen(function* () {
@@ -81,15 +85,22 @@ const tables = Effect.gen(function* () {
 it.effect("enforces book identity in the database", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    const insertBook = (title: string, author: string, readingLevel: string | null = null) => sql`
+    const insertBook = (
+      title: string,
+      author: string | null,
+      readingLevel: string | null = null,
+    ) => sql`
       INSERT INTO books (title, author, category_id, reading_level)
       SELECT ${title}, ${author}, id, ${readingLevel} FROM categories WHERE name = 'fiction'
     `;
     yield* insertBook("The Hobbit", "J. R. R. Tolkien");
     // A different author is a different book.
     yield* insertBook("The Hobbit", "Someone Else");
+    // An unknown author is another book, but only one per title.
+    yield* insertBook("The Hobbit", null);
     for (const attempt of [
       insertBook(" the  HOBBIT\t", "j. r. r.   tolkien "),
+      insertBook("THE HOBBIT ", null),
       insertBook(" ", "Author"),
       insertBook("Title", "\t"),
       insertBook("Title", "Author", "  "),
@@ -101,12 +112,69 @@ it.effect("enforces book identity in the database", () =>
     expect(yield* sql`SELECT title, author FROM books ORDER BY id`).toEqual([
       { title: "The Hobbit", author: "J. R. R. Tolkien" },
       { title: "The Hobbit", author: "Someone Else" },
+      { title: "The Hobbit", author: null },
     ]);
     // A referenced category cannot be deleted.
     expect(
       Result.isFailure(yield* Effect.result(sql`DELETE FROM categories WHERE name = 'fiction'`)),
     ).toBe(true);
   }).pipe(Effect.provide(DatabaseLive)),
+);
+
+const BeforeOptionalAuthorLive = databaseMigratedBy(
+  PgMigrator.run({
+    loader: PgMigrator.fromRecord(
+      Object.fromEntries(Object.entries(Migrations.all).filter(([id]) => id < "0018")),
+    ),
+    table: "goho_migrations",
+  }),
+);
+
+it.effect("upgrades saved books and covers unchanged to allow unknown authors", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const migrationIds = sql<{ id: number }>`
+      SELECT migration_id AS id FROM goho_migrations ORDER BY migration_id
+    `.pipe(Effect.map((rows) => rows.map(({ id }) => id)));
+    expect((yield* migrationIds).at(-1)).toBe(16);
+    yield* sql`
+      INSERT INTO books (title, author, category_id, reading_level)
+      SELECT title, author, id, level FROM categories,
+        (VALUES ('The Hobbit', 'J. R. R. Tolkien', 'Grade 4'), ('Beowulf', 'Anonymous', NULL))
+          AS b(title, author, level)
+      WHERE name = 'fiction'
+    `;
+    yield* sql`
+      INSERT INTO book_uploads (
+        id, file_id, file_name, content_type, status, book_id, is_cover,
+        extraction_version, extracted_payload
+      )
+      SELECT gen_random_uuid(), 'stored', 'cover.png', 'image/png', 'succeeded', id, true, 1, '{}'
+      FROM books WHERE title = 'The Hobbit'
+    `;
+    const snapshot = Effect.all([
+      sql`SELECT * FROM books ORDER BY id`,
+      sql`SELECT * FROM book_uploads ORDER BY id`,
+    ]);
+    const before = yield* snapshot;
+    // Some databases already record an unrelated migration 0017; 0018 must still run.
+    yield* sql`INSERT INTO goho_migrations (migration_id, name) VALUES (17, 'issued_upload_ids')`;
+    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([
+      [18, "optional_book_author"],
+    ]);
+    expect((yield* migrationIds).slice(-2)).toEqual([17, 18]);
+    expect(yield* snapshot).toEqual(before);
+
+    const books = yield* BookRepository.Service;
+    const [hobbitId, beowulfId] = (yield* sql<{ id: BookId }>`
+      SELECT id::text AS id FROM books ORDER BY id
+    `).map(({ id }) => id);
+    expect(yield* books.findOrCreate(hobbit)).toMatchObject({ id: hobbitId, hasImage: true });
+    // An unknown author is a new book next to the old ones, saved once.
+    const unknown = yield* books.findOrCreate({ title: "Beowulf", category: "Fiction" });
+    expect(unknown.id).not.toBe(beowulfId);
+    expect(yield* books.findOrCreate({ title: "beowulf", category: "Fiction" })).toEqual(unknown);
+  }).pipe(Effect.provide(BeforeOptionalAuthorLive)),
 );
 
 it.effect("saves one book per normalized identity and reuses it without changing anything", () =>
@@ -181,11 +249,40 @@ it.effect("returns the committed book to a create that loses the race, without i
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+it.effect("keeps one book per title without an author, even when saves race", () =>
+  Effect.gen(function* () {
+    const books = yield* BookRepository.Service;
+    const sql = yield* SqlClient.SqlClient;
+    const known = yield* books.findOrCreate(hobbit);
+    const beowulf = { title: "Beowulf", category: "Poetry" };
+    // The loser waits on the winner's uncommitted unknown-author identity.
+    const [winner, loser] = yield* behindOpenTransaction(
+      books.findOrCreate(beowulf),
+      books.findOrCreate({ title: " BEOWULF", author: null, category: "Brand New Shelf" }),
+      "INSERT INTO books",
+    );
+    expect(winner).toMatchObject({ title: "Beowulf", author: null, readingLevel: null });
+    expect(loser).toEqual(winner);
+    expect(yield* categoryNamed("brand new shelf")).toBeUndefined();
+    // Unknown and known authors stay apart either way round.
+    const unknownHobbit = yield* books.findOrCreate({ ...hobbit, author: null });
+    expect(unknownHobbit.id).not.toBe(known.id);
+    expect(unknownHobbit.author).toBeNull();
+    expect(yield* books.findOrCreate({ ...hobbit, title: "the hobbit" })).toEqual(known);
+    expect(yield* books.findOrCreate({ title: "The Hobbit", category: "Fiction" })).toEqual(
+      unknownHobbit,
+    );
+    const translated = yield* books.findOrCreate({ ...beowulf, author: "Seamus Heaney" });
+    expect(translated.id).not.toBe(winner.id);
+    expect(yield* sql`SELECT count(*)::int AS count FROM books`).toEqual([{ count: 4 }]);
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
 it.effect("finds title and author matches literally, newest first", () =>
   Effect.gen(function* () {
     const books = yield* BookRepository.Service;
     const sql = yield* SqlClient.SqlClient;
-    const save = (title: string, author: string) =>
+    const save = (title: string, author: string | null) =>
       books
         .findOrCreate({ title, author, category: "Fiction" })
         .pipe(Effect.map((book) => book.id));
@@ -193,6 +290,7 @@ it.effect("finds title and author matches literally, newest first", () =>
     const underscore = yield* save("Cotton Fields", "A_B Writer");
     const question = yield* save("What? Where!", "Mary   Jones");
     const plain = yield* save("Plain Title", "Plain Author");
+    const unknown = yield* save("Unknown Cotton", null);
     // Creation time orders the list; ID breaks ties.
     yield* sql`ALTER TABLE books DISABLE TRIGGER maintain_record_timestamps`;
     yield* sql`
@@ -205,14 +303,16 @@ it.effect("finds title and author matches literally, newest first", () =>
     const search = (text: string) =>
       books.list(text).pipe(Effect.map((found) => found.map(({ id }) => id)));
 
-    const everything = [percent, plain, question, underscore];
+    const everything = [percent, unknown, plain, question, underscore];
     expect(yield* search("")).toEqual(everything);
     expect(yield* search("   ")).toEqual(everything);
     expect(yield* search("%")).toEqual([percent]);
     expect(yield* search("_")).toEqual([underscore]);
     expect(yield* search("a_b")).toEqual([underscore]);
     expect(yield* search("?")).toEqual([question]);
-    expect(yield* search("COTTON")).toEqual([percent, underscore]);
+    // A book without an author still matches by title.
+    expect(yield* search("COTTON")).toEqual([percent, unknown, underscore]);
+    expect(yield* search("writer")).toEqual([underscore]);
     expect(yield* search(" mary jones ")).toEqual([question]);
     expect(yield* search("Mary  Jones")).toEqual([question]);
     expect(yield* search("\\")).toEqual([]);
@@ -239,6 +339,13 @@ it.effect("corrects only supplied fields, clears the reading level, and allows c
     expect(renamed).toEqual({ ...original, title: "THE HOBBIT" });
     const cleared = Option.getOrThrow(yield* books.update(bookId, { readingLevel: null }));
     expect(cleared).toEqual({ ...renamed, readingLevel: null });
+    // Null clears the author, and a later correction can name one again.
+    const anonymous = Option.getOrThrow(yield* books.update(bookId, { author: null }));
+    expect(anonymous).toEqual({ ...cleared, author: null });
+    expect(yield* books.findOrCreate({ ...hobbit, author: null })).toEqual(anonymous);
+    expect(Option.getOrThrow(yield* books.update(bookId, { author: original.author }))).toEqual(
+      cleared,
+    );
     // Moving a book into a receipt category keeps the category's ID and adds the book kind.
     const groceries = yield* categoryNamed("groceries");
     const moved = Option.getOrThrow(
@@ -268,12 +375,16 @@ it.effect("rejects a correction to another book's identity and leaves everything
     const books = yield* BookRepository.Service;
     yield* books.findOrCreate(hobbit);
     const other = yield* books.findOrCreate({ ...hobbit, title: "The Silmarillion" });
+    const unknown = yield* books.findOrCreate({ title: "Roverandom", category: "Fiction" });
     const before = yield* tables;
-    for (const changes of [
-      { title: " the  hobbit " },
-      { title: "The Hobbit", category: "Brand New Shelf", readingLevel: null },
-    ]) {
-      const result = yield* books.update(other.id, changes).pipe(Effect.result);
+    for (const [bookId, changes] of [
+      [other.id, { title: " the  hobbit " }],
+      [other.id, { title: "The Hobbit", category: "Brand New Shelf", readingLevel: null }],
+      // Without an author, a title can still belong to one book only.
+      [other.id, { title: "roverandom", author: null }],
+      [unknown.id, { author: "J. R. R. Tolkien", title: "The Silmarillion" }],
+    ] as const) {
+      const result = yield* books.update(bookId, changes).pipe(Effect.result);
       expect(Result.isFailure(result) && result.failure._tag).toBe("BookConflict");
       expect(yield* tables).toEqual(before);
     }
@@ -343,6 +454,22 @@ it.effect("serves saved books over HTTP with one Book shape and domain errors", 
       data: [expected],
     });
     expect(yield* client.books.list({ query: { search: "silmarillion" } })).toEqual({ data: [] });
+
+    // A book without an author answers with null and doesn't trip up search.
+    const unknown = yield* HttpClient.post("/books", {
+      body: yield* HttpBody.json({ title: "Beowulf", category: "Fiction" }),
+    });
+    const { data: anonymous } = yield* unknown.json.pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(Schema.Struct({ data: Book }))),
+    );
+    expect(anonymous.author).toBeNull();
+    expect(yield* client.books.list({ query: { search: "tolkien" } })).toEqual({
+      data: [expected],
+    });
+    expect(yield* client.books.list({ query: { search: "beowulf" } })).toEqual({
+      data: [anonymous],
+    });
+    expect(yield* client.books.delete({ params: { bookId: anonymous.id } })).toBeUndefined();
 
     const { data: other } = yield* client.books.create({
       payload: { title: "The Silmarillion", author: "J. R. R. Tolkien", category: "Fiction" },

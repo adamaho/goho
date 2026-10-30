@@ -631,14 +631,15 @@ private fun BookOverlayText(book: Book, settle: (index: Int) -> Modifier, modifi
             textAlign = TextAlign.Center,
             modifier = settle(0).semantics { heading() },
         )
-        Text(
-            book.readingLevel?.let { stringResource(R.string.book_author_level, book.author, it) }
-                ?: book.author,
-            style = GohoTheme.type.bookAuthor,
-            color = c.textSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop).then(settle(1)),
-        )
+        bookMetadata(book)?.let {
+            Text(
+                it,
+                style = GohoTheme.type.bookAuthor,
+                color = c.textSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop).then(settle(1)),
+            )
+        }
         CategoryTag(
             book.category,
             Modifier.padding(top = GohoSpacing.bookOverlayTagTop).then(settle(2)),

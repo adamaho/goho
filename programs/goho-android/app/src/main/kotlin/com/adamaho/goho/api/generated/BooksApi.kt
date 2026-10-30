@@ -21,7 +21,7 @@ interface BooksApi {
     /**
      * POST books
      * Add a book
-     * Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.
+     * Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes. A book with no author only matches another with none.
      * Responses:
      *  - 200: Success
      *  - 400: The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.
@@ -104,7 +104,7 @@ interface BooksApi {
      *  - 200: Success
      *  - 400: The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.
      *  - 404: No book is wearing that number, bud.
-     *  - 409: Another book on the roster already has that title and author. Nothing changed and nothing merged.
+     *  - 409: Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.
      *  - 500: The server could not save this correction; nothing changed.
      *
      * @param bookId 

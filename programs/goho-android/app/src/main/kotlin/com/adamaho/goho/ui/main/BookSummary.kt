@@ -24,6 +24,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import com.adamaho.goho.R
+import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import java.time.Instant
@@ -89,6 +90,18 @@ internal fun BookSummary(
     }
 }
 
+/** The author and reading level joined, either one alone, or null when the book has neither. */
+@Composable
+internal fun bookMetadata(book: Book): String? {
+    val author = book.author
+    val level = book.readingLevel
+    return if (author != null && level != null) {
+        stringResource(R.string.book_author_level, author, level)
+    } else {
+        author ?: level
+    }
+}
+
 @Composable
 private fun BookMetadata(
     entry: BookListEntry?,
@@ -115,12 +128,7 @@ private fun BookMetadata(
     val text =
         when (entry) {
             null -> AnnotatedString("")
-            is BookListEntry.Saved ->
-                AnnotatedString(
-                    entry.book.readingLevel?.let {
-                        stringResource(R.string.book_author_level, entry.book.author, it)
-                    } ?: entry.book.author
-                )
+            is BookListEntry.Saved -> AnnotatedString(bookMetadata(entry.book).orEmpty())
             is BookListEntry.Scan -> uploadTime(entry.uploadedAt, now, zone, locale)
         }
     Text(

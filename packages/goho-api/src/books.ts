@@ -35,11 +35,11 @@ const BookFields = {
       examples: ["The Hobbit"],
     }),
   ),
-  author: Text.pipe(
+  author: Schema.NullOr(Text).pipe(
     Schema.annotateEncoded({
       description:
-        "Author, shown as spelled. The same title by a different author is a different book.",
-      examples: ["J. R. R. Tolkien"],
+        "Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.",
+      examples: ["J. R. R. Tolkien", null],
     }),
   ),
   category: Text.pipe(
@@ -59,20 +59,21 @@ const BookFields = {
 
 /**
  * Manually entered book. Creating a book whose title and author match a saved
- * one, ignoring case and extra whitespace, returns the saved book unchanged.
+ * one, ignoring case and extra whitespace, returns the saved book unchanged. An
+ * omitted or null author is unknown, and matches only a saved book without one.
  *
  * @category models
  * @since 0.1.0
  */
 export const CreateBookRequest = Schema.Struct({
   title: BookFields.title,
-  author: BookFields.author,
+  author: Schema.optionalKey(BookFields.author),
   category: BookFields.category,
   readingLevel: Schema.optionalKey(BookFields.readingLevel),
 }).annotate({
   identifier: "CreateBookRequest",
   description:
-    "A book to put on the roster. Values are trimmed and stay nonempty; leave out the reading level or send null when it isn't known.",
+    "A book to put on the roster. Values are trimmed and stay nonempty; leave out the author or reading level, or send null, when it isn't known.",
   examples: [
     {
       title: "The Hobbit",
@@ -92,9 +93,9 @@ export const CreateBookRequest = Schema.Struct({
 export interface CreateBookRequest extends Schema.Schema.Type<typeof CreateBookRequest> {}
 
 /**
- * Book corrections. Only supplied fields change, null clears the reading level,
- * and at least one field is required. The HTTP contract also rejects unsupported
- * properties.
+ * Book corrections. Only supplied fields change, null clears the author or
+ * reading level, and at least one field is required. The HTTP contract also
+ * rejects unsupported properties.
  *
  * @category models
  * @since 0.1.0
@@ -109,7 +110,7 @@ export const PatchBookRequest = Schema.Struct({
   .annotate({
     identifier: "PatchBookRequest",
     description:
-      "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null reading level clears it.",
+      "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null author or reading level clears it.",
     examples: [{ readingLevel: "Grade 5" }, { title: "The Hobbit", readingLevel: null }],
   });
 
@@ -191,7 +192,8 @@ export class BookImageNotFound extends Schema.Error<BookImageNotFound>("BookImag
 ) {}
 
 /**
- * A correction would give a book the title and author of another saved book.
+ * A correction would give a book the title and author of another saved book,
+ * including another book's title with no author.
  *
  * @category errors
  * @since 0.1.0
@@ -201,7 +203,7 @@ export class BookConflict extends Schema.Error<BookConflict>("BookConflict")(
   {
     httpApiStatus: 409,
     description:
-      "Another book on the roster already has that title and author. Nothing changed and nothing merged.",
+      "Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.",
   },
 ) {}
 

@@ -12,7 +12,7 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
  */
 export const tool = Tool.make("patch_book", {
   description:
-    "Correct a saved Goho book's title, author, category, or reading level. Supply at least one field in changes; omitted fields stay unchanged and a null readingLevel clears it. Categories are saved in lowercase, and an unfamiliar name adds a new category. Books are never merged, so a title and author matching another saved book is rejected.",
+    "Correct a saved Goho book's title, author, category, or reading level. Supply at least one field in changes; omitted fields stay unchanged and a null author or readingLevel clears it. Categories are saved in lowercase, and an unfamiliar name adds a new category. Books are never merged, so a title and author matching another saved book is rejected.",
   parameters: Schema.Struct({ book_id: BookId, changes: PatchBookRequest }),
   success: Schema.Struct({ book: Book }),
   failure: Schema.String,

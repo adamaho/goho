@@ -96,13 +96,15 @@ private fun LargeCover(book: Book, cloth: ClothColors) {
             maxLines = 5,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(
-            book.author,
-            style = GohoTheme.type.bookCoverAuthor,
-            color = cloth.text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        book.author?.let {
+            Text(
+                it,
+                style = GohoTheme.type.bookCoverAuthor,
+                color = cloth.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

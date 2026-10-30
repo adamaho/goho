@@ -120,9 +120,17 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
         readingLevel: null,
       },
     });
+    // An omitted or null author is unknown.
+    for (const author of [undefined, null]) {
+      const unknown = yield* HttpClient.post("/books", {
+        body: yield* HttpBody.json({ title: "Beowulf", category: "Poetry", author }),
+      });
+      expect(unknown.status).toBe(200);
+    }
     expect(yield* client.books.list({ query: {} })).toEqual({ data: [book] });
     yield* client.books.list({ query: { search: " 100%_cotton? " } });
     yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } });
+    yield* client.books.patch({ params: { bookId: book.id }, payload: { author: null } });
     const patched = yield* HttpClient.patch("/books/9223372036854775807", {
       body: yield* HttpBody.json({ title: "  The Hobbit  ", category: " Fantasy " }),
     });
@@ -138,10 +146,13 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
           readingLevel: null,
         },
       ],
+      ["findOrCreate", { title: "Beowulf", category: "Poetry" }],
+      ["findOrCreate", { title: "Beowulf", category: "Poetry", author: null }],
       // An omitted search lists everything; given text passes through untouched.
       ["list", ""],
       ["list", " 100%_cotton? "],
       ["update", book.id, { readingLevel: null }],
+      ["update", book.id, { author: null }],
       ["update", "9223372036854775807", { title: "The Hobbit", category: "Fantasy" }],
     ]);
   }).pipe(Effect.provide(layer));
@@ -154,10 +165,11 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
     for (const payload of [
       {},
       { author: valid.author, category: valid.category },
-      { title: valid.title, category: valid.category },
       { title: valid.title, author: valid.author },
       { ...valid, title: " " },
       { ...valid, author: "" },
+      { ...valid, author: " \t" },
+      { ...valid, author: 7 },
       { ...valid, category: "\t" },
       { ...valid, title: null },
       { ...valid, category: null },

@@ -146,15 +146,23 @@ from its items, each once in item order. Items and books are written with a
 ### Books
 
 `books` is one shared list of unique books with a generated `bigint` identity
-`id`, the `title` and `author` as entered, a required `category_id`, and a
-nullable `reading_level` set only by hand.
+`id`, the `title` and nullable `author` as entered, a required `category_id`,
+and a nullable `reading_level` set only by hand.
 
 - Identity is the title and author compared by `book_identity_text`: lowercase,
   whitespace runs collapsed to one space, then trimmed. What counts as whitespace
   follows PostgreSQL's locale, so some Unicode spaces, such as an internal
   non-breaking space, can stay distinct. Generated `title_key` and
   `author_key` columns store it under the `books_identity_key` unique constraint,
-  which enforces uniqueness for concurrent saves. Search uses the same function
+  which enforces uniqueness for concurrent saves.
+- A null author is unknown, never a placeholder string. Its `author_key` is
+  null, and the constraint is `NULLS NOT DISTINCT`, so each title has at most
+  one book without an author, separate from that title by any known author.
+  Lookups compare the author key with `IS NOT DISTINCT FROM`, and a null author
+  never matches a search, which still checks the title. Migration 0018 dropped
+  the `NOT NULL` constraints and rebuilt the key under the same name, so the
+  insert's `ON CONFLICT` target and the `BookConflict` mapping are unchanged;
+  it updated no rows, so IDs, timestamps, uploads and covers stayed as they were. Search uses the same function
   and `strpos`, so punctuation and LIKE wildcards match literally.
 - Creating a book looks up its identity first and returns an existing book
   without touching it or the catalog. Otherwise the category lookup and insert
@@ -181,13 +189,20 @@ nullable `reading_level` set only by hand.
 `book_uploads` tracks cover scans as `receipt_uploads` tracks receipts, with its
 own `book-uploads` queue and failure codes (`storage_failed`,
 `processing_failed`, `book_creation_failed`, `internal_error`). A succeeded
-upload records its `book_id`, extraction version 1 and the validated
+upload records its `book_id`, extraction version and the validated
 `{ title, author, category }` JSON. Several uploads can succeed for one book,
 and each keeps its original file.
 
 - Extraction asks only for the title, author and category, choosing from the
   current `book` category names read before each attempt; it never sets a
   reading level, and the model cannot add a category.
+- The author is a required, nullable field of the structured output. The prompt
+  asks for printed authors in order, always leaving out illustrators,
+  translators, editors and other non-author credits. With no author printed it
+  asks for the printed publisher, and otherwise null, using only names on the
+  cover. Version
+  2 records this contract; uploads processed earlier keep their version 1
+  payloads, whose author is always text.
 - Saving uses the book's `findOrCreate`, so a scan of a saved identity reuses
   the book unchanged, including its reading level and category, and a new book
   has no reading level.

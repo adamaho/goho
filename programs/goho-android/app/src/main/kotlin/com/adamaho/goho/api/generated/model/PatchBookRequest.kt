@@ -28,10 +28,10 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 /**
- * Book details to correct, bud. Send at least one field; left-out fields stay put, and a null reading level clears it.
+ * Book details to correct, bud. Send at least one field; left-out fields stay put, and a null author or reading level clears it.
  *
  * @param title Book title, shown as spelled. Case and extra spaces don't make it a different book.
- * @param author Author, shown as spelled. The same title by a different author is a different book.
+ * @param author Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.
  * @param category Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
  */
@@ -43,7 +43,7 @@ data class PatchBookRequest (
     @Json(name = "title")
     val title: kotlin.String? = null,
 
-    /* Author, shown as spelled. The same title by a different author is a different book. */
+    /* Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book. */
     @Json(name = "author")
     val author: kotlin.String? = null,
 

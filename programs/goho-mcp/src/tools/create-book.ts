@@ -12,7 +12,7 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
  */
 export const tool = Tool.make("create_book", {
   description:
-    "Create a saved Goho book from a title, author, category, and optional reading level. If a saved book already has that title and author, ignoring case and extra spaces, that book is returned unchanged. Use fictional book details only when the user asks for an example.",
+    "Create a saved Goho book from a title, category, and optional author and reading level; leave out an unknown author rather than guessing. If a saved book already has that title and author, ignoring case and extra spaces, that book is returned unchanged. Use fictional book details only when the user asks for an example.",
   parameters: CreateBookRequest,
   success: Schema.Struct({ book: Book }),
   failure: Schema.String,

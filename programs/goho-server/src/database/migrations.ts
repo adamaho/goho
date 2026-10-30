@@ -17,6 +17,33 @@ import itemCategories from "./migrations/0013-item-categories.ts";
 import categoryKinds from "./migrations/0014-category-kinds.ts";
 import books from "./migrations/0015-books.ts";
 import bookUploads from "./migrations/0016-book-uploads.ts";
+import optionalBookAuthor from "./migrations/0018-optional-book-author.ts";
+
+/**
+ * Every migration by ID. Upgrade tests run a prefix of it.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const all = {
+  "0001_receipts": receipts,
+  "0002_create_receipt": createReceipt,
+  "0003_bigint_receipt_ids": bigintReceiptIds,
+  "0004_receipt_uploads": receiptUploads,
+  "0005_receipt_upload_file_id": receiptUploadFileId,
+  "0006_drop_receipt_idempotency": dropReceiptIdempotency,
+  "0007_move_extraction_to_uploads": moveExtractionToUploads,
+  "0008_default_receipt_currency": defaultReceiptCurrency,
+  "0009_record_timestamps": recordTimestamps,
+  "0010_receipt_item_ids": receiptItemIds,
+  "0011_receipt_history": receiptHistory,
+  "0012_receipt_categories": receiptCategories,
+  "0013_item_categories": itemCategories,
+  "0014_category_kinds": categoryKinds,
+  "0015_books": books,
+  "0016_book_uploads": bookUploads,
+  "0018_optional_book_author": optionalBookAuthor,
+};
 
 /**
  * Explicit migration registry, shared by the migration command and tests.
@@ -25,25 +52,5 @@ import bookUploads from "./migrations/0016-book-uploads.ts";
  * @since 0.1.0
  */
 export const run = Effect.fn("@goho/Database.Migrations.run")(function* () {
-  return yield* PgMigrator.run({
-    loader: PgMigrator.fromRecord({
-      "0001_receipts": receipts,
-      "0002_create_receipt": createReceipt,
-      "0003_bigint_receipt_ids": bigintReceiptIds,
-      "0004_receipt_uploads": receiptUploads,
-      "0005_receipt_upload_file_id": receiptUploadFileId,
-      "0006_drop_receipt_idempotency": dropReceiptIdempotency,
-      "0007_move_extraction_to_uploads": moveExtractionToUploads,
-      "0008_default_receipt_currency": defaultReceiptCurrency,
-      "0009_record_timestamps": recordTimestamps,
-      "0010_receipt_item_ids": receiptItemIds,
-      "0011_receipt_history": receiptHistory,
-      "0012_receipt_categories": receiptCategories,
-      "0013_item_categories": itemCategories,
-      "0014_category_kinds": categoryKinds,
-      "0015_books": books,
-      "0016_book_uploads": bookUploads,
-    }),
-    table: "goho_migrations",
-  });
+  return yield* PgMigrator.run({ loader: PgMigrator.fromRecord(all), table: "goho_migrations" });
 });

@@ -134,9 +134,66 @@ it.effect("saves the scanned book without a reading level in the success transac
     expect(saved).toEqual([
       "begin",
       { findOrCreate: parsed },
-      { markSucceeded: [upload.id, book.id, { version: 1, payload: parsed }] },
+      { markSucceeded: [upload.id, book.id, { version: 2, payload: parsed }] },
       "commit",
     ]);
+  }),
+);
+
+it.effect("asks for printed authors only, then the publisher, then null", () =>
+  Effect.gen(function* () {
+    const prompts = yield* Ref.make<ReadonlyArray<string>>([]);
+    const saved = yield* Ref.make<ReadonlyArray<unknown>>([]);
+    // A publisher stands in as text; with neither, the author is null.
+    for (const author of ["Puffin Books", null]) {
+      const scanned = { ...parsed, author };
+      yield* Worker.process(job, { id: upload.id, attempts: 1 }).pipe(
+        Effect.provide(
+          dependencies({
+            generateObject: (options) =>
+              Ref.update(prompts, (values) => [...values, JSON.stringify(options.prompt)]).pipe(
+                Effect.andThen(generateObject(scanned)(options)),
+              ),
+            findOrCreate: (request) =>
+              Ref.update(saved, (values) => [...values, request]).pipe(
+                Effect.as({ ...book, author }),
+              ),
+            markSucceeded: (_, bookId, extraction) =>
+              Ref.update(saved, (values) => [...values, extraction]).pipe(
+                Effect.as({ ...upload, status: "succeeded", bookId }),
+              ),
+          }),
+        ),
+      );
+      // The book and the stored extraction get the author as the model returned it.
+      expect(yield* Ref.get(saved)).toEqual([scanned, { version: 2, payload: scanned }]);
+      yield* Ref.set(saved, []);
+    }
+    const [prompt = ""] = yield* Ref.get(prompts);
+    // The author rules, in priority order: authors only, then publisher, then null.
+    const rules = [
+      "Always omit illustrators, translators, editors, and other contributors who are not authors.",
+      "When no author is printed, return the publisher's name as printed on the cover instead.",
+      "When neither an author nor a publisher is printed, return null for author.",
+      "Never supply an author or publisher from your own knowledge of the book.",
+    ].map((rule) => prompt.indexOf(rule));
+    expect(rules.every((index) => index >= 0)).toBe(true);
+    expect(rules).toEqual([...rules].sort((x, y) => x - y));
+    // No contributor may stand in for a missing author.
+    expect(prompt).not.toMatch(/unless no author|credits no author/i);
+
+    // The author key is required, so output that leaves it out is invalid.
+    const { author: _, ...withoutAuthor } = parsed;
+    const result = yield* Worker.process(job, { id: upload.id, attempts: 3 }).pipe(
+      Effect.provide(
+        dependencies({
+          generateObject: generateObject(withoutAuthor),
+          findOrCreate: () => Effect.die("Invalid output must not save a book"),
+        }),
+      ),
+      Effect.result,
+    );
+    expect(Result.isFailure(result) && result.failure.failureCode).toBe("processing_failed");
   }),
 );
 

@@ -944,7 +944,7 @@
             }
           }
         },
-        "description": "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes.",
+        "description": "Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes. A book with no author only matches another with none.",
         "summary": "Add a book",
         "requestBody": {
           "content": {
@@ -1063,7 +1063,7 @@
             }
           },
           "409": {
-            "description": "Another book on the roster already has that title and author. Nothing changed and nothing merged.",
+            "description": "Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1243,7 +1243,7 @@
             }
           }
         },
-        "description": "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.",
+        "description": "Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. No author on the cover? The publisher printed there steps in, and with neither the author stays null.",
         "summary": "Upload a book cover",
         "requestBody": {
           "content": {
@@ -1615,9 +1615,16 @@
             "examples": ["The Hobbit"]
           },
           "author": {
-            "type": "string",
-            "description": "Author, shown as spelled. The same title by a different author is a different book.",
-            "examples": ["J. R. R. Tolkien"]
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.",
+            "examples": ["J. R. R. Tolkien", null]
           },
           "category": {
             "allOf": [
@@ -1743,9 +1750,16 @@
             "examples": ["The Hobbit"]
           },
           "author": {
-            "type": "string",
-            "description": "Author, shown as spelled. The same title by a different author is a different book.",
-            "examples": ["J. R. R. Tolkien"]
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.",
+            "examples": ["J. R. R. Tolkien", null]
           },
           "category": {
             "type": "string",
@@ -1767,7 +1781,7 @@
         },
         "additionalProperties": false,
         "minProperties": 1,
-        "description": "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null reading level clears it.",
+        "description": "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null author or reading level clears it.",
         "examples": [
           {
             "readingLevel": "Grade 5"
@@ -1787,9 +1801,16 @@
             "examples": ["The Hobbit"]
           },
           "author": {
-            "type": "string",
-            "description": "Author, shown as spelled. The same title by a different author is a different book.",
-            "examples": ["J. R. R. Tolkien"]
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.",
+            "examples": ["J. R. R. Tolkien", null]
           },
           "category": {
             "type": "string",
@@ -1809,9 +1830,9 @@
             "examples": ["Grade 4", null]
           }
         },
-        "required": ["title", "author", "category"],
+        "required": ["title", "category"],
         "additionalProperties": false,
-        "description": "A book to put on the roster. Values are trimmed and stay nonempty; leave out the reading level or send null when it isn't known.",
+        "description": "A book to put on the roster. Values are trimmed and stay nonempty; leave out the author or reading level, or send null, when it isn't known.",
         "examples": [
           {
             "title": "The Hobbit",

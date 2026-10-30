@@ -244,7 +244,7 @@ it.effect("saves a queued scan as a new book with its cover and extraction", () 
     expect([new Uint8Array(cover.bytes), cover.contentType]).toEqual([image(1), "image/png"]);
     expect(
       yield* sql`SELECT is_cover, extraction_version, extracted_payload FROM book_uploads`,
-    ).toEqual([{ is_cover: true, extraction_version: 1, extracted_payload: hobbit }]);
+    ).toEqual([{ is_cover: true, extraction_version: 2, extracted_payload: hobbit }]);
     expect(
       yield* sql`
         SELECT state FROM ${sql(QueueConstants.tableName)}

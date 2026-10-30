@@ -32,8 +32,9 @@ class DuplicateIdentity extends Schema.TaggedError<DuplicateIdentity>()(
 
 /**
  * Book persistence operations. Identity is the title and author compared in SQL
- * case-insensitively with whitespace trimmed and collapsed. Every operation that
- * returns a book returns the same record as `findById`.
+ * case-insensitively with whitespace trimmed and collapsed; an unknown (null)
+ * author matches only another unknown author. Every operation that returns a book
+ * returns the same record as `findById`.
  *
  * @category models
  * @since 0.1.0
@@ -49,8 +50,8 @@ export interface Interface {
   /** The saved book with this ID and its category; none when no book has it. */
   readonly findById: (bookId: BookId) => Effect.Effect<Option.Option<Book>, PersistenceError>;
   /**
-   * Books newest first whose title or author contains `search` literally, ignoring
-   * case and extra whitespace; every book for blank `search`.
+   * Books newest first whose title or known author contains `search` literally,
+   * ignoring case and extra whitespace; every book for blank `search`.
    */
   readonly list: (search: string) => Effect.Effect<ReadonlyArray<Book>, PersistenceError>;
   /**
@@ -101,7 +102,7 @@ const identityConstraint = "books_identity_key";
 
 const IdRow = Schema.Struct({ id: BookId });
 
-const Identity = Schema.Struct({ title: Schema.String, author: Schema.String });
+const Identity = Schema.Struct({ title: Schema.String, author: Schema.NullOr(Schema.String) });
 
 /**
  * Stores books on the shared SQL client.
@@ -136,7 +137,7 @@ export const layer = Layer.effect(
       execute: ({ title, author }) => sql`
         ${selectBooks}
         WHERE b.title_key = book_identity_text(${title})
-          AND b.author_key = book_identity_text(${author})
+          AND b.author_key IS NOT DISTINCT FROM book_identity_text(${author})
       `,
     });
 
@@ -164,7 +165,8 @@ export const layer = Layer.effect(
     const selectList = SqlSchema.findAll({
       Request: Schema.String,
       Result: Book,
-      // strpos matches literally, so punctuation and LIKE wildcards need no escaping.
+      // strpos matches literally, so punctuation and LIKE wildcards need no escaping. A
+      // null author key matches nothing, leaving the title to decide.
       execute: (search) => sql`
         ${selectBooks}
         WHERE strpos(b.title_key, book_identity_text(${search})) > 0
@@ -185,7 +187,7 @@ export const layer = Layer.effect(
         // Encoding keeps only these editable columns, so no other field can reach the SET list.
         changes: Schema.Struct({
           title: Schema.optionalKey(Schema.String),
-          author: Schema.optionalKey(Schema.String),
+          author: Schema.optionalKey(Schema.NullOr(Schema.String)),
           categoryId: Schema.optionalKey(CategoryId),
           readingLevel: Schema.optionalKey(Schema.NullOr(Schema.String)),
         }).pipe(Schema.encodeKeys({ categoryId: "category_id", readingLevel: "reading_level" })),
@@ -203,7 +205,7 @@ export const layer = Layer.effect(
           const category = yield* categories.findOrCreate(book.category, "book");
           const inserted = yield* insertRow({
             title: book.title,
-            author: book.author,
+            author: book.author ?? null,
             categoryId: category.id,
             readingLevel: book.readingLevel ?? null,
           });
@@ -214,7 +216,7 @@ export const layer = Layer.effect(
 
     const findOrCreate = Effect.fn("@goho/BookRepository.findOrCreate")(
       function* (book: CreateBookRequest) {
-        const identity = { title: book.title, author: book.author };
+        const identity = { title: book.title, author: book.author ?? null };
         const existing = yield* findByIdentity(identity);
         if (Option.isSome(existing)) return existing.value;
         const inserted = yield* insertNew(book).pipe(

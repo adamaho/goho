@@ -33,7 +33,7 @@ import com.squareup.moshi.JsonClass
  *
  * @param id The book's roster number; use it to target this book.
  * @param title Book title, shown as spelled. Case and extra spaces don't make it a different book.
- * @param author Author, shown as spelled. The same title by a different author is a different book.
+ * @param author Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.
  * @param category The book's category.
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
  * @param hasImage Whether a cover image is on file; the first scan of a book without one adds it.
@@ -50,9 +50,9 @@ data class Book (
     @Json(name = "title")
     val title: kotlin.String,
 
-    /* Author, shown as spelled. The same title by a different author is a different book. */
+    /* Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book. */
     @Json(name = "author")
-    val author: kotlin.String,
+    val author: kotlin.String?,
 
     /* The book's category. */
     @Json(name = "category")

@@ -19,7 +19,7 @@ interface BookUploadsApi {
     /**
      * POST book-uploads
      * Upload a book cover
-     * Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it.
+     * Stores one cover image and returns its queued status before processing starts. A clean scan saves the book, or finds it already on the roster without changing it. No author on the cover? The publisher printed there steps in, and with neither the author stays null.
      * Responses:
      *  - 202: Success
      *  - 400: The upload is missing a supported cover image.

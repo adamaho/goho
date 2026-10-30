@@ -28,11 +28,11 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 /**
- * A book to put on the roster. Values are trimmed and stay nonempty; leave out the reading level or send null when it isn't known.
+ * A book to put on the roster. Values are trimmed and stay nonempty; leave out the author or reading level, or send null, when it isn't known.
  *
  * @param title Book title, shown as spelled. Case and extra spaces don't make it a different book.
- * @param author Author, shown as spelled. The same title by a different author is a different book.
  * @param category Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
+ * @param author Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
  */
 
@@ -43,13 +43,13 @@ data class CreateBookRequest (
     @Json(name = "title")
     val title: kotlin.String,
 
-    /* Author, shown as spelled. The same title by a different author is a different book. */
-    @Json(name = "author")
-    val author: kotlin.String,
-
     /* Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
     @Json(name = "category")
     val category: kotlin.String,
+
+    /* Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book. */
+    @Json(name = "author")
+    val author: kotlin.String? = null,
 
     /* Reading level as you'd write it, or null when nobody has set one. */
     @Json(name = "readingLevel")

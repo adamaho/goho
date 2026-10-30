@@ -41,7 +41,9 @@ internal fun BookSearchResults(
     val key = bookSearchKey(query)
     val keyed =
         remember(saved) {
-            saved.map { Triple(it, bookSearchKey(it.book.title), bookSearchKey(it.book.author)) }
+            saved.map {
+                Triple(it, bookSearchKey(it.book.title), bookSearchKey(it.book.author.orEmpty()))
+            }
         }
     val matches =
         remember(keyed, key) {

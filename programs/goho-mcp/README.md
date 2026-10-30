@@ -123,13 +123,13 @@ while the client is connected and reserves stdout for protocol messages.
   string that matches title or author, ignoring case. After seeding a fresh
   database, it returns five books.
 - `get_book` takes a string `book_id`. Use an ID returned by `list_books`.
-- `create_book` takes `title`, `author`, `category`, and an optional
-  `readingLevel`. If a saved book already has that title and author, ignoring
+- `create_book` takes `title`, `category`, and optional `author` and
+  `readingLevel`; leave out the author when it isn't known. If a saved book already has that title and author, ignoring
   case and extra spaces, it returns that book unchanged instead of adding one.
 - `delete_book` takes a string `book_id` and permanently removes that book and
   its cover scans. Its category stays. It returns the deleted ID.
 - `patch_book` takes a string `book_id` and a `changes` object containing at
   least one of `title`, `author`, `category`, or `readingLevel`, for example:
-  `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. A null
+  `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. A null `author` or
   `readingLevel` clears it. It returns the complete saved book. A title and
   author matching another saved book is rejected; books are never merged.
