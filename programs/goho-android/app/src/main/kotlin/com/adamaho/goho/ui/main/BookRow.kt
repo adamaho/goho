@@ -21,8 +21,9 @@ import kotlinx.coroutines.delay
 
 /**
  * Books row around [BookSummary]. Saved books open the book overlay through [onClick] and, on a
- * hold, their options sheet through [onOptions]; scans are display-only. A null [entry] keeps the
- * same layout for skeleton loading. [optionsOpen] marks the row whose options sheet is open.
+ * hold, their options sheet through [onOptions]; failed scans open their options on a tap or hold,
+ * and queued or processing scans are display-only. A null [entry] keeps the same layout for
+ * skeleton loading. [optionsOpen] marks the row whose options sheet is open.
  */
 @Composable
 internal fun BookRow(
@@ -33,10 +34,11 @@ internal fun BookRow(
     expanded: Boolean,
     covers: ThumbnailCache,
     onClick: ((Book) -> Unit)? = null,
-    onOptions: ((Book) -> Unit)? = null,
+    onOptions: ((BookListEntry) -> Unit)? = null,
     optionsOpen: Boolean = false,
 ) {
     val book = (entry as? BookListEntry.Saved)?.book
+    val failedScan = entry?.needsAttention == true
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var held by remember { mutableStateOf(false) }
@@ -50,28 +52,35 @@ internal fun BookRow(
     // Focus returns to the row when its book overlay or options sheet closes, unless it's leaving.
     val focus = remember { FocusRequester() }
     val selected =
-        book != null && (optionsOpen || LocalBookOverlay.current?.isLifted(book.id) == true)
+        optionsOpen || (book != null && LocalBookOverlay.current?.isLifted(book.id) == true)
     var wasSelected by remember { mutableStateOf(false) }
     LaunchedEffect(selected) {
-        if (wasSelected && !selected && onClick != null) focus.requestFocus()
+        if (wasSelected && !selected && (onClick != null || onOptions != null)) focus.requestFocus()
         wasSelected = selected
     }
-    val optionsLabel = stringResource(R.string.book_options)
+    val optionsLabel =
+        stringResource(if (failedScan) R.string.book_scan_options else R.string.book_options)
+    val open: (() -> Unit)? =
+        when {
+            book != null -> onClick?.let { { it(book) } }
+            entry != null && failedScan -> onOptions?.let { { it(entry) } }
+            else -> null
+        }
     val clickable =
-        if (book != null && onClick != null)
+        if (entry != null && open != null)
             Modifier.focusRequester(focus)
                 .combinedClickable(
                     interactionSource = interaction,
                     indication = null,
                     role = Role.Button,
-                    onClick = { onClick(book) },
+                    onClick = open,
                     onLongClickLabel = optionsLabel,
                     // combinedClickable supplies exactly one platform long-press haptic.
                     onLongClick =
-                        onOptions?.let { open ->
+                        onOptions?.let { options ->
                             {
                                 held = false
-                                open(book)
+                                options(entry)
                             }
                         },
                 )

@@ -13,6 +13,7 @@ import retrofit2.Response
 
 internal enum class DeletionKind {
     Book,
+    BookUpload,
     Receipt,
     ReceiptUpload,
 }

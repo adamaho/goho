@@ -28,6 +28,9 @@
     <string name="book_deleting">Deleting…</string>
     <string name="book_delete_failed">Couldn’t delete this book. Try again.</string>
     <string name="book_cancel">Cancel</string>
+    <string name="book_scan_options">Scan options</string>
+    <string name="book_scan_delete">Delete scan</string>
+    <string name="book_scan_delete_failed">Couldn’t delete this scan. Try again.</string>
     <string name="section_title_description">Section: %1$s</string>
     <string name="section_menu_title">Sections</string>
     <string name="section_menu_expanded">Menu expanded</string>
@@ -123,6 +126,7 @@
     <string name="refresh_failed_indicator">Refresh failed.</string>
     <string name="receipt_item_description">%1$s, %2$s, %3$s</string>
     <string name="book_delete_unconfirmed">Something went wrong deleting this book. Please refresh and try again.</string>
+    <string name="book_scan_delete_unconfirmed">Something went wrong deleting this scan. Please refresh and try again.</string>
     <string name="receipt_delete_unconfirmed">Something went wrong deleting this receipt. Please refresh and try again.</string>
     <string name="deletion_dismiss">Dismiss</string>
 </resources>

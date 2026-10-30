@@ -263,9 +263,7 @@ class MainActivity : ComponentActivity() {
                                                                     )
                                                                 },
                                                                 onBookClick = openBook,
-                                                                deleteBook = {
-                                                                    books.delete(it.id)
-                                                                },
+                                                                deleteEntry = books::delete,
                                                                 search = bookSearch,
                                                                 uploadToReveal = bookUploadToReveal,
                                                                 onUploadRevealed = {
