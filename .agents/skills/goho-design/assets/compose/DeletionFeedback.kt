@@ -27,7 +27,7 @@ internal fun DeletionFeedback(deletions: PendingDeletions, modifier: Modifier = 
     val host = remember { SnackbarHostState() }
     val window = LocalWindowInfo.current
     val bookError = stringResource(R.string.book_delete_unconfirmed)
-    val scanError = stringResource(R.string.book_scan_delete_unconfirmed)
+    val scanError = stringResource(R.string.scan_delete_unconfirmed)
     val receiptError = stringResource(R.string.receipt_delete_unconfirmed)
     val dismiss = stringResource(R.string.deletion_dismiss)
     LaunchedEffect(deletions, bookError, scanError, receiptError, dismiss, window) {
@@ -37,9 +37,9 @@ internal fun DeletionFeedback(deletions: PendingDeletions, modifier: Modifier = 
                 message =
                     when (kind) {
                         DeletionKind.Book -> bookError
-                        DeletionKind.BookUpload -> scanError
-                        DeletionKind.Receipt,
-                        DeletionKind.ReceiptUpload -> receiptError
+                        DeletionKind.Receipt -> receiptError
+                        DeletionKind.BookUpload,
+                        DeletionKind.ReceiptUpload -> scanError
                     },
                 actionLabel = dismiss,
                 duration = SnackbarDuration.Long,
