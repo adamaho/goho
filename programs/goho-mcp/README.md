@@ -130,6 +130,6 @@ while the client is connected and reserves stdout for protocol messages.
   its cover scans. Its category stays. It returns the deleted ID.
 - `patch_book` takes a string `book_id` and a `changes` object containing at
   least one of `title`, `author`, `category`, or `readingLevel`, for example:
-  `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. A null `author` or
-  `readingLevel` clears it. It returns the complete saved book. A title and
+  `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. Omitted fields stay
+  unchanged; null and blank values are rejected. It returns the complete saved book. A title and
   author matching another saved book is rejected; books are never merged.

@@ -324,7 +324,7 @@ it.effect("finds title and author matches literally, newest first", () =>
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("corrects only supplied fields, clears the reading level, and allows case renames", () =>
+it.effect("corrects only supplied fields, sets unknown values, and allows case renames", () =>
   Effect.gen(function* () {
     const books = yield* BookRepository.Service;
     const sql = yield* SqlClient.SqlClient;
@@ -337,22 +337,22 @@ it.effect("corrects only supplied fields, clears the reading level, and allows c
 
     const renamed = Option.getOrThrow(yield* books.update(bookId, { title: "THE HOBBIT" }));
     expect(renamed).toEqual({ ...original, title: "THE HOBBIT" });
-    const cleared = Option.getOrThrow(yield* books.update(bookId, { readingLevel: null }));
-    expect(cleared).toEqual({ ...renamed, readingLevel: null });
-    // Null clears the author, and a later correction can name one again.
-    const anonymous = Option.getOrThrow(yield* books.update(bookId, { author: null }));
-    expect(anonymous).toEqual({ ...cleared, author: null });
-    expect(yield* books.findOrCreate({ ...hobbit, author: null })).toEqual(anonymous);
-    expect(Option.getOrThrow(yield* books.update(bookId, { author: original.author }))).toEqual(
-      cleared,
+    const anonymous = yield* books.findOrCreate({ title: "Beowulf", category: "Fiction" });
+    expect(anonymous).toMatchObject({ author: null, readingLevel: null });
+    const named = Option.getOrThrow(
+      yield* books.update(anonymous.id, { author: "Unknown poet", readingLevel: "Grade 6" }),
     );
+    expect(named).toEqual({ ...anonymous, author: "Unknown poet", readingLevel: "Grade 6" });
+    expect(
+      Option.getOrThrow(yield* books.update(anonymous.id, { author: "Anonymous poet" })),
+    ).toEqual({ ...named, author: "Anonymous poet" });
     // Moving a book into a receipt category keeps the category's ID and adds the book kind.
     const groceries = yield* categoryNamed("groceries");
     const moved = Option.getOrThrow(
       yield* books.update(bookId, { category: "Groceries", readingLevel: "Grade 5" }),
     );
     expect(moved).toEqual({
-      ...cleared,
+      ...renamed,
       category: { ...groceries, kinds: ["receipt", "book"] },
       readingLevel: "Grade 5",
     });
@@ -376,12 +376,13 @@ it.effect("rejects a correction to another book's identity and leaves everything
     yield* books.findOrCreate(hobbit);
     const other = yield* books.findOrCreate({ ...hobbit, title: "The Silmarillion" });
     const unknown = yield* books.findOrCreate({ title: "Roverandom", category: "Fiction" });
+    const anotherUnknown = yield* books.findOrCreate({ title: "Beowulf", category: "Fiction" });
     const before = yield* tables;
     for (const [bookId, changes] of [
       [other.id, { title: " the  hobbit " }],
-      [other.id, { title: "The Hobbit", category: "Brand New Shelf", readingLevel: null }],
+      [other.id, { title: "The Hobbit", category: "Brand New Shelf", readingLevel: "Grade 5" }],
       // Without an author, a title can still belong to one book only.
-      [other.id, { title: "roverandom", author: null }],
+      [anotherUnknown.id, { title: "roverandom" }],
       [unknown.id, { author: "J. R. R. Tolkien", title: "The Silmarillion" }],
     ] as const) {
       const result = yield* books.update(bookId, changes).pipe(Effect.result);
@@ -483,8 +484,26 @@ it.effect("serves saved books over HTTP with one Book shape and domain errors", 
     expect(yield* categoryNamed("brand new shelf")).toBeUndefined();
 
     expect(
-      yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } }),
-    ).toEqual({ data: { ...expected, readingLevel: null } });
+      yield* client.books.patch({
+        params: { bookId: book.id },
+        payload: { readingLevel: "Grade 5" },
+      }),
+    ).toEqual({ data: { ...expected, readingLevel: "Grade 5" } });
+    for (const payload of [
+      { author: null },
+      { readingLevel: null },
+      { title: "Must not save", author: null },
+      { category: "Must Not Exist", readingLevel: null },
+    ]) {
+      const rejected = yield* HttpClient.patch(`/books/${book.id}`, {
+        body: yield* HttpBody.json(payload),
+      });
+      expect(rejected.status).toBe(400);
+      expect(yield* client.books.get({ params: { bookId: book.id } })).toEqual({
+        data: { ...expected, readingLevel: "Grade 5" },
+      });
+    }
+    expect(yield* categoryNamed("must not exist")).toBeUndefined();
 
     expect(yield* client.books.delete({ params: { bookId: book.id } })).toBeUndefined();
     for (const response of [

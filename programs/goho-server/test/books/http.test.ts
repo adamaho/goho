@@ -129,8 +129,15 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
     }
     expect(yield* client.books.list({ query: {} })).toEqual({ data: [book] });
     yield* client.books.list({ query: { search: " 100%_cotton? " } });
-    yield* client.books.patch({ params: { bookId: book.id }, payload: { readingLevel: null } });
-    yield* client.books.patch({ params: { bookId: book.id }, payload: { author: null } });
+    yield* client.books.patch({
+      params: { bookId: book.id },
+      payload: { readingLevel: "Grade 5" },
+    });
+    yield* client.books.patch({ params: { bookId: book.id }, payload: { author: "Tolkien" } });
+    const trimmed = yield* HttpClient.patch(`/books/${book.id}`, {
+      body: yield* HttpBody.json({ author: " Tolkien ", readingLevel: " Grade 4 " }),
+    });
+    expect(trimmed.status).toBe(200);
     const patched = yield* HttpClient.patch("/books/9223372036854775807", {
       body: yield* HttpBody.json({ title: "  The Hobbit  ", category: " Fantasy " }),
     });
@@ -151,8 +158,9 @@ it.effect("passes trimmed, validated books and searches to the repository", () =
       // An omitted search lists everything; given text passes through untouched.
       ["list", ""],
       ["list", " 100%_cotton? "],
-      ["update", book.id, { readingLevel: null }],
-      ["update", book.id, { author: null }],
+      ["update", book.id, { readingLevel: "Grade 5" }],
+      ["update", book.id, { author: "Tolkien" }],
+      ["update", book.id, { author: "Tolkien", readingLevel: "Grade 4" }],
       ["update", "9223372036854775807", { title: "The Hobbit", category: "Fantasy" }],
     ]);
   }).pipe(Effect.provide(layer));
@@ -188,9 +196,14 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
     for (const payload of [
       {},
       { title: null },
+      { author: null },
       { author: " " },
       { category: null },
+      { readingLevel: null },
       { readingLevel: "" },
+      { readingLevel: " \t" },
+      { title: "Changed", author: null },
+      { category: "New Shelf", readingLevel: null },
       { title: "The Hobbit", hasImage: true },
       { readingLevel: null, id: "13" },
       null,

@@ -1750,16 +1750,8 @@
             "examples": ["The Hobbit"]
           },
           "author": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.",
-            "examples": ["J. R. R. Tolkien", null]
+            "type": "string",
+            "description": "Author to set or replace; cannot be cleared."
           },
           "category": {
             "type": "string",
@@ -1767,28 +1759,19 @@
             "examples": ["Fiction"]
           },
           "readingLevel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Reading level as you'd write it, or null when nobody has set one.",
-            "examples": ["Grade 4", null]
+            "type": "string",
+            "description": "Reading level to set or replace; cannot be cleared."
           }
         },
         "additionalProperties": false,
         "minProperties": 1,
-        "description": "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null author or reading level clears it.",
+        "description": "Book details to correct, bud. Send at least one field; left-out fields stay put. Values must be nonempty text; null cannot clear them.",
         "examples": [
           {
             "readingLevel": "Grade 5"
           },
           {
-            "title": "The Hobbit",
-            "readingLevel": null
+            "title": "The Hobbit"
           }
         ]
       },

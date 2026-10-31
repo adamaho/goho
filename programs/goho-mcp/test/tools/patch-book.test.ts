@@ -22,8 +22,8 @@ const ServerLive = HttpServer.serve(
       return HttpServerResponse.jsonUnsafe({ data: { ...book, ...corrections } });
     }
     if (request.url === "/books/13") {
-      expect(yield* request.json).toEqual({ readingLevel: null });
-      return HttpServerResponse.jsonUnsafe({ data: { ...book, id: "13", readingLevel: null } });
+      expect(yield* request.json).toEqual({ author: "Tolkien" });
+      return HttpServerResponse.jsonUnsafe({ data: { ...book, id: "13", author: "Tolkien" } });
     }
     if (request.url === "/books/999") {
       return HttpServerResponse.jsonUnsafe({ _tag: "BookNotFound" }, { status: 404 });
@@ -52,12 +52,12 @@ it.effect("patches book details through MCP and returns the complete book", () =
     expect(patched.isError).toBe(false);
     expect(patched.structuredContent).toEqual({ book: { ...book, ...corrections } });
 
-    const cleared = yield* Schema.decodeUnknownEffect(BookResult)(
-      yield* client.call(3, "patch_book", { book_id: "13", changes: { readingLevel: null } }),
+    const renamed = yield* Schema.decodeUnknownEffect(BookResult)(
+      yield* client.call(3, "patch_book", { book_id: "13", changes: { author: "Tolkien" } }),
     );
-    expect(cleared.isError).toBe(false);
-    expect(cleared.structuredContent).toEqual({
-      book: { ...book, id: "13", readingLevel: null },
+    expect(renamed.isError).toBe(false);
+    expect(renamed.structuredContent).toEqual({
+      book: { ...book, id: "13", author: "Tolkien" },
     });
   }).pipe(Effect.provide([ServerLive, NodeServices.layer])),
 );
@@ -104,6 +104,9 @@ it.effect("rejects invalid book patches before contacting the API", () =>
       { ...valid, changes: { title: "  " } },
       { ...valid, changes: { title: null } },
       { ...valid, changes: { author: "  " } },
+      { ...valid, changes: { author: null } },
+      { ...valid, changes: { readingLevel: null } },
+      { ...valid, changes: { readingLevel: " \t" } },
       { ...valid, changes: { category: null } },
       { ...valid, changes: { title: "The Hobbit", hasImage: true } },
       { ...valid, changes: { title: "The Hobbit", id: "13" } },

@@ -165,8 +165,9 @@ author, and it differs from every book of that title with one.
   `Cache-Control: private, no-store`. A book without a cover, or a missing book,
   returns HTTP 404 with `{"_tag":"BookImageNotFound"}`.
 - `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
-  `readingLevel`; omitted fields keep their values and `null` clears the author
-  or reading level. Taking another book's title and author returns HTTP 409 with
+  `readingLevel`; omitted fields keep their values. Supplied values must be
+  nonempty text; `null` and blank values return HTTP 400, so the author and reading
+  level cannot be cleared. Taking another book's title and author returns HTTP 409 with
   `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
 - `DELETE /books/:bookId` removes the book with all its successful cover
   uploads, their original images, and extraction data, and returns HTTP 204. Its

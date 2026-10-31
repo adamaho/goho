@@ -93,8 +93,8 @@ export const CreateBookRequest = Schema.Struct({
 export interface CreateBookRequest extends Schema.Schema.Type<typeof CreateBookRequest> {}
 
 /**
- * Book corrections. Only supplied fields change, null clears the author or
- * reading level, and at least one field is required. The HTTP contract also
+ * Book corrections. Only supplied fields change, values cannot be cleared,
+ * and at least one field is required. The HTTP contract also
  * rejects unsupported properties.
  *
  * @category models
@@ -102,16 +102,26 @@ export interface CreateBookRequest extends Schema.Schema.Type<typeof CreateBookR
  */
 export const PatchBookRequest = Schema.Struct({
   title: Schema.optionalKey(BookFields.title),
-  author: Schema.optionalKey(BookFields.author),
+  author: Schema.optionalKey(
+    Text.pipe(
+      Schema.annotateEncoded({ description: "Author to set or replace; cannot be cleared." }),
+    ),
+  ),
   category: Schema.optionalKey(BookFields.category),
-  readingLevel: Schema.optionalKey(BookFields.readingLevel),
+  readingLevel: Schema.optionalKey(
+    Text.pipe(
+      Schema.annotateEncoded({
+        description: "Reading level to set or replace; cannot be cleared.",
+      }),
+    ),
+  ),
 })
   .check(Schema.isMinProperties(1))
   .annotate({
     identifier: "PatchBookRequest",
     description:
-      "Book details to correct, bud. Send at least one field; left-out fields stay put, and a null author or reading level clears it.",
-    examples: [{ readingLevel: "Grade 5" }, { title: "The Hobbit", readingLevel: null }],
+      "Book details to correct, bud. Send at least one field; left-out fields stay put. Values must be nonempty text; null cannot clear them.",
+    examples: [{ readingLevel: "Grade 5" }, { title: "The Hobbit" }],
   });
 
 /**

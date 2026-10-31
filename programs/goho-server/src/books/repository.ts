@@ -187,9 +187,9 @@ export const layer = Layer.effect(
         // Encoding keeps only these editable columns, so no other field can reach the SET list.
         changes: Schema.Struct({
           title: Schema.optionalKey(Schema.String),
-          author: Schema.optionalKey(Schema.NullOr(Schema.String)),
+          author: Schema.optionalKey(Schema.String),
           categoryId: Schema.optionalKey(CategoryId),
-          readingLevel: Schema.optionalKey(Schema.NullOr(Schema.String)),
+          readingLevel: Schema.optionalKey(Schema.String),
         }).pipe(Schema.encodeKeys({ categoryId: "category_id", readingLevel: "reading_level" })),
       }),
       execute: ({ bookId, changes }) => sql`
