@@ -12,7 +12,9 @@ import java.util.Locale
 
 /**
  * A saved book's or failed scan's options sheet, headed by its Books row summary with a plain
- * cover.
+ * cover. A saved book without an author offers Add author above Delete book when [onAddAuthor] is
+ * set; [openAuthorForm] opens the sheet directly at that form with [authorDraft], as the book
+ * overlay and the snackbar's Edit do.
  */
 @Composable
 internal fun BookOptions(
@@ -23,6 +25,9 @@ internal fun BookOptions(
     covers: ThumbnailCache,
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
+    onAddAuthor: ((String) -> Unit)? = null,
+    openAuthorForm: Boolean = false,
+    authorDraft: String = "",
 ) {
     val config = LocalConfiguration.current
     val scan = entry is BookListEntry.Scan
@@ -47,5 +52,7 @@ internal fun BookOptions(
         },
         onDelete = onDelete,
         onDismiss = onDismiss,
+        form = onAddAuthor?.let { addAuthorForm(authorDraft, it) },
+        openForm = openAuthorForm,
     )
 }

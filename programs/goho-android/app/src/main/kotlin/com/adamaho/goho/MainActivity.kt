@@ -1,5 +1,7 @@
 package com.adamaho.goho
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -18,13 +20,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavEntry
@@ -36,17 +42,22 @@ import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
+import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.Receipt
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
-import com.adamaho.goho.ui.components.DeletionFeedback
+import com.adamaho.goho.ui.components.FeedbackSnackbar
 import com.adamaho.goho.ui.main.BookListController
+import com.adamaho.goho.ui.main.BookListEntry
+import com.adamaho.goho.ui.main.BookOptions
 import com.adamaho.goho.ui.main.BookOverlayHost
 import com.adamaho.goho.ui.main.BookOverview
 import com.adamaho.goho.ui.main.DeletionKey
 import com.adamaho.goho.ui.main.DeletionKind
+import com.adamaho.goho.ui.main.Feedback
+import com.adamaho.goho.ui.main.FeedbackMessage
 import com.adamaho.goho.ui.main.PendingDeletions
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
@@ -61,6 +72,7 @@ import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
 import com.adamaho.goho.ui.main.deleteAndConfirm
 import com.adamaho.goho.ui.main.receiptListEntries
+import com.adamaho.goho.ui.main.rememberClock
 import com.adamaho.goho.ui.main.rememberSectionSearch
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_FORMAT_JPEG
@@ -93,6 +105,9 @@ import okio.BufferedSink
 /** A scanned image waiting in the preview, with the kind of scan that decides its upload. */
 private data class Capture(val kind: ScanKind, val imageUri: Uri)
 
+/** The Add author form opened on its own, from the book overlay or a snackbar's Edit. */
+private data class AuthorRequest(val book: Book, val draft: String)
+
 class MainActivity : ComponentActivity() {
     private var capture by mutableStateOf<Capture?>(null)
     /** The kind of the open scanner, saved in case this activity is recreated behind it. */
@@ -103,6 +118,9 @@ class MainActivity : ComponentActivity() {
     private var receiptUploadToReveal by mutableStateOf<String?>(null)
     private var bookUploadToReveal by mutableStateOf<UUID?>(null)
     private var section by mutableStateOf(Section.Receipts)
+    private var authorRequest by mutableStateOf<AuthorRequest?>(null)
+    /** The open book overlay's fixed actions, which the snackbar clears while Add is hidden. */
+    private var overlayActionsHeight by mutableStateOf(0.dp)
     private var pollingJob: Job? = null
     private var refreshAfterCurrent = false
     private var historyRevision = 0L
@@ -110,13 +128,16 @@ class MainActivity : ComponentActivity() {
     private val receiptUploadsApi by lazy { service<ReceiptUploadsApi>() }
     private val receiptsApi by lazy { service<ReceiptsApi>() }
     private val receiptThumbnails = ThumbnailCache { loadReceiptImage(it) }
-    private val deletions by lazy { PendingDeletions(lifecycleScope) }
+    private val feedback = Feedback()
+    private val deletions by lazy { PendingDeletions(lifecycleScope, feedback) }
     private val books by lazy {
         BookListController(
             lifecycleScope,
             service<BooksApi>(),
             service<BookUploadsApi>(),
             deletions,
+            feedback,
+            ::isOffline,
         )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
@@ -204,6 +225,9 @@ class MainActivity : ComponentActivity() {
                                                 covers = books.covers,
                                                 loadFullCover = books::loadFullCover,
                                                 deleteBook = { books.delete(it.id) },
+                                                current = books::current,
+                                                onAddAuthor = ::openAuthorForm,
+                                                onActionsHeight = { overlayActionsHeight = it },
                                             ) { openBook, actionAlpha ->
                                                 SectionScreen(
                                                     section = section,
@@ -264,6 +288,9 @@ class MainActivity : ComponentActivity() {
                                                                 },
                                                                 onBookClick = openBook,
                                                                 deleteEntry = books::delete,
+                                                                addAuthor = { id, author ->
+                                                                    books.addAuthor(id, author)
+                                                                },
                                                                 search = bookSearch,
                                                                 uploadToReveal = bookUploadToReveal,
                                                                 onUploadRevealed = {
@@ -311,20 +338,27 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                     }
-                    DeletionFeedback(
-                        deletions,
-                        Modifier.fillMaxSize()
-                            .navigationBarsPadding()
-                            .imePadding()
-                            .padding(
-                                bottom =
-                                    if (captured == null && backStack.lastOrNull() == SectionRoute)
-                                        GohoSpacing.fabBottom +
-                                            GohoSpacing.addButton +
-                                            GohoSpacing.contentGap
-                                    else GohoSpacing.screenMargin
-                            )
-                            .wrapContentSize(Alignment.BottomCenter),
+                    authorRequest?.let { request -> key(request) { AuthorSheet(request) } }
+                    FeedbackSnackbar(
+                        feedback,
+                        onAction = ::onFeedbackAction,
+                        modifier =
+                            Modifier.fillMaxSize()
+                                .navigationBarsPadding()
+                                .imePadding()
+                                .padding(
+                                    bottom =
+                                        if (
+                                            captured == null &&
+                                                backStack.lastOrNull() == SectionRoute
+                                        )
+                                            maxOf(
+                                                GohoSpacing.fabBottom + GohoSpacing.addButton,
+                                                overlayActionsHeight,
+                                            ) + GohoSpacing.contentGap
+                                        else GohoSpacing.screenMargin
+                                )
+                                .wrapContentSize(Alignment.BottomCenter),
                     )
                 }
             }
@@ -363,6 +397,56 @@ class MainActivity : ComponentActivity() {
         pollingJob?.cancel()
         pollingJob = null
         super.onStop()
+    }
+
+    /** The options sheet opened straight at the Add author form, keeping [AuthorRequest.draft]. */
+    @Composable
+    private fun AuthorSheet(request: AuthorRequest) {
+        val clock by rememberClock()
+        val bookId = request.book.id
+        BookOptions(
+            entry = BookListEntry.Saved(request.book),
+            now = clock,
+            zone = ZoneId.systemDefault(),
+            locale = LocalConfiguration.current.locales[0],
+            covers = books.covers,
+            onDelete = { books.delete(bookId) },
+            onDismiss = { authorRequest = null },
+            onAddAuthor = { books.addAuthor(bookId, it) },
+            openAuthorForm = true,
+            authorDraft = request.draft,
+        )
+    }
+
+    /** Opens the Add author form for the live book, if it can still take an author. */
+    private fun openAuthorForm(book: Book) {
+        books.authorless(book.id)?.let { authorRequest = AuthorRequest(it, "") }
+    }
+
+    /**
+     * Edit reopens the form with the rejected author, and Try again resends it, but only for a book
+     * still listed without an author and not being deleted.
+     */
+    private fun onFeedbackAction(message: FeedbackMessage) {
+        when (message) {
+            is FeedbackMessage.AuthorConflict ->
+                books.authorless(message.bookId)?.let {
+                    authorRequest = AuthorRequest(it, message.author)
+                }
+            is FeedbackMessage.AuthorFailed ->
+                books.addAuthor(message.bookId, message.author, retry = true)
+            is FeedbackMessage.DeletionFailed -> Unit
+        }
+    }
+
+    /**
+     * Only a device without a usable network counts as offline, not a server that didn't answer.
+     */
+    private fun isOffline(): Boolean {
+        val connectivity = getSystemService(ConnectivityManager::class.java)
+        return connectivity
+            ?.getNetworkCapabilities(connectivity.activeNetwork)
+            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) != true
     }
 
     private fun selectSection(next: Section) {

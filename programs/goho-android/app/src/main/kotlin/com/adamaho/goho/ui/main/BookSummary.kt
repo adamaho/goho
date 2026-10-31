@@ -35,10 +35,13 @@ import java.util.Locale
 
 /**
  * Shared book presentation for Books rows and the options-sheet header. A null [entry] keeps the
- * same layout for skeleton loading. The tag sits at the bottom end, past a wider gap than the
- * cover's; [expanded] moves it below the text for large fonts and narrow screens. Titles always
- * stay on one line. Only rows set [liftCover], so the sheet header never registers a second shared
- * cover for the book overlay.
+ * same layout for skeleton loading. Saved books show no category tag here, so their text takes the
+ * full width; only the book overlay shows the category. A scan's upload tag sits at the bottom end,
+ * past a wider gap than the cover's; [expanded] moves it below the text for large fonts and narrow
+ * screens. Titles always stay on one line. Only rows set [liftCover], so the sheet header never
+ * registers a second shared cover for the book overlay. A saved book's metadata is its author, or a
+ * dash without one, then the reading level unless rows clear [showReadingLevel]. Both rows and the
+ * sheet header are display-only.
  */
 @Composable
 internal fun BookSummary(
@@ -50,8 +53,10 @@ internal fun BookSummary(
     covers: ThumbnailCache,
     modifier: Modifier = Modifier,
     liftCover: Boolean = false,
+    showReadingLevel: Boolean = true,
 ) {
     val c = GohoTheme.colors
+    val scan = entry as? BookListEntry.Scan
     val title =
         when (entry) {
             null -> ""
@@ -77,13 +82,14 @@ internal fun BookSummary(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            BookMetadata(entry, now, zone, locale, expanded)
-            if (expanded) BookTag(entry, Modifier.align(Alignment.End))
+            BookMetadata(entry, now, zone, locale, expanded, showReadingLevel)
+            if (scan != null && expanded)
+                BookUploadTag(processing = !scan.failed, Modifier.align(Alignment.End))
         }
-        if (!expanded) {
+        if (scan != null && !expanded) {
             Spacer(Modifier.width(GohoSpacing.textToTag))
-            BookTag(
-                entry,
+            BookUploadTag(
+                processing = !scan.failed,
                 Modifier.align(Alignment.Bottom).widthIn(max = GohoSpacing.tagMaxWidth),
             )
         }
@@ -109,6 +115,7 @@ private fun BookMetadata(
     zone: ZoneId,
     locale: Locale,
     expanded: Boolean,
+    showReadingLevel: Boolean,
 ) {
     val c = GohoTheme.colors
     val style = GohoTheme.type.meta
@@ -128,7 +135,14 @@ private fun BookMetadata(
     val text =
         when (entry) {
             null -> AnnotatedString("")
-            is BookListEntry.Saved -> AnnotatedString(bookMetadata(entry.book).orEmpty())
+            is BookListEntry.Saved -> {
+                val author = entry.book.author ?: stringResource(R.string.book_author_missing)
+                val level = entry.book.readingLevel?.takeIf { showReadingLevel }
+                AnnotatedString(
+                    if (level == null) author
+                    else stringResource(R.string.book_author_level, author, level)
+                )
+            }
             is BookListEntry.Scan -> uploadTime(entry.uploadedAt, now, zone, locale)
         }
     Text(
@@ -166,21 +180,6 @@ private fun uploadTime(
                 )
             }
         } else append(date)
-    }
-}
-
-@Composable
-private fun BookTag(entry: BookListEntry?, modifier: Modifier = Modifier) {
-    when (entry) {
-        null ->
-            Tag(
-                label = "",
-                icon = painterResource(R.drawable.ic_tag_other),
-                color = TagColor.Grey,
-                modifier = modifier.skeleton(GohoSpacing.skeletonWidth, block = true),
-            )
-        is BookListEntry.Saved -> CategoryTag(entry.book.category, modifier)
-        is BookListEntry.Scan -> BookUploadTag(processing = !entry.failed, modifier)
     }
 }
 

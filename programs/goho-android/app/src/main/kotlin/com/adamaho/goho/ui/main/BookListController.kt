@@ -8,7 +8,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
+import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.BookUpload
+import com.adamaho.goho.api.generated.model.PatchBookRequest
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -22,26 +24,38 @@ import okhttp3.MultipartBody
 /**
  * Books data owned by the activity, independent of receipts. Books and their cover scans refresh
  * together; a refresh joins or queues behind one already running, and a failure keeps the cached
- * list. A refresh that began before an accepted scan or a deletion never drops the scan or restores
- * the deleted book or failed scan.
+ * list. A refresh that began before an accepted scan, a deletion or a saved author never drops the
+ * scan, restores the deleted book or failed scan, or loses the author.
  */
 internal class BookListController(
     private val scope: CoroutineScope,
     private val booksApi: BooksApi,
     private val uploadsApi: BookUploadsApi,
     private val deletions: PendingDeletions,
+    private val feedback: Feedback,
+    private val isOffline: () -> Boolean,
 ) {
     var state by mutableStateOf(BookListState())
         private set
 
-    /** Pending deletions stay hidden even when an overlapping refresh still returns them. */
+    private val authors = PendingAuthors(scope)
+
+    /**
+     * Pending deletions stay hidden and pending authors shown even when an overlapping refresh
+     * still returns the old book.
+     */
     val visibleState: BookListState
         get() =
             state.copy(
                 books =
-                    state.books.filterNot {
-                        deletions.contains(DeletionKey(DeletionKind.Book, it.id))
-                    },
+                    state.books
+                        .filterNot { deletions.contains(DeletionKey(DeletionKind.Book, it.id)) }
+                        .map { book ->
+                            authors
+                                .author(book.id)
+                                ?.takeIf { book.author == null }
+                                ?.let { book.copy(author = it) } ?: book
+                        },
                 uploads =
                     state.uploads.filterNot {
                         deletions.contains(
@@ -164,19 +178,79 @@ internal class BookListController(
                     delete = { booksApi.booksDelete(bookId) },
                     lookup = { booksApi.booksGet(bookId) },
                 )
-            if (deleted) {
-                changeRevision++
-                state =
-                    state.copy(
-                        books = state.books.filterNot { it.id == bookId },
-                        uploads =
-                            state.uploads.filterNot {
-                                it.status == BookUpload.Status.succeeded && it.bookId == bookId
-                            },
-                    )
-            } else refresh()
+            if (deleted) removeBook(bookId) else refresh()
             deleted
         }
+
+    /** The listed book with this ID that can take an author: not being deleted and without one. */
+    fun authorless(bookId: String): Book? =
+        visibleState.books.find { it.id == bookId }?.takeIf { it.author == null }
+
+    /**
+     * [book] as a snapshot, such as the book overlay's, should show it: with an author added since
+     * it was taken, whether saved or still pending. A listed author wins, as in [visibleState].
+     */
+    fun current(book: Book): Book {
+        if (book.author != null) return book
+        val author = state.books.find { it.id == book.id }?.author ?: authors.author(book.id)
+        return if (author == null) book else book.copy(author = author)
+    }
+
+    /**
+     * Shows [author] on a book without one at once and saves it in the background. Only the
+     * server's book replaces the listed one, before the pending author is released; a conflict or
+     * failure drops it and reports through [feedback], keeping the trimmed text for Edit or Try
+     * again. [retry] checks the book first so it doesn't overwrite an author that arrived since.
+     * Books that are gone, being deleted or already have an author are left alone.
+     */
+    fun addAuthor(bookId: String, author: String, retry: Boolean = false) {
+        val name = author.trim()
+        if (name.isEmpty() || authorless(bookId) == null) return
+        authors.start(bookId, name) {
+            when (
+                val outcome =
+                    patchAndConfirm(
+                        patch = { booksApi.booksPatch(bookId, PatchBookRequest(author = name)) },
+                        lookup = { booksApi.booksGet(bookId) },
+                        lookupFirst = retry,
+                    )
+            ) {
+                is AuthorOutcome.Saved -> {
+                    changeRevision++
+                    state =
+                        state.copy(
+                            books = state.books.map { if (it.id == bookId) outcome.book else it }
+                        )
+                }
+                AuthorOutcome.Missing -> removeBook(bookId)
+                AuthorOutcome.Conflict ->
+                    feedback.send(FeedbackMessage.AuthorConflict(bookId, name))
+                is AuthorOutcome.Failed -> {
+                    feedback.send(
+                        FeedbackMessage.AuthorFailed(
+                            bookId,
+                            name,
+                            offline = outcome.unanswered && isOffline(),
+                        )
+                    )
+                    refresh()
+                }
+            }
+        }
+    }
+
+    /** Commits a book's confirmed absence, with the scans that saved it. */
+    private fun removeBook(bookId: String) {
+        changeRevision++
+        state =
+            state.copy(
+                books = state.books.filterNot { it.id == bookId },
+                uploads =
+                    state.uploads.filterNot {
+                        it.status == BookUpload.Status.succeeded && it.bookId == bookId
+                    },
+            )
+    }
 
     /** Deletes a held Books row: a saved book, or a failed scan. */
     suspend fun delete(entry: BookListEntry): Boolean =

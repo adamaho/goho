@@ -9,6 +9,7 @@ object GohoShapes {
     val sectionMenu = RoundedCornerShape(20.dp)
     val sheet = RoundedCornerShape(28.dp)
     val heldRow = RoundedCornerShape(14.dp)
+    val field = RoundedCornerShape(14.dp)
     val button = RoundedCornerShape(20.dp)
     val buttonSmall = RoundedCornerShape(16.dp)
     val thumb = RoundedCornerShape(8.dp)

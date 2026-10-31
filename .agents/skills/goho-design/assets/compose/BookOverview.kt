@@ -43,9 +43,10 @@ data class BookListState(
 /**
  * Books content below the section title. Saved rows open the book overlay on tap and their options
  * sheet on a hold, and failed scans open theirs on a tap or hold; [deleteEntry] returns whether the
- * deletion of the held book or scan was accepted. [uploadToReveal] shows All at the top until that
- * accepted scan, or the book it saved, is listed. While [search] is open its results replace the
- * pages, which keep their filter and scroll positions for its exit.
+ * deletion of the held book or scan was accepted, and [addAuthor] saves the author typed for a held
+ * book without one. [uploadToReveal] shows All at the top until that accepted scan, or the book it
+ * saved, is listed. While [search] is open its results replace the pages, which keep their filter
+ * and scroll positions for its exit.
  */
 @Composable
 internal fun BookOverview(
@@ -55,6 +56,7 @@ internal fun BookOverview(
     onRefresh: () -> Unit,
     onBookClick: (Book) -> Unit,
     deleteEntry: suspend (BookListEntry) -> Boolean,
+    addAuthor: (bookId: String, author: String) -> Unit,
     search: SectionSearch,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
@@ -184,6 +186,11 @@ internal fun BookOverview(
                 covers,
                 onDelete = { deleteEntry(entry) },
                 onDismiss = { optionsEntry = null },
+                onAddAuthor =
+                    (entry as? BookListEntry.Saved)
+                        ?.book
+                        ?.takeIf { it.author == null }
+                        ?.let { book -> { author -> addAuthor(book.id, author) } },
             )
         }
     }
@@ -259,11 +266,10 @@ private fun BookListPage(
                 if (!state.hasLoaded && state.loading)
                     item("loading") {
                         SkeletonScope(loading = true) {
+                            // The card and its dividers wait for the masks, so no empty card shows.
                             ListCard(
-                                Modifier.loadingSemantics(
-                                    true,
-                                    stringResource(R.string.books_loading),
-                                )
+                                Modifier.skeletonContainer()
+                                    .loadingSemantics(true, stringResource(R.string.books_loading))
                             ) {
                                 repeat(4) { index ->
                                     if (index > 0) ListDivider(GohoSpacing.bookDividerStart)

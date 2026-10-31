@@ -6,8 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import retrofit2.Response
 
@@ -25,10 +23,11 @@ internal data class DeletionKey(val kind: DeletionKind, val id: String)
  * rather than removing snapshots that a rollback could restore over newer changes. The caller
  * commits confirmed removal to its raw data before this mask is released.
  */
-internal class PendingDeletions(private val scope: CoroutineScope) {
+internal class PendingDeletions(
+    private val scope: CoroutineScope,
+    private val feedback: Feedback,
+) {
     private var pending by mutableStateOf(emptySet<DeletionKey>())
-    private val failures = Channel<DeletionKind>(Channel.UNLIMITED)
-    val errors = failures.receiveAsFlow()
 
     fun contains(key: DeletionKey): Boolean = key in pending
 
@@ -38,7 +37,7 @@ internal class PendingDeletions(private val scope: CoroutineScope) {
         pending = pending + key
         scope.launch {
             try {
-                if (!operation()) failures.send(key.kind)
+                if (!operation()) feedback.send(FeedbackMessage.DeletionFailed(key.kind))
             } finally {
                 pending = pending - key
             }

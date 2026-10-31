@@ -22,8 +22,9 @@ import kotlinx.coroutines.delay
 /**
  * Books row around [BookSummary]. Saved books open the book overlay through [onClick] and, on a
  * hold, their options sheet through [onOptions]; failed scans open their options on a tap or hold,
- * and queued or processing scans are display-only. A null [entry] keeps the same layout for
- * skeleton loading. [optionsOpen] marks the row whose options sheet is open.
+ * and queued or processing scans are display-only. Rows show a saved book's author, or a dash
+ * without one, and no reading level or category. A null [entry] keeps the same layout for skeleton
+ * loading. [optionsOpen] marks the row whose options sheet is open.
  */
 @Composable
 internal fun BookRow(
@@ -93,6 +94,7 @@ internal fun BookRow(
         expanded = expanded,
         covers = covers,
         liftCover = true,
+        showReadingLevel = false,
         modifier =
             Modifier.fillMaxWidth()
                 .then(clickable)

@@ -43,6 +43,7 @@ data class GohoTypography(
     val listRow: TextStyle,
     val listValue: TextStyle,
     val body: TextStyle,
+    val feedbackTitle: TextStyle,
     val meta: TextStyle,
     val timestamp: TextStyle,
     val section: TextStyle,
@@ -240,6 +241,15 @@ val GohoType =
                 fontWeight = FontWeight.Normal,
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        feedbackTitle =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),

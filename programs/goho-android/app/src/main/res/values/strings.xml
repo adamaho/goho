@@ -28,6 +28,11 @@
     <string name="book_deleting">Deleting…</string>
     <string name="book_delete_failed">Couldn’t delete this book. Try again.</string>
     <string name="book_cancel">Cancel</string>
+    <string name="book_add_author">Add author</string>
+    <string name="book_author_name">Author’s name</string>
+    <string name="book_author_save">Save author</string>
+    <string name="book_author_missing">—</string>
+    <string name="book_metadata_separator">·</string>
     <string name="scan_options">Scan options</string>
     <string name="scan_delete">Delete scan</string>
     <string name="scan_delete_failed">Couldn’t delete this scan. Try again.</string>
@@ -125,8 +130,16 @@
     <string name="release_to_refresh">Release to refresh</string>
     <string name="refresh_failed_indicator">Refresh failed.</string>
     <string name="receipt_item_description">%1$s, %2$s, %3$s</string>
-    <string name="book_delete_unconfirmed">Something went wrong deleting this book. Please refresh and try again.</string>
-    <string name="scan_delete_unconfirmed">Something went wrong deleting this scan. Please refresh and try again.</string>
-    <string name="receipt_delete_unconfirmed">Something went wrong deleting this receipt. Please refresh and try again.</string>
-    <string name="deletion_dismiss">Dismiss</string>
+    <string name="feedback_book_delete_failed">We couldn’t delete that book</string>
+    <string name="feedback_scan_delete_failed">We couldn’t delete that scan</string>
+    <string name="feedback_receipt_delete_failed">We couldn’t delete that receipt</string>
+    <string name="feedback_delete_failed_detail">Pull to refresh, then give it another go.</string>
+    <string name="feedback_author_conflict">That book’s already here</string>
+    <string name="feedback_author_conflict_detail">Another book has this title and author.</string>
+    <string name="feedback_author_failed">We couldn’t save the author</string>
+    <string name="feedback_offline_detail">Looks like you’re offline. Let’s try again.</string>
+    <string name="feedback_hiccup_detail">A little hiccup on our end. Let’s try again.</string>
+    <string name="feedback_edit">Edit</string>
+    <string name="feedback_try_again">Try again</string>
+    <string name="feedback_dismiss">Dismiss</string>
 </resources>

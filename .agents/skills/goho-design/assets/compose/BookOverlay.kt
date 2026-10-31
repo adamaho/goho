@@ -2,6 +2,7 @@ package com.adamaho.goho.ui.main
 
 import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
@@ -21,6 +22,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,11 +51,14 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.theme.*
@@ -72,8 +77,9 @@ internal enum class BookDeletion {
 
 /**
  * The lifted book shared by the overlay and the Books rows. The overlay keeps a snapshot of the
- * tapped [Book], so list refreshes and polling never change or close it. An accepted deletion
- * closes the overlay while the activity-owned operation continues.
+ * tapped [Book], so list refreshes and polling never change or close it; only an author added since
+ * is shown on it. An accepted deletion closes the overlay while the activity-owned operation
+ * continues.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Stable
@@ -170,7 +176,10 @@ private val textExitMillis =
  * Hosts the book overlay above [content], including the section header and Add button. Rows and the
  * overlay share one [SharedTransitionLayout] so the cover flies between them; [content] receives
  * the action that lifts a saved book and the opacity of the screen's floating action, which gives
- * way to the overlay. [deleteBook] returns whether the background deletion was accepted.
+ * way to the overlay. [deleteBook] returns whether the background deletion was accepted. [current]
+ * adds an author added since the snapshot was taken, and [onAddAuthor] opens the Add author form
+ * for a book without one. [onActionsHeight] reports the height of the fixed actions while the
+ * overlay is shown, and zero after, so app-level feedback can clear them.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -178,6 +187,9 @@ internal fun BookOverlayHost(
     covers: ThumbnailCache,
     loadFullCover: suspend (String) -> ImageBitmap?,
     deleteBook: suspend (Book) -> Boolean,
+    current: (Book) -> Book,
+    onAddAuthor: (Book) -> Unit,
+    onActionsHeight: (Dp) -> Unit,
     content: @Composable (openBook: (Book) -> Unit, actionAlpha: () -> Float) -> Unit,
 ) {
     val reduced = rememberReducedMotion()
@@ -264,7 +276,16 @@ internal fun BookOverlayHost(
                         },
                 ) {
                     state.book?.let { book ->
-                        BookOverlay(book, state, this, covers, loadFullCover, canBlur) {
+                        BookOverlay(
+                            current(book),
+                            state,
+                            this,
+                            covers,
+                            loadFullCover,
+                            canBlur,
+                            onAddAuthor,
+                            onActionsHeight,
+                        ) {
                             state.delete(scope, deleteBook)
                         }
                     }
@@ -323,6 +344,8 @@ private fun BookOverlay(
     covers: ThumbnailCache,
     loadFullCover: suspend (String) -> ImageBitmap?,
     canBlur: Boolean,
+    onAddAuthor: (Book) -> Unit,
+    onActionsHeight: (Dp) -> Unit,
     onDelete: () -> Unit,
 ) {
     val c = GohoTheme.colors
@@ -392,6 +415,14 @@ private fun BookOverlay(
         }
     val closeFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { closeFocus.requestFocus() }
+    // Add author leaves once an author is shown, so focus moves back to Close.
+    val hasAuthor = book.author != null
+    var hadAuthor by remember(book.id) { mutableStateOf(hasAuthor) }
+    LaunchedEffect(hasAuthor) {
+        if (hasAuthor && !hadAuthor) closeFocus.requestFocus()
+        hadAuthor = hasAuthor
+    }
+    DisposableEffect(Unit) { onDispose { onActionsHeight(0.dp) } }
     val textDelay =
         (GohoMotion.BOOK_OVERLAY_OPEN_MILLIS * (1f - GohoMotion.BOOK_OVERLAY_TEXT_FRACTION)).toInt()
     val textMillis = GohoMotion.BOOK_OVERLAY_OPEN_MILLIS - textDelay
@@ -517,8 +548,11 @@ private fun BookOverlay(
                 BookOverlayText(
                     book,
                     settle,
-                    Modifier.graphicsLayer { alpha = 1f - dragFraction() }
-                        .pointerInput(Unit) { detectTapGestures {} },
+                    addAuthorEnabled = !state.deleting,
+                    onAddAuthor = { onAddAuthor(book) },
+                    modifier =
+                        Modifier.graphicsLayer { alpha = 1f - dragFraction() }
+                            .pointerInput(Unit) { detectTapGestures {} },
                 )
             }
             BookOverlayFooter(
@@ -527,7 +561,8 @@ private fun BookOverlay(
                 onConfirm = onDelete,
                 onCancel = state::close,
                 modifier =
-                    Modifier.then(arrive)
+                    Modifier.onSizeChanged { onActionsHeight(with(density) { it.height.toDp() }) }
+                        .then(arrive)
                         .graphicsLayer { alpha = 1f - dragFraction() }
                         .pointerInput(Unit) { detectTapGestures {} },
             )
@@ -614,9 +649,21 @@ private fun PhotoCover(
     }
 }
 
+/**
+ * Title, author line and category. A book without an author shows Add author on the author line,
+ * followed by its reading level when set; the line crossfades when an author is added or rolled
+ * back.
+ */
 @Composable
-private fun BookOverlayText(book: Book, settle: (index: Int) -> Modifier, modifier: Modifier) {
+private fun BookOverlayText(
+    book: Book,
+    settle: (index: Int) -> Modifier,
+    addAuthorEnabled: Boolean,
+    onAddAuthor: () -> Unit,
+    modifier: Modifier,
+) {
     val c = GohoTheme.colors
+    val reduced = rememberReducedMotion()
     Column(
         modifier
             .fillMaxWidth()
@@ -631,14 +678,57 @@ private fun BookOverlayText(book: Book, settle: (index: Int) -> Modifier, modifi
             textAlign = TextAlign.Center,
             modifier = settle(0).semantics { heading() },
         )
-        bookMetadata(book)?.let {
-            Text(
-                it,
-                style = GohoTheme.type.bookAuthor,
-                color = c.textSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop).then(settle(1)),
-            )
+        AnimatedContent(
+            book.author == null,
+            modifier = Modifier.padding(top = GohoSpacing.bookOverlayAuthorTop).then(settle(1)),
+            transitionSpec = {
+                fadeIn(tween(if (reduced) 0 else GohoMotion.STATUS_CROSSFADE_MILLIS)) togetherWith
+                    fadeOut(tween(if (reduced) 0 else GohoMotion.STATUS_CROSSFADE_MILLIS))
+            },
+            contentAlignment = Alignment.Center,
+            label = "Book author",
+        ) { missing ->
+            if (missing)
+                FlowRow(
+                    horizontalArrangement = Arrangement.Center,
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextAction(
+                        stringResource(R.string.book_add_author),
+                        onAddAuthor,
+                        enabled = addAuthorEnabled,
+                        style = GohoTheme.type.rowTitle,
+                        icon = {
+                            PlusIcon(Modifier.size(GohoSpacing.buttonIcon), c.onAccentContainer)
+                        },
+                    )
+                    // The dot sits as far from the level as Add author's padding puts it from
+                    // the label, and wraps with the level.
+                    book.readingLevel?.let { level ->
+                        Row(
+                            horizontalArrangement =
+                                Arrangement.spacedBy(GohoSpacing.textActionHorizontal),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(R.string.book_metadata_separator),
+                                style = GohoTheme.type.bookAuthor,
+                                color = c.textSecondary,
+                                modifier = Modifier.clearAndSetSemantics {},
+                            )
+                            Text(level, style = GohoTheme.type.bookAuthor, color = c.textSecondary)
+                        }
+                    }
+                }
+            else
+                bookMetadata(book)?.let {
+                    Text(
+                        it,
+                        style = GohoTheme.type.bookAuthor,
+                        color = c.textSecondary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
         }
         CategoryTag(
             book.category,

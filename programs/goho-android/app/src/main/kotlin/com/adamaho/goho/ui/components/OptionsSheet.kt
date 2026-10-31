@@ -29,11 +29,29 @@ import com.adamaho.goho.theme.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
+/** The sheet's one visible pane: its menu, the delete confirmation, or an [OptionsForm]. */
+private enum class OptionsPane {
+    Menu,
+    Delete,
+    Form,
+}
+
+/**
+ * A menu action above delete that swaps the sheet to its own pane, as Add author does. [label]
+ * names the action and the pane; [content] receives the sheet's animated close.
+ */
+internal class OptionsForm(
+    val label: String,
+    val icon: @Composable (Modifier, Color) -> Unit,
+    val content: @Composable (close: () -> Unit) -> Unit,
+)
+
 /**
  * One item's header stays mounted while the actions below change inside the same sheet. The caller
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
  * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
- * request and any later failure belong to the activity. The sheet only awaits its own exit.
+ * request and any later failure belong to the activity. The sheet only awaits its own exit. A
+ * [form] adds its action above delete; [openForm] opens the sheet directly at that pane.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,10 +65,14 @@ internal fun OptionsSheet(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
+    form: OptionsForm? = null,
+    openForm: Boolean = false,
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
-    var confirming by rememberSaveable { mutableStateOf(false) }
+    var pane by rememberSaveable {
+        mutableStateOf(if (openForm && form != null) OptionsPane.Form else OptionsPane.Menu)
+    }
     var deleting by remember { mutableStateOf(false) }
     var deleted by remember { mutableStateOf(false) }
     var failed by rememberSaveable { mutableStateOf(false) }
@@ -60,7 +82,12 @@ internal fun OptionsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { !deleting || deleted },
         )
-    val pane = if (confirming) deleteLabel else title
+    val paneTitle =
+        when (pane) {
+            OptionsPane.Menu -> title
+            OptionsPane.Delete -> deleteLabel
+            OptionsPane.Form -> form?.label ?: title
+        }
     fun dismiss() {
         if (!deleting)
             scope.launch {
@@ -81,7 +108,7 @@ internal fun OptionsSheet(
     ) {
         Column(
             Modifier.fillMaxWidth()
-                .navigationBarsPadding()
+                .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
                 .padding(GohoSpacing.sheetInset)
                 .shadow(
                     GohoSpacing.sheetElevation,
@@ -92,7 +119,7 @@ internal fun OptionsSheet(
                 .clip(GohoShapes.sheet)
                 .background(c.sheet)
                 .verticalScroll(rememberScrollState())
-                .semantics { paneTitle = pane }
+                .semantics { this.paneTitle = paneTitle }
         ) {
             Box(
                 Modifier.align(Alignment.CenterHorizontally)
@@ -110,7 +137,7 @@ internal fun OptionsSheet(
             }
             Spacer(Modifier.height(GohoSpacing.sheetContentTop))
             AnimatedContent(
-                targetState = confirming,
+                targetState = pane,
                 contentAlignment = Alignment.TopStart,
                 transitionSpec = {
                     (fadeIn(
@@ -133,8 +160,9 @@ internal fun OptionsSheet(
                         )
                 },
                 label = "Options sheet content",
-            ) { showConfirmation ->
-                if (!showConfirmation) {
+            ) { shown ->
+                if (shown == OptionsPane.Form && form != null) form.content(::dismiss)
+                else if (shown != OptionsPane.Delete) {
                     Column(Modifier.fillMaxWidth()) {
                         Box(
                             Modifier.fillMaxWidth()
@@ -143,42 +171,19 @@ internal fun OptionsSheet(
                                 .background(c.divider)
                         )
                         Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
-                        val interaction = remember { MutableInteractionSource() }
-                        val progress by pressProgress(interaction)
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .background(
-                                    lerp(
-                                        c.sheet,
-                                        if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
-                                        progress.coerceIn(0f, 1f),
-                                    )
-                                )
-                                .clickable(
-                                    interaction,
-                                    indication = null,
-                                    role = Role.Button,
-                                    enabled = !confirming,
-                                    onClick = { confirming = true },
-                                )
-                                .heightIn(min = GohoSpacing.sheetActionHeight)
-                                .padding(
-                                    horizontal = GohoSpacing.sheetPadding,
-                                    vertical = GohoSpacing.sheetInset,
-                                ),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(GohoSpacing.sheetActionGap),
-                            verticalAlignment = Alignment.CenterVertically,
+                        val enabled = pane == OptionsPane.Menu
+                        form?.let {
+                            OptionsMenuItem(it.label, c.textPrimary, it.icon, enabled) {
+                                pane = OptionsPane.Form
+                            }
+                        }
+                        OptionsMenuItem(
+                            deleteLabel,
+                            c.onDangerContainer,
+                            { modifier, color -> TrashIcon(modifier, color) },
+                            enabled,
                         ) {
-                            TrashIcon(
-                                Modifier.size(GohoSpacing.sheetActionIcon),
-                                c.onDangerContainer,
-                            )
-                            Text(
-                                deleteLabel,
-                                style = GohoTheme.type.rowTitle,
-                                color = c.onDangerContainer,
-                            )
+                            pane = OptionsPane.Delete
                         }
                         Spacer(Modifier.height(GohoSpacing.sheetInset))
                     }
@@ -243,5 +248,43 @@ internal fun OptionsSheet(
                 }
             }
         }
+    }
+}
+
+/** A sheet menu row: 56dp, icon and label in [color], pressed fill and no ripple. */
+@Composable
+private fun OptionsMenuItem(
+    label: String,
+    color: Color,
+    icon: @Composable (Modifier, Color) -> Unit,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val c = GohoTheme.colors
+    val interaction = remember { MutableInteractionSource() }
+    val progress by pressProgress(interaction)
+    Row(
+        Modifier.fillMaxWidth()
+            .background(
+                lerp(
+                    c.sheet,
+                    if (c.isDark) c.surfaceMutedPressed else c.surfacePressed,
+                    progress.coerceIn(0f, 1f),
+                )
+            )
+            .clickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .heightIn(min = GohoSpacing.sheetActionHeight)
+            .padding(horizontal = GohoSpacing.sheetPadding, vertical = GohoSpacing.sheetInset),
+        horizontalArrangement = Arrangement.spacedBy(GohoSpacing.sheetActionGap),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon(Modifier.size(GohoSpacing.sheetActionIcon), color)
+        Text(label, style = GohoTheme.type.rowTitle, color = color)
     }
 }

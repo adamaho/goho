@@ -143,6 +143,15 @@ object GohoSpacing {
     val searchCountTop = 10.dp
     val searchCountBottom = 8.dp
     val headerHeight = 44.dp
+    val textActionHorizontal = 12.dp // Lavender text actions: Add author, Edit and Try again.
+    val textActionIconGap = 6.dp
+    val fieldHorizontal = 16.dp // Add author's name field.
+    val snackbarStart = 12.dp
+    val snackbarEnd = 4.dp // The 44dp dismiss target supplies the rest of the end inset.
+    val snackbarVertical = 12.dp
+    val snackbarIconSlot = 36.dp
+    val snackbarElevation = 8.dp
+    val snackbarDismissDistance = 96.dp
     val headerTop = 4.dp
     val headerFadeHeight = 12.dp
     val lineGap = 5.dp

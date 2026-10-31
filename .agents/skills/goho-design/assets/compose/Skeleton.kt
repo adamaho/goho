@@ -62,6 +62,17 @@ internal fun Modifier.skeleton(
         }
 }
 
+/**
+ * Hides a loading container, such as the card around skeleton rows, until the enclosing
+ * [SkeletonScope] shows its masks, so the container and masks appear together after the shared
+ * delay and a quick load never shows an empty card. Layout and semantics are unchanged.
+ */
+@Composable
+internal fun Modifier.skeletonContainer(): Modifier {
+    val skeleton = LocalSkeleton.current ?: return this
+    return drawWithContent { if (skeleton.visible) drawContent() }
+}
+
 internal fun Modifier.loadingSemantics(loading: Boolean, description: String): Modifier =
     if (loading)
         clearAndSetSemantics {

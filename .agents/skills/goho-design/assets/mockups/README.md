@@ -1,5 +1,31 @@
 # Mockups
 
+## Add author, Books rows and feedback snackbar (native implementation)
+
+October 31, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator at 280dpi, using an isolated disposable real backend and database with sample books only; no production or family records. Captures are 720×1600px at standard text size unless noted. They were taken from three candidate builds of the same change; each later build left the parts shown in earlier captures unchanged, so all of them show the current behavior.
+
+Current build (`4cc12f6`):
+
+- [Books list, light](add-author-native/list-light.png): saved rows show the author alone or a display-only “—”, with no reading level or category tag; the generated covers keep the category colour.
+- [Hold menu, light](add-author-native/hold-menu-light.png): a book without an author; the header shows “— · Ages 3–5” with no category tag, and the menu lists Add author above Delete book.
+- [Add author form, light](add-author-native/author-form-light.png): the same sheet swapped in place to the form: “Author’s name” unfocused with the keyboard closed, no hint, an enabled Save author and Cancel.
+- [Books loading, light](add-author-native/books-loading-light.png): the four loading rows mask the real cover, title and author line, with no tag mask; captured while a local proxy delayed each real list response by 4s.
+- [Books loading first frames](add-author-native/books-loading-first-frames.png): a cropped, scaled filmstrip from a 30fps screen recording of the same delayed cold start. Labels are video times, not request-relative: no card at frames 139 and 141 (4.600s, 4.667s), then the card, dividers and masks appear together in frame 142 (4.700s) and shimmer in 145 (4.800s).
+
+`9f42df4` (book overlay, Add author form and deletion feedback unchanged since):
+
+- [Overlay Add author, light](add-author-native/overlay-add-author-light.png): “+ Add author · Ages 3–5” with equal 12dp gaps around the dot, and the category tag kept in the overlay.
+- [Add author form, large dark](add-author-native/author-form-large-dark.png): 2× text; the header title ellipsizes and the actions stay full width.
+- [Add author form, compact with keyboard](add-author-native/author-form-compact-keyboard-dark.png): 560×1120px at 2× text, after tapping the field: the sheet sits above the keyboard and scrolls so Save author and Cancel stay reachable.
+- [Scan deletion failure, light](add-author-native/delete-scan-failure-light.png): a controlled storage failure rolls back a failed scan's deletion and shows the red-trash snackbar with only the X.
+
+`a46cfdb` (snackbar and Books rows unchanged since):
+
+- [Conflict snackbar, light](add-author-native/conflict-snackbar-light.png): a real 409 rolls the author back and offers Edit, which reopened the form with the rejected name and the keyboard closed.
+- [Retry snackbar, dark](add-author-native/retry-snackbar-dark.png): an unreachable local server gives the generic “A little hiccup on our end. Let’s try again.” with Try again, not the offline copy, because the device still had a network.
+
+Manual checks on the emulator covered: both entry points opening the form without autofocus, tapping the field to show the keyboard, Cancel, a blank Save that keeps the sheet open, the optimistic author and generated cover while a 15-second database lock held the save (which then timed out and rolled back), a real 409 with Edit, a saved author found by search, Try again succeeding after the server was reachable again, the scan deletion failure followed by a successful retry, light and dark, 2× text and a compact 320×640dp screen. Not checked manually: TalkBack speech, haptics, the offline message on a device without a network, and receipt deletion; an independent code review covered the shared routing. Pending saves aren't kept across a process restart.
+
 ## Book search motion (October 25, 2026, approved design)
 
 Filmstrips of the approved shared-axis motion for opening and closing book search ([section 10](../../references/screens.md#10-book-search)), captured from the canvas prototype (option C) at 2×, cropped to the header and the top of the list. They are design references, not native captures, and the spec's timings win (the prototype staggers Close search and the field by 30ms; natively they move together). `book-search-motion-open-light.png` and `-dark.png` show 0, 100, 200, 300 and 450ms after tapping Search; `book-search-motion-close-light.png` and `-dark.png` show 0, 100, 200 and 400ms after Close search.
@@ -69,14 +95,14 @@ Native source mirrors: `BookOverlay.kt`, `BookOverlayFooter.kt`, `BookOverview.k
 October 26, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator at 720×1600px. Text is at the standard size except the receipt failure capture, which uses 1.5× font scale. The app used an isolated disposable real backend and database with sample books, receipts and scans. These supersede the historical network-wait and inline network-error states above; confirmation remains unchanged.
 
 - [Book pending, light](native-optimistic-deletion/book-pending-light.png): the overlay has closed and the book and its count are removed while a 15-second database lock delays DELETE.
-- [Book failure, light](native-optimistic-deletion/book-failure-light.png): the row and cover return after failure, with shared deletion feedback above Add.
+- [Book failure, light](native-optimistic-deletion/book-failure-light.png): the row and cover return after failure, with the historical `DeletionFeedback` (one sentence and a Dismiss button) above Add.
 - [Book failure, dark](native-optimistic-deletion/book-failure-dark.png): the same feedback remains available after another options sheet has hidden the app window for more than ten seconds.
 - [Receipt pending, dark](native-optimistic-deletion/receipt-pending-dark.png): confirmation from receipt details has returned to the updated list while an eight-second database lock delays DELETE.
 - [Receipt failure, large dark](native-optimistic-deletion/receipt-failure-large-dark.png): a real storage 500 rolls deletion back; the receipt returns and the feedback and Dismiss action remain readable at 1.5× text.
 
 Manual checks also covered successful retry through a book’s hold-options sheet and deleting a failed receipt scan, which updated both All and Needs attention counts. After restoring the receipt fixture’s file, retry through its hold-options sheet succeeded and showed All 0 and “No receipts yet” at 1.5× text. A pending refresh was attempted, but the delayed-response proxy exceeded the client timeout, so this session did not establish the stale-GET race behavior. No animation recording was captured. Android assembly, lint and formatting passed; no automated Android tests or harnesses were added or run.
 
-Current behavior: [shared deletion flow](../../references/screens.md#5-receipt-and-book-options-sheet-and-delete-confirmation) and [DeletionFeedback](../../references/components.md#deletionfeedback). Native mirrors: `OptionsSheet.kt`, `BookOverlay.kt` and `DeletionFeedback.kt` in `assets/compose/`.
+The feedback in these captures is historical: on October 31, 2026 the icon-led `FeedbackSnackbar` replaced `DeletionFeedback` with new copy; the rollback and reconciliation shown are unchanged. Current behavior: [shared deletion flow](../../references/screens.md#5-receipt-and-book-options-sheet-and-delete-confirmation) and [FeedbackSnackbar](../../references/components.md#feedbacksnackbar). Native mirrors: `OptionsSheet.kt`, `BookOverlay.kt` and `FeedbackSnackbar.kt` in `assets/compose/`.
 
 ## Section navigation and add button (October 22, 2026, approved design)
 
@@ -120,7 +146,7 @@ Captured in the same emulator session as the empty state above. Back and outside
 
 ## Book list options and layout (native implementation)
 
-October 24, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator, 720×1600px at 280dpi. These are the current Books row and options-header references: 48×56dp covers, bottom-end tags, a 16dp text/tag gap, and dividers aligned with the text at 76dp. Saved books follow locale-aware A–Z title order; unfinished and failed scans stay pinned above them, with no new sort control.
+October 24, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator, 720×1600px at 280dpi. These were the Books row and options-header references: 48×56dp covers, bottom-end tags, a 16dp text/tag gap, and dividers aligned with the text at 76dp. Their category tags are historical: on October 31, 2026 saved-book rows and book sheet headers dropped the category tag and rows dropped the reading level and show “—” for a missing author ([current captures](#add-author-books-rows-and-feedback-snackbar-native-implementation)); covers, dividers and scan tags are unchanged. Saved books follow locale-aware A–Z title order; unfinished and failed scans stay pinned above them, with no new sort control.
 
 - [Light list](book-list-options-native/list-light.png) and [dark list](book-list-options-native/list-dark.png): generated covers, a synthetic photo cover, short authors and long-author ellipsis with a clear tag gap.
 - [Pressed row](book-list-options-native/pressed-light.png): the grey fill is inset 6dp from the row bounds, leaving white card surface visible all around; content and touch bounds stay in place.
