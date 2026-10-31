@@ -1,9 +1,9 @@
 # @goho/goho-mcp
 
 Goho receipts and books are small, structured records that give an MCP client a
-useful read and write workflow. This local stdio server exposes receipt and book
-lookup, creation, correction, and deletion through the existing Goho HTTP API, so
-it can be tested without hosting or an OpenAI key.
+useful read and write workflow. This local Streamable HTTP server exposes receipt
+and book lookup, creation, correction, and deletion through the existing Goho HTTP
+API, so it can be tested without hosting or an OpenAI key.
 
 ## Agent-first setup
 
@@ -27,8 +27,9 @@ it running. In another terminal, seed only that dev API with:
 
 GOHO_SERVER_URL=http://127.0.0.1:3000 pnpm --filter @goho/goho-server db:seed
 
-Configure my MCP client to launch programs/goho-mcp with pnpm over stdio, using
-absolute paths and the dev API. Reload the client if needed.
+Start programs/goho-mcp with pnpm in a third terminal and keep it running.
+Connect my MCP client to http://127.0.0.1:3001/mcp using Streamable HTTP.
+Reload the client if needed.
 
 Call list_receipts, get_receipt with a returned ID, and create_receipt with
 fictional data. Read the created receipt to verify it. Run pnpm check and report
@@ -64,33 +65,53 @@ This creates four fictional receipts and five books through the API. Receipts ar
 skipped when any receipt already exists and books are matched by title and author,
 so running it again does not duplicate either.
 
-## Connect an MCP client
+## Start the MCP server
 
-Configure your MCP client to launch this program with the **stdio** transport.
-Use your checkout's absolute path in place of `/absolute/path/to/goho`:
+In a third terminal at the repository root, start the MCP server and keep it
+running:
 
 ```bash
-pnpm --dir /absolute/path/to/goho/programs/goho-mcp start
+pnpm --filter @goho/goho-mcp start
 ```
 
-From the repository root, register it with Codex CLI:
+Use `dev` instead of `start` to restart on source changes. The server logs its
+address on startup and serves:
+
+- `POST /mcp`, the Streamable HTTP MCP endpoint. It supports MCP protocol
+  revisions `2025-11-25` and `2025-06-18`.
+- `GET /health`, which returns HTTP 200 with `{"data":{"status":"ok"}}` while
+  the MCP server is running. It does not check the Goho API.
+
+Configure it with these environment variables:
+
+| Variable          | Default                 | Purpose                                         |
+| ----------------- | ----------------------- | ----------------------------------------------- |
+| `GOHO_MCP_HOST`   | `127.0.0.1`             | Interface to listen on                          |
+| `GOHO_MCP_PORT`   | `3001`                  | Port to listen on, from 0 to 65535; 0 picks one |
+| `GOHO_SERVER_URL` | `http://127.0.0.1:3000` | Goho API the tools call                         |
+
+The endpoint has no authentication, so anyone who can reach it can read, change,
+and delete receipts and books. The loopback default keeps it on your machine.
+Only bind another interface on a trusted network, such as a tailnet restricted
+to your devices. The server rejects requests from browser origins, but that is
+not access control: other clients can still call it.
+
+## Connect an MCP client
+
+Register the running server with Codex CLI:
 
 ```bash
-codex mcp add goho -- "$(command -v pnpm)" --dir "$PWD/programs/goho-mcp" start
+codex mcp add goho --url http://127.0.0.1:3001/mcp
 ```
 
 Or register it with Claude Code:
 
 ```bash
-claude mcp add --transport stdio goho -- "$(command -v pnpm)" --dir "$PWD/programs/goho-mcp" start
+claude mcp add --transport http goho http://127.0.0.1:3001/mcp
 ```
 
-Start a new session in either client and ask, "List my Goho receipts."
-
-The MCP server connects to `http://127.0.0.1:3000` by default. If your dev API
-uses another address, set `GOHO_SERVER_URL` in the MCP server's environment.
-Keep the Goho API running while using the tools. The MCP process stays running
-while the client is connected and reserves stdout for protocol messages.
+Start a new session in either client and ask, "List my Goho receipts." Keep the
+Goho API and the MCP server running while using the tools.
 
 ## Try the tools
 

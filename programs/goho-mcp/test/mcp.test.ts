@@ -1,9 +1,10 @@
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
+import { FetchHttpClient, HttpClient } from "effect/http";
 import { expect } from "vitest";
 
-import { startMcpClient } from "./support/mcp-client.ts";
+import { connectMcpClient, startMcpClient, startMcpServer } from "./support/mcp-client.ts";
 
 const ToolList = Schema.Struct({
   tools: Schema.Array(
@@ -21,7 +22,7 @@ const ToolList = Schema.Struct({
 
 it.effect("registers the receipt and book tools through MCP", () =>
   Effect.gen(function* () {
-    const client = yield* startMcpClient("http://127.0.0.1:3000");
+    const client = yield* startMcpClient("http://127.0.0.1:1");
     const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
       yield* client.request(2, "tools/list", {}),
     );
@@ -66,4 +67,34 @@ it.effect("registers the receipt and book tools through MCP", () =>
       });
     }
   }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("negotiates the earlier supported MCP protocol revision", () =>
+  Effect.gen(function* () {
+    const { url } = yield* startMcpServer("http://127.0.0.1:1");
+    const client = yield* connectMcpClient(url, "2025-06-18");
+    const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
+      yield* client.request(2, "tools/list", {}),
+    );
+    expect(discovered.tools).toHaveLength(11);
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("reports liveness without contacting the API", () =>
+  Effect.gen(function* () {
+    const { url } = yield* startMcpServer("http://127.0.0.1:1");
+    const response = yield* HttpClient.get(`${url}/health`);
+    expect(response.status).toBe(200);
+    expect(yield* response.json).toEqual({ data: { status: "ok" } });
+  }).pipe(Effect.provide([NodeServices.layer, FetchHttpClient.layer])),
+);
+
+it.effect("stops listening when the process is terminated", () =>
+  Effect.gen(function* () {
+    const { child, url } = yield* startMcpServer("http://127.0.0.1:1");
+    yield* child.kill();
+    expect(yield* child.isRunning).toBe(false);
+    const refused = yield* HttpClient.get(`${url}/health`).pipe(Effect.flip);
+    expect(refused._tag).toBe("HttpClientError");
+  }).pipe(Effect.provide([NodeServices.layer, FetchHttpClient.layer])),
 );

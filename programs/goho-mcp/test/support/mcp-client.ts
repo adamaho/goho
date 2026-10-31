@@ -1,4 +1,5 @@
-import { Effect, Path, Queue, Schema, Stream } from "effect";
+import { Deferred, Effect, identity, Path, Schema, Stream } from "effect";
+import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
 import { ChildProcess } from "effect/process";
 import { expect } from "vitest";
 
@@ -84,58 +85,96 @@ export const ErrorResult = Schema.Struct({
 });
 
 /**
- * Starts and initializes the MCP process for integration tests.
+ * Starts the MCP program on a free loopback port for integration tests.
  *
  * @category testing
  * @since 0.1.0
  */
-export const startMcpClient = (baseUrl: string) =>
+export const startMcpServer = (baseUrl: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
     const mainPath = yield* path.fromFileUrl(new URL("../../src/main.ts", import.meta.url));
 
-    const input = yield* Queue.unbounded<string>();
-    const output = yield* Queue.unbounded<string>();
-
     const child = yield* ChildProcess.make(process.execPath, [mainPath], {
-      env: { GOHO_SERVER_URL: baseUrl },
+      env: { GOHO_SERVER_URL: baseUrl, GOHO_MCP_HOST: "127.0.0.1", GOHO_MCP_PORT: "0" },
       extendEnv: true,
-      stdin: {
-        stream: Stream.fromQueue(input).pipe(Stream.encodeText),
-        endOnDone: false,
-      },
+      stdin: "ignore",
       stdout: "pipe",
-      stderr: "pipe",
+      stderr: "inherit",
     });
 
+    // Keep draining logs so the child never blocks on a full stdout pipe.
+    const listening = yield* Deferred.make<string>();
     yield* child.stdout.pipe(
       Stream.decodeText,
       Stream.splitLines,
-      Stream.runForEach((line) => Queue.offer(output, line)),
+      Stream.runForEach((line) => {
+        const url = /Listening on (\S+)/.exec(line)?.[1];
+        return url === undefined ? Effect.void : Deferred.succeed(listening, url);
+      }),
       Effect.forkScoped,
     );
 
-    const send = (method: string, params: unknown, id?: number) =>
-      Queue.offer(input, `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`);
+    return { child, url: yield* Deferred.await(listening) };
+  });
+
+/**
+ * Initializes a Streamable HTTP MCP session against a running MCP program.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const connectMcpClient = (url: string, protocolVersion = "2025-11-25") =>
+  Effect.gen(function* () {
+    const http = yield* HttpClient.HttpClient;
+    let sessionId: string | undefined;
+    let negotiatedVersion: string | undefined;
+
+    const post = (message: unknown) =>
+      HttpClientRequest.post(`${url}/mcp`).pipe(
+        HttpClientRequest.accept("application/json, text/event-stream"),
+        sessionId === undefined
+          ? identity
+          : HttpClientRequest.setHeader("mcp-session-id", sessionId),
+        negotiatedVersion === undefined
+          ? identity
+          : HttpClientRequest.setHeader("mcp-protocol-version", negotiatedVersion),
+        HttpClientRequest.bodyJsonUnsafe(message),
+        http.execute,
+      );
+
+    const send = (method: string, params: unknown) =>
+      Effect.gen(function* () {
+        const response = yield* post({ jsonrpc: "2.0", method, params });
+        expect(response.status).toBe(202);
+      });
 
     const request = (id: number, method: string, params: unknown) =>
       Effect.gen(function* () {
-        yield* send(method, params, id);
-        const response = yield* Schema.decodeEffect(RpcResponse)(yield* Queue.take(output));
-        expect(response.id).toBe(id);
-        return response.result;
+        const response = yield* post({ jsonrpc: "2.0", id, method, params });
+        expect(response.status).toBe(200);
+        sessionId ??= response.headers["mcp-session-id"];
+        // Responses are plain JSON or server-sent events carrying JSON messages.
+        const text = yield* response.text;
+        const messages = response.headers["content-type"]?.startsWith("text/event-stream")
+          ? text.split("\n").flatMap((line) => (line.startsWith("data: ") ? [line.slice(6)] : []))
+          : [text];
+        const decoded = yield* Schema.decodeEffect(RpcResponse)(messages.at(-1) ?? "");
+        expect(decoded.id).toBe(id);
+        return decoded.result;
       });
 
     const initialized = yield* Schema.decodeUnknownEffect(
       Schema.Struct({ protocolVersion: Schema.String }),
     )(
       yield* request(1, "initialize", {
-        protocolVersion: "2025-11-25",
+        protocolVersion,
         capabilities: {},
         clientInfo: { name: "goho-mcp-test", version: "1.0.0" },
       }),
     );
-    expect(initialized.protocolVersion).toBe("2025-11-25");
+    expect(initialized.protocolVersion).toBe(protocolVersion);
+    negotiatedVersion = protocolVersion;
     yield* send("notifications/initialized", undefined);
 
     return {
@@ -143,4 +182,13 @@ export const startMcpClient = (baseUrl: string) =>
       call: (id: number, name: string, args: unknown) =>
         request(id, "tools/call", { name, arguments: args }),
     };
-  });
+  }).pipe(Effect.provide(FetchHttpClient.layer));
+
+/**
+ * Starts the MCP program and initializes an HTTP session for integration tests.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const startMcpClient = (baseUrl: string) =>
+  Effect.flatMap(startMcpServer(baseUrl), ({ url }) => connectMcpClient(url));
