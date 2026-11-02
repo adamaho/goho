@@ -38,3 +38,4 @@ duplicate receipts or books.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for first-time setup, the development
 workflow, verification commands, and workspace conventions.
+
