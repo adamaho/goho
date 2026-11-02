@@ -18,6 +18,9 @@ val Geist =
         Font(R.font.geist_semibold, FontWeight.SemiBold),
     )
 
+// Geist Serif is a display serif with a single 400 weight, used only for titles.
+val GeistSerif = FontFamily(Font(R.font.geist_serif_regular, FontWeight.Normal))
+
 private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
 
 @Immutable
@@ -56,11 +59,11 @@ val GohoType =
     GohoTypography(
         statusTitle =
             TextStyle(
-                fontFamily = Geist,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp,
-                lineHeight = 26.sp,
-                letterSpacing = (-0.02).em,
+                fontFamily = GeistSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 22.sp,
+                lineHeight = 28.sp,
+                letterSpacing = (-0.01).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         display =
@@ -109,29 +112,29 @@ val GohoType =
             ),
         title =
             TextStyle(
-                fontFamily = Geist,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 22.sp,
-                lineHeight = 28.sp,
-                letterSpacing = (-0.025).em,
+                fontFamily = GeistSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                letterSpacing = (-0.01).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         screenTitle =
             TextStyle(
-                fontFamily = Geist,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 24.sp,
-                lineHeight = 30.sp,
-                letterSpacing = (-0.015).em,
+                fontFamily = GeistSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 28.sp,
+                lineHeight = 34.sp,
+                letterSpacing = (-0.01).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         bookTitle =
             TextStyle(
-                fontFamily = Geist,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 26.sp,
-                lineHeight = 32.sp,
-                letterSpacing = (-0.02).em,
+                fontFamily = GeistSerif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
+                letterSpacing = (-0.01).em,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
         bookAuthor =

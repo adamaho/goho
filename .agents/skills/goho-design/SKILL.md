@@ -7,7 +7,7 @@ description: Goho's visual design system, character identities, launcher icons, 
 
 Latest change: October 31, 2026 [Add author](#add-author-and-feedback-snackbar) for saved books without an author, and the shared `FeedbackSnackbar` that replaces `DeletionFeedback` for every background failure. Design handoff: October 22, 2026 section navigation (title menu with title swipe) and the shared Add button, which replaces the Scan button; see [Sections and navigation](#sections-and-navigation). Builds on the October 21, 2026 item category tags for receipt lists, shared sheet headers and receipt details, updated with the Categories breakdown card and single-category example. Preserve the approved Bram, button and layout refinements below. See [Category and upload tags](#category-and-upload-tags) and the [handoff mockups](assets/mockups/README.md#item-category-tags-october-21-2026-approved-design). The written specs take precedence over older examples in the reference assets.
 
-Goho is the family’s app. The latest design organises it into Receipts and Books sections, with more modules later; the native app implements Receipts, a Books list whose saved books open the lifted-book overlay on tap and the shared options sheet on a hold, Books search over the saved titles and authors, and scanning receipts or book covers from Add. The look is **warm, soft and friendly, with financial-app precision**: pale lavender-white in light mode, violet-charcoal in dark mode, one lavender accent, generous rounded corners, Geist type with restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
+Goho is the family’s app. The latest design organises it into Receipts and Books sections, with more modules later; the native app implements Receipts, a Books list whose saved books open the lifted-book overlay on tap and the shared options sheet on a hold, Books search over the saved titles and authors, and scanning receipts or book covers from Add. The look is **warm, soft and friendly, with financial-app precision**: pale lavender-white in light mode, violet-charcoal in dark mode, one lavender accent, generous rounded corners, Geist type with Geist Serif titles, restrained weights and proportional figures, grouped cards, and buttons that press down with a small spring.
 
 Think "Family wallet's warmth and motion, Linear's calm surfaces", never "Material starter template".
 
@@ -55,7 +55,7 @@ Approved and implemented natively, October 31, 2026. A saved book whose author i
 
 ## Geist typography
 
-Bundle Geist Regular (400), Medium (500), and SemiBold (600). Do not use weight 700 or Geist Mono. Apply the current sizes, weights and tracking in `references/tokens.md`, keeping the approved proportional digits and fixed Receipts header.
+Bundle Geist Regular (400), Medium (500), and SemiBold (600), plus Geist Serif Regular (400) for titles only (`screenTitle`, `title`, `statusTitle`, `bookTitle`). Do not use weight 700 or Geist Mono. Apply the current sizes, weights and tracking in `references/tokens.md`, keeping the approved proportional digits and fixed Receipts header.
 
 ## Non-negotiables
 

@@ -241,6 +241,9 @@ val Geist = FontFamily(
     Font(R.font.geist_semibold, FontWeight.SemiBold),
 )
 
+// Bundle Geist Serif (Vercel, OFL) as res/font/geist_serif_regular.ttf. It has one 400 weight and is used only for titles.
+val GeistSerif = FontFamily(Font(R.font.geist_serif_regular, FontWeight.Normal))
+
 private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
 
 @Immutable
@@ -265,7 +268,7 @@ data class GohoTypography(
 
 val GohoType = GohoTypography(
     display = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 44.sp, lineHeight = 48.sp, letterSpacing = (-0.035).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    title = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.025).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    title = TextStyle(fontFamily = GeistSerif, fontWeight = FontWeight.Normal, fontSize = 26.sp, lineHeight = 32.sp, letterSpacing = (-0.01).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     wordmark = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 36.sp, letterSpacing = (-0.035).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     rowTitle = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.01).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     button = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),

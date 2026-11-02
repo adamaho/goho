@@ -1,0 +1,9 @@
+Geist Serif by Vercel, with Andrés Briganti and Mark Davis.
+Source: npm package geist@1.9.0, dist/fonts/geist-serif/GeistSerif-Regular.woff2
+Package integrity: sha512-uxiyxH5PaKDaK2//ln06NxJEz5gc6771BTwSs1YFgNnASGtp1SYD3VZShSIijvlNwDjMgHnzqye4MmIUTspEzw==
+Source SHA-256: d11c9077e61bda553e2eea121409c584504319e08f972d11e0a38ed4b14de398
+License: SIL Open Font License 1.1 (OFL-GeistSerif.txt).
+Unwrapped from WOFF2 to TrueType with fontTools 4.68.0 (flavor=None);
+outlines and tables are unchanged.
+Geist Serif ships one weight (400). The app uses the Regular variant with
+round dots, not the Square, Triangle or Heart variants.
