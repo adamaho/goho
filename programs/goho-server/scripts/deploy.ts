@@ -60,3 +60,4 @@ Effect.gen(function* () {
   );
   yield* Console.log(`Deployed ${image} to ${host}`);
 }).pipe(Effect.provide(NodeServices.layer), NodeRuntime.runMain);
+
