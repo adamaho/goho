@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Array, Effect } from "effect";
 import { SqlClient } from "effect/sql";
 
 // Canonical catalog with display metadata: icon identifiers for the app's bundled tag
@@ -12,7 +12,7 @@ const presets = [
   { name: "health", icon: "health", color: "red" },
   { name: "gas", icon: "transport", color: "blue" },
   { name: "charity", icon: "other", color: "grey" },
-];
+] as const;
 
 // Existing names consolidated into each canonical category.
 const aliases = [
@@ -32,7 +32,7 @@ const aliases = [
   { alias: "health and fitness", canonical: "health" },
   { alias: "fuel", canonical: "gas" },
   { alias: "charitable donation", canonical: "charity" },
-];
+] as const;
 
 /**
  * Moves the required category reference from receipts to their items, seeds and
@@ -60,7 +60,7 @@ export default Effect.gen(function* () {
   `;
   yield* sql`
     INSERT INTO category_presets
-    ${sql.insert(presets.map((preset, position) => ({ position, ...preset })))}
+    ${sql.insert(Array.map(presets, (preset, position) => ({ position, ...preset })))}
   `;
   yield* sql`
     CREATE TEMPORARY TABLE category_aliases (alias text PRIMARY KEY, canonical text NOT NULL)

@@ -5,19 +5,21 @@ import { Config, Layer, Schema } from "effect";
 import { McpProtocol, McpServer } from "effect/ai";
 import { HttpRouter, HttpServerResponse } from "effect/http";
 
+import * as GohoServerClient from "#src/goho-server-client.ts";
+
 import * as GohoTools from "./tools/index.ts";
 
 const McpLive = Layer.effectDiscard(McpServer.registerToolkit(GohoTools.toolkit)).pipe(
   Layer.provide(GohoTools.layer),
-  Layer.provide(
-    McpServer.layerHttp({
-      name: "goho-mcp",
-      version: "0.0.0",
-      path: "/mcp",
-      protocols: [McpProtocol.v2025_11_25, McpProtocol.v2025_06_18],
-    }),
-  ),
 );
+
+const McpHttpLive = McpServer.layerHttp({
+  name: "goho-mcp",
+  version: "0.0.0",
+  path: "/mcp",
+  protocols: [McpProtocol.v2025_11_25, McpProtocol.v2025_06_18],
+  registrations: McpLive,
+}).pipe(HttpRouter.provideRequest(GohoServerClient.layer));
 
 // Liveness only: it does not check that the Goho API is reachable.
 const HealthLive = HttpRouter.add(
@@ -26,7 +28,7 @@ const HealthLive = HttpRouter.add(
   HttpServerResponse.jsonUnsafe({ data: { status: "ok" } }),
 );
 
-const ServerLive = HttpRouter.serve(Layer.mergeAll(McpLive, HealthLive)).pipe(
+const ServerLive = HttpRouter.serve(Layer.mergeAll(McpHttpLive, HealthLive)).pipe(
   Layer.provide(
     NodeHttpServer.layerConfig(createServer, {
       host: Config.String("GOHO_MCP_HOST").pipe(Config.withDefault("127.0.0.1")),

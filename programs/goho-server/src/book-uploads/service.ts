@@ -6,7 +6,8 @@ import {
   BookUploadNotFound,
   BookUploadsUnavailable,
 } from "@goho/goho-api/book-uploads";
-import { Context, Crypto, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
+import { SecureRandom } from "effect/crypto";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
@@ -92,7 +93,7 @@ export const layer = Layer.effect(
     const repository = yield* BookUploadRepository.Service;
     const queue = yield* BookUploadQueue.Service;
     const transaction = yield* Transaction.Service;
-    const crypto = yield* Crypto.Crypto;
+    const random = yield* SecureRandom.SecureRandom;
 
     const deletionFailed = unavailable("Book upload deletion failed");
 
@@ -117,7 +118,7 @@ export const layer = Layer.effect(
 
     const create = Effect.fn("@goho/BookUploads.create")(
       function* (input: UploadInput) {
-        const uploadId = BookUploadId.make(yield* crypto.randomUUIDv4());
+        const uploadId = BookUploadId.make(yield* random.uuidV4());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
         const upload = yield* transaction

@@ -1,6 +1,7 @@
-import { NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Crypto, Effect, FileSystem, Path, Result } from "effect";
+import { Effect, FileSystem, Path, Result } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { expect } from "vitest";
 
 import * as FileStorage from "#src/file-storage.ts";
@@ -27,25 +28,25 @@ it.effect("stores, reads, and deletes files in its configured directory", () =>
     yield* storage.delete(fileId);
     expect(yield* fileSystem.exists(path.join(directory, fileId))).toBe(false);
     yield* storage.delete(fileId);
-  }).pipe(Effect.provide(NodeServices.layer)),
+  }).pipe(Effect.provide([NodeServices.layer, NodeCrypto.layer])),
 );
 
 it.effect("maps filesystem failures to the storage boundary", () =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
-    const crypto = yield* Crypto.Crypto;
+    const random = yield* SecureRandom.SecureRandom;
     const directory = yield* fileSystem.makeTempDirectoryScoped({
       prefix: "goho-storage-test-",
     });
     const storage = yield* FileStorage.Service.pipe(
       Effect.provide(FileStorage.layerFileSystem({ directory })),
     );
-    const missingFileId = FileStorage.FileId.make(yield* crypto.randomUUIDv4());
+    const missingFileId = FileStorage.FileId.make(yield* random.uuidV4());
     const result = yield* storage.get(missingFileId).pipe(Effect.result);
 
     expect(Result.isFailure(result) && result.failure).toMatchObject({
       _tag: "GohoServer.FileStorage.StorageError",
       operation: "get",
     });
-  }).pipe(Effect.provide(NodeServices.layer)),
+  }).pipe(Effect.provide([NodeServices.layer, NodeCrypto.layer])),
 );

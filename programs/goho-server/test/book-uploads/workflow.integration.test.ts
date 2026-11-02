@@ -3,18 +3,8 @@ import { it } from "@effect/vitest";
 import { Ai, Postgres } from "@goho/core";
 import { BookUploadId } from "@goho/goho-api/book-uploads";
 import type { BookId } from "@goho/goho-api/books";
-import {
-  Config,
-  Context,
-  Crypto,
-  Effect,
-  FileSystem,
-  Layer,
-  Option,
-  Redacted,
-  Ref,
-  Result,
-} from "effect";
+import { Config, Context, Effect, FileSystem, Layer, Option, Redacted, Ref, Result } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { SqlClient } from "effect/sql";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
@@ -38,8 +28,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+    const random = yield* SecureRandom.SecureRandom;
+    const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -96,8 +86,7 @@ const InfrastructureLive = Layer.mergeAll(
   Transaction.layer,
   StorageLive,
   AiLive,
-  NodeCrypto.layer,
-);
+).pipe(Layer.provideMerge(NodeCrypto.layer));
 
 const TestLive = Layer.mergeAll(BookUploads.layer, Books.layer).pipe(
   Layer.provideMerge(InfrastructureLive),
@@ -363,11 +352,11 @@ it.effect("serializes cover choice and book deletion on the book lock", () =>
   Effect.gen(function* () {
     const books = yield* BookRepository.Service;
     const repo = yield* BookUploadRepository.Service;
-    const crypto = yield* Crypto.Crypto;
+    const random = yield* SecureRandom.SecureRandom;
     const book = yield* books.findOrCreate({ ...hobbit, category: "Fiction" });
     const processing = (fileId: string) =>
       Effect.gen(function* () {
-        const id = BookUploadId.make(yield* crypto.randomUUIDv4());
+        const id = BookUploadId.make(yield* random.uuidV4());
         yield* repo.createQueued({
           id,
           fileId: FileStorage.FileId.make(fileId),
@@ -507,7 +496,7 @@ it.effect("fails book uploads their queue abandoned and leaves other queues' job
     const sql = yield* SqlClient.SqlClient;
     const uploads = yield* BookUploads.Service;
     const repo = yield* BookUploadRepository.Service;
-    const crypto = yield* Crypto.Crypto;
+    const random = yield* SecureRandom.SecureRandom;
     // Seeds what a crash during the final attempt leaves: the job failed, the upload did not.
     const abandoned = yield* upload(1);
     yield* repo.markProcessing(abandoned.id);
@@ -517,7 +506,7 @@ it.effect("fails book uploads their queue abandoned and leaves other queues' job
     `;
     // Only a receipt job with this ID failed; the upload has no failed book job.
     const unrelated = yield* repo.createQueued({
-      id: BookUploadId.make(yield* crypto.randomUUIDv4()),
+      id: BookUploadId.make(yield* random.uuidV4()),
       fileId: FileStorage.FileId.make("unrelated-file"),
       fileName: "cover.png",
       contentType: "image/png",

@@ -4,7 +4,8 @@ import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { Book, BookId, type CreateBookRequest } from "@goho/goho-api/books";
 import * as Client from "@goho/goho-server-client/client";
-import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result, Schema } from "effect";
+import { Config, Context, Effect, Layer, Option, Redacted, Result, Schema } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
@@ -37,8 +38,8 @@ const databaseMigratedBy = <E, R>(migrate: Effect.Effect<unknown, E, R>) =>
       const url = yield* Config.Redacted("TEST_DATABASE_URL");
       const adminContext = yield* Layer.build(Postgres.layer({ url }));
       const admin = Context.get(adminContext, SqlClient.SqlClient);
-      const crypto = yield* Crypto.Crypto;
-      const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+      const random = yield* SecureRandom.SecureRandom;
+      const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
       yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
         admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
       );

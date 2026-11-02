@@ -6,7 +6,6 @@ import { ReceiptId } from "@goho/goho-api/receipts";
 import {
   Config,
   Context,
-  Crypto,
   Effect,
   FileSystem,
   Layer,
@@ -17,6 +16,7 @@ import {
   Result,
   Schema,
 } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { SqlClient } from "effect/sql";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
@@ -39,8 +39,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+    const random = yield* SecureRandom.SecureRandom;
+    const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -74,8 +74,8 @@ const ReceiptUploadsLive = ReceiptUploads.layer.pipe(
 );
 
 const makeJob = Effect.gen(function* () {
-  const crypto = yield* Crypto.Crypto;
-  return { uploadId: ReceiptUploadId.make(yield* crypto.randomUUIDv4()) };
+  const random = yield* SecureRandom.SecureRandom;
+  return { uploadId: ReceiptUploadId.make(yield* random.uuidV4()) };
 }).pipe(Effect.provide(NodeCrypto.layer));
 
 class RetryableProcessingError extends Schema.TaggedError<RetryableProcessingError>()(
@@ -298,7 +298,7 @@ it.effect(
       const repeated = yield* uploads.delete(created.id).pipe(Effect.result);
       expect(Result.isFailure(repeated) && repeated.failure._tag).toBe("NotFound");
       expect(deleted).toEqual([failedUpload.fileId, failedUpload.fileId]);
-    }).pipe(Effect.provide([RepositoryLive, DatabaseLive, NodeServices.layer])),
+    }).pipe(Effect.provide([RepositoryLive, DatabaseLive, NodeServices.layer, NodeCrypto.layer])),
 );
 
 const MissingPhotoLive = Layer.unwrap(
@@ -306,7 +306,7 @@ const MissingPhotoLive = Layer.unwrap(
     const fs = yield* FileSystem.FileSystem;
     const directory = yield* fs.makeTempDirectoryScoped({ prefix: "goho-upload-missing-test-" });
     const storage = FileStorage.layerFileSystem({ directory }).pipe(
-      Layer.provide(NodeServices.layer),
+      Layer.provide([NodeServices.layer, NodeCrypto.layer]),
     );
     return ReceiptUploads.layer.pipe(
       Layer.provideMerge([

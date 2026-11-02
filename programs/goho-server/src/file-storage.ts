@@ -1,4 +1,5 @@
-import { Context, Crypto, Effect, FileSystem, Layer, Path, Schema } from "effect";
+import { Context, Effect, FileSystem, Layer, Path, Schema } from "effect";
+import { SecureRandom } from "effect/crypto";
 
 import { NonEmptyText } from "#src/schema.ts";
 
@@ -88,7 +89,7 @@ export const layerFileSystem = (options: { readonly directory: string }) =>
   Layer.effect(
     Service,
     Effect.gen(function* () {
-      const crypto = yield* Crypto.Crypto;
+      const random = yield* SecureRandom.SecureRandom;
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
 
@@ -98,7 +99,7 @@ export const layerFileSystem = (options: { readonly directory: string }) =>
 
       const put = Effect.fn("@goho/FileStorage.FileSystem.put")(function* (file: FileToStore) {
         const input = yield* Schema.decodeEffect(FileToStore)(file);
-        const fileId = yield* Schema.decodeEffect(FileId)(yield* crypto.randomUUIDv4());
+        const fileId = yield* Schema.decodeEffect(FileId)(yield* random.uuidV4());
         yield* fileSystem.writeFile(storedPath(fileId), input.bytes, {
           flag: "wx",
           mode: 0o600,

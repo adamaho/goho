@@ -10,18 +10,8 @@ import {
   ReceiptItemId,
 } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import {
-  Config,
-  Context,
-  Crypto,
-  Effect,
-  Layer,
-  Option,
-  Redacted,
-  Ref,
-  Result,
-  Schema,
-} from "effect";
+import { Config, Context, Effect, Layer, Option, Redacted, Ref, Result, Schema } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
@@ -117,8 +107,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+    const random = yield* SecureRandom.SecureRandom;
+    const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -142,8 +132,8 @@ const migratedDatabase = (migrations: Parameters<typeof PgMigrator.fromRecord>[0
       const url = yield* Config.Redacted("TEST_DATABASE_URL");
       const adminContext = yield* Layer.build(Postgres.layer({ url }));
       const admin = Context.get(adminContext, SqlClient.SqlClient);
-      const crypto = yield* Crypto.Crypto;
-      const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+      const random = yield* SecureRandom.SecureRandom;
+      const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
       yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
         admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
       );
@@ -2077,15 +2067,15 @@ const consolidated = {
 it.effect("moves populated categories onto items and consolidates them without changing data", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
-    yield* sql`
-      INSERT INTO categories ${sql.insert(
-        Object.keys(consolidated).map((name) => ({
+    for (const name of Object.keys(consolidated)) {
+      yield* sql`
+        INSERT INTO categories ${sql.insert({
           name,
           created_at: "2026-10-01T12:00:00Z",
           updated_at: "2026-10-02T12:00:00Z",
-        })),
-      )}
-    `;
+        })}
+      `;
+    }
     // Each receipt is named after its category; seafood is left unused.
     yield* sql`
       INSERT INTO receipts (

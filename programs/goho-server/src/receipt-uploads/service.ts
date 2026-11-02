@@ -4,7 +4,8 @@ import {
   ReceiptUploadId,
 } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
-import { Context, Crypto, Effect, Layer, Option, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { HttpApiError } from "effect/http-api";
 
 import * as Transaction from "#src/database/transaction.ts";
@@ -105,7 +106,7 @@ export const layer = Layer.effect(
     const repository = yield* ReceiptUploadRepository.Service;
     const queue = yield* ReceiptUploadQueue.Service;
     const transaction = yield* Transaction.Service;
-    const crypto = yield* Crypto.Crypto;
+    const random = yield* SecureRandom.SecureRandom;
 
     const deleteUpload = Effect.fn("@goho/ReceiptUploads.deleteUpload")(
       (uploadId: ReceiptUploadId) =>
@@ -128,7 +129,7 @@ export const layer = Layer.effect(
 
     const create = Effect.fn("@goho/ReceiptUploads.create")(
       function* (input: UploadInput) {
-        const uploadId = ReceiptUploadId.make(yield* crypto.randomUUIDv4());
+        const uploadId = ReceiptUploadId.make(yield* random.uuidV4());
         const file = yield* Schema.decodeEffect(UploadInput)(input);
         const fileId = yield* storage.put(file);
         const upload = yield* transaction

@@ -3,7 +3,8 @@ import { it } from "@effect/vitest";
 import { Postgres } from "@goho/core";
 import { ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import { ReceiptId } from "@goho/goho-api/receipts";
-import { Config, Context, Crypto, Effect, Layer, Option, Redacted, Result } from "effect";
+import { Config, Context, Effect, Layer, Option, Redacted, Result } from "effect";
+import { SecureRandom } from "effect/crypto";
 import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
@@ -17,8 +18,8 @@ const DatabaseLive = Layer.effectContext(
     const url = yield* Config.Redacted("TEST_DATABASE_URL");
     const adminContext = yield* Layer.build(Postgres.layer({ url }));
     const admin = Context.get(adminContext, SqlClient.SqlClient);
-    const crypto = yield* Crypto.Crypto;
-    const schema = `test_${(yield* crypto.randomUUIDv4()).replaceAll("-", "")}`;
+    const random = yield* SecureRandom.SecureRandom;
+    const schema = `test_${(yield* random.uuidV4()).replaceAll("-", "")}`;
     yield* Effect.acquireRelease(admin`CREATE SCHEMA ${admin(schema)}`, () =>
       admin`DROP SCHEMA ${admin(schema)} CASCADE`.pipe(Effect.orDie),
     );
@@ -36,16 +37,16 @@ const DatabaseLive = Layer.effectContext(
 ).pipe(Layer.provide(NodeCrypto.layer));
 
 const makeUpload = Effect.gen(function* () {
-  const crypto = yield* Crypto.Crypto;
+  const random = yield* SecureRandom.SecureRandom;
   return {
-    id: ReceiptUploadId.make(yield* crypto.randomUUIDv4()),
+    id: ReceiptUploadId.make(yield* random.uuidV4()),
     fileId: FileId.make("drive-file-id"),
     fileName: "example.png",
     contentType: "image/png" as const,
   };
 }).pipe(Effect.provide(NodeCrypto.layer));
 
-const makeUploadId = Crypto.Crypto.use((crypto) => crypto.randomUUIDv4()).pipe(
+const makeUploadId = SecureRandom.SecureRandom.use((random) => random.uuidV4()).pipe(
   Effect.map(ReceiptUploadId.make),
   Effect.provide(NodeCrypto.layer),
 );

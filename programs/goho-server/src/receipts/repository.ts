@@ -258,7 +258,7 @@ export const layer = Layer.effect(
     });
 
     const insertItemRows = SqlSchema.void({
-      Request: Schema.Array(ItemInsertRow),
+      Request: Schema.NonEmptyArray(ItemInsertRow),
       execute: (rows) => sql`INSERT INTO receipt_items ${sql.insert(rows)}`,
     });
 
