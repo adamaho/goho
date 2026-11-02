@@ -1,7 +1,7 @@
 # @goho/goho-cli
 
-Calls the Goho server to upload, inspect, list, patch, and delete receipts and books. OpenAI credentials
-belong only to the [server](../goho-server/README.md).
+Calls the Goho server to check its status and to upload, inspect, list, patch, and delete receipts and
+books. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -13,6 +13,16 @@ cp programs/goho-cli/.env.example programs/goho-cli/.env
 
 `GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`.
 Start the server before invoking the CLI.
+
+## Check server status
+
+```bash
+pnpm --filter @goho/goho-cli start status
+```
+
+The command prints `{ "status": "ok" }` as JSON when the server is responding. An
+unreachable or failing server exits nonzero. It does not check the database or
+providers.
 
 ## List receipts
 
