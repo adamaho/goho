@@ -14,7 +14,9 @@
     "start": "node src/main.ts",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "image": "node scripts/build-image.ts",
+    "deploy": "node scripts/deploy.ts"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
