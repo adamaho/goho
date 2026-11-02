@@ -8,4 +8,3 @@ import { HttpApiClient } from "effect/http-api";
  * @since 0.1.0
  */
 export const make = (baseUrl: string) => HttpApiClient.make(api, { baseUrl });
-
