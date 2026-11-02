@@ -117,3 +117,4 @@ jobs:
         run: |
           ssh -o BatchMode=yes -o LogLevel=ERROR "production@$GOHO_DEPLOY_HOST" \
             "rm -rf -- '$REMOTE_DOCKER_CONFIG'"
+
