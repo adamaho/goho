@@ -113,6 +113,84 @@ claude mcp add --transport http goho http://127.0.0.1:3001/mcp
 Start a new session in either client and ask, "List my Goho receipts." Keep the
 Goho API and the MCP server running while using the tools.
 
+## Deploy to the tailnet
+
+Merging a change to this program or its workspace dependencies into `dev`
+deploys it automatically through the existing `deploy` workflow. No extra workflow
+dispatch is needed. The workflow pushes `ghcr.io/<owner>/goho-mcp:<commit-sha>`
+and the `dev` tag, copies `compose.yml` to `/opt/goho/goho-mcp`, and waits up to
+180 seconds for the container to report healthy.
+
+It reuses the existing `production` deploy user, its Docker access, the CI
+secrets, and the shared `goho` network. The stack has no env file, volumes, or
+database or OpenAI credentials.
+
+| Setting           | Production value                                                  |
+| ----------------- | ----------------------------------------------------------------- |
+| Compose service   | `mcp` in project `goho-mcp`                                       |
+| `GOHO_MCP_HOST`   | `0.0.0.0` inside the container                                    |
+| `GOHO_MCP_PORT`   | `13001`                                                           |
+| Host binding      | `127.0.0.1:13001`, so only the host can reach it directly         |
+| `GOHO_SERVER_URL` | `http://server:13000`, the `server` service on the `goho` network |
+
+The health check only shows that the MCP server is running. A successful deploy
+does not prove the tools can reach the Goho API; if they can't, tool calls return
+an error.
+
+### Publish it with Tailscale Serve
+
+Deploying does not change Tailscale, so the endpoint stays host-only until you
+publish it. On the Goho host, check the current routes, then add this one as a
+user allowed to change Serve configuration:
+
+```bash
+tailscale serve status
+tailscale serve --bg --https=443 --set-path /mcp http://127.0.0.1:13001/mcp
+```
+
+This adds `/mcp` alongside the existing routes on port 443, leaving them
+unchanged. Only `/mcp` is published; `/health` is not.
+
+To roll back, remove only this route. Do not use `tailscale serve reset`, which
+removes every route:
+
+```bash
+tailscale serve --https=443 --set-path /mcp off
+```
+
+The endpoint has no authentication, so your tailnet access rules are its only
+protection. Any device or user allowed to reach this host on port 443 can read,
+change, and delete receipts and books. Check that your Tailscale grants limit
+port 443 to the clients you trust before publishing; this repository does not
+configure them. Do not expose this route with Tailscale Funnel.
+
+### Connect OpenCode
+
+Add the server to `~/.config/opencode/opencode.json` on a device allowed to reach
+it, using the host's MagicDNS name:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "goho": {
+        "type": "remote",
+        "url": "https://<goho-host>.<tailnet>.ts.net/mcp",
+        "oauth": false,
+      },
+    },
+  },
+}
+```
+
+`oauth: false` is there because this server has no OAuth to sign in to and relies
+on private tailnet access instead. Check the connection with:
+
+```bash
+opencode mcp list
+```
+
 ## Try the tools
 
 - `list_receipts` returns receipts, newest first, with their items. It takes no

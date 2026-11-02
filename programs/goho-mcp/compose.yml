@@ -1,0 +1,33 @@
+# Production stack for the Goho MCP server. programs/goho-mcp/scripts/deploy.ts copies
+# this file to /opt/goho/goho-mcp/compose.yml. It holds no credentials: the tools call
+# the Goho API, reached as `server` on the `goho` network.
+name: goho-mcp
+
+services:
+  mcp:
+    image: ${GOHO_IMAGE:?Set GOHO_IMAGE to the image to deploy}
+    restart: unless-stopped
+    init: true
+    user: "${GOHO_UID:?Set GOHO_UID}:${GOHO_GID:?Set GOHO_GID}"
+    environment:
+      GOHO_MCP_HOST: 0.0.0.0
+      GOHO_MCP_PORT: "13001"
+      GOHO_SERVER_URL: http://server:13000
+    ports:
+      # Only this machine can reach the MCP server; Tailscale Serve publishes it to the tailnet.
+      - "127.0.0.1:13001:13001"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:13001/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+networks:
+  default:
+    name: goho
+    external: true
