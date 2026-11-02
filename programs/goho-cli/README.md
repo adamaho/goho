@@ -101,10 +101,12 @@ receipt exits nonzero with a specific message.
 
 ```bash
 pnpm --filter @goho/goho-cli start books list
+pnpm --filter @goho/goho-cli start books list --search "hobbit"
 ```
 
 The command prints a JSON array containing every persisted book, newest first.
-An empty database prints `[]`.
+An empty database prints `[]`. Add `--search` to keep only books whose title or
+author contains the text, ignoring case and extra spaces; no matches prints `[]`.
 
 ## Upload a book cover
 
