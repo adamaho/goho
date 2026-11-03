@@ -1,7 +1,7 @@
 # @goho/goho-cli
 
 Calls the Goho server to check its status and to upload, inspect, list, patch, and delete receipts and
-books. OpenAI credentials belong only to the [server](../goho-server/README.md).
+books, and to add books by hand. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -175,6 +175,22 @@ pnpm --filter @goho/goho-cli start books view <positive-integer-book-id>
 
 The command prints the complete book as JSON. A malformed ID or a valid ID that
 does not exist exits nonzero; a missing book prints a specific message.
+
+## Add a book
+
+```bash
+pnpm --filter @goho/goho-cli start books create --title "The Hobbit" --category "Fiction" --author "J. R. R. Tolkien" --reading-level "Grade 4"
+```
+
+`--title` and `--category` are required; `--author` and `--reading-level` are
+optional. Values are trimmed and must be nonblank. Categories are saved in lowercase,
+and an unfamiliar name adds a new category. The command prints the complete book as
+JSON.
+
+A book already saved with the same title and author, ignoring case and extra spaces,
+is printed unchanged instead of creating a duplicate, so its category and reading
+level may differ from the supplied flags. A book with no author only matches another
+with none.
 
 ## Patch a book
 
