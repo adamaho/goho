@@ -41,6 +41,32 @@ describe("books list", () => {
   });
 });
 
+describe("books list --search", () => {
+  const runSearch = (args: ReadonlyArray<string>, expectedUrl: string) =>
+    withResponse(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.url).toBe(expectedUrl);
+        return HttpServerResponse.jsonUnsafe({ data: [book] });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["books", "list", ...args]),
+    );
+
+  it("sends the search text and prints the matching books", async () => {
+    const result = await runSearch(["--search", "the hobbit"], "/books?search=the+hobbit");
+    expect(result).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: `${JSON.stringify([book], null, 2)}\n`,
+    });
+  });
+
+  it("sends no query without the flag", async () => {
+    const result = await runSearch([], "/books");
+    expect(result.code).toBe(0);
+  });
+});
+
 describe("books view", () => {
   it("prints one unwrapped book", async () => {
     const result = await withJsonResponse(200, { data: book }, (baseUrl) =>

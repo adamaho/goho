@@ -1,6 +1,6 @@
 import { BookId } from "@goho/goho-server-client/books";
-import { Console, Effect } from "effect";
-import { Argument, Command } from "effect/cli";
+import { Console, Effect, Option } from "effect";
+import { Argument, Command, Flag } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
@@ -8,12 +8,19 @@ import * as GohoServer from "#src/goho-server.ts";
 import { patchCommand } from "./book-patches.ts";
 import { statusCommand, uploadCommand } from "./book-uploads.ts";
 
-const listCommand = Command.make("list").pipe(
-  Command.withDescription("List all persisted books."),
-  Command.withHandler(() =>
+const listCommand = Command.make("list", {
+  search: Flag.String("search").pipe(
+    Flag.withDescription("Text to find in a book's title or author."),
+    Flag.optional,
+  ),
+}).pipe(
+  Command.withDescription("List persisted books, optionally filtered by title or author."),
+  Command.withHandler(({ search }) =>
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
-      const response = yield* client.books.list({ query: {} });
+      const response = yield* client.books.list({
+        query: Option.isSome(search) ? { search: search.value } : {},
+      });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }).pipe(
       Effect.mapError(
