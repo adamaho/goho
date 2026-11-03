@@ -6,7 +6,12 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { patchCommand } from "./book-patches.ts";
-import { statusCommand, uploadCommand } from "./book-uploads.ts";
+import {
+  deleteUploadCommand,
+  statusCommand,
+  uploadCommand,
+  uploadsCommand,
+} from "./book-uploads.ts";
 
 const listCommand = Command.make("list", {
   search: Flag.String("search").pipe(
@@ -103,5 +108,7 @@ export const booksCommand = Command.make("books").pipe(
     deleteCommand,
     uploadCommand,
     statusCommand,
+    uploadsCommand,
+    deleteUploadCommand,
   ]),
 );

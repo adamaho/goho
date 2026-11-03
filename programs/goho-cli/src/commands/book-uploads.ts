@@ -73,3 +73,63 @@ export const statusCommand = Command.make("status", {
     ),
   ),
 );
+
+/**
+ * Lists every book cover upload and its current processing status.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
+export const uploadsCommand = Command.make("uploads").pipe(
+  Command.withDescription("List all book cover uploads and their processing status."),
+  Command.withHandler(() =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      const response = yield* client.bookUploads.list();
+      yield* Console.log(JSON.stringify(response.data, null, 2));
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message: "Book uploads could not be listed. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
+
+/**
+ * Deletes one failed book cover upload and its stored image.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
+export const deleteUploadCommand = Command.make("delete-upload", {
+  uploadId: Argument.String("upload-id").pipe(
+    Argument.withSchema(BookUploadId),
+    Argument.withDescription("UUID of the failed book cover upload to delete."),
+  ),
+}).pipe(
+  Command.withDescription("Permanently delete one failed book cover upload and its stored image."),
+  Command.withHandler(({ uploadId }) =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      yield* client.bookUploads.delete({ params: { uploadId } });
+      yield* Console.log(`Deleted book upload ${uploadId}.`);
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "BookUploadNotFound"
+                ? `Book upload ${uploadId} was not found.`
+                : cause._tag === "BookUploadConflict"
+                  ? `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.`
+                  : "Book upload could not be deleted. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
