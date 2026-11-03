@@ -200,6 +200,21 @@ pnpm --filter @goho/goho-cli start books view <positive-integer-book-id>
 The command prints the complete book as JSON. A malformed ID or a valid ID that
 does not exist exits nonzero; a missing book prints a specific message.
 
+## Download a book cover
+
+```bash
+pnpm --filter @goho/goho-cli start books download 12
+pnpm --filter @goho/goho-cli start books download 12 --output covers/hobbit.webp --clobber
+```
+
+The command saves the book's stored cover image and prints its `path`, `contentType`,
+and `sizeBytes` as JSON. Without `--output` the file is named `book-<id>` with the
+image's extension, in the current directory. `--output` is used exactly as given, so check
+`contentType` if its extension matters, and its folder must already exist.
+
+An existing file exits nonzero and stays unchanged unless you pass `--clobber`. A missing
+book, or one entered by hand with no successful scan, also exits nonzero.
+
 ## Add a book
 
 ```bash

@@ -26,11 +26,12 @@ export interface CliResult {
  * @category testing
  * @since 0.1.0
  */
-export const runCommand = (baseUrl: string, args: ReadonlyArray<string>) =>
+export const runCommand = (baseUrl: string, args: ReadonlyArray<string>, cwd = process.cwd()) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
     const mainPath = yield* path.fromFileUrl(new URL("../src/main.ts", import.meta.url));
     const child = yield* ChildProcess.make(process.execPath, [mainPath, ...args], {
+      cwd,
       env: { GOHO_SERVER_URL: baseUrl },
       extendEnv: true,
       stdin: "ignore",
