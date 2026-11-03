@@ -5,7 +5,7 @@ import { Argument, Command } from "effect/cli";
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
-import { createCommand } from "./receipt-creates.ts";
+import { createCommand } from "./receipt-create.ts";
 import { patchCommand, patchItemCommand } from "./receipt-patches.ts";
 import {
   deleteUploadCommand,
