@@ -115,7 +115,15 @@ export const startMcpServer = (baseUrl: string) =>
       Effect.forkScoped,
     );
 
-    return { child, url: yield* Deferred.await(listening) };
+    const url = yield* Deferred.await(listening).pipe(
+      Effect.raceFirst(
+        Effect.flatMap(child.exitCode, (code) =>
+          Effect.die(new Error(`The MCP program exited with code ${code} before listening.`)),
+        ),
+      ),
+    );
+
+    return { child, url };
   });
 
 /**
