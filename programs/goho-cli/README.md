@@ -84,31 +84,26 @@ that does not exist exits nonzero; a missing receipt prints a specific message.
 ## Add a receipt
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts create <path>
+pnpm --filter @goho/goho-cli start receipts create \
+  --store-name "Example Store" \
+  --receipt-date 2026-09-13 \
+  --subtotal 10.25 --tax 0.75 --total 11.00 \
+  --currency USD \
+  --item "name=Apples,amount=10.25,category=Groceries" \
+  --item "name=Milk\, 2%,amount=4.99,category=Groceries"
 ```
 
-The command reads one JSON file and prints the complete saved receipt as JSON:
+Every flag is required. Repeat `--item` once per line item, in receipt order; each needs
+`name`, `amount`, and `category`, in any order. Inside an item, write a comma as `\,` and
+a backslash as `\\`.
 
-```json
-{
-  "storeName": "Example Store",
-  "receiptDate": "2026-09-13",
-  "subtotal": "10.25",
-  "tax": "0.75",
-  "total": "11.00",
-  "currency": "USD",
-  "items": [{ "name": "Apples", "amount": "10.25", "category": "Groceries" }]
-}
-```
+Amounts are decimals and are not rounded or checked against the totals. Names are trimmed
+and must be nonblank; dates must be real calendar dates in `YYYY-MM-DD` format; `currency`
+is three uppercase letters. Categories are saved in lowercase, and an unfamiliar name adds
+a new category. The command prints the complete saved receipt as JSON.
 
-Every field is required, and `items` needs at least one entry, saved in file order.
-Amounts are decimal strings, not JSON numbers, and are not rounded or checked against
-the totals. Names are trimmed and must be nonblank; dates must be real calendar dates
-in `YYYY-MM-DD` format; `currency` is three uppercase letters. Categories are saved in
-lowercase, and an unfamiliar name adds a new category.
-
-An invalid file or an unknown field exits nonzero before sending a request. Every
-successful call saves a new receipt, so running the command twice leaves two receipts.
+Invalid values exit nonzero before sending a request. Every successful call saves a new
+receipt, so running the command twice leaves two receipts.
 
 ## Patch a receipt
 
