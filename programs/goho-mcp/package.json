@@ -14,7 +14,7 @@
     "start": "node src/main.ts",
     "lint": "oxlint .",
     "tsc": "tsc --noEmit",
-    "test:unit": "vitest run",
+    "test:integration": "vitest run",
     "image": "node scripts/build-image.ts",
     "deploy": "node scripts/deploy.ts"
   },

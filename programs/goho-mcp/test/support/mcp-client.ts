@@ -85,22 +85,34 @@ export const ErrorResult = Schema.Struct({
 });
 
 /**
- * Starts the MCP program on a free loopback port for integration tests.
+ * The MCP program exited before it started listening.
  *
  * @category testing
  * @since 0.1.0
  */
-export const startMcpServer = (baseUrl: string) =>
+export class McpProgramExited extends Schema.TaggedError<McpProgramExited>()("McpProgramExited", {
+  exitCode: Schema.Finite,
+}) {}
+
+/**
+ * Starts the MCP program on a loopback port for integration tests, free unless one is given.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const startMcpServer = (baseUrl: string, port = "0") =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
     const mainPath = yield* path.fromFileUrl(new URL("../../src/main.ts", import.meta.url));
 
     const child = yield* ChildProcess.make(process.execPath, [mainPath], {
-      env: { GOHO_SERVER_URL: baseUrl, GOHO_MCP_HOST: "127.0.0.1", GOHO_MCP_PORT: "0" },
+      env: { GOHO_SERVER_URL: baseUrl, GOHO_MCP_HOST: "127.0.0.1", GOHO_MCP_PORT: port },
       extendEnv: true,
       stdin: "ignore",
       stdout: "pipe",
       stderr: "inherit",
+      // Bounds cleanup when a stalled request holds up graceful shutdown.
+      forceKillAfter: "5 seconds",
     });
 
     // Keep draining logs so the child never blocks on a full stdout pipe.
@@ -117,8 +129,8 @@ export const startMcpServer = (baseUrl: string) =>
 
     const url = yield* Deferred.await(listening).pipe(
       Effect.raceFirst(
-        Effect.flatMap(child.exitCode, (code) =>
-          Effect.die(new Error(`The MCP program exited with code ${code} before listening.`)),
+        Effect.flatMap(child.exitCode, (exitCode) =>
+          Effect.fail(new McpProgramExited({ exitCode })),
         ),
       ),
     );
@@ -191,12 +203,3 @@ export const connectMcpClient = (url: string, protocolVersion = "2025-11-25") =>
         request(id, "tools/call", { name, arguments: args }),
     };
   }).pipe(Effect.provide(FetchHttpClient.layer));
-
-/**
- * Starts the MCP program and initializes an HTTP session for integration tests.
- *
- * @category testing
- * @since 0.1.0
- */
-export const startMcpClient = (baseUrl: string) =>
-  Effect.flatMap(startMcpServer(baseUrl), ({ url }) => connectMcpClient(url));
