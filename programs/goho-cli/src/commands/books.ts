@@ -5,6 +5,7 @@ import { Argument, Command, Flag } from "effect/cli";
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
+import { createCommand } from "./book-creates.ts";
 import { patchCommand } from "./book-patches.ts";
 import {
   deleteUploadCommand,
@@ -94,7 +95,7 @@ const deleteCommand = Command.make("delete", {
 );
 
 /**
- * Command group for book cover uploads, retrieval, corrections, and deletion.
+ * Command group for book cover uploads, retrieval, creation, corrections, and deletion.
  *
  * @category commands
  * @since 0.1.0
@@ -104,6 +105,7 @@ export const booksCommand = Command.make("books").pipe(
   Command.withSubcommands([
     listCommand,
     viewCommand,
+    createCommand,
     patchCommand,
     deleteCommand,
     uploadCommand,
