@@ -1,7 +1,7 @@
 # @goho/goho-cli
 
 Calls the Goho server to check its status and to upload, inspect, list, patch, and delete receipts and
-books, and to add books by hand. OpenAI credentials belong only to the [server](../goho-server/README.md).
+books, and to add receipts and books by hand. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -80,6 +80,35 @@ pnpm --filter @goho/goho-cli start receipts view <positive-integer-receipt-id>
 
 The command prints the complete receipt as JSON. A malformed ID or a valid ID
 that does not exist exits nonzero; a missing receipt prints a specific message.
+
+## Add a receipt
+
+```bash
+pnpm --filter @goho/goho-cli start receipts create <path>
+```
+
+The command reads one JSON file and prints the complete saved receipt as JSON:
+
+```json
+{
+  "storeName": "Example Store",
+  "receiptDate": "2026-09-13",
+  "subtotal": "10.25",
+  "tax": "0.75",
+  "total": "11.00",
+  "currency": "USD",
+  "items": [{ "name": "Apples", "amount": "10.25", "category": "Groceries" }]
+}
+```
+
+Every field is required, and `items` needs at least one entry, saved in file order.
+Amounts are decimal strings, not JSON numbers, and are not rounded or checked against
+the totals. Names are trimmed and must be nonblank; dates must be real calendar dates
+in `YYYY-MM-DD` format; `currency` is three uppercase letters. Categories are saved in
+lowercase, and an unfamiliar name adds a new category.
+
+An invalid file or an unknown field exits nonzero before sending a request. Every
+successful call saves a new receipt, so running the command twice leaves two receipts.
 
 ## Patch a receipt
 
