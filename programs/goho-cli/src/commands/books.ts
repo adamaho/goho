@@ -6,7 +6,7 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { createCommand } from "./book-create.ts";
-import { patchCommand } from "./book-patches.ts";
+import { patchCommand } from "./book-patch.ts";
 import {
   deleteUploadCommand,
   statusCommand,
