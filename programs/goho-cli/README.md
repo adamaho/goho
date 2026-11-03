@@ -52,6 +52,26 @@ The command prints `queued`, `processing`, `succeeded`, or `failed`. A successfu
 upload includes the resulting receipt ID; a failed upload includes a stable
 failure code.
 
+## List receipt uploads
+
+```bash
+pnpm --filter @goho/goho-cli start receipts uploads
+```
+
+The command prints a JSON array containing every receipt upload and its current
+status, newest first. No uploads prints `[]`.
+
+## Delete a failed receipt upload
+
+```bash
+pnpm --filter @goho/goho-cli start receipts delete-upload <upload-id>
+```
+
+The command permanently removes the failed upload and its stored image, then
+prints `Deleted receipt upload <id>.` There is no confirmation prompt. An upload that
+is queued, processing, or succeeded exits nonzero and nothing changes; delete the
+receipt to remove a successful scan. A missing upload also exits nonzero.
+
 ## View a receipt
 
 ```bash
@@ -126,6 +146,26 @@ pnpm --filter @goho/goho-cli start books status <upload-id>
 The command prints `queued`, `processing`, `succeeded`, or `failed`. A successful
 upload includes the saved or matched book ID; a failed upload includes a stable
 failure code.
+
+## List book cover uploads
+
+```bash
+pnpm --filter @goho/goho-cli start books uploads
+```
+
+The command prints a JSON array containing every book cover upload and its current
+status, newest first. No uploads prints `[]`.
+
+## Delete a failed book cover upload
+
+```bash
+pnpm --filter @goho/goho-cli start books delete-upload <upload-id>
+```
+
+The command permanently removes the failed upload and its stored image, then
+prints `Deleted book upload <id>.` There is no confirmation prompt. An upload that
+is queued, processing, or succeeded exits nonzero and nothing changes; delete the
+book to remove a successful scan. A missing upload also exits nonzero.
 
 ## View a book
 

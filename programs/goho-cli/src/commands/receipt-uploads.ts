@@ -73,3 +73,63 @@ export const statusCommand = Command.make("status", {
     ),
   ),
 );
+
+/**
+ * Lists every receipt upload and its current processing status.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
+export const uploadsCommand = Command.make("uploads").pipe(
+  Command.withDescription("List all receipt uploads and their processing status."),
+  Command.withHandler(() =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      const response = yield* client.receiptUploads.list();
+      yield* Console.log(JSON.stringify(response.data, null, 2));
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message: "Receipt uploads could not be listed. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);
+
+/**
+ * Deletes one failed receipt upload and its stored image.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
+export const deleteUploadCommand = Command.make("delete-upload", {
+  uploadId: Argument.String("upload-id").pipe(
+    Argument.withSchema(ReceiptUploadId),
+    Argument.withDescription("UUID of the failed receipt upload to delete."),
+  ),
+}).pipe(
+  Command.withDescription("Permanently delete one failed receipt upload and its stored image."),
+  Command.withHandler(({ uploadId }) =>
+    Effect.gen(function* () {
+      const client = yield* GohoServer.Service;
+      yield* client.receiptUploads.delete({ params: { uploadId } });
+      yield* Console.log(`Deleted receipt upload ${uploadId}.`);
+    }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new CommandError({
+            message:
+              cause._tag === "NotFound"
+                ? `Receipt upload ${uploadId} was not found.`
+                : cause._tag === "Conflict"
+                  ? `Receipt upload ${uploadId} has not failed, so it cannot be deleted. Delete the receipt to remove a successful scan.`
+                  : "Receipt upload could not be deleted. Check the server logs and try again.",
+            cause,
+          }),
+      ),
+    ),
+  ),
+);

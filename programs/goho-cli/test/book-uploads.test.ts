@@ -141,3 +141,96 @@ describe("books status", () => {
     );
   });
 });
+
+describe("books uploads", () => {
+  it("prints the unwrapped upload array", async () => {
+    const result = await withResponse(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.method).toBe("GET");
+        expect(request.url).toBe("/book-uploads");
+        return HttpServerResponse.jsonUnsafe({ data: [upload] });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["books", "uploads"]),
+    );
+    expect(result).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: `${JSON.stringify([upload], null, 2)}\n`,
+    });
+  });
+
+  it("prints an empty unwrapped array", async () => {
+    const result = await withJsonResponse(200, { data: [] }, (baseUrl) =>
+      runCommand(baseUrl, ["books", "uploads"]),
+    );
+    expect(result).toEqual({ code: 0, stderr: "", stdout: "[]\n" });
+  });
+
+  it("reports server failures and exits nonzero", async () => {
+    const result = await withJsonResponse(500, { _tag: "BookUploadsUnavailable" }, (baseUrl) =>
+      runCommand(baseUrl, ["books", "uploads"]),
+    );
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(
+      "Book uploads could not be listed. Check the server logs and try again.\n",
+    );
+  });
+});
+
+describe("books delete-upload", () => {
+  const runDelete = (status: number, body: unknown) =>
+    withResponse(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.method).toBe("DELETE");
+        expect(request.url).toBe(`/book-uploads/${uploadId}`);
+        return body === undefined
+          ? HttpServerResponse.empty({ status })
+          : HttpServerResponse.jsonUnsafe(body, { status });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["books", "delete-upload", uploadId]),
+    );
+
+  it("deletes one failed upload and confirms it", async () => {
+    const result = await runDelete(204, undefined);
+    expect(result).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: `Deleted book upload ${uploadId}.\n`,
+    });
+  });
+
+  it("reports a missing upload and exits nonzero", async () => {
+    const result = await runDelete(404, { _tag: "BookUploadNotFound" });
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(`Book upload ${uploadId} was not found.\n`);
+  });
+
+  it("reports an upload that has not failed and exits nonzero", async () => {
+    const result = await runDelete(409, { _tag: "BookUploadConflict" });
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(
+      `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.\n`,
+    );
+  });
+
+  it("reports server failures and exits nonzero", async () => {
+    const result = await runDelete(500, { _tag: "BookUploadsUnavailable" });
+    expect(result.code).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe(
+      "Book upload could not be deleted. Check the server logs and try again.\n",
+    );
+  });
+
+  it("rejects a malformed upload ID and exits nonzero", async () => {
+    const result = await withJsonResponse(500, {}, (baseUrl) =>
+      runCommand(baseUrl, ["books", "delete-upload", "not-a-uuid"]),
+    );
+    expect(result.code).toBe(1);
+  });
+});

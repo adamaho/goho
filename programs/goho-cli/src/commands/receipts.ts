@@ -6,7 +6,12 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { patchCommand, patchItemCommand } from "./receipt-patches.ts";
-import { statusCommand, uploadCommand } from "./receipt-uploads.ts";
+import {
+  deleteUploadCommand,
+  statusCommand,
+  uploadCommand,
+  uploadsCommand,
+} from "./receipt-uploads.ts";
 
 const listCommand = Command.make("list").pipe(
   Command.withDescription("List all persisted receipts."),
@@ -97,5 +102,7 @@ export const receiptsCommand = Command.make("receipts").pipe(
     deleteCommand,
     uploadCommand,
     statusCommand,
+    uploadsCommand,
+    deleteUploadCommand,
   ]),
 );
