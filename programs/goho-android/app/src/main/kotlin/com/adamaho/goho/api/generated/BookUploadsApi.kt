@@ -12,6 +12,7 @@ import com.adamaho.goho.api.generated.model.BookUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.BookUploadsGet200Response
 import com.adamaho.goho.api.generated.model.BookUploadsList200Response
 import com.adamaho.goho.api.generated.model.BookUploadsUnavailable
+import com.adamaho.goho.api.generated.model.ErrorResponse
 
 import okhttp3.MultipartBody
 
@@ -23,6 +24,7 @@ interface BookUploadsApi {
      * Responses:
      *  - 202: Success
      *  - 400: The upload is missing a supported cover image.
+     *  - 413: The upload exceeds a size or part-count limit, bud. Nothing is queued.
      *  - 500: The server could not store or queue the cover image.
      *
      * @param file 

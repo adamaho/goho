@@ -7,6 +7,7 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.Conflict
+import com.adamaho.goho.api.generated.model.ErrorResponse
 import com.adamaho.goho.api.generated.model.InternalServerError
 import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
@@ -22,6 +23,7 @@ interface ReceiptUploadsApi {
      * Responses:
      *  - 202: Success
      *  - 400: The upload is missing a supported receipt image.
+     *  - 413: The upload exceeds a size or part-count limit, bud. Nothing is queued.
      *  - 500: The server could not store or queue the receipt image.
      *
      * @param file 
