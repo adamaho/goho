@@ -6,6 +6,7 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { createCommand } from "./book-create.ts";
+import { imageCommand } from "./book-image.ts";
 import { patchCommand } from "./book-patch.ts";
 import {
   deleteUploadCommand,
@@ -95,7 +96,7 @@ const deleteCommand = Command.make("delete", {
 );
 
 /**
- * Command group for book cover uploads, retrieval, creation, corrections, and deletion.
+ * Command group for book cover uploads and downloads, retrieval, creation, corrections, and deletion.
  *
  * @category commands
  * @since 0.1.0
@@ -105,6 +106,7 @@ export const booksCommand = Command.make("books").pipe(
   Command.withSubcommands([
     listCommand,
     viewCommand,
+    imageCommand,
     createCommand,
     patchCommand,
     deleteCommand,
