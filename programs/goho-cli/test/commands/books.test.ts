@@ -90,7 +90,7 @@ describe("books delete", () => {
     expect(result).toEqual({
       code: 0,
       stderr: "",
-      stdout: `Deleted book ${book.id}.\n`,
+      stdout: `${JSON.stringify({ deleted: true, resource: "book", id: book.id }, null, 2)}\n`,
     });
   });
 

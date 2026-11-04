@@ -4,6 +4,7 @@ import { Argument, Command } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
+import { DeleteResult } from "#src/response.ts";
 
 import { createCommand } from "./book-create.ts";
 import { imageCommand } from "./book-image.ts";
@@ -68,7 +69,12 @@ const deleteCommand = Command.make("delete", {
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
       yield* client.books.delete({ params: { bookId } });
-      yield* Console.log(`Deleted book ${bookId}.`);
+      const result = yield* DeleteResult.makeEffect({
+        deleted: true,
+        resource: "book",
+        id: bookId,
+      });
+      yield* Console.log(JSON.stringify(result, null, 2));
     }).pipe(
       Effect.mapError(
         (cause) =>
