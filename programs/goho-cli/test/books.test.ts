@@ -20,7 +20,15 @@ const book = {
 describe("books list", () => {
   it("prints the unwrapped book array", async () => {
     const books = [book];
-    const result = await withJsonResponse(200, { data: books }, runList);
+    const result = await withResponse(
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        expect(request.method).toBe("GET");
+        expect(request.url).toBe("/books");
+        return HttpServerResponse.jsonUnsafe({ data: books });
+      }),
+      runList,
+    );
     expect(result).toEqual({
       code: 0,
       stderr: "",
@@ -38,32 +46,6 @@ describe("books list", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe("Books could not be listed. Check the server logs and try again.\n");
-  });
-});
-
-describe("books list --search", () => {
-  const runSearch = (args: ReadonlyArray<string>, expectedUrl: string) =>
-    withResponse(
-      Effect.gen(function* () {
-        const request = yield* HttpServerRequest.HttpServerRequest;
-        expect(request.url).toBe(expectedUrl);
-        return HttpServerResponse.jsonUnsafe({ data: [book] });
-      }),
-      (baseUrl) => runCommand(baseUrl, ["books", "list", ...args]),
-    );
-
-  it("sends the search text and prints the matching books", async () => {
-    const result = await runSearch(["--search", "the hobbit"], "/books?search=the+hobbit");
-    expect(result).toEqual({
-      code: 0,
-      stderr: "",
-      stdout: `${JSON.stringify([book], null, 2)}\n`,
-    });
-  });
-
-  it("sends no query without the flag", async () => {
-    const result = await runSearch([], "/books");
-    expect(result.code).toBe(0);
   });
 });
 
