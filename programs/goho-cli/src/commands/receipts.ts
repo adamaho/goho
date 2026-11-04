@@ -8,12 +8,7 @@ import * as GohoServer from "#src/goho-server.ts";
 import { createCommand } from "./receipt-create.ts";
 import { imageCommand } from "./receipt-image.ts";
 import { patchCommand, patchItemCommand } from "./receipt-patch.ts";
-import {
-  deleteUploadCommand,
-  statusCommand,
-  uploadCommand,
-  uploadsCommand,
-} from "./receipt-uploads.ts";
+import { uploadsCommand } from "./receipt-uploads.ts";
 
 const listCommand = Command.make("list").pipe(
   Command.withDescription("List all persisted receipts."),
@@ -104,9 +99,6 @@ export const receiptsCommand = Command.make("receipts").pipe(
     patchCommand,
     patchItemCommand,
     deleteCommand,
-    uploadCommand,
-    statusCommand,
     uploadsCommand,
-    deleteUploadCommand,
   ]),
 );

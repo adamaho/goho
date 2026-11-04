@@ -31,7 +31,7 @@ const withTempFile = <A>(
     return yield* Effect.tryPromise(() => run(filePath)).pipe(Effect.orDie);
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer), Effect.runPromise);
 
-describe("receipts upload", () => {
+describe("receipts uploads create", () => {
   it("uploads one image and prints its queued resource", async () => {
     let received:
       | {
@@ -60,7 +60,9 @@ describe("receipts upload", () => {
     }).pipe(Effect.orDie);
 
     const result = await withTempFile("receipt.png", new Uint8Array([1, 2, 3]), (filePath) =>
-      withResponse(response, (baseUrl) => runCommand(baseUrl, ["receipts", "upload", filePath])),
+      withResponse(response, (baseUrl) =>
+        runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
+      ),
     );
 
     expect(received).toEqual({
@@ -79,7 +81,9 @@ describe("receipts upload", () => {
 
   it("rejects unsupported file extensions before upload", async () => {
     const result = await withTempFile("receipt.pdf", new Uint8Array([1]), (filePath) =>
-      withJsonResponse(500, {}, (baseUrl) => runCommand(baseUrl, ["receipts", "upload", filePath])),
+      withJsonResponse(500, {}, (baseUrl) =>
+        runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
+      ),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -88,7 +92,7 @@ describe("receipts upload", () => {
 
   it("reports an unreadable receipt path", async () => {
     const result = await withJsonResponse(500, {}, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "upload", "/missing/receipt.png"]),
+      runCommand(baseUrl, ["receipts", "uploads", "create", "/missing/receipt.png"]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -98,7 +102,7 @@ describe("receipts upload", () => {
   it("reports a receipt rejected by the server", async () => {
     const result = await withTempFile("receipt.webp", new Uint8Array([1]), (filePath) =>
       withResponse(Effect.succeed(HttpServerResponse.empty({ status: 400 })), (baseUrl) =>
-        runCommand(baseUrl, ["receipts", "upload", filePath]),
+        runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
       ),
     );
     expect(result.code).toBe(1);
@@ -109,10 +113,10 @@ describe("receipts upload", () => {
   });
 });
 
-describe("receipts status", () => {
+describe("receipts uploads view", () => {
   it("prints the current upload resource", async () => {
     const result = await withJsonResponse(200, { data: upload }, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "status", uploadId]),
+      runCommand(baseUrl, ["receipts", "uploads", "view", uploadId]),
     );
     expect(result).toEqual({
       code: 0,
@@ -123,7 +127,7 @@ describe("receipts status", () => {
 
   it("reports a missing upload", async () => {
     const result = await withJsonResponse(404, { _tag: "NotFound" }, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "status", uploadId]),
+      runCommand(baseUrl, ["receipts", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -132,7 +136,7 @@ describe("receipts status", () => {
 
   it("reports server failures", async () => {
     const result = await withJsonResponse(500, { _tag: "InternalServerError" }, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "status", uploadId]),
+      runCommand(baseUrl, ["receipts", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -142,7 +146,7 @@ describe("receipts status", () => {
   });
 });
 
-describe("receipts uploads", () => {
+describe("receipts uploads list", () => {
   it("prints the unwrapped upload array", async () => {
     const result = await withResponse(
       Effect.gen(function* () {
@@ -151,7 +155,7 @@ describe("receipts uploads", () => {
         expect(request.url).toBe("/receipt-uploads");
         return HttpServerResponse.jsonUnsafe({ data: [upload] });
       }),
-      (baseUrl) => runCommand(baseUrl, ["receipts", "uploads"]),
+      (baseUrl) => runCommand(baseUrl, ["receipts", "uploads", "list"]),
     );
     expect(result).toEqual({
       code: 0,
@@ -162,14 +166,14 @@ describe("receipts uploads", () => {
 
   it("prints an empty unwrapped array", async () => {
     const result = await withJsonResponse(200, { data: [] }, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "uploads"]),
+      runCommand(baseUrl, ["receipts", "uploads", "list"]),
     );
     expect(result).toEqual({ code: 0, stderr: "", stdout: "[]\n" });
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await withJsonResponse(500, { _tag: "InternalServerError" }, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "uploads"]),
+      runCommand(baseUrl, ["receipts", "uploads", "list"]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -179,7 +183,7 @@ describe("receipts uploads", () => {
   });
 });
 
-describe("receipts delete-upload", () => {
+describe("receipts uploads delete", () => {
   const runDelete = (status: number, body: unknown) =>
     withResponse(
       Effect.gen(function* () {
@@ -190,7 +194,7 @@ describe("receipts delete-upload", () => {
           ? HttpServerResponse.empty({ status })
           : HttpServerResponse.jsonUnsafe(body, { status });
       }),
-      (baseUrl) => runCommand(baseUrl, ["receipts", "delete-upload", uploadId]),
+      (baseUrl) => runCommand(baseUrl, ["receipts", "uploads", "delete", uploadId]),
     );
 
   it("deletes one failed upload and confirms it", async () => {
@@ -228,9 +232,15 @@ describe("receipts delete-upload", () => {
   });
 
   it("rejects a malformed upload ID and exits nonzero", async () => {
-    const result = await withJsonResponse(500, {}, (baseUrl) =>
-      runCommand(baseUrl, ["receipts", "delete-upload", "not-a-uuid"]),
+    let requests = 0;
+    const result = await withResponse(
+      Effect.sync(() => {
+        requests += 1;
+        return HttpServerResponse.empty({ status: 500 });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["receipts", "uploads", "delete", "not-a-uuid"]),
     );
     expect(result.code).toBe(1);
+    expect(requests).toBe(0);
   });
 });
