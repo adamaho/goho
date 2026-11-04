@@ -6,7 +6,7 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { createCommand } from "./book-create.ts";
-import { downloadCommand } from "./book-download.ts";
+import { imageCommand } from "./book-image.ts";
 import { patchCommand } from "./book-patch.ts";
 import {
   deleteUploadCommand,
@@ -106,7 +106,7 @@ export const booksCommand = Command.make("books").pipe(
   Command.withSubcommands([
     listCommand,
     viewCommand,
-    downloadCommand,
+    imageCommand,
     createCommand,
     patchCommand,
     deleteCommand,

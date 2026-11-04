@@ -43,16 +43,16 @@ const join = (directory: string, name: string) =>
     return path.join(directory, name);
   }).pipe(Effect.provide(NodeServices.layer), Effect.runPromise);
 
-const runDownload = (contentType: string, args: ReadonlyArray<string>) =>
+const runImage = (contentType: string, args: ReadonlyArray<string>) =>
   withResponse(coverResponse(contentType), (baseUrl) =>
-    runCommand(baseUrl, ["books", "download", "12", ...args]),
+    runCommand(baseUrl, ["books", "image", "12", ...args]),
   );
 
-describe("books download", () => {
+describe("books image", () => {
   it("saves the exact bytes to --output and describes the file", async () => {
     await withTempDirectory(async (directory) => {
       const output = await join(directory, "cover.png");
-      const result = await runDownload("image/png", ["--output", output]);
+      const result = await runImage("image/png", ["--output", output]);
       expect(result).toEqual({
         code: 0,
         stderr: "",
@@ -65,7 +65,7 @@ describe("books download", () => {
   it("keeps --output as given when its extension differs from the type", async () => {
     await withTempDirectory(async (directory) => {
       const output = await join(directory, "cover.png");
-      const result = await runDownload("image/webp", ["--output", output]);
+      const result = await runImage("image/webp", ["--output", output]);
       expect(result.code).toBe(0);
       expect(JSON.parse(result.stdout)).toEqual({
         path: output,
@@ -82,7 +82,7 @@ describe("books download", () => {
   ])("names the file $name by default for $contentType", async ({ contentType, name }) => {
     await withTempDirectory(async (directory) => {
       const result = await withResponse(coverResponse(contentType), (baseUrl) =>
-        runCommand(baseUrl, ["books", "download", "12"], directory),
+        runCommand(baseUrl, ["books", "image", "12"], directory),
       );
       expect(result.code).toBe(0);
       expect(JSON.parse(result.stdout).path).toBe(name);
@@ -93,7 +93,7 @@ describe("books download", () => {
   it("refuses an unexpected type without --output", async () => {
     await withTempDirectory(async (directory) => {
       const result = await withResponse(coverResponse("image/gif"), (baseUrl) =>
-        runCommand(baseUrl, ["books", "download", "12"], directory),
+        runCommand(baseUrl, ["books", "image", "12"], directory),
       );
       expect(result).toEqual({
         code: 1,
@@ -103,25 +103,11 @@ describe("books download", () => {
     });
   });
 
-  it("leaves an existing file unchanged without --clobber", async () => {
+  it("replaces an existing file by default", async () => {
     await withTempDirectory(async (directory) => {
       const output = await join(directory, "cover.png");
       await writeBytes(output, [9]);
-      const result = await runDownload("image/png", ["--output", output]);
-      expect(result).toEqual({
-        code: 1,
-        stdout: "",
-        stderr: `${output} already exists. Pass --clobber to replace it.\n`,
-      });
-      expect(await readBytes(output)).toEqual([9]);
-    });
-  });
-
-  it("replaces an existing file with --clobber", async () => {
-    await withTempDirectory(async (directory) => {
-      const output = await join(directory, "cover.png");
-      await writeBytes(output, [9]);
-      const result = await runDownload("image/png", ["--output", output, "--clobber"]);
+      const result = await runImage("image/png", ["--output", output]);
       expect(result.code).toBe(0);
       expect(await readBytes(output)).toEqual([...bytes]);
     });
@@ -130,7 +116,7 @@ describe("books download", () => {
   it("reports a folder that does not exist", async () => {
     await withTempDirectory(async (directory) => {
       const output = await join(directory, "missing/cover.png");
-      const result = await runDownload("image/png", ["--output", output]);
+      const result = await runImage("image/png", ["--output", output]);
       expect(result).toEqual({
         code: 1,
         stdout: "",
@@ -141,7 +127,7 @@ describe("books download", () => {
 
   it("reports a missing cover and exits nonzero", async () => {
     const result = await withJsonResponse(404, { _tag: "BookImageNotFound" }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "download", "12"]),
+      runCommand(baseUrl, ["books", "image", "12"]),
     );
     expect(result).toEqual({
       code: 1,
@@ -152,7 +138,7 @@ describe("books download", () => {
 
   it("reports server failures and exits nonzero", async () => {
     const result = await withJsonResponse(500, { _tag: "BooksUnavailable" }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "download", "12"]),
+      runCommand(baseUrl, ["books", "image", "12"]),
     );
     expect(result).toEqual({
       code: 1,
@@ -168,7 +154,7 @@ describe("books download", () => {
         requests += 1;
         return HttpServerResponse.empty({ status: 500 });
       }),
-      (baseUrl) => runCommand(baseUrl, ["books", "download", "0"]),
+      (baseUrl) => runCommand(baseUrl, ["books", "image", "0"]),
     );
     expect(result.code).toBe(1);
     expect(requests).toBe(0);

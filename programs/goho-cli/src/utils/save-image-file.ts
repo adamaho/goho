@@ -18,7 +18,7 @@ const getImageExtension = (contentType: string) => {
 /**
  * Saves one downloaded image and describes the saved file. Without `output` the
  * file is named `defaultName` plus the extension for its type, in the current
- * directory. An existing file is only replaced when `clobber` is set. `label`
+ * directory. An existing file is replaced. `label`
  * names the image in failure messages, such as `"Book cover"`.
  *
  * @category utils
@@ -30,9 +30,8 @@ export const saveImageFile = Effect.fn("@goho/Utils.saveImageFile")(function* (o
   readonly bytes: Uint8Array;
   readonly contentType: string;
   readonly output: Option.Option<string>;
-  readonly clobber: boolean;
 }) {
-  const { bytes, clobber, contentType, defaultName, label, output } = options;
+  const { bytes, contentType, defaultName, label, output } = options;
   const fileSystem = yield* FileSystem.FileSystem;
   const extension = getImageExtension(contentType);
   if (Option.isNone(output) && extension === undefined) {
@@ -42,15 +41,11 @@ export const saveImageFile = Effect.fn("@goho/Utils.saveImageFile")(function* (o
     });
   }
   const path = Option.getOrElse(output, () => `${defaultName}${extension}`);
-  // "wx" fails on an existing file, so a check can't race the write.
-  yield* fileSystem.writeFile(path, bytes, { flag: clobber ? "w" : "wx" }).pipe(
+  yield* fileSystem.writeFile(path, bytes).pipe(
     Effect.mapError(
       (cause) =>
         new CommandError({
-          message:
-            cause.reason._tag === "AlreadyExists"
-              ? `${path} already exists. Pass --clobber to replace it.`
-              : `${label} could not be saved to ${path}.`,
+          message: `${label} could not be saved to ${path}.`,
           cause,
         }),
     ),

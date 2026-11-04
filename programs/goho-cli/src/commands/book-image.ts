@@ -12,7 +12,7 @@ import { saveImageFile } from "#src/utils/save-image-file.ts";
  * @category commands
  * @since 0.1.0
  */
-export const downloadCommand = Command.make("download", {
+export const imageCommand = Command.make("image", {
   bookId: Argument.String("book-id").pipe(
     Argument.withSchema(BookId),
     Argument.withDescription("Positive integer ID of the persisted book."),
@@ -21,13 +21,9 @@ export const downloadCommand = Command.make("download", {
     Flag.withDescription("File to save to. Defaults to book-<id> with the image's extension."),
     Flag.optional,
   ),
-  clobber: Flag.Boolean("clobber").pipe(
-    Flag.withDescription("Replace the file if it exists."),
-    Flag.withDefault(false),
-  ),
 }).pipe(
   Command.withDescription("Save one book's stored cover image to a file."),
-  Command.withHandler(({ bookId, output, clobber }) =>
+  Command.withHandler(({ bookId, output }) =>
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
       const response = yield* client.books.getImage({ params: { bookId } }).pipe(
@@ -48,7 +44,6 @@ export const downloadCommand = Command.make("download", {
         bytes: response.body,
         contentType: response.headers["content-type"],
         output,
-        clobber,
       });
       yield* Console.log(JSON.stringify(saved, null, 2));
     }),
