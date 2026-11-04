@@ -81,6 +81,22 @@ pnpm --filter @goho/goho-cli start receipts view <positive-integer-receipt-id>
 The command prints the complete receipt as JSON. A malformed ID or a valid ID
 that does not exist exits nonzero; a missing receipt prints a specific message.
 
+## Download a receipt image
+
+```bash
+pnpm --filter @goho/goho-cli start receipts image 42
+pnpm --filter @goho/goho-cli start receipts image 42 --output scans/receipt.jpg
+```
+
+The command saves the receipt's stored scanned image and prints its `path`, `contentType`,
+and `sizeBytes` as JSON. Without `--output` the file is named `receipt-<id>` with the
+image's extension, in the current directory. `--output` is used exactly as given, so check
+`contentType` if its extension matters, and its folder must already exist.
+
+An existing file is overwritten. A missing receipt, or one entered by hand with no
+scanned image, exits nonzero. This command only retrieves the stored image; it does not
+upload or queue anything for processing.
+
 ## Add a receipt
 
 ```bash
