@@ -14,6 +14,18 @@ cp programs/goho-cli/.env.example programs/goho-cli/.env
 `GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`.
 Start the server before invoking the CLI.
 
+Upload operations live under `books uploads` and `receipts uploads`, each with
+`create`, `list`, `view`, and `delete` subcommands:
+
+| Previous command                    | Replacement (books or receipts)      |
+| ----------------------------------- | ------------------------------------ |
+| `<group> upload <path>`             | `<group> uploads create <path>`      |
+| `<group> uploads`                   | `<group> uploads list`               |
+| `<group> status <upload-id>`        | `<group> uploads view <upload-id>`   |
+| `<group> delete-upload <upload-id>` | `<group> uploads delete <upload-id>` |
+
+The old forms are no longer supported. `goho status` still checks server health.
+
 ## Check server status
 
 ```bash
@@ -36,7 +48,7 @@ ordered items, newest first. An empty database prints `[]`.
 ## Upload a receipt
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts upload <path>
+pnpm --filter @goho/goho-cli start receipts uploads create <path>
 ```
 
 The command accepts one JPEG, PNG, or WebP image and immediately prints the
@@ -45,17 +57,18 @@ queued upload resource as JSON. Keep its UUID to check processing status.
 ## Check upload status
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts status <upload-id>
+pnpm --filter @goho/goho-cli start receipts uploads view <upload-id>
 ```
 
-The command prints `queued`, `processing`, `succeeded`, or `failed`. A successful
+The command prints the upload resource as JSON, including its current status:
+`queued`, `processing`, `succeeded`, or `failed`. A successful
 upload includes the resulting receipt ID; a failed upload includes a stable
 failure code.
 
 ## List receipt uploads
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts uploads
+pnpm --filter @goho/goho-cli start receipts uploads list
 ```
 
 The command prints a JSON array containing every receipt upload and its current
@@ -64,7 +77,7 @@ status, newest first. No uploads prints `[]`.
 ## Delete a failed receipt upload
 
 ```bash
-pnpm --filter @goho/goho-cli start receipts delete-upload <upload-id>
+pnpm --filter @goho/goho-cli start receipts uploads delete <upload-id>
 ```
 
 The command permanently removes the failed upload and its stored image, then
@@ -181,7 +194,7 @@ This replaces `books list --search <text>`; `books list` now always lists every 
 ## Upload a book cover
 
 ```bash
-pnpm --filter @goho/goho-cli start books upload <path>
+pnpm --filter @goho/goho-cli start books uploads create <path>
 ```
 
 The command accepts one JPEG, PNG, or WebP cover image and immediately prints the
@@ -190,17 +203,18 @@ queued upload resource as JSON. Keep its UUID to check processing status.
 ## Check book upload status
 
 ```bash
-pnpm --filter @goho/goho-cli start books status <upload-id>
+pnpm --filter @goho/goho-cli start books uploads view <upload-id>
 ```
 
-The command prints `queued`, `processing`, `succeeded`, or `failed`. A successful
+The command prints the upload resource as JSON, including its current status:
+`queued`, `processing`, `succeeded`, or `failed`. A successful
 upload includes the saved or matched book ID; a failed upload includes a stable
 failure code.
 
 ## List book cover uploads
 
 ```bash
-pnpm --filter @goho/goho-cli start books uploads
+pnpm --filter @goho/goho-cli start books uploads list
 ```
 
 The command prints a JSON array containing every book cover upload and its current
@@ -209,7 +223,7 @@ status, newest first. No uploads prints `[]`.
 ## Delete a failed book cover upload
 
 ```bash
-pnpm --filter @goho/goho-cli start books delete-upload <upload-id>
+pnpm --filter @goho/goho-cli start books uploads delete <upload-id>
 ```
 
 The command permanently removes the failed upload and its stored image, then

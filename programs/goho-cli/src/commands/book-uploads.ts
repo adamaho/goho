@@ -12,7 +12,7 @@ import { readImageFile } from "#src/utils/read-image-file.ts";
  * @category commands
  * @since 0.1.0
  */
-export const uploadCommand = Command.make("upload", {
+const createCommand = Command.make("create", {
   filePath: Argument.String("path").pipe(
     Argument.withDescription("Path to one JPEG, PNG, or WebP book cover image."),
   ),
@@ -47,7 +47,7 @@ export const uploadCommand = Command.make("upload", {
  * @category commands
  * @since 0.1.0
  */
-export const statusCommand = Command.make("status", {
+const viewCommand = Command.make("view", {
   uploadId: Argument.String("upload-id").pipe(
     Argument.withSchema(BookUploadId),
     Argument.withDescription("UUID returned when the book cover was uploaded."),
@@ -80,7 +80,7 @@ export const statusCommand = Command.make("status", {
  * @category commands
  * @since 0.1.0
  */
-export const uploadsCommand = Command.make("uploads").pipe(
+const listCommand = Command.make("list").pipe(
   Command.withDescription("List all book cover uploads and their processing status."),
   Command.withHandler(() =>
     Effect.gen(function* () {
@@ -105,7 +105,7 @@ export const uploadsCommand = Command.make("uploads").pipe(
  * @category commands
  * @since 0.1.0
  */
-export const deleteUploadCommand = Command.make("delete-upload", {
+const deleteCommand = Command.make("delete", {
   uploadId: Argument.String("upload-id").pipe(
     Argument.withSchema(BookUploadId),
     Argument.withDescription("UUID of the failed book cover upload to delete."),
@@ -132,4 +132,15 @@ export const deleteUploadCommand = Command.make("delete-upload", {
       ),
     ),
   ),
+);
+
+/**
+ * Groups book cover upload creation, listing, viewing, and failed-upload deletion.
+ *
+ * @category commands
+ * @since 0.1.0
+ */
+export const uploadsCommand = Command.make("uploads").pipe(
+  Command.withDescription("Manage book cover uploads and their processing status."),
+  Command.withSubcommands([createCommand, listCommand, viewCommand, deleteCommand]),
 );

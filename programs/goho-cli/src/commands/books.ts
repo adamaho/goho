@@ -9,12 +9,7 @@ import { createCommand } from "./book-create.ts";
 import { imageCommand } from "./book-image.ts";
 import { patchCommand } from "./book-patch.ts";
 import { searchCommand } from "./book-search.ts";
-import {
-  deleteUploadCommand,
-  statusCommand,
-  uploadCommand,
-  uploadsCommand,
-} from "./book-uploads.ts";
+import { uploadsCommand } from "./book-uploads.ts";
 
 const listCommand = Command.make("list").pipe(
   Command.withDescription("List all persisted books."),
@@ -105,9 +100,6 @@ export const booksCommand = Command.make("books").pipe(
     createCommand,
     patchCommand,
     deleteCommand,
-    uploadCommand,
-    statusCommand,
     uploadsCommand,
-    deleteUploadCommand,
   ]),
 );

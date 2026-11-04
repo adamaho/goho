@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withResponse } from "./cli.ts";
+import { runCommand, withResponse } from "#test/cli.ts";
 
 const groceries = {
   id: "3",

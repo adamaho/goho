@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "./cli.ts";
+import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const uploadId = "00000000-0000-4000-8000-000000000001";
 const upload = {
@@ -16,6 +16,50 @@ const upload = {
   createdAt: "2026-09-21T00:00:00.000Z",
   updatedAt: "2026-09-21T00:00:00.000Z",
 };
+
+describe("books upload command structure", () => {
+  const runWithoutRequest = async (args: ReadonlyArray<string>) => {
+    let requests = 0;
+    const result = await withResponse(
+      Effect.sync(() => {
+        requests += 1;
+        return HttpServerResponse.empty({ status: 500 });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["books", ...args]),
+    );
+    expect(requests).toBe(0);
+    return result;
+  };
+
+  it("shows upload operations without listing uploads when no subcommand is given", async () => {
+    const result = await runWithoutRequest(["uploads"]);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("goho books uploads");
+    for (const operation of ["create", "list", "view", "delete"]) {
+      expect(result.stdout).toMatch(new RegExp(`^  ${operation}\\s`, "m"));
+    }
+  });
+
+  it.each([
+    ["upload", "scan.png"],
+    ["status", uploadId],
+    ["delete-upload", uploadId],
+  ])("rejects the previous flat form: %j", async (...args) => {
+    const result = await runWithoutRequest(args);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(`Unknown subcommand "${args[0]}"`);
+  });
+
+  it.each([["create"], ["view"], ["view", "not-a-uuid"], ["delete"]])(
+    "requires arguments for uploads %j before sending a request",
+    async (...args) => {
+      const result = await runWithoutRequest(["uploads", ...args]);
+      expect(result.code).toBe(1);
+      expect(result.stdout + result.stderr).not.toBe("");
+    },
+  );
+});
 
 const withTempFile = <A>(
   fileName: string,
@@ -31,7 +75,7 @@ const withTempFile = <A>(
     return yield* Effect.tryPromise(() => run(filePath)).pipe(Effect.orDie);
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer), Effect.runPromise);
 
-describe("books upload", () => {
+describe("books uploads create", () => {
   it("uploads one image and prints its queued resource", async () => {
     let received:
       | {
@@ -60,7 +104,9 @@ describe("books upload", () => {
     }).pipe(Effect.orDie);
 
     const result = await withTempFile("cover.png", new Uint8Array([1, 2, 3]), (filePath) =>
-      withResponse(response, (baseUrl) => runCommand(baseUrl, ["books", "upload", filePath])),
+      withResponse(response, (baseUrl) =>
+        runCommand(baseUrl, ["books", "uploads", "create", filePath]),
+      ),
     );
 
     expect(received).toEqual({
@@ -79,7 +125,9 @@ describe("books upload", () => {
 
   it("rejects unsupported file extensions before upload", async () => {
     const result = await withTempFile("cover.pdf", new Uint8Array([1]), (filePath) =>
-      withJsonResponse(500, {}, (baseUrl) => runCommand(baseUrl, ["books", "upload", filePath])),
+      withJsonResponse(500, {}, (baseUrl) =>
+        runCommand(baseUrl, ["books", "uploads", "create", filePath]),
+      ),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -88,7 +136,7 @@ describe("books upload", () => {
 
   it("reports an unreadable cover path", async () => {
     const result = await withJsonResponse(500, {}, (baseUrl) =>
-      runCommand(baseUrl, ["books", "upload", "/missing/cover.png"]),
+      runCommand(baseUrl, ["books", "uploads", "create", "/missing/cover.png"]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -98,7 +146,7 @@ describe("books upload", () => {
   it("reports a cover rejected by the server", async () => {
     const result = await withTempFile("cover.webp", new Uint8Array([1]), (filePath) =>
       withResponse(Effect.succeed(HttpServerResponse.empty({ status: 400 })), (baseUrl) =>
-        runCommand(baseUrl, ["books", "upload", filePath]),
+        runCommand(baseUrl, ["books", "uploads", "create", filePath]),
       ),
     );
     expect(result.code).toBe(1);
@@ -109,10 +157,10 @@ describe("books upload", () => {
   });
 });
 
-describe("books status", () => {
+describe("books uploads view", () => {
   it("prints the current upload resource", async () => {
     const result = await withJsonResponse(200, { data: upload }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "status", uploadId]),
+      runCommand(baseUrl, ["books", "uploads", "view", uploadId]),
     );
     expect(result).toEqual({
       code: 0,
@@ -123,7 +171,7 @@ describe("books status", () => {
 
   it("reports a missing upload", async () => {
     const result = await withJsonResponse(404, { _tag: "BookUploadNotFound" }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "status", uploadId]),
+      runCommand(baseUrl, ["books", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -132,7 +180,7 @@ describe("books status", () => {
 
   it("reports server failures", async () => {
     const result = await withJsonResponse(500, { _tag: "BookUploadsUnavailable" }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "status", uploadId]),
+      runCommand(baseUrl, ["books", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -142,7 +190,7 @@ describe("books status", () => {
   });
 });
 
-describe("books uploads", () => {
+describe("books uploads list", () => {
   it("prints the unwrapped upload array", async () => {
     const result = await withResponse(
       Effect.gen(function* () {
@@ -151,7 +199,7 @@ describe("books uploads", () => {
         expect(request.url).toBe("/book-uploads");
         return HttpServerResponse.jsonUnsafe({ data: [upload] });
       }),
-      (baseUrl) => runCommand(baseUrl, ["books", "uploads"]),
+      (baseUrl) => runCommand(baseUrl, ["books", "uploads", "list"]),
     );
     expect(result).toEqual({
       code: 0,
@@ -162,14 +210,14 @@ describe("books uploads", () => {
 
   it("prints an empty unwrapped array", async () => {
     const result = await withJsonResponse(200, { data: [] }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "uploads"]),
+      runCommand(baseUrl, ["books", "uploads", "list"]),
     );
     expect(result).toEqual({ code: 0, stderr: "", stdout: "[]\n" });
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await withJsonResponse(500, { _tag: "BookUploadsUnavailable" }, (baseUrl) =>
-      runCommand(baseUrl, ["books", "uploads"]),
+      runCommand(baseUrl, ["books", "uploads", "list"]),
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
@@ -179,7 +227,7 @@ describe("books uploads", () => {
   });
 });
 
-describe("books delete-upload", () => {
+describe("books uploads delete", () => {
   const runDelete = (status: number, body: unknown) =>
     withResponse(
       Effect.gen(function* () {
@@ -190,7 +238,7 @@ describe("books delete-upload", () => {
           ? HttpServerResponse.empty({ status })
           : HttpServerResponse.jsonUnsafe(body, { status });
       }),
-      (baseUrl) => runCommand(baseUrl, ["books", "delete-upload", uploadId]),
+      (baseUrl) => runCommand(baseUrl, ["books", "uploads", "delete", uploadId]),
     );
 
   it("deletes one failed upload and confirms it", async () => {
@@ -228,9 +276,15 @@ describe("books delete-upload", () => {
   });
 
   it("rejects a malformed upload ID and exits nonzero", async () => {
-    const result = await withJsonResponse(500, {}, (baseUrl) =>
-      runCommand(baseUrl, ["books", "delete-upload", "not-a-uuid"]),
+    let requests = 0;
+    const result = await withResponse(
+      Effect.sync(() => {
+        requests += 1;
+        return HttpServerResponse.empty({ status: 500 });
+      }),
+      (baseUrl) => runCommand(baseUrl, ["books", "uploads", "delete", "not-a-uuid"]),
     );
     expect(result.code).toBe(1);
+    expect(requests).toBe(0);
   });
 });

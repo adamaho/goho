@@ -8,3 +8,6 @@ receipt workflow validation.
 
 Use `pnpm --filter @goho/goho-cli dev` for watch mode and `pnpm check` for verification.
 Keep receipt orchestration in the server; the CLI calls the shared client and formats results.
+
+Mirror source paths in tests: `src/commands/book-uploads.ts` is covered by
+`test/commands/book-uploads.test.ts`. Keep shared test support separate from source-mirrored tests.
