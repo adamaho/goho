@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "./cli.ts";
+import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 

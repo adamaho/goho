@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "./cli.ts";
+import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const bytes = new Uint8Array([0, 1, 2, 255]);
 
