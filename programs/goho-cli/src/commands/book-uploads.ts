@@ -31,9 +31,11 @@ const createCommand = Command.make("create", {
             new CommandError({
               code: getRequestErrorCode(cause),
               message:
-                cause._tag === "BadRequest"
-                  ? "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB."
-                  : "Book cover could not be uploaded. Check the server logs and try again.",
+                "error" in cause
+                  ? cause.error.message
+                  : cause._tag === "BadRequest"
+                    ? "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB."
+                    : "Book cover could not be uploaded. Check the server logs and try again.",
               cause,
             }),
         ),

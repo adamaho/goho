@@ -1,21 +1,8 @@
-import { Option, Schema } from "effect";
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { CommandError, ErrorCode, getRequestErrorCode } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 
-describe("ErrorCode", () => {
-  it("restricts categories to the public literal union", () => {
-    expectTypeOf<ErrorCode>().toEqualTypeOf<
-      | "invalid_input"
-      | "not_found"
-      | "conflict"
-      | "request_failed"
-      | "file_error"
-      | "configuration_error"
-    >();
-    expect(Option.isNone(Schema.decodeUnknownOption(ErrorCode)("anything"))).toBe(true);
-  });
-
+describe("CommandError", () => {
   it.each([
     "invalid_input",
     "not_found",
@@ -33,6 +20,11 @@ describe("ErrorCode", () => {
 });
 
 describe("getRequestErrorCode", () => {
+  it("preserves the code from a decoded public error envelope", () => {
+    expect(
+      getRequestErrorCode({ error: { code: "invalid_input", message: "Upload limit exceeded." } }),
+    ).toBe("invalid_input");
+  });
   it.each([
     ["BadRequest", "invalid_input"],
     ["NotFound", "not_found"],

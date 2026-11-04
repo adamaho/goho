@@ -124,6 +124,16 @@
           "400": {
             "description": "The upload is missing a supported receipt image."
           },
+          "413": {
+            "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "The server could not store or queue the receipt image.",
             "content": {
@@ -1232,6 +1242,16 @@
           "400": {
             "description": "The upload is missing a supported cover image."
           },
+          "413": {
+            "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "The server could not store or queue the cover image.",
             "content": {
@@ -1551,6 +1571,35 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "invalid_input",
+                  "not_found",
+                  "conflict",
+                  "request_failed",
+                  "file_error",
+                  "configuration_error"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["error"],
+        "additionalProperties": false,
+        "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued."
       },
       "BooksUnavailable": {
         "type": "object",

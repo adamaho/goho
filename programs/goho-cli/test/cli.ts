@@ -1,4 +1,5 @@
 import { NodeHttpServer, NodeServices } from "@effect/platform-node";
+import type { ErrorCode } from "@goho/goho-server-client/response";
 import { Effect, Layer, Path, Stream } from "effect";
 import {
   HttpServer,
@@ -7,8 +8,6 @@ import {
   type HttpServerResponse as HttpServerResponseType,
 } from "effect/http";
 import { ChildProcess } from "effect/process";
-
-import type { ErrorCode } from "#src/errors.ts";
 
 /**
  * Expected stderr for one handled CLI failure.

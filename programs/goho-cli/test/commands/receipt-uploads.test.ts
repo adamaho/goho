@@ -164,6 +164,19 @@ describe("receipts uploads create", () => {
   });
 });
 
+describe("receipts uploads create limit errors", () => {
+  it("prints the decoded server JSON error for an oversized upload", async () => {
+    const message =
+      "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.";
+    const result = await withTempFile("receipt.png", new Uint8Array([1]), (filePath) =>
+      withJsonResponse(413, { error: { code: "invalid_input", message } }, (baseUrl) =>
+        runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
+      ),
+    );
+    expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput("invalid_input", message) });
+  });
+});
+
 describe("receipts uploads view", () => {
   it("prints the current upload resource", async () => {
     const result = await withJsonResponse(200, { data: upload }, (baseUrl) =>
