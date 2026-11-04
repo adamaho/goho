@@ -30,6 +30,7 @@ export const layer = Layer.effect(
     Effect.mapError(
       (cause) =>
         new CommandError({
+          code: "configuration_error",
           message: "Invalid CLI configuration. Check GOHO_SERVER_URL.",
           cause,
         }),

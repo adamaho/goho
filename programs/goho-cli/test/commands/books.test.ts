@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["books", "list"]);
 
@@ -45,7 +45,12 @@ describe("books list", () => {
     const result = await withJsonResponse(500, { _tag: "BooksUnavailable" }, runList);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Books could not be listed. Check the server logs and try again.\n");
+    expect(result.stderr).toBe(
+      errorOutput(
+        "request_failed",
+        "Books could not be listed. Check the server logs and try again.",
+      ),
+    );
   });
 });
 
@@ -67,7 +72,7 @@ describe("books view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Book ${book.id} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Book ${book.id} was not found.`));
   });
 });
 
@@ -98,14 +103,19 @@ describe("books delete", () => {
     const result = await runDelete(404, { _tag: "BookNotFound" });
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Book ${book.id} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Book ${book.id} was not found.`));
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await runDelete(500, { _tag: "BooksUnavailable" });
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Book could not be deleted. Check the server logs and try again.\n");
+    expect(result.stderr).toBe(
+      errorOutput(
+        "request_failed",
+        "Book could not be deleted. Check the server logs and try again.",
+      ),
+    );
   });
 
   it("rejects a malformed book ID and exits nonzero", async () => {

@@ -8,6 +8,7 @@ import { booksCommand } from "./commands/books.ts";
 import { receiptsCommand } from "./commands/receipts.ts";
 import { statusCommand } from "./commands/status.ts";
 import * as GohoServer from "./goho-server.ts";
+import { ErrorResponse } from "./response.ts";
 
 const command = Command.make("goho").pipe(
   Command.withDescription("Command-line interface for Goho"),
@@ -17,13 +18,13 @@ const command = Command.make("goho").pipe(
 Command.run(command, { version: "0.0.0" }).pipe(
   Effect.provide(GohoServer.layer),
   Effect.catchTag("GohoCli.CommandError", (error) =>
-    Console.error(error.message).pipe(
-      Effect.andThen(
-        Effect.sync(() => {
-          process.exitCode = 1;
-        }),
-      ),
-    ),
+    Effect.gen(function* () {
+      const response = yield* ErrorResponse.makeEffect({
+        error: { code: error.code, message: error.message },
+      });
+      yield* Console.error(JSON.stringify(response, null, 2));
+      process.exitCode = 1;
+    }),
   ),
   Effect.provide(NodeServices.layer),
   NodeRuntime.runMain,

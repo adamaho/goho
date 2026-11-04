@@ -7,7 +7,7 @@ import {
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -40,6 +40,7 @@ export const patchCommand = Command.make("patch", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: "invalid_input",
               message:
                 "Supply at least one of --store-name or --receipt-date. Names must be nonblank and dates must be real dates in YYYY-MM-DD format.",
               cause,
@@ -51,6 +52,7 @@ export const patchCommand = Command.make("patch", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: getRequestErrorCode(cause),
               message:
                 cause._tag === "NotFound"
                   ? `Receipt ${receiptId} was not found.`
@@ -100,6 +102,7 @@ export const patchItemCommand = Command.make("patch-item", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: "invalid_input",
               message: "Supply --name, --category, or both. Values must be nonblank.",
               cause,
             }),
@@ -112,6 +115,7 @@ export const patchItemCommand = Command.make("patch-item", {
           Effect.mapError(
             (cause) =>
               new CommandError({
+                code: getRequestErrorCode(cause),
                 message:
                   cause._tag === "NotFound"
                     ? `Item ${itemId} was not found on receipt ${receiptId}.`

@@ -2,7 +2,7 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { saveImageFile } from "#src/utils/save-image-file.ts";
 
@@ -30,6 +30,7 @@ export const imageCommand = Command.make("image", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: getRequestErrorCode(cause),
               message:
                 cause._tag === "NotFound"
                   ? `Receipt ${receiptId} was not found or has no scanned image.`

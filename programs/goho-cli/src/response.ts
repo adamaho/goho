@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { ErrorCode } from "./errors.ts";
+
 /**
  * Resource kinds reported by successful CLI deletion commands.
  *
@@ -41,3 +43,25 @@ export const DeleteResult = Schema.Struct({
  * @since 0.1.0
  */
 export interface DeleteResult extends Schema.Schema.Type<typeof DeleteResult> {}
+
+/**
+ * Public stderr response for handled CLI failures. Diagnostic causes are kept
+ * internal and never included in this response.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ErrorResponse = Schema.Struct({
+  error: Schema.Struct({
+    code: ErrorCode,
+    message: Schema.String,
+  }),
+});
+
+/**
+ * Decoded public CLI error response.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ErrorResponse extends Schema.Schema.Type<typeof ErrorResponse> {}

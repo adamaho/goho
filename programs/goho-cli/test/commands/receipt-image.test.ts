@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const bytes = new Uint8Array([0, 1, 2, 255]);
 
@@ -63,23 +63,25 @@ describe("receipts image", () => {
   it.each([
     {
       status: 404,
+      errorCode: "not_found",
       tag: "NotFound",
       message: "Receipt 42 was not found or has no scanned image.",
     },
     {
       status: 500,
+      errorCode: "request_failed",
       tag: "InternalServerError",
       message: "Receipt image could not be retrieved. Check the server logs and try again.",
     },
-  ])(
+  ] as const)(
     "reports HTTP $status without touching the existing file",
-    async ({ status, tag, message }) => {
+    async ({ status, tag, message, errorCode }) => {
       const { result, saved } = await withImageFile((directory, output) =>
         withJsonResponse(status, { _tag: tag }, (baseUrl) =>
           runCommand(baseUrl, ["receipts", "image", "42", "--output", output]),
         ),
       );
-      expect(result).toEqual({ code: 1, stdout: "", stderr: `${message}\n` });
+      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
       expect(saved).toEqual([9, 9, 9, 9, 9, 9]);
     },
   );
@@ -92,7 +94,10 @@ describe("receipts image", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toMatch(/^Receipt image could not be saved to /u);
+    expect(JSON.parse(result.stderr).error).toMatchObject({
+      code: "file_error",
+      message: expect.stringMatching(/^Receipt image could not be saved to /u),
+    });
     expect(saved).toEqual([9, 9, 9, 9, 9, 9]);
   });
 

@@ -1,7 +1,7 @@
 import { Option, Schema } from "effect";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { DeletedResource, DeleteResult } from "#src/response.ts";
+import { DeletedResource, DeleteResult, ErrorResponse } from "#src/response.ts";
 
 describe("DeleteResult", () => {
   it("restricts resource names to the supported literal union", () => {
@@ -29,5 +29,21 @@ describe("DeleteResult", () => {
     { deleted: true, resource: "book", id: 12 },
   ])("rejects an invalid confirmation: %j", (value) => {
     expect(Option.isNone(Schema.decodeUnknownOption(DeleteResult)(value))).toBe(true);
+  });
+});
+
+describe("ErrorResponse", () => {
+  it("constructs the public error envelope", () => {
+    const response = { error: { code: "not_found", message: "Book 12 was not found." } } as const;
+    expect(ErrorResponse.makeOption(response)).toEqual(Option.some(response));
+  });
+
+  it.each([
+    { error: { code: "anything", message: "Nope" } },
+    { error: { code: "not_found" } },
+    { error: { code: "not_found", message: 12 } },
+    { code: "not_found", message: "Nope" },
+  ])("rejects an invalid public error: %j", (value) => {
+    expect(Option.isNone(Schema.decodeUnknownOption(ErrorResponse)(value))).toBe(true);
   });
 });

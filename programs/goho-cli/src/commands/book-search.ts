@@ -1,7 +1,7 @@
 import { Console, Effect, Schema } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -26,6 +26,7 @@ export const searchCommand = Command.make("search", {
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message: "Books could not be searched. Check the server logs and try again.",
             cause,
           }),
