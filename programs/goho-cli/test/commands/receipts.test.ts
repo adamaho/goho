@@ -104,7 +104,7 @@ describe("receipts delete", () => {
     expect(result).toEqual({
       code: 0,
       stderr: "",
-      stdout: `Deleted receipt ${receipt.id}.\n`,
+      stdout: `${JSON.stringify({ deleted: true, resource: "receipt", id: receipt.id }, null, 2)}\n`,
     });
   });
 

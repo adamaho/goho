@@ -4,6 +4,7 @@ import { Argument, Command } from "effect/cli";
 
 import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
+import { DeleteResult } from "#src/response.ts";
 
 import { createCommand } from "./receipt-create.ts";
 import { imageCommand } from "./receipt-image.ts";
@@ -67,7 +68,12 @@ const deleteCommand = Command.make("delete", {
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
       yield* client.receipts.delete({ params: { receiptId } });
-      yield* Console.log(`Deleted receipt ${receiptId}.`);
+      const result = yield* DeleteResult.makeEffect({
+        deleted: true,
+        resource: "receipt",
+        id: receiptId,
+      });
+      yield* Console.log(JSON.stringify(result, null, 2));
     }).pipe(
       Effect.mapError(
         (cause) =>

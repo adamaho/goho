@@ -246,7 +246,7 @@ describe("books uploads delete", () => {
     expect(result).toEqual({
       code: 0,
       stderr: "",
-      stdout: `Deleted book upload ${uploadId}.\n`,
+      stdout: `${JSON.stringify({ deleted: true, resource: "book-upload", id: uploadId }, null, 2)}\n`,
     });
   });
 

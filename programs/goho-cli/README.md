@@ -26,6 +26,17 @@ Upload operations live under `books uploads` and `receipts uploads`, each with
 
 The old forms are no longer supported. `goho status` still checks server health.
 
+## Delete responses
+
+All four delete commands print a JSON confirmation instead of a text message:
+
+```json
+{ "deleted": true, "resource": "book", "id": "12" }
+```
+
+`resource` is `book`, `receipt`, `book-upload`, or `receipt-upload`, and `id` stays a
+string. Failures still exit nonzero and print an error to stderr without a success result.
+
 ## Check server status
 
 ```bash
@@ -81,7 +92,7 @@ pnpm --filter @goho/goho-cli start receipts uploads delete <upload-id>
 ```
 
 The command permanently removes the failed upload and its stored image, then
-prints `Deleted receipt upload <id>.` There is no confirmation prompt. An upload that
+prints a JSON confirmation with `resource: "receipt-upload"`. There is no confirmation prompt. An upload that
 is queued, processing, or succeeded exits nonzero and nothing changes; delete the
 receipt to remove a successful scan. A missing upload also exits nonzero.
 
@@ -167,7 +178,7 @@ pnpm --filter @goho/goho-cli start receipts delete <positive-integer-receipt-id>
 ```
 
 The command permanently removes the receipt, its items, and any scanned image,
-then prints `Deleted receipt <id>.` There is no confirmation prompt. A missing
+then prints a JSON confirmation with `resource: "receipt"`. There is no confirmation prompt. A missing
 receipt exits nonzero with a specific message.
 
 ## List books
@@ -227,7 +238,7 @@ pnpm --filter @goho/goho-cli start books uploads delete <upload-id>
 ```
 
 The command permanently removes the failed upload and its stored image, then
-prints `Deleted book upload <id>.` There is no confirmation prompt. An upload that
+prints a JSON confirmation with `resource: "book-upload"`. There is no confirmation prompt. An upload that
 is queued, processing, or succeeded exits nonzero and nothing changes; delete the
 book to remove a successful scan. A missing upload also exits nonzero.
 
@@ -290,7 +301,7 @@ pnpm --filter @goho/goho-cli start books delete <positive-integer-book-id>
 ```
 
 The command permanently removes the book, its successful cover scans, and their
-images, then prints `Deleted book <id>.` There is no confirmation prompt. A missing
+images, then prints a JSON confirmation with `resource: "book"`. There is no confirmation prompt. A missing
 book exits nonzero with a specific message.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.
