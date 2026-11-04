@@ -2,7 +2,7 @@ import { CreateBookRequest } from "@goho/goho-server-client/books";
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Command, Flag } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -31,6 +31,7 @@ export const createCommand = Command.make("create", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: "invalid_input",
               message:
                 "Values for --title, --category, --author, and --reading-level must be nonblank.",
               cause,
@@ -42,6 +43,7 @@ export const createCommand = Command.make("create", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: getRequestErrorCode(cause),
               message:
                 cause._tag === "BadRequest"
                   ? "The book was rejected. Check the supplied values."

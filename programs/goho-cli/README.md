@@ -37,6 +37,28 @@ All four delete commands print a JSON confirmation instead of a text message:
 `resource` is `book`, `receipt`, `book-upload`, or `receipt-upload`, and `id` stays a
 string. Failures still exit nonzero and print an error to stderr without a success result.
 
+## Error responses
+
+Handled command failures print one JSON object to stderr and exit with code `1`:
+
+```json
+{ "error": { "code": "not_found", "message": "Book 12 was not found." } }
+```
+
+| Code                  | Meaning                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `invalid_input`       | Handler validation failed, or the API rejected the supplied values                         |
+| `not_found`           | The API could not find the requested record, upload, or image                              |
+| `conflict`            | A book correction conflicts, or an upload is not eligible for deletion                     |
+| `request_failed`      | A request failed due to the server, transport, or response decoding                        |
+| `file_error`          | A local image could not be read or saved, or its default extension could not be determined |
+| `configuration_error` | CLI configuration could not be loaded                                                      |
+
+Successful JSON output is unchanged. Internal diagnostic causes are not included in the
+error response. Parser errors, such as missing arguments and unknown flags, still use
+Effect CLI's text rendering and may print help to stdout; unhandled defects are also
+outside this response contract.
+
 ## Check server status
 
 ```bash

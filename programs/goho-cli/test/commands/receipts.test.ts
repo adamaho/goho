@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 
@@ -49,7 +49,10 @@ describe("receipts list", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipts could not be listed. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Receipts could not be listed. Check the server logs and try again.",
+      ),
     );
   });
 });
@@ -72,7 +75,7 @@ describe("receipts view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Receipt ${receipt.id} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Receipt ${receipt.id} was not found.`));
   });
 
   it("does not retain the old show command", async () => {
@@ -112,7 +115,7 @@ describe("receipts delete", () => {
     const result = await runDelete(404, { _tag: "NotFound" });
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Receipt ${receipt.id} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Receipt ${receipt.id} was not found.`));
   });
 
   it("reports server failures and exits nonzero", async () => {
@@ -120,7 +123,10 @@ describe("receipts delete", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipt could not be deleted. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Receipt could not be deleted. Check the server logs and try again.",
+      ),
     );
   });
 

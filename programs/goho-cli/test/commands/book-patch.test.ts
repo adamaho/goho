@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
 
 const fiction = { id: "9", name: "fiction", icon: "other", color: "grey", kinds: ["book"] };
 const fantasy = { id: "10", name: "fantasy", icon: "other", color: "grey", kinds: ["book"] };
@@ -73,29 +73,35 @@ describe("books patch", () => {
   it.each([
     {
       status: 400,
+      errorCode: "invalid_input",
       tag: "BadRequest",
       message: "The book correction was rejected. Check the supplied changes.",
     },
-    { status: 404, tag: "BookNotFound", message: "Book 12 was not found." },
+    { status: 404, tag: "BookNotFound", message: "Book 12 was not found.", errorCode: "not_found" },
     {
       status: 409,
+      errorCode: "conflict",
       tag: "BookConflict",
       message: "Another book already has that title and author.",
     },
     {
       status: 500,
+      errorCode: "request_failed",
       tag: "BooksUnavailable",
       message: "Book could not be patched. Check the server logs and try again.",
     },
-  ])("reports HTTP $status and exits nonzero", async ({ status, tag, message }) => {
-    const result = await runPatch(
-      ["patch", book.id, "--title", "The Hobbit"],
-      { title: "The Hobbit" },
-      status,
-      { _tag: tag },
-    );
-    expect(result).toEqual({ code: 1, stdout: "", stderr: `${message}\n` });
-  });
+  ] as const)(
+    "reports HTTP $status and exits nonzero",
+    async ({ status, tag, message, errorCode }) => {
+      const result = await runPatch(
+        ["patch", book.id, "--title", "The Hobbit"],
+        { title: "The Hobbit" },
+        status,
+        { _tag: tag },
+      );
+      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
+    },
+  );
 });
 
 describe("book patch validation", () => {

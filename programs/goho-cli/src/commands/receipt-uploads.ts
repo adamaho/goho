@@ -2,7 +2,7 @@ import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 import { readImageFile } from "#src/utils/read-image-file.ts";
@@ -29,6 +29,7 @@ const createCommand = Command.make("create", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: getRequestErrorCode(cause),
               message:
                 cause._tag === "BadRequest"
                   ? "Receipt must be a JPEG, PNG, or WebP image no larger than 20 MB."
@@ -64,6 +65,7 @@ const viewCommand = Command.make("view", {
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message:
               cause._tag === "NotFound"
                 ? `Receipt upload ${uploadId} was not found.`
@@ -92,6 +94,7 @@ const listCommand = Command.make("list").pipe(
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message: "Receipt uploads could not be listed. Check the server logs and try again.",
             cause,
           }),
@@ -127,6 +130,7 @@ const deleteCommand = Command.make("delete", {
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message:
               cause._tag === "NotFound"
                 ? `Receipt upload ${uploadId} was not found.`

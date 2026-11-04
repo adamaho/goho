@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const uploadId = "00000000-0000-4000-8000-000000000001";
 const upload = {
@@ -131,7 +131,9 @@ describe("receipts uploads create", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Receipt must be a JPEG, PNG, or WebP image.\n");
+    expect(result.stderr).toBe(
+      errorOutput("invalid_input", "Receipt must be a JPEG, PNG, or WebP image."),
+    );
   });
 
   it("reports an unreadable receipt path", async () => {
@@ -140,7 +142,9 @@ describe("receipts uploads create", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Receipt file could not be read: /missing/receipt.png\n");
+    expect(result.stderr).toBe(
+      errorOutput("file_error", "Receipt file could not be read: /missing/receipt.png"),
+    );
   });
 
   it("reports a receipt rejected by the server", async () => {
@@ -152,7 +156,10 @@ describe("receipts uploads create", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipt must be a JPEG, PNG, or WebP image no larger than 20 MB.\n",
+      errorOutput(
+        "invalid_input",
+        "Receipt must be a JPEG, PNG, or WebP image no larger than 20 MB.",
+      ),
     );
   });
 });
@@ -175,7 +182,9 @@ describe("receipts uploads view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Receipt upload ${uploadId} was not found.\n`);
+    expect(result.stderr).toBe(
+      errorOutput("not_found", `Receipt upload ${uploadId} was not found.`),
+    );
   });
 
   it("reports server failures", async () => {
@@ -185,7 +194,10 @@ describe("receipts uploads view", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipt upload status could not be retrieved. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Receipt upload status could not be retrieved. Check the server logs and try again.",
+      ),
     );
   });
 });
@@ -222,7 +234,10 @@ describe("receipts uploads list", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipt uploads could not be listed. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Receipt uploads could not be listed. Check the server logs and try again.",
+      ),
     );
   });
 });
@@ -254,7 +269,9 @@ describe("receipts uploads delete", () => {
     const result = await runDelete(404, { _tag: "NotFound" });
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Receipt upload ${uploadId} was not found.\n`);
+    expect(result.stderr).toBe(
+      errorOutput("not_found", `Receipt upload ${uploadId} was not found.`),
+    );
   });
 
   it("reports an upload that has not failed and exits nonzero", async () => {
@@ -262,7 +279,10 @@ describe("receipts uploads delete", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      `Receipt upload ${uploadId} has not failed, so it cannot be deleted. Delete the receipt to remove a successful scan.\n`,
+      errorOutput(
+        "conflict",
+        `Receipt upload ${uploadId} has not failed, so it cannot be deleted. Delete the receipt to remove a successful scan.`,
+      ),
     );
   });
 
@@ -271,7 +291,10 @@ describe("receipts uploads delete", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Receipt upload could not be deleted. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Receipt upload could not be deleted. Check the server logs and try again.",
+      ),
     );
   });
 

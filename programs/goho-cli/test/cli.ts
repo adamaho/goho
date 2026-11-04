@@ -8,6 +8,17 @@ import {
 } from "effect/http";
 import { ChildProcess } from "effect/process";
 
+import type { ErrorCode } from "#src/errors.ts";
+
+/**
+ * Expected stderr for one handled CLI failure.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const errorOutput = (code: ErrorCode, message: string) =>
+  `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
+
 /**
  * Captured output from one CLI process.
  *

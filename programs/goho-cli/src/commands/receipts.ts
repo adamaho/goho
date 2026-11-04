@@ -2,7 +2,7 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 
@@ -22,6 +22,7 @@ const listCommand = Command.make("list").pipe(
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message: "Receipts could not be listed. Check the server logs and try again.",
             cause,
           }),
@@ -46,6 +47,7 @@ const viewCommand = Command.make("view", {
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message:
               cause._tag === "NotFound"
                 ? `Receipt ${receiptId} was not found.`
@@ -78,6 +80,7 @@ const deleteCommand = Command.make("delete", {
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message:
               cause._tag === "NotFound"
                 ? `Receipt ${receiptId} was not found.`

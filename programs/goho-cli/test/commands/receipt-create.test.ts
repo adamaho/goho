@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
 
 const payload = {
   storeName: "Example Store",
@@ -131,18 +131,23 @@ describe("receipts create", () => {
   it.each([
     {
       status: 400,
+      errorCode: "invalid_input",
       tag: "BadRequest",
       message: "The receipt was rejected. Check the supplied values.",
     },
     {
       status: 500,
+      errorCode: "request_failed",
       tag: "InternalServerError",
       message: "Receipt could not be created. Check the server logs and try again.",
     },
-  ])("reports HTTP $status and exits nonzero", async ({ status, tag, message }) => {
-    const result = await runCreate([...flags(), ...apples], payload, status, { _tag: tag });
-    expect(result).toEqual({ code: 1, stdout: "", stderr: `${message}\n` });
-  });
+  ] as const)(
+    "reports HTTP $status and exits nonzero",
+    async ({ status, tag, message, errorCode }) => {
+      const result = await runCreate([...flags(), ...apples], payload, status, { _tag: tag });
+      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
+    },
+  );
 });
 
 describe("receipt create validation", () => {
@@ -200,7 +205,10 @@ describe("receipt create validation", () => {
     expect(result.code).toBe(1);
     expect(requests).toBe(0);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain(`Invalid --item "${item}": ${problem}.`);
+    expect(JSON.parse(result.stderr).error).toMatchObject({
+      code: "invalid_input",
+      message: expect.stringContaining(`Invalid --item "${item}": ${problem}.`),
+    });
   });
 
   it.each([
@@ -216,7 +224,9 @@ describe("receipt create validation", () => {
     expect(result.code).toBe(1);
     expect(requests).toBe(0);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("Receipt is not valid: ");
-    expect(result.stderr).toContain(`["items"][1]["${at}"]`);
+    const error = JSON.parse(result.stderr).error;
+    expect(error.code).toBe("invalid_input");
+    expect(error.message).toContain("Receipt is not valid: ");
+    expect(error.message).toContain(`["items"][1]["${at}"]`);
   });
 });

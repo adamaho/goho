@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
 
 const groceries = {
   id: "3",
@@ -81,25 +81,30 @@ describe("receipts patch", () => {
   it.each([
     {
       status: 400,
+      errorCode: "invalid_input",
       tag: "BadRequest",
       message: "The receipt correction was rejected. Check the supplied changes.",
     },
-    { status: 404, tag: "NotFound", message: "Receipt 42 was not found." },
+    { status: 404, tag: "NotFound", message: "Receipt 42 was not found.", errorCode: "not_found" },
     {
       status: 500,
+      errorCode: "request_failed",
       tag: "InternalServerError",
       message: "Receipt could not be patched. Check the server logs and try again.",
     },
-  ])("reports HTTP $status and exits nonzero", async ({ status, tag, message }) => {
-    const result = await runPatch(
-      ["patch", receipt.id, "--store-name", "Corner Store"],
-      `/receipts/${receipt.id}`,
-      { storeName: "Corner Store" },
-      status,
-      { _tag: tag },
-    );
-    expect(result).toEqual({ code: 1, stdout: "", stderr: `${message}\n` });
-  });
+  ] as const)(
+    "reports HTTP $status and exits nonzero",
+    async ({ status, tag, message, errorCode }) => {
+      const result = await runPatch(
+        ["patch", receipt.id, "--store-name", "Corner Store"],
+        `/receipts/${receipt.id}`,
+        { storeName: "Corner Store" },
+        status,
+        { _tag: tag },
+      );
+      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
+    },
+  );
 });
 
 describe("receipts patch-item", () => {
@@ -140,25 +145,35 @@ describe("receipts patch-item", () => {
   it.each([
     {
       status: 400,
+      errorCode: "invalid_input",
       tag: "BadRequest",
       message: "The item correction was rejected. Check the supplied changes.",
     },
-    { status: 404, tag: "NotFound", message: `Item ${item.id} was not found on receipt 42.` },
+    {
+      status: 404,
+      tag: "NotFound",
+      message: `Item ${item.id} was not found on receipt 42.`,
+      errorCode: "not_found",
+    },
     {
       status: 500,
+      errorCode: "request_failed",
       tag: "InternalServerError",
       message: "Receipt item could not be patched. Check the server logs and try again.",
     },
-  ])("reports HTTP $status and exits nonzero", async ({ status, tag, message }) => {
-    const result = await runPatch(
-      ["patch-item", receipt.id, item.id, "--name", "Apples"],
-      `/receipts/${receipt.id}/items/${item.id}`,
-      { name: "Apples" },
-      status,
-      { _tag: tag },
-    );
-    expect(result).toEqual({ code: 1, stdout: "", stderr: `${message}\n` });
-  });
+  ] as const)(
+    "reports HTTP $status and exits nonzero",
+    async ({ status, tag, message, errorCode }) => {
+      const result = await runPatch(
+        ["patch-item", receipt.id, item.id, "--name", "Apples"],
+        `/receipts/${receipt.id}/items/${item.id}`,
+        { name: "Apples" },
+        status,
+        { _tag: tag },
+      );
+      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
+    },
+  );
 });
 
 describe("receipt patch validation", () => {

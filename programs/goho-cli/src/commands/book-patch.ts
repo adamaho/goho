@@ -2,7 +2,7 @@ import { BookId, PatchBookRequest } from "@goho/goho-server-client/books";
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -39,6 +39,7 @@ export const patchCommand = Command.make("patch", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: "invalid_input",
               message:
                 "Supply at least one of --title, --author, --category, or --reading-level. Values must be nonblank.",
               cause,
@@ -50,6 +51,7 @@ export const patchCommand = Command.make("patch", {
         Effect.mapError(
           (cause) =>
             new CommandError({
+              code: getRequestErrorCode(cause),
               message:
                 cause._tag === "BookNotFound"
                   ? `Book ${bookId} was not found.`

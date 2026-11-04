@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const runStatus = (baseUrl: string) => runCommand(baseUrl, ["status"]);
 
@@ -29,7 +29,10 @@ describe("status", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Server status could not be retrieved. Check that the server is running.\n",
+      errorOutput(
+        "request_failed",
+        "Server status could not be retrieved. Check that the server is running.",
+      ),
     );
   });
 
@@ -38,7 +41,10 @@ describe("status", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Server status could not be retrieved. Check that the server is running.\n",
+      errorOutput(
+        "request_failed",
+        "Server status could not be retrieved. Check that the server is running.",
+      ),
     );
   });
 });

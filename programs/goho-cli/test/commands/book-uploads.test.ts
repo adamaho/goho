@@ -3,7 +3,7 @@ import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const uploadId = "00000000-0000-4000-8000-000000000001";
 const upload = {
@@ -131,7 +131,9 @@ describe("books uploads create", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Book cover must be a JPEG, PNG, or WebP image.\n");
+    expect(result.stderr).toBe(
+      errorOutput("invalid_input", "Book cover must be a JPEG, PNG, or WebP image."),
+    );
   });
 
   it("reports an unreadable cover path", async () => {
@@ -140,7 +142,9 @@ describe("books uploads create", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe("Book cover file could not be read: /missing/cover.png\n");
+    expect(result.stderr).toBe(
+      errorOutput("file_error", "Book cover file could not be read: /missing/cover.png"),
+    );
   });
 
   it("reports a cover rejected by the server", async () => {
@@ -152,7 +156,10 @@ describe("books uploads create", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB.\n",
+      errorOutput(
+        "invalid_input",
+        "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB.",
+      ),
     );
   });
 });
@@ -175,7 +182,7 @@ describe("books uploads view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Book upload ${uploadId} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Book upload ${uploadId} was not found.`));
   });
 
   it("reports server failures", async () => {
@@ -185,7 +192,10 @@ describe("books uploads view", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Book upload status could not be retrieved. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Book upload status could not be retrieved. Check the server logs and try again.",
+      ),
     );
   });
 });
@@ -222,7 +232,10 @@ describe("books uploads list", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Book uploads could not be listed. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Book uploads could not be listed. Check the server logs and try again.",
+      ),
     );
   });
 });
@@ -254,7 +267,7 @@ describe("books uploads delete", () => {
     const result = await runDelete(404, { _tag: "BookUploadNotFound" });
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(`Book upload ${uploadId} was not found.\n`);
+    expect(result.stderr).toBe(errorOutput("not_found", `Book upload ${uploadId} was not found.`));
   });
 
   it("reports an upload that has not failed and exits nonzero", async () => {
@@ -262,7 +275,10 @@ describe("books uploads delete", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.\n`,
+      errorOutput(
+        "conflict",
+        `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.`,
+      ),
     );
   });
 
@@ -271,7 +287,10 @@ describe("books uploads delete", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      "Book upload could not be deleted. Check the server logs and try again.\n",
+      errorOutput(
+        "request_failed",
+        "Book upload could not be deleted. Check the server logs and try again.",
+      ),
     );
   });
 

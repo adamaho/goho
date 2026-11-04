@@ -1,7 +1,7 @@
 import { Console, Effect } from "effect";
 import { Command } from "effect/cli";
 
-import { CommandError } from "#src/errors.ts";
+import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -21,6 +21,7 @@ export const statusCommand = Command.make("status").pipe(
       Effect.mapError(
         (cause) =>
           new CommandError({
+            code: getRequestErrorCode(cause),
             message: "Server status could not be retrieved. Check that the server is running.",
             cause,
           }),
