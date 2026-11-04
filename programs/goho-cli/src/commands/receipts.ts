@@ -6,6 +6,7 @@ import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 import { createCommand } from "./receipt-create.ts";
+import { imageCommand } from "./receipt-image.ts";
 import { patchCommand, patchItemCommand } from "./receipt-patch.ts";
 import {
   deleteUploadCommand,
@@ -98,6 +99,7 @@ export const receiptsCommand = Command.make("receipts").pipe(
   Command.withSubcommands([
     listCommand,
     viewCommand,
+    imageCommand,
     createCommand,
     patchCommand,
     patchItemCommand,
