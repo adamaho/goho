@@ -127,9 +127,8 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
   }).pipe(Effect.provide(layer));
 });
 
-// Uses the live clock because this waits on a real socket: the 413 takes several
-// seconds to arrive and the connection is then reset. Its own server keeps that
-// reset away from other requests.
+// Uses a real socket for both raw HTTP and typed-client size-limit rejections.
+// Its own server keeps connection resets away from unrelated requests.
 it.live(
   "rejects a cover over the shared 20 MiB upload limit before the service",
   () => {
@@ -142,6 +141,20 @@ it.live(
         body: HttpBody.formData(coverForm(file)),
       });
       expect(response.status).toBe(413);
+      expect(response.headers["content-type"]).toContain("application/json");
+      const expected = {
+        error: {
+          code: "invalid_input",
+          message:
+            "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.",
+        },
+      };
+      expect(yield* response.json).toEqual(expected);
+      const client = yield* Client.make("");
+      const failure = yield* client.bookUploads
+        .create({ payload: coverForm(file) })
+        .pipe(Effect.flip);
+      expect(failure).toEqual(expected);
       expect(calls).toEqual([]);
     }).pipe(Effect.provide(layer));
   },

@@ -240,6 +240,48 @@ it.effect("rejects unsupported receipt upload content types", () =>
   }).pipe(Effect.provide(TestLive)),
 );
 
+it.live(
+  "returns declared JSON for an oversized receipt upload before the service",
+  () => {
+    let calls = 0;
+    const layer = testLayer(
+      {},
+      {
+        create: () =>
+          Effect.sync(() => {
+            calls += 1;
+            return receiptUpload;
+          }),
+      },
+    );
+    return Effect.gen(function* () {
+      const form = new FormData();
+      form.append(
+        "file",
+        new File([new Uint8Array(20 * 1024 * 1024 + 1)], "receipt.png", { type: "image/png" }),
+      );
+      const expected = {
+        error: {
+          code: "invalid_input",
+          message:
+            "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.",
+        },
+      };
+      const response = yield* HttpClient.post("/receipt-uploads", {
+        body: HttpBody.formData(form),
+      });
+      expect(response.status).toBe(413);
+      expect(response.headers["content-type"]).toContain("application/json");
+      expect(yield* response.json).toEqual(expected);
+      const client = yield* Client.make("");
+      const failure = yield* client.receiptUploads.create({ payload: form }).pipe(Effect.flip);
+      expect(failure).toEqual(expected);
+      expect(calls).toBe(0);
+    }).pipe(Effect.provide(layer));
+  },
+  15_000,
+);
+
 it.effect("returns HTTP 404 when a receipt does not exist", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(`/receipts/${receipt.id}`);

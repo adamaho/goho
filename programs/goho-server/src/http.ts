@@ -9,6 +9,7 @@ import * as BookUploads from "./book-uploads/service.ts";
 import * as Books from "./books/service.ts";
 import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as Receipts from "./receipts/service.ts";
+import * as UploadErrorResponses from "./upload-error-responses.ts";
 
 const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers) =>
   Effect.gen(function* () {
@@ -133,7 +134,14 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, BookUploadsLive, HealthLive]),
+  Layer.provide([
+    ReceiptUploadsLive,
+    ReceiptsLive,
+    BooksLive,
+    BookUploadsLive,
+    HealthLive,
+    UploadErrorResponses.layer,
+  ]),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),

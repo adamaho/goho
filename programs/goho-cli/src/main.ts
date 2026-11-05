@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
+import { ErrorResponse } from "@goho/goho-server-client/response";
 import { Console, Effect } from "effect";
 import { Command } from "effect/cli";
 
@@ -8,7 +9,6 @@ import { booksCommand } from "./commands/books.ts";
 import { receiptsCommand } from "./commands/receipts.ts";
 import { statusCommand } from "./commands/status.ts";
 import * as GohoServer from "./goho-server.ts";
-import { ErrorResponse } from "./response.ts";
 
 const command = Command.make("goho").pipe(
   Command.withDescription("Command-line interface for Goho"),

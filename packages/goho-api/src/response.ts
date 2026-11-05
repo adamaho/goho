@@ -1,6 +1,50 @@
 import { Schema } from "effect";
 
 /**
+ * Stable categories for public API and CLI errors, bud.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ErrorCode = Schema.Literals([
+  "invalid_input",
+  "not_found",
+  "conflict",
+  "request_failed",
+  "file_error",
+  "configuration_error",
+]);
+
+/**
+ * Decoded public error category.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export type ErrorCode = typeof ErrorCode.Type;
+
+/**
+ * Public error code and message. Diagnostic causes stay off the roster.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const ErrorResponse = Schema.Struct({
+  error: Schema.Struct({
+    code: ErrorCode,
+    message: Schema.String,
+  }),
+}).annotate({ identifier: "ErrorResponse" });
+
+/**
+ * Decoded public error response.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface ErrorResponse extends Schema.Schema.Type<typeof ErrorResponse> {}
+
+/**
  * Successful API response with its payload under `data`.
  *
  * @category models

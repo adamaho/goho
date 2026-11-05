@@ -1,27 +1,5 @@
+import { ErrorCode, type ErrorResponse } from "@goho/goho-server-client/response";
 import { Schema } from "effect";
-
-/**
- * Stable categories for handled CLI failures, independent of message wording.
- *
- * @category models
- * @since 0.1.0
- */
-export const ErrorCode = Schema.Literals([
-  "invalid_input",
-  "not_found",
-  "conflict",
-  "request_failed",
-  "file_error",
-  "configuration_error",
-]);
-
-/**
- * Decoded CLI error category.
- *
- * @category models
- * @since 0.1.0
- */
-export type ErrorCode = typeof ErrorCode.Type;
 
 /**
  * Safe command-line failure with its diagnostic cause.
@@ -42,7 +20,10 @@ export class CommandError extends Schema.TaggedError<CommandError>()("GohoCli.Co
  * @category mapping
  * @since 0.1.0
  */
-export const getRequestErrorCode = (cause: { readonly _tag: string }): ErrorCode => {
+export const getRequestErrorCode = (
+  cause: { readonly _tag: string } | ErrorResponse,
+): ErrorCode => {
+  if ("error" in cause) return cause.error.code;
   switch (cause._tag) {
     case "BadRequest":
       return "invalid_input";

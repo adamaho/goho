@@ -10,4 +10,4 @@ clients. It depends only on Effect and contains no server infrastructure.
 - `/categories`: the shared category schema and its kinds.
 - `/receipt-uploads`: receipt upload identity and status schemas.
 - `/receipts`: receipt request and response schemas.
-- `/response`: shared successful response envelope.
+- `/response`: shared successful response envelope and public error code/message schema.

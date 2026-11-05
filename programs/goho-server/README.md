@@ -36,6 +36,21 @@ WebP image no larger than 20 MB. It stores the original, creates a durable uploa
 record, queues processing, and immediately returns HTTP 202 with the upload
 resource under `data`.
 
+Multipart limits are one part, a 20 MiB file, and a 21 MiB total request. Exceeding
+a limit returns HTTP 413 with this public JSON error; nothing is queued:
+
+```json
+{
+  "error": {
+    "code": "invalid_input",
+    "message": "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB."
+  }
+}
+```
+
+This response uses the shared `ErrorResponse` schema and is also decoded by the
+typed client. Other endpoint error formats are unchanged.
+
 Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
 be retained. File names are opaque IDs; original names and MIME types are stored
 with the upload record in PostgreSQL.
@@ -185,7 +200,7 @@ HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
 cover image, with the same size limit as receipt uploads. It stores the original
 in `GOHO_UPLOADS_DIRECTORY`, queues processing, and returns HTTP 202 with the
 upload under `data`. Other file types return HTTP 400, and files over the limit
-return HTTP 413.
+return HTTP 413 with the same JSON error as receipt uploads.
 
 Processing reads the title, author, and category from the cover. The author is
 the printed authors, never illustrators, translators, or editors; with no author
