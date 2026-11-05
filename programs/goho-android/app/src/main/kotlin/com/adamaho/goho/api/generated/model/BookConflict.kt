@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BookConflict (
 
-    @Json(name = "_tag")
-    val tag: BookConflict.Tag
+    @Json(name = "type")
+    val type: BookConflict.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BookConflict.Status? = null,
+
+    @Json(name = "title")
+    val title: BookConflict.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BookConflict
+     * Values: gohoColonProblemColonBookMinusConflict
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BookConflict") BookConflict("BookConflict");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:book-conflict") gohoColonProblemColonBookMinusConflict("goho:problem:book-conflict");
+    }
+    /**
+     * 
+     *
+     * Values: _409
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "409.0") _409(409.0);
+    }
+    /**
+     * 
+     *
+     * Values: Book_already_exists
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Book already exists") Book_already_exists("Book already exists");
     }
 
 }

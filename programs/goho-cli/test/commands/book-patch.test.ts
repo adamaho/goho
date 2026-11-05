@@ -1,8 +1,15 @@
+import { BookConflict, BookNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  validationProblem,
+  withResponse,
+} from "#test/cli.ts";
 
 const fiction = { id: "9", name: "fiction", icon: "other", color: "grey", kinds: ["book"] };
 const fantasy = { id: "10", name: "fantasy", icon: "other", color: "grey", kinds: ["book"] };
@@ -22,9 +29,7 @@ const runPatch = (args: ReadonlyArray<string>, payload: unknown, status: number,
       expect(request.method).toBe("PATCH");
       expect(request.url).toBe(`/books/${book.id}`);
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(payload);
-      return status === 400
-        ? yield* validationResponse
-        : HttpServerResponse.jsonUnsafe(body, { status });
+      return yield* toTestResponse(status, body);
     }),
     (baseUrl) => runCommand(baseUrl, ["books", ...args]),
   );
@@ -74,30 +79,35 @@ describe("books patch", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequestProblem",
+      problem: validationProblem,
       message: "The book correction was rejected. Check the supplied changes.",
     },
-    { status: 404, tag: "BookNotFound", message: "Book 12 was not found.", errorCode: "not_found" },
+    {
+      status: 404,
+      problem: new BookNotFound(),
+      message: "Book 12 was not found.",
+      errorCode: "not_found",
+    },
     {
       status: 409,
       errorCode: "conflict",
-      tag: "BookConflict",
+      problem: new BookConflict(),
       message: "Another book already has that title and author.",
     },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "BooksUnavailable",
+      problem: new BooksUnavailable(),
       message: "Book could not be patched. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status and exits nonzero",
-    async ({ status, tag, message, errorCode }) => {
+    async ({ status, problem, message, errorCode }) => {
       const result = await runPatch(
         ["patch", book.id, "--title", "The Hobbit"],
         { title: "The Hobbit" },
         status,
-        { _tag: tag },
+        problem,
       );
       expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
     },

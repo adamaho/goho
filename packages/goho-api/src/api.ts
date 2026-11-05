@@ -97,6 +97,27 @@ const ReceiptUploadConflictProblem = ReceiptUploadConflict.pipe(
 const ReceiptUploadsUnavailableProblem = ReceiptUploadsUnavailable.pipe(
   Schema.annotateEncoded({ identifier: "ReceiptUploadsUnavailable" }),
 );
+const BookNotFoundProblem = BookNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "BookNotFound" }),
+);
+const BookImageNotFoundProblem = BookImageNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "BookImageNotFound" }),
+);
+const BookConflictProblem = BookConflict.pipe(
+  Schema.annotateEncoded({ identifier: "BookConflict" }),
+);
+const BooksUnavailableProblem = BooksUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "BooksUnavailable" }),
+);
+const BookUploadNotFoundProblem = BookUploadNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "BookUploadNotFound" }),
+);
+const BookUploadConflictProblem = BookUploadConflict.pipe(
+  Schema.annotateEncoded({ identifier: "BookUploadConflict" }),
+);
+const BookUploadsUnavailableProblem = BookUploadsUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "BookUploadsUnavailable" }),
+);
 
 // API groups
 
@@ -358,7 +379,7 @@ export const api = HttpApi.make("goho-server")
             }),
           ),
           error: [
-            BooksUnavailable.annotate({
+            BooksUnavailableProblem.annotate({
               description: "The server could not pull the books off the bench.",
             }),
           ],
@@ -374,8 +395,8 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: DataResponse(Book),
           error: [
-            BookNotFound,
-            BooksUnavailable.annotate({
+            BookNotFoundProblem,
+            BooksUnavailableProblem.annotate({
               description: "The server could not retrieve this book.",
             }),
           ],
@@ -386,7 +407,7 @@ export const api = HttpApi.make("goho-server")
           payload: CreateBookRequest,
           success: DataResponse(Book),
           error: [
-            BooksUnavailable.annotate({
+            BooksUnavailableProblem.annotate({
               description: "The server could not save this book; nothing changed.",
             }),
           ],
@@ -404,9 +425,9 @@ export const api = HttpApi.make("goho-server")
           payload: PatchBookRequest,
           success: DataResponse(Book),
           error: [
-            BookNotFound,
-            BookConflict,
-            BooksUnavailable.annotate({
+            BookNotFoundProblem,
+            BookConflictProblem,
+            BooksUnavailableProblem.annotate({
               description: "The server could not save this correction; nothing changed.",
             }),
           ],
@@ -423,8 +444,8 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: HttpApiSchema.NoContent,
           error: [
-            BookNotFound,
-            BooksUnavailable.annotate({
+            BookNotFoundProblem,
+            BooksUnavailableProblem.annotate({
               description:
                 "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
             }),
@@ -441,8 +462,8 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: ImageResponse,
           error: [
-            BookImageNotFound,
-            BooksUnavailable.annotate({
+            BookImageNotFoundProblem,
+            BooksUnavailableProblem.annotate({
               description: "The server could not retrieve this cover image.",
             }),
           ],
@@ -462,7 +483,7 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
           error: [
             UploadLimitExceeded,
-            BookUploadsUnavailable.annotate({
+            BookUploadsUnavailableProblem.annotate({
               description: "The server could not store or queue the cover image.",
             }),
           ],
@@ -477,7 +498,7 @@ export const api = HttpApi.make("goho-server")
         HttpApiEndpoint.get("list", "/book-uploads", {
           success: DataResponse(Schema.Array(BookUpload)),
           error: [
-            BookUploadsUnavailable.annotate({
+            BookUploadsUnavailableProblem.annotate({
               description: "The server could not pull the cover scans off the bench.",
             }),
           ],
@@ -493,8 +514,8 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: BookUploadId },
           success: DataResponse(BookUpload),
           error: [
-            BookUploadNotFound,
-            BookUploadsUnavailable.annotate({
+            BookUploadNotFoundProblem,
+            BookUploadsUnavailableProblem.annotate({
               description: "The server could not retrieve this cover scan.",
             }),
           ],
@@ -510,9 +531,9 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: BookUploadId },
           success: HttpApiSchema.NoContent,
           error: [
-            BookUploadNotFound,
-            BookUploadConflict,
-            BookUploadsUnavailable.annotate({
+            BookUploadNotFoundProblem,
+            BookUploadConflictProblem,
+            BookUploadsUnavailableProblem.annotate({
               description: "The server could not delete this scan and its stored image.",
             }),
           ],

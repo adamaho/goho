@@ -1,4 +1,5 @@
 import { NodeServices } from "@effect/platform-node";
+import { BookImageNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, FileSystem, Path } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
@@ -129,7 +130,7 @@ describe("books image", () => {
   });
 
   it("reports a missing cover and exits nonzero", async () => {
-    const result = await withJsonResponse(404, { _tag: "BookImageNotFound" }, (baseUrl) =>
+    const result = await withJsonResponse(404, new BookImageNotFound(), (baseUrl) =>
       runCommand(baseUrl, ["books", "image", "12"]),
     );
     expect(result).toEqual({
@@ -140,7 +141,7 @@ describe("books image", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await withJsonResponse(500, { _tag: "BooksUnavailable" }, (baseUrl) =>
+    const result = await withJsonResponse(500, new BooksUnavailable(), (baseUrl) =>
       runCommand(baseUrl, ["books", "image", "12"]),
     );
     expect(result).toEqual({

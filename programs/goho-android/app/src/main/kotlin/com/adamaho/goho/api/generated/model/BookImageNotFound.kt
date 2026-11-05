@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BookImageNotFound (
 
-    @Json(name = "_tag")
-    val tag: BookImageNotFound.Tag
+    @Json(name = "type")
+    val type: BookImageNotFound.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BookImageNotFound.Status? = null,
+
+    @Json(name = "title")
+    val title: BookImageNotFound.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BookImageNotFound
+     * Values: gohoColonProblemColonBookMinusImageMinusNotMinusFound
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BookImageNotFound") BookImageNotFound("BookImageNotFound");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:book-image-not-found") gohoColonProblemColonBookMinusImageMinusNotMinusFound("goho:problem:book-image-not-found");
+    }
+    /**
+     * 
+     *
+     * Values: _404
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "404.0") _404(404.0);
+    }
+    /**
+     * 
+     *
+     * Values: Book_image_not_found
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Book image not found") Book_image_not_found("Book image not found");
     }
 
 }

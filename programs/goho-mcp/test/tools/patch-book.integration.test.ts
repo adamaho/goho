@@ -1,4 +1,5 @@
 import { layer } from "@effect/vitest";
+import { BookConflict, BookNotFound } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { HttpApiError } from "effect/http-api";
@@ -26,10 +27,10 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.jsonUnsafe({ data: { ...book, id: "13", author: "Tolkien" } });
   }
   if (request.url === "/books/999") {
-    return HttpServerResponse.jsonUnsafe({ _tag: "BookNotFound" }, { status: 404 });
+    return yield* HttpServerRespondable.toResponse(new BookNotFound());
   }
   if (request.url === "/books/409") {
-    return HttpServerResponse.jsonUnsafe({ _tag: "BookConflict" }, { status: 409 });
+    return yield* HttpServerRespondable.toResponse(new BookConflict());
   }
   if (request.url === "/books/400") {
     return yield* HttpServerRespondable.toResponse(

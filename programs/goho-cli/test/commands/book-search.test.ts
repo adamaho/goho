@@ -1,3 +1,4 @@
+import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
@@ -39,7 +40,7 @@ describe("books search", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await withJsonResponse(500, { _tag: "BooksUnavailable" }, (baseUrl) =>
+    const result = await withJsonResponse(500, new BooksUnavailable(), (baseUrl) =>
       runCommand(baseUrl, ["books", "search", "hobbit"]),
     );
     expect(result).toEqual({

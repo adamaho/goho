@@ -1,8 +1,15 @@
+import { BookNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  withJsonResponse,
+  withResponse,
+} from "#test/cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["books", "list"]);
 
@@ -42,7 +49,7 @@ describe("books list", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await withJsonResponse(500, { _tag: "BooksUnavailable" }, runList);
+    const result = await withJsonResponse(500, new BooksUnavailable(), runList);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
@@ -67,7 +74,7 @@ describe("books view", () => {
   });
 
   it("reports a missing book and exits nonzero", async () => {
-    const result = await withJsonResponse(404, { _tag: "BookNotFound" }, (baseUrl) =>
+    const result = await withJsonResponse(404, new BookNotFound(), (baseUrl) =>
       runView(book.id, baseUrl),
     );
     expect(result.code).toBe(1);
@@ -85,7 +92,7 @@ describe("books delete", () => {
         expect(request.url).toBe(`/books/${book.id}`);
         return body === undefined
           ? HttpServerResponse.empty({ status })
-          : HttpServerResponse.jsonUnsafe(body, { status });
+          : yield* toTestResponse(status, body);
       }),
       (baseUrl) => runCommand(baseUrl, ["books", "delete", book.id]),
     );
@@ -100,14 +107,14 @@ describe("books delete", () => {
   });
 
   it("reports a missing book and exits nonzero", async () => {
-    const result = await runDelete(404, { _tag: "BookNotFound" });
+    const result = await runDelete(404, new BookNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(errorOutput("not_found", `Book ${book.id} was not found.`));
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await runDelete(500, { _tag: "BooksUnavailable" });
+    const result = await runDelete(500, new BooksUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(

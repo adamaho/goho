@@ -14,9 +14,8 @@ import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BooksCreate200Response
 import com.adamaho.goho.api.generated.model.BooksGet200Response
 import com.adamaho.goho.api.generated.model.BooksList200Response
-import com.adamaho.goho.api.generated.model.BooksUnavailable
+import com.adamaho.goho.api.generated.model.BooksList500Response
 import com.adamaho.goho.api.generated.model.CreateBookRequest
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
 import com.adamaho.goho.api.generated.model.PatchBookRequest
 
 interface BooksApi {

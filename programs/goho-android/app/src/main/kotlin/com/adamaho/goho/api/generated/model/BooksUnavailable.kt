@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BooksUnavailable (
 
-    @Json(name = "_tag")
-    val tag: BooksUnavailable.Tag
+    @Json(name = "type")
+    val type: BooksUnavailable.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BooksUnavailable.Status? = null,
+
+    @Json(name = "title")
+    val title: BooksUnavailable.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BooksUnavailable
+     * Values: gohoColonProblemColonBooksMinusUnavailable
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BooksUnavailable") BooksUnavailable("BooksUnavailable");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:books-unavailable") gohoColonProblemColonBooksMinusUnavailable("goho:problem:books-unavailable");
+    }
+    /**
+     * 
+     *
+     * Values: _500
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "500.0") _500(500.0);
+    }
+    /**
+     * 
+     *
+     * Values: Books_unavailable
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Books unavailable") Books_unavailable("Books unavailable");
     }
 
 }

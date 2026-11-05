@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { HttpApiError } from "effect/http-api";
 
 import { Category, CategoryId } from "./categories.ts";
 import { BigintId, maxId } from "./ids.ts";
@@ -176,18 +177,17 @@ export const Book = Schema.Struct({
  */
 export interface Book extends Schema.Schema.Type<typeof Book> {}
 
-// Errors name their wire schema; `Schema.TaggedError` cannot, so OpenAPI would
-// call it `…Encoded`.
-
 /**
  * No book has the requested ID.
  *
  * @category errors
  * @since 0.1.0
  */
-export class BookNotFound extends Schema.Error<BookNotFound>("BookNotFound")(
-  Schema.TaggedStruct("BookNotFound", {}).annotate({ identifier: "BookNotFound" }),
-  { httpApiStatus: 404, description: "No book is wearing that number, bud." },
+export class BookNotFound extends HttpApiError.Problem<BookNotFound>()(
+  "BookNotFound",
+  { type: "goho:problem:book-not-found", status: 404, title: "Book not found" },
+  {},
+  { description: "No book is wearing that number, bud." },
 ) {}
 
 /**
@@ -196,9 +196,11 @@ export class BookNotFound extends Schema.Error<BookNotFound>("BookNotFound")(
  * @category errors
  * @since 0.1.0
  */
-export class BookImageNotFound extends Schema.Error<BookImageNotFound>("BookImageNotFound")(
-  Schema.TaggedStruct("BookImageNotFound", {}).annotate({ identifier: "BookImageNotFound" }),
-  { httpApiStatus: 404, description: "No cover is on file for that book number, bud." },
+export class BookImageNotFound extends HttpApiError.Problem<BookImageNotFound>()(
+  "BookImageNotFound",
+  { type: "goho:problem:book-image-not-found", status: 404, title: "Book image not found" },
+  {},
+  { description: "No cover is on file for that book number, bud." },
 ) {}
 
 /**
@@ -208,10 +210,11 @@ export class BookImageNotFound extends Schema.Error<BookImageNotFound>("BookImag
  * @category errors
  * @since 0.1.0
  */
-export class BookConflict extends Schema.Error<BookConflict>("BookConflict")(
-  Schema.TaggedStruct("BookConflict", {}).annotate({ identifier: "BookConflict" }),
+export class BookConflict extends HttpApiError.Problem<BookConflict>()(
+  "BookConflict",
+  { type: "goho:problem:book-conflict", status: 409, title: "Book already exists" },
+  {},
   {
-    httpApiStatus: 409,
     description:
       "Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.",
   },
@@ -223,10 +226,11 @@ export class BookConflict extends Schema.Error<BookConflict>("BookConflict")(
  * @category errors
  * @since 0.1.0
  */
-export class BooksUnavailable extends Schema.Error<BooksUnavailable>("BooksUnavailable")(
-  Schema.TaggedStruct("BooksUnavailable", {}).annotate({ identifier: "BooksUnavailable" }),
+export class BooksUnavailable extends HttpApiError.Problem<BooksUnavailable>()(
+  "BooksUnavailable",
+  { type: "goho:problem:books-unavailable", status: 500, title: "Books unavailable" },
+  {},
   {
-    httpApiStatus: 500,
     description: "The server could not get to the book roster. Nothing changed; take another shot.",
   },
 ) {}

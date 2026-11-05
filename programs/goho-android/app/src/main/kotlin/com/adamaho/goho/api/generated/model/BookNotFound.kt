@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BookNotFound (
 
-    @Json(name = "_tag")
-    val tag: BookNotFound.Tag
+    @Json(name = "type")
+    val type: BookNotFound.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BookNotFound.Status? = null,
+
+    @Json(name = "title")
+    val title: BookNotFound.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BookNotFound
+     * Values: gohoColonProblemColonBookMinusNotMinusFound
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BookNotFound") BookNotFound("BookNotFound");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:book-not-found") gohoColonProblemColonBookMinusNotMinusFound("goho:problem:book-not-found");
+    }
+    /**
+     * 
+     *
+     * Values: _404
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "404.0") _404(404.0);
+    }
+    /**
+     * 
+     *
+     * Values: Book_not_found
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Book not found") Book_not_found("Book not found");
     }
 
 }

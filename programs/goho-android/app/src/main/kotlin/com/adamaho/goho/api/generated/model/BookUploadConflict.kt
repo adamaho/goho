@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BookUploadConflict (
 
-    @Json(name = "_tag")
-    val tag: BookUploadConflict.Tag
+    @Json(name = "type")
+    val type: BookUploadConflict.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BookUploadConflict.Status? = null,
+
+    @Json(name = "title")
+    val title: BookUploadConflict.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BookUploadConflict
+     * Values: gohoColonProblemColonBookMinusUploadMinusConflict
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BookUploadConflict") BookUploadConflict("BookUploadConflict");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:book-upload-conflict") gohoColonProblemColonBookMinusUploadMinusConflict("goho:problem:book-upload-conflict");
+    }
+    /**
+     * 
+     *
+     * Values: _409
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "409.0") _409(409.0);
+    }
+    /**
+     * 
+     *
+     * Values: Book_upload_cannot_be_deleted
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Book upload cannot be deleted") Book_upload_cannot_be_deleted("Book upload cannot be deleted");
     }
 
 }

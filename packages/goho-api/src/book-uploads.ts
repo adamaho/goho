@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { HttpApiError } from "effect/http-api";
 
 import { BookId } from "./books.ts";
 
@@ -130,9 +131,11 @@ export interface BookUpload extends Schema.Schema.Type<typeof BookUpload> {}
  * @category errors
  * @since 0.1.0
  */
-export class BookUploadNotFound extends Schema.Error<BookUploadNotFound>("BookUploadNotFound")(
-  Schema.TaggedStruct("BookUploadNotFound", {}).annotate({ identifier: "BookUploadNotFound" }),
-  { httpApiStatus: 404, description: "No cover scan is wearing that number, bud." },
+export class BookUploadNotFound extends HttpApiError.Problem<BookUploadNotFound>()(
+  "BookUploadNotFound",
+  { type: "goho:problem:book-upload-not-found", status: 404, title: "Book upload not found" },
+  {},
+  { description: "No cover scan is wearing that number, bud." },
 ) {}
 
 /**
@@ -141,10 +144,15 @@ export class BookUploadNotFound extends Schema.Error<BookUploadNotFound>("BookUp
  * @category errors
  * @since 0.1.0
  */
-export class BookUploadConflict extends Schema.Error<BookUploadConflict>("BookUploadConflict")(
-  Schema.TaggedStruct("BookUploadConflict", {}).annotate({ identifier: "BookUploadConflict" }),
+export class BookUploadConflict extends HttpApiError.Problem<BookUploadConflict>()(
+  "BookUploadConflict",
   {
-    httpApiStatus: 409,
+    type: "goho:problem:book-upload-conflict",
+    status: 409,
+    title: "Book upload cannot be deleted",
+  },
+  {},
+  {
     description:
       "Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
   },
@@ -157,14 +165,15 @@ export class BookUploadConflict extends Schema.Error<BookUploadConflict>("BookUp
  * @category errors
  * @since 0.1.0
  */
-export class BookUploadsUnavailable extends Schema.Error<BookUploadsUnavailable>(
+export class BookUploadsUnavailable extends HttpApiError.Problem<BookUploadsUnavailable>()(
   "BookUploadsUnavailable",
-)(
-  Schema.TaggedStruct("BookUploadsUnavailable", {}).annotate({
-    identifier: "BookUploadsUnavailable",
-  }),
   {
-    httpApiStatus: 500,
+    type: "goho:problem:book-uploads-unavailable",
+    status: 500,
+    title: "Book uploads unavailable",
+  },
+  {},
+  {
     description: "The server could not get to the cover scans; take another shot.",
   },
 ) {}

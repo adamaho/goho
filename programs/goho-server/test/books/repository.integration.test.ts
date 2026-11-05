@@ -481,7 +481,11 @@ it.effect("serves saved books over HTTP with one Book shape and domain errors", 
       body: yield* HttpBody.json({ title: "THE HOBBIT", category: "Brand New Shelf" }),
     });
     expect(collision.status).toBe(409);
-    expect(yield* collision.json).toEqual({ _tag: "BookConflict" });
+    expect(yield* collision.json).toEqual({
+      type: "goho:problem:book-conflict",
+      status: 409,
+      title: "Book already exists",
+    });
     expect(yield* categoryNamed("brand new shelf")).toBeUndefined();
 
     expect(
@@ -515,7 +519,11 @@ it.effect("serves saved books over HTTP with one Book shape and domain errors", 
       }),
     ]) {
       expect(response.status).toBe(404);
-      expect(yield* response.json).toEqual({ _tag: "BookNotFound" });
+      expect(yield* response.json).toEqual({
+        type: "goho:problem:book-not-found",
+        status: 404,
+        title: "Book not found",
+      });
     }
     expect(yield* client.books.list({ query: {} })).toEqual({ data: [other] });
   }).pipe(Effect.provide(HttpDatabaseLive)),

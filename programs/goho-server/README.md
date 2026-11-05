@@ -47,9 +47,8 @@ Deploy the server and updated CLI/MCP together; older clients expecting empty
 codes and does not need to read the problem body.
 
 The middleware also returns a generic HTTP 500 problem if a successful response
-cannot be encoded. Book and book upload errors keep their tagged JSON bodies, upload
-limits keep their existing HTTP 413 JSON response, and malformed multipart,
-unsupported request content types, unknown routes, and unexpected defects retain
+cannot be encoded. Upload limits keep their existing HTTP 413 JSON response, and
+malformed multipart, unsupported request content types, unknown routes, and unexpected defects retain
 Effect's default responses. This is not a normalization of every HTTP failure.
 
 ### Receipt errors
@@ -243,20 +242,35 @@ author, and it differs from every book of that title with one.
 - `GET /books/:bookId` returns one book.
 - `GET /books/:bookId/image` returns the cover's bytes with its MIME type and
   `Cache-Control: private, no-store`. A book without a cover, or a missing book,
-  returns HTTP 404 with `{"_tag":"BookImageNotFound"}`.
+  returns HTTP 404 with `BookImageNotFound`.
 - `PATCH /books/:bookId` corrects any of `title`, `author`, `category`, and
   `readingLevel`; omitted fields keep their values. Supplied values must be
   nonempty text; `null` and blank values return HTTP 400, so the author and reading
   level cannot be cleared. Taking another book's title and author returns HTTP 409 with
-  `{"_tag":"BookConflict"}` and changes nothing; books are never merged.
+  `BookConflict` and changes nothing; books are never merged.
 - `DELETE /books/:bookId` removes the book with all its successful cover
   uploads, their original images, and extraction data, and returns HTTP 204. Its
   category stays. As with receipts, a storage or commit failure after some images
   are removed can leave the book without them until deletion is retried.
 
 Malformed IDs and invalid bodies return HTTP 400 with a validation problem. A missing
-book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
-HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
+book returns HTTP 404 with `BookNotFound`. Persistence failures return
+HTTP 500 with `BooksUnavailable` and save nothing.
+
+Book and book upload failures use the same `application/problem+json` shape as
+receipts, with the same rules for `type` and private details:
+
+| HTTP | `type`                                  | Client error             | Meaning                                                     |
+| ---- | --------------------------------------- | ------------------------ | ----------------------------------------------------------- |
+| 404  | `goho:problem:book-not-found`           | `BookNotFound`           | No book has this ID.                                        |
+| 404  | `goho:problem:book-image-not-found`     | `BookImageNotFound`      | The book is missing or has no cover on file.                |
+| 409  | `goho:problem:book-conflict`            | `BookConflict`           | Another book already has that title and author.             |
+| 500  | `goho:problem:books-unavailable`        | `BooksUnavailable`       | Books or their covers could not be read or changed.         |
+| 404  | `goho:problem:book-upload-not-found`    | `BookUploadNotFound`     | No book upload has this ID.                                 |
+| 409  | `goho:problem:book-upload-conflict`     | `BookUploadConflict`     | The upload has not failed, so it cannot be deleted.         |
+| 500  | `goho:problem:book-uploads-unavailable` | `BookUploadsUnavailable` | Book uploads could not be stored, queued, read, or deleted. |
+
+Deploy the server and updated CLI/MCP together; the old `{"_tag":...}` book bodies are gone.
 
 ### Book cover uploads
 
@@ -280,7 +294,7 @@ returns one. Each has `status` (`queued`, `processing`, `succeeded`, or
 `storage_failed`, `processing_failed`, `book_creation_failed`, or
 `internal_error`. Failure and crash recovery work as for receipt uploads.
 
-`DELETE /book-uploads/:uploadId` removes a failed upload and its image with HTTP 204. Other statuses return HTTP 409 with `{"_tag":"BookUploadConflict"}`; delete
+`DELETE /book-uploads/:uploadId` removes a failed upload and its image with HTTP 204. Other statuses return HTTP 409 with `BookUploadConflict`; delete
 the book to remove its successful scans. Missing uploads return HTTP 404 with
-`{"_tag":"BookUploadNotFound"}`, and malformed UUIDs return HTTP 400. Storage or
-database failures return HTTP 500 with `{"_tag":"BookUploadsUnavailable"}`.
+`BookUploadNotFound`, and malformed UUIDs return HTTP 400. Storage or
+database failures return HTTP 500 with `BookUploadsUnavailable`.

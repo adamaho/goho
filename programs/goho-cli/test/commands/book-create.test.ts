@@ -1,8 +1,15 @@
+import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  validationProblem,
+  withResponse,
+} from "#test/cli.ts";
 
 const book = {
   id: "12",
@@ -20,9 +27,7 @@ const runCreate = (flags: ReadonlyArray<string>, payload: unknown, status: numbe
       expect(request.method).toBe("POST");
       expect(request.url).toBe("/books");
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(payload);
-      return status === 400
-        ? yield* validationResponse
-        : HttpServerResponse.jsonUnsafe(body, { status });
+      return yield* toTestResponse(status, body);
     }),
     (baseUrl) => runCommand(baseUrl, ["books", "create", ...flags]),
   );
@@ -54,23 +59,23 @@ describe("books create", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequestProblem",
+      problem: validationProblem,
       message: "The book was rejected. Check the supplied values.",
     },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "BooksUnavailable",
+      problem: new BooksUnavailable(),
       message: "Book could not be created. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status and exits nonzero",
-    async ({ status, tag, message, errorCode }) => {
+    async ({ status, problem, message, errorCode }) => {
       const result = await runCreate(
         ["--title", "The Hobbit", "--category", "Fiction"],
         { title: "The Hobbit", category: "Fiction" },
         status,
-        { _tag: tag },
+        problem,
       );
       expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
     },

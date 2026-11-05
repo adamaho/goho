@@ -2,17 +2,23 @@ import { Effect } from "effect";
 import { HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "./cli.ts";
+import { errorOutput, runCommand, withResponse } from "./cli.ts";
 
 describe("CLI error output", () => {
   it("writes one public JSON error to stderr without server details or a stack", async () => {
-    const result = await withJsonResponse(
-      500,
-      {
-        _tag: "BooksUnavailable",
-        detail: "PRIVATE_DATABASE_PASSWORD",
-        stack: "PRIVATE_SERVER_STACK",
-      },
+    const result = await withResponse(
+      Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            type: "goho:problem:books-unavailable",
+            status: 500,
+            title: "Books unavailable",
+            detail: "PRIVATE_DATABASE_PASSWORD",
+            stack: "PRIVATE_SERVER_STACK",
+          },
+          { status: 500, contentType: "application/problem+json" },
+        ),
+      ),
       (baseUrl) => runCommand(baseUrl, ["books", "list"]),
     );
     expect(result).toEqual({

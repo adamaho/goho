@@ -1093,14 +1093,16 @@
           "500": {
             "description": "The server could not pull the books off the bench. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1145,14 +1147,16 @@
           "500": {
             "description": "The server could not save this book; nothing changed. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1218,7 +1222,7 @@
           "404": {
             "description": "No book is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookNotFound"
                 }
@@ -1228,14 +1232,16 @@
           "500": {
             "description": "The server could not retrieve this book. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1288,7 +1294,7 @@
           "404": {
             "description": "No book is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookNotFound"
                 }
@@ -1298,7 +1304,7 @@
           "409": {
             "description": "Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookConflict"
                 }
@@ -1308,14 +1314,16 @@
           "500": {
             "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1365,7 +1373,7 @@
           "404": {
             "description": "No book is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookNotFound"
                 }
@@ -1375,14 +1383,16 @@
           "500": {
             "description": "The server could not delete this book and its stored images; take another shot to finish the cleanup. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1440,7 +1450,7 @@
           "404": {
             "description": "No cover is on file for that book number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookImageNotFound"
                 }
@@ -1450,14 +1460,16 @@
           "500": {
             "description": "The server could not retrieve this cover image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BooksUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BooksUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1514,14 +1526,16 @@
           "500": {
             "description": "The server could not store or queue the cover image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookUploadsUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BookUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1587,14 +1601,16 @@
           "500": {
             "description": "The server could not pull the cover scans off the bench. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookUploadsUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BookUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1650,7 +1666,7 @@
           "404": {
             "description": "No cover scan is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadNotFound"
                 }
@@ -1660,14 +1676,16 @@
           "500": {
             "description": "The server could not retrieve this cover scan. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookUploadsUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BookUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1707,7 +1725,7 @@
           "404": {
             "description": "No cover scan is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadNotFound"
                 }
@@ -1717,7 +1735,7 @@
           "409": {
             "description": "Only failed scans can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadConflict"
                 }
@@ -1727,14 +1745,16 @@
           "500": {
             "description": "The server could not delete this scan and its stored image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookUploadsUnavailable"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/BookUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1830,34 +1850,76 @@
       "BookUploadsUnavailable": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookUploadsUnavailable"]
+            "enum": ["goho:problem:book-uploads-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book uploads unavailable"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookUploadConflict": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookUploadConflict"]
+            "enum": ["goho:problem:book-upload-conflict"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [409]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book upload cannot be deleted"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookUploadNotFound": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookUploadNotFound"]
+            "enum": ["goho:problem:book-upload-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book upload not found"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookUploadId": {
@@ -1987,45 +2049,101 @@
       "BooksUnavailable": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BooksUnavailable"]
+            "enum": ["goho:problem:books-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Books unavailable"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookImageNotFound": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookImageNotFound"]
+            "enum": ["goho:problem:book-image-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book image not found"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookNotFound": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookNotFound"]
+            "enum": ["goho:problem:book-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book not found"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "BookConflict": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["BookConflict"]
+            "enum": ["goho:problem:book-conflict"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [409]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Book already exists"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "Book": {

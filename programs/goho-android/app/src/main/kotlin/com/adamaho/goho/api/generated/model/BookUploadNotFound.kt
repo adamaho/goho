@@ -30,25 +30,59 @@ import com.squareup.moshi.JsonClass
 /**
  * 
  *
- * @param tag 
+ * @param type 
+ * @param detail 
+ * @param instance 
+ * @param status 
+ * @param title 
  */
 
 
 data class BookUploadNotFound (
 
-    @Json(name = "_tag")
-    val tag: BookUploadNotFound.Tag
+    @Json(name = "type")
+    val type: BookUploadNotFound.Type,
+
+    @Json(name = "detail")
+    val detail: kotlin.String? = null,
+
+    @Json(name = "instance")
+    val instance: kotlin.String? = null,
+
+    @Json(name = "status")
+    val status: BookUploadNotFound.Status? = null,
+
+    @Json(name = "title")
+    val title: BookUploadNotFound.Title? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: BookUploadNotFound
+     * Values: gohoColonProblemColonBookMinusUploadMinusNotMinusFound
      */
     @JsonClass(generateAdapter = false)
-    enum class Tag(val value: kotlin.String) {
-        @Json(name = "BookUploadNotFound") BookUploadNotFound("BookUploadNotFound");
+    enum class Type(val value: kotlin.String) {
+        @Json(name = "goho:problem:book-upload-not-found") gohoColonProblemColonBookMinusUploadMinusNotMinusFound("goho:problem:book-upload-not-found");
+    }
+    /**
+     * 
+     *
+     * Values: _404
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Status(val value: kotlin.Double) {
+        @Json(name = "404.0") _404(404.0);
+    }
+    /**
+     * 
+     *
+     * Values: Book_upload_not_found
+     */
+    @JsonClass(generateAdapter = false)
+    enum class Title(val value: kotlin.String) {
+        @Json(name = "Book upload not found") Book_upload_not_found("Book upload not found");
     }
 
 }

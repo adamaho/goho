@@ -1,16 +1,21 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { api } from "@goho/goho-api/api";
 import {
   Book,
   BookConflict,
   BookId,
+  BookImageNotFound,
+  BookNotFound,
+  BooksUnavailable,
   type CreateBookRequest,
   type PatchBookRequest,
 } from "@goho/goho-api/books";
 import { CategoryId } from "@goho/goho-api/categories";
 import * as Client from "@goho/goho-server-client/client";
 import { Effect, Layer, Option } from "effect";
-import { HttpBody, HttpClient, HttpRouter } from "effect/http";
+import { HttpBody, HttpClient, type HttpClientResponse, HttpRouter } from "effect/http";
+import { HttpApiClient } from "effect/http-api";
 import { expect } from "vitest";
 
 import * as BookUploads from "#src/book-uploads/service.ts";
@@ -37,9 +42,6 @@ const book = Book.make({
   hasImage: false,
 });
 
-const persistenceError = (operation: string) =>
-  new BookRepository.PersistenceError({ operation, cause: "private database details" });
-
 const cover: BookRepository.Cover = {
   fileId: FileStorage.FileId.make("stored-cover"),
   contentType: "image/webp",
@@ -49,6 +51,7 @@ const cover: BookRepository.Cover = {
 const testLayer = (
   repository: Partial<BookRepository.Interface> = {},
   storage: Partial<FileStorage.Interface> = {},
+  transaction = Transaction.layerTest,
 ) => {
   const calls: Array<unknown> = [];
   const record =
@@ -63,7 +66,7 @@ const testLayer = (
       Layer.provide([
         Books.layer.pipe(
           Layer.provide([
-            Transaction.layerTest,
+            transaction,
             Layer.succeed(FileStorage.Service, {
               put: () => Effect.die("Unexpected storage.put"),
               get: record<[FileStorage.FileId], Uint8Array>("get", new Uint8Array([4, 5, 6])),
@@ -242,89 +245,9 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
   }).pipe(Effect.provide(layer));
 });
 
-const getBook = HttpClient.get(`/books/${book.id}`);
-
 const getImage = HttpClient.get(`/books/${book.id}/image`);
 
 const deleteBook = HttpClient.del(`/books/${book.id}`);
-
-const patchTitle = (title: string) =>
-  HttpBody.json({ title }).pipe(
-    Effect.flatMap((body) => HttpClient.patch(`/books/${book.id}`, { body })),
-  );
-
-interface ErrorCase {
-  readonly repository: Partial<BookRepository.Interface>;
-  readonly request: typeof getBook | ReturnType<typeof patchTitle>;
-  readonly status: number;
-  readonly tag: string;
-}
-
-it.effect("returns domain errors with their declared statuses", () =>
-  Effect.gen(function* () {
-    const notFound = { status: 404, tag: "BookNotFound" };
-    const cases: ReadonlyArray<ErrorCase> = [
-      { repository: { findById: () => Effect.succeedNone }, request: getBook, ...notFound },
-      { repository: { delete: () => Effect.succeedNone }, request: deleteBook, ...notFound },
-      {
-        repository: { update: () => Effect.succeedNone },
-        request: patchTitle("Gone"),
-        ...notFound,
-      },
-      {
-        repository: { findCover: () => Effect.succeedNone },
-        request: getImage,
-        status: 404,
-        tag: "BookImageNotFound",
-      },
-      {
-        repository: { update: () => Effect.fail(new BookConflict()) },
-        request: patchTitle("Taken"),
-        status: 409,
-        tag: "BookConflict",
-      },
-    ];
-    for (const { repository, request, status, tag } of cases) {
-      yield* Effect.gen(function* () {
-        const response = yield* request;
-        expect(response.status).toBe(status);
-        expect(yield* response.json).toEqual({ _tag: tag });
-      }).pipe(Effect.provide(testLayer(repository).layer));
-    }
-  }),
-);
-
-it.effect("returns HTTP 500 without exposing book persistence details", () => {
-  const { layer } = testLayer({
-    findOrCreate: () => Effect.fail(persistenceError("findOrCreate")),
-    findById: () => Effect.fail(persistenceError("findById")),
-    findCover: () => Effect.fail(persistenceError("findCover")),
-    list: () => Effect.fail(persistenceError("list")),
-    update: () => Effect.fail(persistenceError("update")),
-    delete: () => Effect.fail(persistenceError("delete")),
-  });
-  return Effect.gen(function* () {
-    const body = yield* HttpBody.json({
-      title: "The Hobbit",
-      author: "J. R. R. Tolkien",
-      category: "Fiction",
-    });
-    for (const request of [
-      HttpClient.post("/books", { body }),
-      HttpClient.get("/books"),
-      HttpClient.get(`/books/${book.id}`),
-      HttpClient.get(`/books/${book.id}/image`),
-      HttpClient.patch(`/books/${book.id}`, { body }),
-      HttpClient.del(`/books/${book.id}`),
-    ]) {
-      const response = yield* request;
-      expect(response.status).toBe(500);
-      const text = yield* response.text;
-      expect(text).not.toContain("private database details");
-      expect(JSON.parse(text)).toEqual({ _tag: "BooksUnavailable" });
-    }
-  }).pipe(Effect.provide(layer));
-});
 
 it.effect("serves the cover with its MIME type and private cache policy", () => {
   const { calls, layer } = testLayer();
@@ -341,31 +264,175 @@ it.effect("serves the cover with its MIME type and private cache policy", () => 
   }).pipe(Effect.provide(layer));
 });
 
-it.effect("deletes every stored scan of a book, and hides storage failures", () =>
-  Effect.gen(function* () {
-    const fileIds = [FileStorage.FileId.make("cover"), FileStorage.FileId.make("duplicate")];
-    const deleted = testLayer({ delete: () => Effect.succeedSome(fileIds) });
-    yield* Effect.gen(function* () {
-      expect((yield* deleteBook).status).toBe(204);
-      expect(deleted.calls).toEqual(fileIds.map((fileId) => ["deleteFile", fileId]));
-    }).pipe(Effect.provide(deleted.layer));
+it.effect("deletes every stored scan of a book", () => {
+  const fileIds = [FileStorage.FileId.make("cover"), FileStorage.FileId.make("duplicate")];
+  const { calls, layer } = testLayer({ delete: () => Effect.succeedSome(fileIds) });
+  return Effect.gen(function* () {
+    expect((yield* deleteBook).status).toBe(204);
+    expect(calls).toEqual(fileIds.map((fileId) => ["deleteFile", fileId]));
+  }).pipe(Effect.provide(layer));
+});
 
-    const storageError = new FileStorage.StorageError({
-      operation: "delete",
-      cause: "private storage details",
-    });
-    const failing = testLayer(
-      { delete: () => Effect.succeedSome(fileIds) },
-      { get: () => Effect.fail(storageError), delete: () => Effect.fail(storageError) },
-    );
-    yield* Effect.gen(function* () {
-      for (const request of [deleteBook, getImage]) {
-        const response = yield* request;
-        expect(response.status).toBe(500);
-        const text = yield* response.text;
-        expect(text).not.toContain("private storage details");
-        expect(JSON.parse(text)).toEqual({ _tag: "BooksUnavailable" });
-      }
-    }).pipe(Effect.provide(failing.layer));
-  }),
+const privateDetails = "private SQL and /private/path details";
+const repositoryFailure = new BookRepository.PersistenceError({
+  operation: "test",
+  cause: privateDetails,
+});
+const storageFailure = (operation: "get" | "delete") =>
+  new FileStorage.StorageError({ operation, cause: privateDetails });
+
+const problem = (error: unknown, type: string, status: number, title: string) => ({
+  error,
+  status,
+  body: { type: `goho:problem:${type}`, status, title },
+});
+const bookNotFound = problem(BookNotFound, "book-not-found", 404, "Book not found");
+const imageNotFound = problem(
+  BookImageNotFound,
+  "book-image-not-found",
+  404,
+  "Book image not found",
+);
+const bookConflict = problem(BookConflict, "book-conflict", 409, "Book already exists");
+const booksUnavailable = problem(BooksUnavailable, "books-unavailable", 500, "Books unavailable");
+
+const bookParams = { params: { bookId: book.id } };
+const correction = { ...bookParams, payload: { title: "The Hobbit" } };
+
+type TestClient = Effect.Success<ReturnType<typeof Client.make>>;
+
+// Each case runs the real service over a failing fake, then checks the wire and the typed client.
+const bookProblemCases: ReadonlyArray<{
+  readonly name: string;
+  readonly fixture: ReturnType<typeof testLayer>;
+  readonly expected: ReturnType<typeof problem>;
+  readonly call: (client: TestClient) => Effect.Effect<unknown, unknown>;
+}> = [
+  {
+    name: "list books: unavailable",
+    fixture: testLayer({ list: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) => client.books.list({ query: {} }),
+  },
+  {
+    name: "get book: missing",
+    fixture: testLayer({ findById: () => Effect.succeedNone }),
+    expected: bookNotFound,
+    call: (client) => client.books.get(bookParams),
+  },
+  {
+    name: "get book: unavailable",
+    fixture: testLayer({ findById: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) => client.books.get(bookParams),
+  },
+  {
+    name: "create book: unavailable",
+    fixture: testLayer({ findOrCreate: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) =>
+      client.books.create({ payload: { title: "The Hobbit", category: "Fiction" } }),
+  },
+  {
+    name: "patch book: missing",
+    fixture: testLayer({ update: () => Effect.succeedNone }),
+    expected: bookNotFound,
+    call: (client) => client.books.patch(correction),
+  },
+  {
+    name: "patch book: identity taken",
+    fixture: testLayer({ update: () => Effect.fail(new BookConflict()) }),
+    expected: bookConflict,
+    call: (client) => client.books.patch(correction),
+  },
+  {
+    name: "patch book: unavailable",
+    fixture: testLayer({ update: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) => client.books.patch(correction),
+  },
+  {
+    name: "delete book: missing",
+    fixture: testLayer({ delete: () => Effect.succeedNone }),
+    expected: bookNotFound,
+    call: (client) => client.books.delete(bookParams),
+  },
+  {
+    name: "delete book: database unavailable",
+    fixture: testLayer({ delete: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) => client.books.delete(bookParams),
+  },
+  {
+    name: "delete book: storage unavailable",
+    fixture: testLayer(
+      { delete: () => Effect.succeedSome([cover.fileId]) },
+      { delete: () => Effect.fail(storageFailure("delete")) },
+    ),
+    expected: booksUnavailable,
+    call: (client) => client.books.delete(bookParams),
+  },
+  {
+    name: "delete book: transaction unavailable",
+    fixture: testLayer(
+      {},
+      {},
+      Layer.succeed(
+        Transaction.Service,
+        Transaction.Service.of({
+          run: () => Effect.fail(new Transaction.TransactionError({ cause: privateDetails })),
+        }),
+      ),
+    ),
+    expected: booksUnavailable,
+    call: (client) => client.books.delete(bookParams),
+  },
+  {
+    name: "get cover: missing",
+    fixture: testLayer({ findCover: () => Effect.succeedNone }),
+    expected: imageNotFound,
+    call: (client) => client.books.getImage(bookParams),
+  },
+  {
+    name: "get cover: database unavailable",
+    fixture: testLayer({ findCover: () => Effect.fail(repositoryFailure) }),
+    expected: booksUnavailable,
+    call: (client) => client.books.getImage(bookParams),
+  },
+  {
+    name: "get cover: storage unavailable",
+    fixture: testLayer(
+      { findCover: () => Effect.succeedSome(cover) },
+      { get: () => Effect.fail(storageFailure("get")) },
+    ),
+    expected: booksUnavailable,
+    call: (client) => client.books.getImage(bookParams),
+  },
+];
+
+it.effect.each(bookProblemCases)(
+  "returns a private, client-decodable problem for $name",
+  ({ call, expected, fixture }) =>
+    Effect.gen(function* () {
+      // Captures the raw response the typed client decodes.
+      const responses: Array<HttpClientResponse.HttpClientResponse> = [];
+      const client = yield* HttpApiClient.make(api, {
+        baseUrl: "",
+        transformClient: HttpClient.tap((response) =>
+          Effect.sync(() => {
+            responses.push(response);
+          }),
+        ),
+      });
+      const failure = yield* call(client).pipe(Effect.flip);
+      expect(failure).toBeInstanceOf(expected.error);
+      const [response] = responses;
+      expect(response?.status).toBe(expected.status);
+      expect(response?.headers["content-type"]).toContain("application/problem+json");
+      expect(
+        yield* Effect.fromNullishOr(response).pipe(Effect.flatMap((raw) => raw.json)),
+      ).toStrictEqual(expected.body);
+      // Failing fakes record nothing, so any recorded call is a write past the failure.
+      expect(fixture.calls).toEqual([]);
+    }).pipe(Effect.provide(fixture.layer)),
 );

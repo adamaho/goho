@@ -43,6 +43,10 @@ client.receipts
   .pipe(Effect.catchTag("ReceiptNotFound", () => Effect.succeed(null)));
 ```
 
-Book and book upload error tags and the upload-limit error envelope are unchanged.
-Upgrade the server and CLI/MCP together when adopting these problem responses; an
-older server's bodies fail problem decoding.
+Book routes fail with `BookNotFound`, `BookImageNotFound`, `BookConflict`, or
+`BooksUnavailable`; book upload routes fail with `BookUploadNotFound`,
+`BookUploadConflict`, or `BookUploadsUnavailable`. These keep their tags and now
+arrive as problem responses too.
+
+The upload-limit error envelope is unchanged. Upgrade the server and CLI/MCP together
+when adopting these problem responses; an older server's bodies fail problem decoding.

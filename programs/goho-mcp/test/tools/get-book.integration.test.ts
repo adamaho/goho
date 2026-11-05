@@ -1,6 +1,7 @@
 import { layer } from "@effect/vitest";
+import { BookNotFound } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
 import { book } from "#test/fixtures/book.ts";
@@ -15,7 +16,7 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.jsonUnsafe({ data: book });
   }
   if (request.url === "/books/999") {
-    return HttpServerResponse.jsonUnsafe({ _tag: "BookNotFound" }, { status: 404 });
+    return yield* HttpServerRespondable.toResponse(new BookNotFound());
   }
   return HttpServerResponse.empty({ status: 500 });
 });
