@@ -4,6 +4,7 @@ import {
   ReceiptUploadNotFound,
   ReceiptUploadsUnavailable,
 } from "@goho/goho-server-client/receipt-uploads";
+import { UploadLimitExceeded } from "@goho/goho-server-client/response";
 import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
@@ -177,11 +178,11 @@ describe("receipts uploads create", () => {
 });
 
 describe("receipts uploads create limit errors", () => {
-  it("prints the decoded server JSON error for an oversized upload", async () => {
+  it("prints the server's guidance from the decoded upload-limit problem", async () => {
     const message =
-      "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.";
+      "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB.";
     const result = await withTempFile("receipt.png", new Uint8Array([1]), (filePath) =>
-      withJsonResponse(413, { error: { code: "invalid_input", message } }, (baseUrl) =>
+      withJsonResponse(413, new UploadLimitExceeded({ detail: message }), (baseUrl) =>
         runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
       ),
     );

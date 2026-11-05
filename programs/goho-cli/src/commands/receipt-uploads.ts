@@ -31,8 +31,8 @@ const createCommand = Command.make("create", {
             new CommandError({
               code: getRequestErrorCode(cause),
               message:
-                "error" in cause
-                  ? cause.error.message
+                cause._tag === "UploadLimitExceeded"
+                  ? cause.message
                   : cause._tag === "BadRequestProblem"
                     ? "Receipt must be a JPEG, PNG, or WebP image no larger than 20 MB."
                     : "Receipt could not be uploaded. Check the server logs and try again.",

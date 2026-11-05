@@ -13,7 +13,7 @@ import com.adamaho.goho.api.generated.model.BookUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.BookUploadsGet200Response
 import com.adamaho.goho.api.generated.model.BookUploadsList200Response
 import com.adamaho.goho.api.generated.model.BookUploadsList500Response
-import com.adamaho.goho.api.generated.model.ErrorResponse
+import com.adamaho.goho.api.generated.model.UploadLimitExceeded
 
 import okhttp3.MultipartBody
 

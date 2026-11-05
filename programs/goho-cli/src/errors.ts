@@ -1,4 +1,4 @@
-import { ErrorCode, type ErrorResponse } from "@goho/goho-server-client/response";
+import { ErrorCode } from "@goho/goho-server-client/response";
 import { Schema } from "effect";
 
 /**
@@ -20,12 +20,10 @@ export class CommandError extends Schema.TaggedError<CommandError>()("GohoCli.Co
  * @category mapping
  * @since 0.1.0
  */
-export const getRequestErrorCode = (
-  cause: { readonly _tag: string } | ErrorResponse,
-): ErrorCode => {
-  if ("error" in cause) return cause.error.code;
+export const getRequestErrorCode = (cause: { readonly _tag: string }): ErrorCode => {
   switch (cause._tag) {
     case "BadRequestProblem":
+    case "UploadLimitExceeded":
       return "invalid_input";
     case "ReceiptNotFound":
     case "ReceiptItemNotFound":

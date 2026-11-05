@@ -7,12 +7,12 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
-import com.adamaho.goho.api.generated.model.ErrorResponse
 import com.adamaho.goho.api.generated.model.ReceiptUploadConflict
 import com.adamaho.goho.api.generated.model.ReceiptUploadNotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200Response
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList500Response
+import com.adamaho.goho.api.generated.model.UploadLimitExceeded
 
 import okhttp3.MultipartBody
 

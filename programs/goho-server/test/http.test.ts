@@ -21,6 +21,7 @@ import {
   ReceiptNotFound,
   ReceiptsUnavailable,
 } from "@goho/goho-api/receipts";
+import { UploadLimitExceeded } from "@goho/goho-api/response";
 import * as Client from "@goho/goho-server-client/client";
 import { Array, Effect, FileSystem, Layer, Option, PlatformError } from "effect";
 import { HttpBody, HttpClient, type HttpClientResponse, HttpRouter } from "effect/http";
@@ -329,7 +330,7 @@ it.effect("rejects unsupported receipt upload content types", () =>
 );
 
 it.live(
-  "returns declared JSON for an oversized receipt upload before the service",
+  "returns the shared problem for receipt uploads over a size or part limit before the service",
   () => {
     let calls = 0;
     const layer = testLayer(
@@ -343,27 +344,36 @@ it.live(
       },
     );
     return Effect.gen(function* () {
-      const form = new FormData();
-      form.append(
-        "file",
-        new File([new Uint8Array(20 * 1024 * 1024 + 1)], "receipt.png", { type: "image/png" }),
-      );
-      const expected = {
-        error: {
-          code: "invalid_input",
-          message:
-            "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.",
-        },
-      };
-      const response = yield* HttpClient.post("/receipt-uploads", {
-        body: HttpBody.formData(form),
-      });
-      expect(response.status).toBe(413);
-      expect(response.headers["content-type"]).toContain("application/json");
-      expect(yield* response.json).toEqual(expected);
+      const image = (size: number, name = "receipt.png") =>
+        new File([new Uint8Array(size)], name, { type: "image/png" });
+      const oversizedFile = new FormData();
+      oversizedFile.append("file", image(20 * 1024 * 1024 + 1));
+      const tooManyParts = new FormData();
+      tooManyParts.append("file", image(1));
+      tooManyParts.append("file", image(1, "second.png"));
+      const oversizedField = new FormData();
+      oversizedField.append("file", "x".repeat(10 * 1024 * 1024 + 1));
       const client = yield* Client.make("");
-      const failure = yield* client.receiptUploads.create({ payload: form }).pipe(Effect.flip);
-      expect(failure).toEqual(expected);
+      for (const [limit, form] of [
+        ["file size", oversizedFile],
+        ["part count", tooManyParts],
+        ["field size", oversizedField],
+      ] as const) {
+        const response = yield* HttpClient.post("/receipt-uploads", {
+          body: HttpBody.formData(form),
+        });
+        expect(response.status, limit).toBe(413);
+        expect(response.headers["content-type"]).toContain("application/problem+json");
+        expect(yield* response.json).toEqual({
+          type: "goho:problem:upload-limit-exceeded",
+          status: 413,
+          title: "Upload limit exceeded",
+          detail:
+            "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB.",
+        });
+        const failure = yield* client.receiptUploads.create({ payload: form }).pipe(Effect.flip);
+        expect(failure).toBeInstanceOf(UploadLimitExceeded);
+      }
       expect(calls).toBe(0);
     }).pipe(Effect.provide(layer));
   },

@@ -46,7 +46,7 @@ import {
   ReceiptNotFound,
   ReceiptsUnavailable,
 } from "./receipts.ts";
-import { DataResponse, ErrorResponse } from "./response.ts";
+import { DataResponse, UploadLimitExceeded } from "./response.ts";
 
 // Payload schemas
 
@@ -70,12 +70,10 @@ const ImageResponse = HttpApiSchema.WithHeaders(
 // Corrections reject unsupported fields so a mixed payload never partly saves.
 const strictPayload = { onExcessProperty: "error" } as const;
 
-const UploadLimitExceeded = ErrorResponse.annotate({
-  httpApiStatus: 413,
-  description: "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
-});
-
 // Problem bodies have no name of their own, so OpenAPI would call them `…Encoded`.
+const UploadLimitExceededProblem = UploadLimitExceeded.pipe(
+  Schema.annotateEncoded({ identifier: "UploadLimitExceeded" }),
+);
 const ReceiptNotFoundProblem = ReceiptNotFound.pipe(
   Schema.annotateEncoded({ identifier: "ReceiptNotFound" }),
 );
@@ -166,7 +164,7 @@ export const api = HttpApi.make("goho-server")
           payload: ImageUploadPayload,
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
-            UploadLimitExceeded,
+            UploadLimitExceededProblem,
             ReceiptUploadsUnavailableProblem.annotate({
               description: "The server could not store or queue the receipt image.",
             }),
@@ -482,7 +480,7 @@ export const api = HttpApi.make("goho-server")
           payload: ImageUploadPayload,
           success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
           error: [
-            UploadLimitExceeded,
+            UploadLimitExceededProblem,
             BookUploadsUnavailableProblem.annotate({
               description: "The server could not store or queue the cover image.",
             }),

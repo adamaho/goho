@@ -9,6 +9,7 @@ import {
   BookUploadsUnavailable,
 } from "@goho/goho-api/book-uploads";
 import { BookId } from "@goho/goho-api/books";
+import { UploadLimitExceeded } from "@goho/goho-api/response";
 import * as Client from "@goho/goho-server-client/client";
 import { Effect, FileSystem, Layer, PlatformError } from "effect";
 import { HttpBody, HttpClient, type HttpClientResponse, HttpRouter } from "effect/http";
@@ -149,31 +150,37 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
 // Uses a real socket for both raw HTTP and typed-client size-limit rejections.
 // Its own server keeps connection resets away from unrelated requests.
 it.live(
-  "rejects a cover over the shared 20 MiB upload limit before the service",
+  "rejects covers over the shared size and part limits before the service",
   () => {
     const { calls, layer } = testLayer();
     return Effect.gen(function* () {
-      const file = new File([new Uint8Array(20 * 1024 * 1024 + 1)], "cover.png", {
-        type: "image/png",
-      });
-      const response = yield* HttpClient.post("/book-uploads", {
-        body: HttpBody.formData(coverForm(file)),
-      });
-      expect(response.status).toBe(413);
-      expect(response.headers["content-type"]).toContain("application/json");
-      const expected = {
-        error: {
-          code: "invalid_input",
-          message:
-            "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB.",
-        },
-      };
-      expect(yield* response.json).toEqual(expected);
+      const image = (size: number, name = "cover.png") =>
+        new File([new Uint8Array(size)], name, { type: "image/png" });
+      const tooManyParts = coverForm(image(1));
+      tooManyParts.append("file", image(1, "second.png"));
+      const oversizedField = new FormData();
+      oversizedField.append("file", "x".repeat(10 * 1024 * 1024 + 1));
       const client = yield* Client.make("");
-      const failure = yield* client.bookUploads
-        .create({ payload: coverForm(file) })
-        .pipe(Effect.flip);
-      expect(failure).toEqual(expected);
+      for (const [limit, form] of [
+        ["file size", coverForm(image(20 * 1024 * 1024 + 1))],
+        ["part count", tooManyParts],
+        ["field size", oversizedField],
+      ] as const) {
+        const response = yield* HttpClient.post("/book-uploads", {
+          body: HttpBody.formData(form),
+        });
+        expect(response.status, limit).toBe(413);
+        expect(response.headers["content-type"]).toContain("application/problem+json");
+        expect(yield* response.json).toEqual({
+          type: "goho:problem:upload-limit-exceeded",
+          status: 413,
+          title: "Upload limit exceeded",
+          detail:
+            "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB.",
+        });
+        const failure = yield* client.bookUploads.create({ payload: form }).pipe(Effect.flip);
+        expect(failure).toBeInstanceOf(UploadLimitExceeded);
+      }
       expect(calls).toEqual([]);
     }).pipe(Effect.provide(layer));
   },

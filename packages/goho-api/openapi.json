@@ -154,9 +154,9 @@
           "413": {
             "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/UploadLimitExceeded"
                 }
               }
             }
@@ -1516,9 +1516,9 @@
           "413": {
             "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/UploadLimitExceeded"
                 }
               }
             }
@@ -2017,34 +2017,30 @@
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
       },
-      "ErrorResponse": {
+      "UploadLimitExceeded": {
         "type": "object",
         "properties": {
-          "error": {
-            "type": "object",
-            "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "invalid_input",
-                  "not_found",
-                  "conflict",
-                  "request_failed",
-                  "file_error",
-                  "configuration_error"
-                ]
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["code", "message"],
-            "additionalProperties": false
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:upload-limit-exceeded"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [413]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Upload limit exceeded"]
           }
         },
-        "required": ["error"],
-        "additionalProperties": false,
-        "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued."
+        "required": ["type"],
+        "additionalProperties": false
       },
       "BooksUnavailable": {
         "type": "object",

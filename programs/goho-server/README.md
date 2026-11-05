@@ -47,7 +47,7 @@ Deploy the server and updated CLI/MCP together; older clients expecting empty
 codes and does not need to read the problem body.
 
 The middleware also returns a generic HTTP 500 problem if a successful response
-cannot be encoded. Upload limits keep their existing HTTP 413 JSON response, and
+cannot be encoded. Upload limits return their own HTTP 413 problem, and
 malformed multipart, unsupported request content types, unknown routes, and unexpected defects retain
 Effect's default responses. This is not a normalization of every HTTP failure.
 
@@ -95,21 +95,22 @@ WebP image no larger than 20 MB. It stores the original, creates a durable uploa
 record, queues processing, and immediately returns HTTP 202 with the upload
 resource under `data`.
 
-Multipart limits are one part, a 20 MiB file, and a 21 MiB total request. Exceeding
-a limit returns HTTP 413 with this public JSON error; nothing is queued:
+Multipart limits are one part, a 20 MB file, and a 21 MB total request. Exceeding
+a limit returns HTTP 413 with this `application/problem+json` body; nothing is queued:
 
 ```json
 {
-  "error": {
-    "code": "invalid_input",
-    "message": "Upload exceeds a multipart limit. Send one image up to 20 MiB with a total request up to 21 MiB."
-  }
+  "type": "goho:problem:upload-limit-exceeded",
+  "status": 413,
+  "title": "Upload limit exceeded",
+  "detail": "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB."
 }
 ```
 
-This response uses the shared `ErrorResponse` schema and is also decoded by the
-typed client. Validation and receipt problems are described above. Storage or queue
-failures return HTTP 500 with `ReceiptUploadsUnavailable`.
+The typed client decodes this as `UploadLimitExceeded`, shared by receipt and book
+uploads. Deploy the server and updated CLI/MCP together; the old `{"error":...}`
+upload-limit body is gone. Validation and receipt problems are described above.
+Storage or queue failures return HTTP 500 with `ReceiptUploadsUnavailable`.
 
 Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
 be retained. File names are opaque IDs; original names and MIME types are stored
@@ -278,7 +279,7 @@ Deploy the server and updated CLI/MCP together; the old `{"_tag":...}` book bodi
 cover image, with the same size limit as receipt uploads. It stores the original
 in `GOHO_UPLOADS_DIRECTORY`, queues processing, and returns HTTP 202 with the
 upload under `data`. Other file types return HTTP 400, and files over the limit
-return HTTP 413 with the same JSON error as receipt uploads.
+return HTTP 413 with the same `UploadLimitExceeded` problem as receipt uploads.
 
 Processing reads the title, author, and category from the cover. The author is
 the printed authors, never illustrators, translators, or editors; with no author

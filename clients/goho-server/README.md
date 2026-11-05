@@ -48,5 +48,9 @@ Book routes fail with `BookNotFound`, `BookImageNotFound`, `BookConflict`, or
 `BookUploadConflict`, or `BookUploadsUnavailable`. These keep their tags and now
 arrive as problem responses too.
 
-The upload-limit error envelope is unchanged. Upgrade the server and CLI/MCP together
+Both upload routes also fail with `UploadLimitExceeded`, exported from
+`@goho/goho-server-client/response`, when an upload goes over a size or part-count
+limit. Its `detail` says what to send instead.
+
+Upgrade the server and CLI/MCP together
 when adopting these problem responses; an older server's bodies fail problem decoding.

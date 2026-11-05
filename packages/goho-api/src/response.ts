@@ -1,7 +1,22 @@
 import { Schema } from "effect";
+import { HttpApiError } from "effect/http-api";
 
 /**
- * Stable categories for public API and CLI errors, bud.
+ * An upload went over a size or part-count limit. Receipt and book uploads share
+ * this one problem because they share one upload policy.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class UploadLimitExceeded extends HttpApiError.Problem<UploadLimitExceeded>()(
+  "UploadLimitExceeded",
+  { type: "goho:problem:upload-limit-exceeded", status: 413, title: "Upload limit exceeded" },
+  {},
+  { description: "The upload exceeds a size or part-count limit, bud. Nothing is queued." },
+) {}
+
+/**
+ * Stable categories for CLI errors, bud.
  *
  * @category models
  * @since 0.1.0
@@ -24,7 +39,7 @@ export const ErrorCode = Schema.Literals([
 export type ErrorCode = typeof ErrorCode.Type;
 
 /**
- * Public error code and message. Diagnostic causes stay off the roster.
+ * CLI error code and message. Diagnostic causes stay off the roster.
  *
  * @category models
  * @since 0.1.0
@@ -37,7 +52,7 @@ export const ErrorResponse = Schema.Struct({
 }).annotate({ identifier: "ErrorResponse" });
 
 /**
- * Decoded public error response.
+ * Decoded CLI error response.
  *
  * @category models
  * @since 0.1.0

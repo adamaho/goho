@@ -20,13 +20,9 @@ describe("CommandError", () => {
 });
 
 describe("getRequestErrorCode", () => {
-  it("preserves the code from a decoded public error envelope", () => {
-    expect(
-      getRequestErrorCode({ error: { code: "invalid_input", message: "Upload limit exceeded." } }),
-    ).toBe("invalid_input");
-  });
   it.each([
     ["BadRequestProblem", "invalid_input"],
+    ["UploadLimitExceeded", "invalid_input"],
     ["ReceiptNotFound", "not_found"],
     ["ReceiptItemNotFound", "not_found"],
     ["ReceiptImageNotFound", "not_found"],

@@ -59,8 +59,8 @@ error response. Parser errors, such as missing arguments and unknown flags, stil
 Effect CLI's text rendering and may print help to stdout; unhandled defects are also
 outside this response contract.
 
-Upload-limit failures (HTTP 413) use this shared error schema too. The CLI prints
-the server's public size-limit message with code `invalid_input` instead of a
+Upload-limit failures (HTTP 413) print here too. The CLI shows the guidance from the
+server's `UploadLimitExceeded` problem with code `invalid_input` instead of a
 generic request-failure message.
 
 ## Check server status
