@@ -164,14 +164,16 @@
           "500": {
             "description": "The server could not store or queue the receipt image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -299,14 +301,16 @@
           "500": {
             "description": "The server could not pull the uploads off the bench. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -350,19 +354,19 @@
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptUploadNotFound"
                 }
               }
             }
           },
           "409": {
-            "description": "Only failed uploads can be deleted; this upload has a different status.",
+            "description": "Only failed uploads can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Conflict"
+                  "$ref": "#/components/schemas/ReceiptUploadConflict"
                 }
               }
             }
@@ -370,14 +374,16 @@
           "500": {
             "description": "The server could not delete this upload and its stored image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -495,9 +501,9 @@
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptUploadNotFound"
                 }
               }
             }
@@ -505,14 +511,16 @@
           "500": {
             "description": "The server could not retrieve this receipt upload. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -563,14 +571,16 @@
           "500": {
             "description": "The server could not pull the receipts off the bench. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -615,14 +625,16 @@
           "500": {
             "description": "Receipt validation or persistence missed the net. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -688,9 +700,9 @@
           "404": {
             "description": "No receipt is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptNotFound"
                 }
               }
             }
@@ -698,14 +710,16 @@
           "500": {
             "description": "The server could not retrieve this receipt. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -745,9 +759,9 @@
           "404": {
             "description": "No receipt is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptNotFound"
                 }
               }
             }
@@ -755,14 +769,16 @@
           "500": {
             "description": "The server could not delete this receipt and its stored image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -816,9 +832,9 @@
           "404": {
             "description": "No receipt is wearing that number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptNotFound"
                 }
               }
             }
@@ -826,14 +842,16 @@
           "500": {
             "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -901,9 +919,9 @@
           "404": {
             "description": "No scanned image is linked to this receipt, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptImageNotFound"
                 }
               }
             }
@@ -911,14 +929,16 @@
           "500": {
             "description": "The server could not retrieve this receipt image. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -982,9 +1002,9 @@
           "404": {
             "description": "That receipt has no item wearing this number, bud.",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NotFound"
+                  "$ref": "#/components/schemas/ReceiptItemNotFound"
                 }
               }
             }
@@ -992,14 +1012,16 @@
           "500": {
             "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InternalServerError"
-                }
-              },
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReceiptsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -2235,26 +2257,54 @@
           }
         ]
       },
-      "InternalServerError": {
+      "ReceiptsUnavailable": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["InternalServerError"]
+            "enum": ["goho:problem:receipts-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipts unavailable"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
-      "NotFound": {
+      "ReceiptItemNotFound": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["NotFound"]
+            "enum": ["goho:problem:receipt-item-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt item not found"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
         "additionalProperties": false
       },
       "ReceiptItem": {
@@ -2366,6 +2416,31 @@
             "category": "Groceries"
           }
         ]
+      },
+      "ReceiptNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:receipt-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
       },
       "Receipt": {
         "type": "object",
@@ -2675,15 +2750,104 @@
           }
         ]
       },
-      "Conflict": {
+      "ReceiptImageNotFound": {
         "type": "object",
         "properties": {
-          "_tag": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
             "type": "string",
-            "enum": ["Conflict"]
+            "enum": ["goho:problem:receipt-image-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt image not found"]
           }
         },
-        "required": ["_tag"],
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "ReceiptUploadsUnavailable": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:receipt-uploads-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt uploads unavailable"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "ReceiptUploadNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:receipt-upload-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt upload not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "ReceiptUploadConflict": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:receipt-upload-conflict"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [409]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Receipt upload cannot be deleted"]
+          }
+        },
+        "required": ["type"],
         "additionalProperties": false
       },
       "HealthData": {

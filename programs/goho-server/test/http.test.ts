@@ -1,20 +1,31 @@
-import { NodeHttpServer } from "@effect/platform-node";
+import { NodeCrypto, NodeFileSystem, NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { api } from "@goho/goho-api/api";
 import { Category, CategoryId } from "@goho/goho-api/categories";
-import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
+import {
+  ReceiptUpload,
+  ReceiptUploadConflict,
+  ReceiptUploadId,
+  ReceiptUploadNotFound,
+  ReceiptUploadsUnavailable,
+} from "@goho/goho-api/receipt-uploads";
 import {
   CreateReceiptRequest,
   type PatchReceiptItemRequest,
   type PatchReceiptRequest,
   Receipt,
   ReceiptId,
+  ReceiptImageNotFound,
   ReceiptItemId,
+  ReceiptItemNotFound,
+  ReceiptNotFound,
+  ReceiptsUnavailable,
 } from "@goho/goho-api/receipts";
 import * as Client from "@goho/goho-server-client/client";
-import { Array, Effect, Layer, Option } from "effect";
-import { HttpBody, HttpClient, HttpRouter } from "effect/http";
+import { Array, Effect, FileSystem, Layer, Option, PlatformError } from "effect";
+import { HttpBody, HttpClient, type HttpClientResponse, HttpRouter } from "effect/http";
 import { HttpApiClient, HttpApiError } from "effect/http-api";
+import { PersistedQueue } from "effect/persistence";
 import { expect } from "vitest";
 
 import * as BookUploads from "#src/book-uploads/service.ts";
@@ -22,6 +33,8 @@ import * as Books from "#src/books/service.ts";
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
 import * as Http from "#src/http.ts";
+import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
+import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
@@ -295,7 +308,7 @@ it.effect("returns HTTP 404 when a receipt has no uploaded image", () =>
     const response = yield* HttpClient.get(`/receipts/${receipt.id}/image`);
     expect(response.status).toBe(404);
   }).pipe(
-    Effect.provide(testLayer({}, { getImage: () => Effect.fail(new HttpApiError.NotFound()) })),
+    Effect.provide(testLayer({}, { getImage: () => Effect.fail(new ReceiptImageNotFound()) })),
   ),
 );
 
@@ -303,7 +316,7 @@ it.effect("returns HTTP 404 when a receipt upload does not exist", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(`/receipt-uploads/${receiptUpload.id}`);
     expect(response.status).toBe(404);
-  }).pipe(Effect.provide(testLayer({}, { get: () => Effect.fail(new HttpApiError.NotFound()) }))),
+  }).pipe(Effect.provide(testLayer({}, { get: () => Effect.fail(new ReceiptUploadNotFound()) }))),
 );
 
 it.effect("rejects unsupported receipt upload content types", () =>
@@ -672,22 +685,6 @@ it.effect("rejects malformed upload IDs before lookup or deletion", () =>
   ),
 );
 
-it.effect("returns the documented status for missing, non-failed, and unavailable uploads", () =>
-  Effect.gen(function* () {
-    for (const [error, status] of [
-      [new HttpApiError.NotFound(), 404],
-      [new HttpApiError.Conflict(), 409],
-      [new HttpApiError.InternalServerError(), 500],
-    ] as const) {
-      yield* Effect.gen(function* () {
-        const response = yield* HttpClient.del(`/receipt-uploads/${receiptUpload.id}`);
-        expect(response.status).toBe(status);
-        expect(yield* response.json).toEqual({ _tag: error._tag });
-      }).pipe(Effect.provide(testLayer({}, { delete: () => Effect.fail(error) })));
-    }
-  }),
-);
-
 const snacks = Category.make({
   id: CategoryId.make("9"),
   name: "snacks",
@@ -915,55 +912,397 @@ it.effect(
   },
 );
 
-it.effect("returns HTTP 404 when correcting a missing receipt or item", () =>
-  Effect.gen(function* () {
-    const receiptResponse = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
-      body: yield* HttpBody.json({ storeName: "Corner Store" }),
-    });
-    expect(receiptResponse.status).toBe(404);
-    expect(yield* receiptResponse.json).toEqual({ _tag: "NotFound" });
-    const itemResponse = yield* HttpClient.patch(`/receipts/${receipt.id}/items/5`, {
-      body: yield* HttpBody.json({ name: "Pears" }),
-    });
-    expect(itemResponse.status).toBe(404);
-    expect(yield* itemResponse.json).toEqual({ _tag: "NotFound" });
-  }).pipe(
-    Effect.provide(
-      testLayer({ update: () => Effect.succeedNone, updateItem: () => Effect.succeedNone }),
-    ),
-  ),
-);
+const privateDetails = "private SQL and /private/path details";
+const repositoryFailure = new ReceiptRepository.PersistenceError({
+  operation: "test",
+  cause: privateDetails,
+});
+const uploadRepositoryFailure = new ReceiptUploadRepository.PersistenceError({
+  operation: "test",
+  cause: privateDetails,
+});
+const storageFailure = (operation: "put" | "get" | "delete") =>
+  new FileStorage.StorageError({ operation, cause: privateDetails });
+const storedFile = FileStorage.FileId.make("stored-photo");
+const missingUpload = new ReceiptUploadRepository.UploadNotFound({ uploadId: receiptUpload.id });
 
-it.effect("returns HTTP 500 without exposing correction failure details", () =>
-  Effect.gen(function* () {
-    for (const [url, payload] of [
-      [`/receipts/${receipt.id}`, { storeName: "Corner Store" }],
-      [`/receipts/${receipt.id}/items/${itemId}`, { name: "Pears" }],
-    ] as const) {
-      const response = yield* HttpClient.patch(url, { body: yield* HttpBody.json(payload) });
-      expect(response.status).toBe(500);
-      const text = yield* response.text;
-      expect(text).not.toContain("private database details");
-      expect(JSON.parse(text)).toEqual({ _tag: "InternalServerError" });
-    }
-  }).pipe(
-    Effect.provide(
-      testLayer({
-        update: () =>
-          Effect.fail(
-            new ReceiptRepository.PersistenceError({
-              operation: "update",
-              cause: "private database details",
-            }),
-          ),
-        updateItem: () =>
-          Effect.fail(
-            new ReceiptRepository.PersistenceError({
-              operation: "updateItem",
-              cause: "private database details",
-            }),
-          ),
-      }),
+// The real upload service over fake persistence, so failures take the production mapping.
+const uploadServiceLayer = (
+  repository: Partial<ReceiptUploadRepository.Interface>,
+  storage: Partial<FileStorage.Interface> = {},
+  queue: Partial<ReceiptUploadQueue.Service["Service"]> = {},
+  // Multipart parsing keeps the real file system; only the handler's temp read is replaced.
+  readFile?: FileSystem.FileSystem["readFile"],
+) =>
+  HttpRouter.serve(
+    Http.layer.pipe(
+      Layer.provide(
+        Layer.effect(
+          FileSystem.FileSystem,
+          Effect.gen(function* () {
+            const fileSystem = yield* FileSystem.FileSystem;
+            return readFile === undefined ? fileSystem : { ...fileSystem, readFile };
+          }),
+        ).pipe(Layer.provide(NodeFileSystem.layer)),
+      ),
+      Layer.provide([
+        ReceiptUploads.layer.pipe(
+          Layer.provide([
+            Transaction.layerTest,
+            NodeCrypto.layer,
+            Layer.mock(ReceiptUploadQueue.Service, queue),
+            Layer.mock(FileStorage.Service, storage),
+            Layer.mock(ReceiptUploadRepository.Service, repository),
+          ]),
+        ),
+        Layer.mock(Receipts.Service, {}),
+        Layer.mock(Books.Service, {}),
+        Layer.mock(BookUploads.Service, {}),
+      ]),
     ),
-  ),
+  ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
+
+const problem = (type: string, status: number, title: string) => ({
+  body: { type: `goho:problem:${type}`, status, title },
+  status,
+});
+const receiptNotFound = {
+  ...problem("receipt-not-found", 404, "Receipt not found"),
+  error: ReceiptNotFound,
+};
+const receiptsUnavailable = {
+  ...problem("receipts-unavailable", 500, "Receipts unavailable"),
+  error: ReceiptsUnavailable,
+};
+const uploadNotFound = {
+  ...problem("receipt-upload-not-found", 404, "Receipt upload not found"),
+  error: ReceiptUploadNotFound,
+};
+const uploadsUnavailable = {
+  ...problem("receipt-uploads-unavailable", 500, "Receipt uploads unavailable"),
+  error: ReceiptUploadsUnavailable,
+};
+const uploadConflict = {
+  ...problem("receipt-upload-conflict", 409, "Receipt upload cannot be deleted"),
+  error: ReceiptUploadConflict,
+};
+const itemNotFound = {
+  ...problem("receipt-item-not-found", 404, "Receipt item not found"),
+  error: ReceiptItemNotFound,
+};
+const imageNotFound = {
+  ...problem("receipt-image-not-found", 404, "Receipt image not found"),
+  error: ReceiptImageNotFound,
+};
+
+const receiptParams = { params: { receiptId: receipt.id } };
+const uploadParams = { params: { uploadId: receiptUpload.id } };
+const uploadForm = () => {
+  const form = new FormData();
+  form.append("file", new File([new Uint8Array([1])], "receipt.png", { type: "image/png" }));
+  return form;
+};
+
+// Upload handoff steps a create reached, in order, for the no-write assertions below.
+const recordCreateSteps = (failing: {
+  readonly createQueued?: boolean;
+  readonly offer?: boolean;
+}) => {
+  const steps: Array<string> = [];
+  const step = (name: string) =>
+    Effect.sync(() => {
+      steps.push(name);
+    });
+  return {
+    steps,
+    repository: {
+      createQueued: () =>
+        step("createQueued").pipe(
+          Effect.andThen(
+            failing.createQueued
+              ? Effect.fail(uploadRepositoryFailure)
+              : Effect.succeed({ ...receiptUpload, fileId: storedFile }),
+          ),
+        ),
+    } satisfies Partial<ReceiptUploadRepository.Interface>,
+    storage: {
+      put: () => step("put").pipe(Effect.as(storedFile)),
+      delete: () => step("delete"),
+    } satisfies Partial<FileStorage.Interface>,
+    queue: {
+      offer: () =>
+        step("offer").pipe(
+          Effect.andThen(
+            failing.offer
+              ? Effect.fail(new PersistedQueue.PersistedQueueError({ message: privateDetails }))
+              : Effect.succeed(receiptUpload.id),
+          ),
+        ),
+    } satisfies Partial<ReceiptUploadQueue.Service["Service"]>,
+  };
+};
+const createDatabaseFailure = recordCreateSteps({ createQueued: true });
+const createQueueFailure = recordCreateSteps({ offer: true });
+const temporaryReadFailure = recordCreateSteps({});
+
+type TestClient = Effect.Success<ReturnType<typeof Client.make>>;
+
+// Each case runs the real service over a failing fake, then checks the wire and the typed client.
+const receiptProblemCases: ReadonlyArray<{
+  readonly name: string;
+  readonly layer: ReturnType<typeof testLayer>;
+  readonly expected:
+    | typeof receiptNotFound
+    | typeof receiptsUnavailable
+    | typeof itemNotFound
+    | typeof imageNotFound
+    | typeof uploadNotFound
+    | typeof uploadConflict
+    | typeof uploadsUnavailable;
+  readonly call: (client: TestClient) => Effect.Effect<unknown, unknown>;
+  readonly steps?: {
+    readonly actual: ReadonlyArray<string>;
+    readonly expected: ReadonlyArray<string>;
+  };
+}> = [
+  {
+    name: "list receipts: unavailable",
+    layer: testLayer({ list: Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.list(),
+  },
+  {
+    name: "get receipt: missing",
+    layer: testLayer({ findById: () => Effect.succeedNone }),
+    expected: receiptNotFound,
+    call: (client) => client.receipts.get(receiptParams),
+  },
+  {
+    name: "get receipt: unavailable",
+    layer: testLayer({ findById: () => Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.get(receiptParams),
+  },
+  {
+    name: "create receipt: unavailable",
+    layer: testLayer({ insert: () => Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.create({ payload: createPayload }),
+  },
+  {
+    name: "patch receipt: missing",
+    layer: testLayer({ update: () => Effect.succeedNone }),
+    expected: receiptNotFound,
+    call: (client) =>
+      client.receipts.patch({ ...receiptParams, payload: { storeName: "Corner Store" } }),
+  },
+  {
+    name: "patch receipt: unavailable",
+    layer: testLayer({ update: () => Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) =>
+      client.receipts.patch({ ...receiptParams, payload: { storeName: "Corner Store" } }),
+  },
+  {
+    name: "patch item: missing",
+    layer: testLayer({ updateItem: () => Effect.succeedNone }),
+    expected: itemNotFound,
+    call: (client) =>
+      client.receipts.patchItem({
+        params: { receiptId: receipt.id, itemId },
+        payload: { name: "Pears" },
+      }),
+  },
+  {
+    name: "patch item: unavailable",
+    layer: testLayer({ updateItem: () => Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) =>
+      client.receipts.patchItem({
+        params: { receiptId: receipt.id, itemId },
+        payload: { name: "Pears" },
+      }),
+  },
+  {
+    name: "delete receipt: missing",
+    layer: testLayer({ delete: () => Effect.succeedNone }),
+    expected: receiptNotFound,
+    call: (client) => client.receipts.delete(receiptParams),
+  },
+  {
+    name: "delete receipt: database unavailable",
+    layer: testLayer({ delete: () => Effect.fail(repositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.delete(receiptParams),
+  },
+  {
+    name: "delete receipt: storage unavailable",
+    layer: testLayer(
+      { delete: () => Effect.succeedSome({ fileId: storedFile }) },
+      {},
+      { delete: () => Effect.fail(storageFailure("delete")) },
+    ),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.delete(receiptParams),
+  },
+  {
+    name: "get receipt image: missing",
+    layer: uploadServiceLayer({ findByReceiptId: () => Effect.succeedNone }),
+    expected: imageNotFound,
+    call: (client) => client.receipts.getImage(receiptParams),
+  },
+  {
+    name: "get receipt image: database unavailable",
+    layer: uploadServiceLayer({ findByReceiptId: () => Effect.fail(uploadRepositoryFailure) }),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.getImage(receiptParams),
+  },
+  {
+    name: "get receipt image: storage unavailable",
+    layer: uploadServiceLayer(
+      {
+        findByReceiptId: () => Effect.succeedSome({ ...receiptUpload, fileId: storedFile }),
+      },
+      { get: () => Effect.fail(storageFailure("get")) },
+    ),
+    expected: receiptsUnavailable,
+    call: (client) => client.receipts.getImage(receiptParams),
+  },
+  {
+    name: "list uploads: unavailable",
+    layer: uploadServiceLayer({ list: Effect.fail(uploadRepositoryFailure) }),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.list(),
+  },
+  {
+    name: "get upload: missing",
+    layer: uploadServiceLayer({ findById: () => Effect.succeedNone }),
+    expected: uploadNotFound,
+    call: (client) => client.receiptUploads.get(uploadParams),
+  },
+  {
+    name: "get upload: unavailable",
+    layer: uploadServiceLayer({ findById: () => Effect.fail(uploadRepositoryFailure) }),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.get(uploadParams),
+  },
+  {
+    name: "create upload: storage unavailable",
+    layer: uploadServiceLayer({}, { put: () => Effect.fail(storageFailure("put")) }),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.create({ payload: uploadForm() }),
+  },
+  {
+    name: "create upload: temporary file unreadable",
+    layer: uploadServiceLayer(
+      temporaryReadFailure.repository,
+      temporaryReadFailure.storage,
+      temporaryReadFailure.queue,
+      (path) =>
+        Effect.sync(() => {
+          temporaryReadFailure.steps.push("readFile");
+        }).pipe(
+          Effect.andThen(
+            Effect.fail(
+              PlatformError.systemError({
+                module: "FileSystem",
+                method: "readFile",
+                _tag: "Unknown",
+                description: privateDetails,
+                pathOrDescriptor: path,
+              }),
+            ),
+          ),
+        ),
+    ),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.create({ payload: uploadForm() }),
+    steps: { actual: temporaryReadFailure.steps, expected: ["readFile"] },
+  },
+  {
+    name: "create upload: database unavailable",
+    layer: uploadServiceLayer(
+      createDatabaseFailure.repository,
+      createDatabaseFailure.storage,
+      createDatabaseFailure.queue,
+    ),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.create({ payload: uploadForm() }),
+    steps: { actual: createDatabaseFailure.steps, expected: ["put", "createQueued", "delete"] },
+  },
+  {
+    name: "create upload: queue unavailable",
+    layer: uploadServiceLayer(
+      createQueueFailure.repository,
+      createQueueFailure.storage,
+      createQueueFailure.queue,
+    ),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.create({ payload: uploadForm() }),
+    steps: {
+      actual: createQueueFailure.steps,
+      expected: ["put", "createQueued", "offer", "delete"],
+    },
+  },
+  {
+    name: "delete upload: missing",
+    layer: uploadServiceLayer({ deleteFailed: () => Effect.fail(missingUpload) }),
+    expected: uploadNotFound,
+    call: (client) => client.receiptUploads.delete(uploadParams),
+  },
+  {
+    name: "delete upload: not failed",
+    layer: uploadServiceLayer({
+      deleteFailed: () =>
+        Effect.fail(
+          new ReceiptUploadRepository.DeletionNotAllowed({
+            uploadId: receiptUpload.id,
+            currentStatus: "queued",
+          }),
+        ),
+    }),
+    expected: uploadConflict,
+    call: (client) => client.receiptUploads.delete(uploadParams),
+  },
+  {
+    name: "delete upload: database unavailable",
+    layer: uploadServiceLayer({ deleteFailed: () => Effect.fail(uploadRepositoryFailure) }),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.delete(uploadParams),
+  },
+  {
+    name: "delete upload: storage unavailable",
+    layer: uploadServiceLayer(
+      { deleteFailed: () => Effect.succeed(storedFile) },
+      { delete: () => Effect.fail(storageFailure("delete")) },
+    ),
+    expected: uploadsUnavailable,
+    call: (client) => client.receiptUploads.delete(uploadParams),
+  },
+];
+
+it.effect.each(receiptProblemCases)(
+  "returns a private, client-decodable problem for $name",
+  ({ call, expected, layer, steps }) =>
+    Effect.gen(function* () {
+      // Captures the raw response the typed client decodes.
+      const responses: Array<HttpClientResponse.HttpClientResponse> = [];
+      const client = yield* HttpApiClient.make(api, {
+        baseUrl: "",
+        transformClient: HttpClient.tap((response) =>
+          Effect.sync(() => {
+            responses.push(response);
+          }),
+        ),
+      });
+      const failure = yield* call(client).pipe(Effect.flip);
+      expect(failure).toBeInstanceOf(expected.error);
+      const [response] = responses;
+      expect(response?.status).toBe(expected.status);
+      expect(response?.headers["content-type"]).toContain("application/problem+json");
+      expect(
+        yield* Effect.fromNullishOr(response).pipe(Effect.flatMap((raw) => raw.json)),
+      ).toStrictEqual(expected.body);
+      expect(steps?.actual).toEqual(steps?.expected);
+    }).pipe(Effect.provide(layer)),
 );

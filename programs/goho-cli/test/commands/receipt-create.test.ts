@@ -1,8 +1,15 @@
+import { ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  validationProblem,
+  withResponse,
+} from "#test/cli.ts";
 
 const payload = {
   storeName: "Example Store",
@@ -52,9 +59,7 @@ const runCreate = (args: ReadonlyArray<string>, expected: unknown, status: numbe
       expect(request.method).toBe("POST");
       expect(request.url).toBe("/receipts");
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(expected);
-      return status === 400
-        ? yield* validationResponse
-        : HttpServerResponse.jsonUnsafe(body, { status });
+      return yield* toTestResponse(status, body);
     }),
     (baseUrl) => runCommand(baseUrl, ["receipts", "create", ...args]),
   );
@@ -132,19 +137,19 @@ describe("receipts create", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequestProblem",
+      problem: validationProblem,
       message: "The receipt was rejected. Check the supplied values.",
     },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "InternalServerError",
+      problem: new ReceiptsUnavailable(),
       message: "Receipt could not be created. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status and exits nonzero",
-    async ({ status, tag, message, errorCode }) => {
-      const result = await runCreate([...flags(), ...apples], payload, status, { _tag: tag });
+    async ({ status, problem, message, errorCode }) => {
+      const result = await runCreate([...flags(), ...apples], payload, status, problem);
       expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
     },
   );

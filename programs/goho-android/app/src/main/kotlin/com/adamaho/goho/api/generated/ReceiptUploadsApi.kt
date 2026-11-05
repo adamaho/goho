@@ -7,13 +7,12 @@ import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
-import com.adamaho.goho.api.generated.model.Conflict
 import com.adamaho.goho.api.generated.model.ErrorResponse
-import com.adamaho.goho.api.generated.model.InternalServerError
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
-import com.adamaho.goho.api.generated.model.NotFound
+import com.adamaho.goho.api.generated.model.ReceiptUploadConflict
+import com.adamaho.goho.api.generated.model.ReceiptUploadNotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200Response
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList500Response
 
 import okhttp3.MultipartBody
 
@@ -43,7 +42,7 @@ interface ReceiptUploadsApi {
      *  - 204: <No Content>
      *  - 400: Bad Request
      *  - 404: No receipt upload is wearing that number, bud.
-     *  - 409: Only failed uploads can be deleted; this upload has a different status.
+     *  - 409: Only failed uploads can be deleted; this one is queued, processing, or succeeded. Nothing changed.
      *  - 500: The server could not delete this upload and its stored image. | Internal Server Error
      *
      * @param uploadId 

@@ -1,6 +1,7 @@
 import { layer } from "@effect/vitest";
+import { ReceiptNotFound } from "@goho/goho-server-client/receipts";
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
 import { DeleteResult, ErrorResult } from "#test/support/mcp-client.ts";
@@ -14,7 +15,7 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.empty({ status: 204 });
   }
   if (request.url === "/receipts/999") {
-    return HttpServerResponse.jsonUnsafe({ _tag: "NotFound" }, { status: 404 });
+    return yield* HttpServerRespondable.toResponse(new ReceiptNotFound());
   }
   return HttpServerResponse.empty({ status: 500 });
 });

@@ -29,6 +29,20 @@ Successful responses use the shared `{ data: ... }` envelope defined by
 
 HTTP schema validation failures decode as `HttpApiError.BadRequestProblem` from
 `effect/http-api`, not `BadRequest`. Response encoding failures decode as
-`HttpApiError.InternalServerErrorProblem`. Domain error tags and the upload-limit
-error envelope are unchanged. Upgrade the server and CLI/MCP together when adopting
-these problem responses; an older server's empty 400 fails problem decoding.
+`HttpApiError.InternalServerErrorProblem`.
+
+Receipt routes fail with `ReceiptNotFound`, `ReceiptItemNotFound`,
+`ReceiptImageNotFound`, or `ReceiptsUnavailable`; receipt upload routes fail with
+`ReceiptUploadNotFound`, `ReceiptUploadConflict`, or `ReceiptUploadsUnavailable`.
+These replace `NotFound`, `Conflict`, and `InternalServerError` on those routes.
+They arrive as problem responses, and the client still gives you a `_tag` to branch on:
+
+```ts
+client.receipts
+  .get({ params: { receiptId } })
+  .pipe(Effect.catchTag("ReceiptNotFound", () => Effect.succeed(null)));
+```
+
+Book and book upload error tags and the upload-limit error envelope are unchanged.
+Upgrade the server and CLI/MCP together when adopting these problem responses; an
+older server's bodies fail problem decoding.

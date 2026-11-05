@@ -17,9 +17,28 @@ import { ChildProcess } from "effect/process";
  * @category testing
  * @since 0.1.0
  */
-export const validationResponse = HttpServerRespondable.toResponse(
-  new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
-);
+export const validationProblem = new HttpApiError.BadRequestProblem({
+  detail: "Request validation failed",
+});
+
+/**
+ * Native HTTP validation response returned by CLI test servers.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const validationResponse = HttpServerRespondable.toResponse(validationProblem);
+
+/**
+ * Renders a declared Problem as the server would, or any other body as JSON.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const toTestResponse = (status: number, body: unknown) =>
+  HttpServerRespondable.isRespondable(body)
+    ? HttpServerRespondable.toResponse(body)
+    : Effect.succeed(HttpServerResponse.jsonUnsafe(body, { status }));
 
 /**
  * Expected stderr for one handled CLI failure.
@@ -103,4 +122,4 @@ export const withJsonResponse = <A>(
   status: number,
   body: unknown,
   run: (baseUrl: string) => Promise<A>,
-) => withResponse(Effect.succeed(HttpServerResponse.jsonUnsafe(body, { status })), run);
+) => withResponse(toTestResponse(status, body), run);

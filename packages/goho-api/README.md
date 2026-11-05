@@ -8,6 +8,6 @@ clients. It depends only on Effect and contains no server infrastructure.
 - `/book-uploads`: book cover upload identity, status, and error schemas.
 - `/books`: book request, response, and error schemas.
 - `/categories`: the shared category schema and its kinds.
-- `/receipt-uploads`: receipt upload identity and status schemas.
-- `/receipts`: receipt request and response schemas.
+- `/receipt-uploads`: receipt upload identity, status, and error schemas.
+- `/receipts`: receipt request, response, and error schemas.
 - `/response`: shared successful response envelope and public error code/message schema.

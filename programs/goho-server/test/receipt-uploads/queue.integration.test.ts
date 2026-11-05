@@ -184,6 +184,9 @@ it.effect("deletes the stored file when the database handoff fails", () =>
 
     expect(result._tag).toBe("Failure");
     expect(yield* Ref.get(deleted)).toEqual(["orphaned-drive-file"]);
+    // The upload row inserted before the failed offer rolls back with it.
+    const sql = yield* SqlClient.SqlClient;
+    expect(yield* sql`SELECT id FROM receipt_uploads`).toEqual([]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -280,14 +283,14 @@ it.effect(
       for (const status of ["queued", "processing"] as const) {
         if (status === "processing") yield* repo.markProcessing(created.id);
         const rejected = yield* uploads.delete(created.id).pipe(Effect.result);
-        expect(Result.isFailure(rejected) && rejected.failure._tag).toBe("Conflict");
+        expect(Result.isFailure(rejected) && rejected.failure._tag).toBe("ReceiptUploadConflict");
         expect(deleted).toEqual([]);
       }
       yield* repo.markFailed(created.id, "processing_failed");
       const failedUpload = Option.getOrThrow(yield* repo.findById(created.id));
       const filePath = path.join(directory, failedUpload.fileId);
       const failure = yield* uploads.delete(created.id).pipe(Effect.result);
-      expect(Result.isFailure(failure) && failure.failure._tag).toBe("InternalServerError");
+      expect(Result.isFailure(failure) && failure.failure._tag).toBe("ReceiptUploadsUnavailable");
       expect(yield* repo.findById(created.id)).toEqual(Option.some(failedUpload));
       expect(yield* fs.exists(filePath)).toBe(true);
       failCleanup = false;
@@ -296,7 +299,7 @@ it.effect(
       expect(yield* repo.findById(created.id)).toEqual(Option.none());
       expect(yield* uploads.list).toEqual([]);
       const repeated = yield* uploads.delete(created.id).pipe(Effect.result);
-      expect(Result.isFailure(repeated) && repeated.failure._tag).toBe("NotFound");
+      expect(Result.isFailure(repeated) && repeated.failure._tag).toBe("ReceiptUploadNotFound");
       expect(deleted).toEqual([failedUpload.fileId, failedUpload.fileId]);
     }).pipe(Effect.provide([RepositoryLive, DatabaseLive, NodeServices.layer, NodeCrypto.layer])),
 );

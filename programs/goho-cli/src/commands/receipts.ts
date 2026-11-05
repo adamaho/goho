@@ -49,7 +49,7 @@ const viewCommand = Command.make("view", {
           new CommandError({
             code: getRequestErrorCode(cause),
             message:
-              cause._tag === "NotFound"
+              cause._tag === "ReceiptNotFound"
                 ? `Receipt ${receiptId} was not found.`
                 : "Receipt could not be retrieved. Check the server logs and try again.",
             cause,
@@ -82,7 +82,7 @@ const deleteCommand = Command.make("delete", {
           new CommandError({
             code: getRequestErrorCode(cause),
             message:
-              cause._tag === "NotFound"
+              cause._tag === "ReceiptNotFound"
                 ? `Receipt ${receiptId} was not found.`
                 : "Receipt could not be deleted. Check the server logs and try again.",
             cause,

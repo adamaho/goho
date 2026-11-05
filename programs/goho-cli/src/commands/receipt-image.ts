@@ -32,7 +32,7 @@ export const imageCommand = Command.make("image", {
             new CommandError({
               code: getRequestErrorCode(cause),
               message:
-                cause._tag === "NotFound"
+                cause._tag === "ReceiptImageNotFound"
                   ? `Receipt ${receiptId} was not found or has no scanned image.`
                   : "Receipt image could not be retrieved. Check the server logs and try again.",
               cause,

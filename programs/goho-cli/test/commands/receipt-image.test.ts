@@ -1,4 +1,5 @@
 import { NodeServices } from "@effect/platform-node";
+import { ReceiptImageNotFound, ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { Effect, FileSystem, Path } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
@@ -64,20 +65,20 @@ describe("receipts image", () => {
     {
       status: 404,
       errorCode: "not_found",
-      tag: "NotFound",
+      problem: new ReceiptImageNotFound(),
       message: "Receipt 42 was not found or has no scanned image.",
     },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "InternalServerError",
+      problem: new ReceiptsUnavailable(),
       message: "Receipt image could not be retrieved. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status without touching the existing file",
-    async ({ status, tag, message, errorCode }) => {
+    async ({ status, problem, message, errorCode }) => {
       const { result, saved } = await withImageFile((directory, output) =>
-        withJsonResponse(status, { _tag: tag }, (baseUrl) =>
+        withJsonResponse(status, problem, (baseUrl) =>
           runCommand(baseUrl, ["receipts", "image", "42", "--output", output]),
         ),
       );

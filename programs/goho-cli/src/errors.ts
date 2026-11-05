@@ -27,12 +27,15 @@ export const getRequestErrorCode = (
   switch (cause._tag) {
     case "BadRequestProblem":
       return "invalid_input";
-    case "NotFound":
+    case "ReceiptNotFound":
+    case "ReceiptItemNotFound":
+    case "ReceiptImageNotFound":
+    case "ReceiptUploadNotFound":
     case "BookNotFound":
     case "BookImageNotFound":
     case "BookUploadNotFound":
       return "not_found";
-    case "Conflict":
+    case "ReceiptUploadConflict":
     case "BookConflict":
     case "BookUploadConflict":
       return "conflict";

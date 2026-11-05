@@ -1,4 +1,5 @@
 import { layer } from "@effect/vitest";
+import { ReceiptItemNotFound } from "@goho/goho-server-client/receipts";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { HttpApiError } from "effect/http-api";
@@ -29,7 +30,7 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.jsonUnsafe({ data: item });
   }
   if (request.url === "/receipts/999/items/7" || request.url === "/receipts/42/items/999") {
-    return HttpServerResponse.jsonUnsafe({ _tag: "NotFound" }, { status: 404 });
+    return yield* HttpServerRespondable.toResponse(new ReceiptItemNotFound());
   }
   if (request.url === "/receipts/42/items/400") {
     return yield* HttpServerRespondable.toResponse(

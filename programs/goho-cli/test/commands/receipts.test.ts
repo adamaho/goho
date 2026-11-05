@@ -1,8 +1,15 @@
+import { ReceiptNotFound, ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  withJsonResponse,
+  withResponse,
+} from "#test/cli.ts";
 
 const runList = (baseUrl: string) => runCommand(baseUrl, ["receipts", "list"]);
 
@@ -45,7 +52,7 @@ describe("receipts list", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await withJsonResponse(500, { _tag: "InternalServerError" }, runList);
+    const result = await withJsonResponse(500, new ReceiptsUnavailable(), runList);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
@@ -70,7 +77,7 @@ describe("receipts view", () => {
   });
 
   it("reports a missing receipt and exits nonzero", async () => {
-    const result = await withJsonResponse(404, { _tag: "NotFound" }, (baseUrl) =>
+    const result = await withJsonResponse(404, new ReceiptNotFound(), (baseUrl) =>
       runView(receipt.id, baseUrl),
     );
     expect(result.code).toBe(1);
@@ -97,7 +104,7 @@ describe("receipts delete", () => {
         expect(request.url).toBe(`/receipts/${receipt.id}`);
         return body === undefined
           ? HttpServerResponse.empty({ status })
-          : HttpServerResponse.jsonUnsafe(body, { status });
+          : yield* toTestResponse(status, body);
       }),
       (baseUrl) => runCommand(baseUrl, ["receipts", "delete", receipt.id]),
     );
@@ -112,14 +119,14 @@ describe("receipts delete", () => {
   });
 
   it("reports a missing receipt and exits nonzero", async () => {
-    const result = await runDelete(404, { _tag: "NotFound" });
+    const result = await runDelete(404, new ReceiptNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(errorOutput("not_found", `Receipt ${receipt.id} was not found.`));
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await runDelete(500, { _tag: "InternalServerError" });
+    const result = await runDelete(500, new ReceiptsUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(

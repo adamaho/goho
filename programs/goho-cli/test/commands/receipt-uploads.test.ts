@@ -1,4 +1,9 @@
 import { NodeServices } from "@effect/platform-node";
+import {
+  ReceiptUploadConflict,
+  ReceiptUploadNotFound,
+  ReceiptUploadsUnavailable,
+} from "@goho/goho-server-client/receipt-uploads";
 import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
@@ -6,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   errorOutput,
   runCommand,
+  toTestResponse,
   validationResponse,
   withJsonResponse,
   withResponse,
@@ -196,7 +202,7 @@ describe("receipts uploads view", () => {
   });
 
   it("reports a missing upload", async () => {
-    const result = await withJsonResponse(404, { _tag: "NotFound" }, (baseUrl) =>
+    const result = await withJsonResponse(404, new ReceiptUploadNotFound(), (baseUrl) =>
       runCommand(baseUrl, ["receipts", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
@@ -207,7 +213,7 @@ describe("receipts uploads view", () => {
   });
 
   it("reports server failures", async () => {
-    const result = await withJsonResponse(500, { _tag: "InternalServerError" }, (baseUrl) =>
+    const result = await withJsonResponse(500, new ReceiptUploadsUnavailable(), (baseUrl) =>
       runCommand(baseUrl, ["receipts", "uploads", "view", uploadId]),
     );
     expect(result.code).toBe(1);
@@ -247,7 +253,7 @@ describe("receipts uploads list", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await withJsonResponse(500, { _tag: "InternalServerError" }, (baseUrl) =>
+    const result = await withJsonResponse(500, new ReceiptUploadsUnavailable(), (baseUrl) =>
       runCommand(baseUrl, ["receipts", "uploads", "list"]),
     );
     expect(result.code).toBe(1);
@@ -270,7 +276,7 @@ describe("receipts uploads delete", () => {
         expect(request.url).toBe(`/receipt-uploads/${uploadId}`);
         return body === undefined
           ? HttpServerResponse.empty({ status })
-          : HttpServerResponse.jsonUnsafe(body, { status });
+          : yield* toTestResponse(status, body);
       }),
       (baseUrl) => runCommand(baseUrl, ["receipts", "uploads", "delete", uploadId]),
     );
@@ -285,7 +291,7 @@ describe("receipts uploads delete", () => {
   });
 
   it("reports a missing upload and exits nonzero", async () => {
-    const result = await runDelete(404, { _tag: "NotFound" });
+    const result = await runDelete(404, new ReceiptUploadNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
@@ -294,7 +300,7 @@ describe("receipts uploads delete", () => {
   });
 
   it("reports an upload that has not failed and exits nonzero", async () => {
-    const result = await runDelete(409, { _tag: "Conflict" });
+    const result = await runDelete(409, new ReceiptUploadConflict());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
@@ -306,7 +312,7 @@ describe("receipts uploads delete", () => {
   });
 
   it("reports server failures and exits nonzero", async () => {
-    const result = await runDelete(500, { _tag: "InternalServerError" });
+    const result = await runDelete(500, new ReceiptUploadsUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(

@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { HttpApiError } from "effect/http-api";
 
 import { Category, CategoryId } from "./categories.ts";
 import { BigintId, maxId } from "./ids.ts";
@@ -338,3 +339,61 @@ export const Receipt = Schema.Struct({
  * @since 0.1.0
  */
 export interface Receipt extends Schema.Schema.Type<typeof Receipt> {}
+
+// Problem `type` values are stable custom-scheme identifiers, not links; clients never fetch them.
+
+/**
+ * No receipt has the requested ID.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptNotFound extends HttpApiError.Problem<ReceiptNotFound>()(
+  "ReceiptNotFound",
+  { type: "goho:problem:receipt-not-found", status: 404, title: "Receipt not found" },
+  {},
+  { description: "No receipt is wearing that number, bud." },
+) {}
+
+/**
+ * The receipt does not exist or has no item with the requested ID.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptItemNotFound extends HttpApiError.Problem<ReceiptItemNotFound>()(
+  "ReceiptItemNotFound",
+  { type: "goho:problem:receipt-item-not-found", status: 404, title: "Receipt item not found" },
+  {},
+  { description: "That receipt has no item wearing this number, bud." },
+) {}
+
+/**
+ * The receipt does not exist or has no scanned image.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptImageNotFound extends HttpApiError.Problem<ReceiptImageNotFound>()(
+  "ReceiptImageNotFound",
+  {
+    type: "goho:problem:receipt-image-not-found",
+    status: 404,
+    title: "Receipt image not found",
+  },
+  {},
+  { description: "No scanned image is linked to this receipt, bud." },
+) {}
+
+/**
+ * Receipts could not be read, saved, or deleted; details stay in the server logs.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptsUnavailable extends HttpApiError.Problem<ReceiptsUnavailable>()(
+  "ReceiptsUnavailable",
+  { type: "goho:problem:receipts-unavailable", status: 500, title: "Receipts unavailable" },
+  {},
+  { description: "The server could not get to the receipts; take another shot." },
+) {}

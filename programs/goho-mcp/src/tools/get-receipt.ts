@@ -39,7 +39,7 @@ export const handle = Effect.fn("@goho/GetReceipt.handle")(function* ({
     .get({ params: { receiptId: receipt_id } })
     .pipe(
       Effect.mapError((cause) =>
-        cause._tag === "NotFound"
+        cause._tag === "ReceiptNotFound"
           ? `Receipt ${receipt_id} was not found.`
           : "Could not get receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
       ),

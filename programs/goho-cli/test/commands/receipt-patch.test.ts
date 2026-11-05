@@ -1,8 +1,19 @@
+import {
+  ReceiptItemNotFound,
+  ReceiptNotFound,
+  ReceiptsUnavailable,
+} from "@goho/goho-server-client/receipts";
 import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  toTestResponse,
+  validationProblem,
+  withResponse,
+} from "#test/cli.ts";
 
 const groceries = {
   id: "3",
@@ -44,9 +55,7 @@ const runPatch = (
       expect(request.method).toBe("PATCH");
       expect(request.url).toBe(url);
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(payload);
-      return status === 400
-        ? yield* validationResponse
-        : HttpServerResponse.jsonUnsafe(body, { status });
+      return yield* toTestResponse(status, body);
     }),
     (baseUrl) => runCommand(baseUrl, ["receipts", ...args]),
   );
@@ -82,25 +91,30 @@ describe("receipts patch", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequestProblem",
+      problem: validationProblem,
       message: "The receipt correction was rejected. Check the supplied changes.",
     },
-    { status: 404, tag: "NotFound", message: "Receipt 42 was not found.", errorCode: "not_found" },
+    {
+      status: 404,
+      problem: new ReceiptNotFound(),
+      message: "Receipt 42 was not found.",
+      errorCode: "not_found",
+    },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "InternalServerError",
+      problem: new ReceiptsUnavailable(),
       message: "Receipt could not be patched. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status and exits nonzero",
-    async ({ status, tag, message, errorCode }) => {
+    async ({ status, problem, message, errorCode }) => {
       const result = await runPatch(
         ["patch", receipt.id, "--store-name", "Corner Store"],
         `/receipts/${receipt.id}`,
         { storeName: "Corner Store" },
         status,
-        { _tag: tag },
+        problem,
       );
       expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
     },
@@ -146,30 +160,30 @@ describe("receipts patch-item", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequestProblem",
+      problem: validationProblem,
       message: "The item correction was rejected. Check the supplied changes.",
     },
     {
       status: 404,
-      tag: "NotFound",
+      problem: new ReceiptItemNotFound(),
       message: `Item ${item.id} was not found on receipt 42.`,
       errorCode: "not_found",
     },
     {
       status: 500,
       errorCode: "request_failed",
-      tag: "InternalServerError",
+      problem: new ReceiptsUnavailable(),
       message: "Receipt item could not be patched. Check the server logs and try again.",
     },
   ] as const)(
     "reports HTTP $status and exits nonzero",
-    async ({ status, tag, message, errorCode }) => {
+    async ({ status, problem, message, errorCode }) => {
       const result = await runPatch(
         ["patch-item", receipt.id, item.id, "--name", "Apples"],
         `/receipts/${receipt.id}/items/${item.id}`,
         { name: "Apples" },
         status,
-        { _tag: tag },
+        problem,
       );
       expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
     },

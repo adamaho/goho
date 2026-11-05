@@ -27,15 +27,19 @@ describe("getRequestErrorCode", () => {
   });
   it.each([
     ["BadRequestProblem", "invalid_input"],
-    ["NotFound", "not_found"],
+    ["ReceiptNotFound", "not_found"],
+    ["ReceiptItemNotFound", "not_found"],
+    ["ReceiptImageNotFound", "not_found"],
+    ["ReceiptUploadNotFound", "not_found"],
     ["BookNotFound", "not_found"],
     ["BookImageNotFound", "not_found"],
     ["BookUploadNotFound", "not_found"],
-    ["Conflict", "conflict"],
+    ["ReceiptUploadConflict", "conflict"],
     ["BookConflict", "conflict"],
     ["BookUploadConflict", "conflict"],
     ["BooksUnavailable", "request_failed"],
-    ["InternalServerError", "request_failed"],
+    ["ReceiptsUnavailable", "request_failed"],
+    ["ReceiptUploadsUnavailable", "request_failed"],
     ["HttpClientError", "request_failed"],
     ["SchemaError", "request_failed"],
   ])("maps %s to %s", (tag, code) => {

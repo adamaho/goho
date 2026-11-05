@@ -47,17 +47,47 @@ Deploy the server and updated CLI/MCP together; older clients expecting empty
 codes and does not need to read the problem body.
 
 The middleware also returns a generic HTTP 500 problem if a successful response
-cannot be encoded. Domain errors keep their existing tagged JSON bodies, upload
+cannot be encoded. Book and book upload errors keep their tagged JSON bodies, upload
 limits keep their existing HTTP 413 JSON response, and malformed multipart,
 unsupported request content types, unknown routes, and unexpected defects retain
 Effect's default responses. This is not a normalization of every HTTP failure.
+
+### Receipt errors
+
+Receipt and receipt upload routes return their domain failures as
+`application/problem+json`, identified by `type`:
+
+| HTTP | `type`                                     | Client error                | Meaning                                                |
+| ---- | ------------------------------------------ | --------------------------- | ------------------------------------------------------ |
+| 404  | `goho:problem:receipt-not-found`           | `ReceiptNotFound`           | No receipt has this ID.                                |
+| 404  | `goho:problem:receipt-item-not-found`      | `ReceiptItemNotFound`       | The receipt is missing or has no item with this ID.    |
+| 404  | `goho:problem:receipt-image-not-found`     | `ReceiptImageNotFound`      | The receipt is missing or has no scanned image.        |
+| 500  | `goho:problem:receipts-unavailable`        | `ReceiptsUnavailable`       | Receipts or their images could not be read or changed. |
+| 404  | `goho:problem:receipt-upload-not-found`    | `ReceiptUploadNotFound`     | No receipt upload has this ID.                         |
+| 409  | `goho:problem:receipt-upload-conflict`     | `ReceiptUploadConflict`     | The upload has not failed, so it cannot be deleted.    |
+| 500  | `goho:problem:receipt-uploads-unavailable` | `ReceiptUploadsUnavailable` | Uploads could not be stored, queued, read, or deleted. |
+
+```json
+{
+  "type": "goho:problem:receipt-not-found",
+  "status": 404,
+  "title": "Receipt not found"
+}
+```
+
+`type` values are stable identifiers in a custom `goho:` URI scheme, not links, so
+never fetch them; match on them instead of `title`.
+SQL, file paths, and other failure details stay in the server logs. The typed client
+decodes each response as the error class named above, so branch on its `_tag`.
+Deploy the server and updated CLI/MCP together; the old `NotFound`, `Conflict`, and
+`InternalServerError` receipt bodies are gone.
 
 ### List receipts
 
 `GET /receipts` returns every persisted receipt and its ordered items under
 `data`. Receipts are ordered by receipt date and creation time, newest first.
 An empty database returns `{"data":[]}`. A retrieval failure returns HTTP 500
-with `{"_tag":"InternalServerError"}`.
+with `ReceiptsUnavailable`.
 
 ### Upload a receipt
 
@@ -79,7 +109,8 @@ a limit returns HTTP 413 with this public JSON error; nothing is queued:
 ```
 
 This response uses the shared `ErrorResponse` schema and is also decoded by the
-typed client. Validation problems are described above; domain error formats are unchanged.
+typed client. Validation and receipt problems are described above. Storage or queue
+failures return HTTP 500 with `ReceiptUploadsUnavailable`.
 
 Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
 be retained. File names are opaque IDs; original names and MIME types are stored
@@ -91,8 +122,9 @@ with the upload record in PostgreSQL.
 `failed`. A successful upload includes its generated receipt ID. A failed upload
 includes a stable failure code; diagnostic details remain in server logs.
 
-A valid UUID with no matching upload returns HTTP 404. Malformed IDs return HTTP
-400, and retrieval failures return HTTP 500.
+A valid UUID with no matching upload returns HTTP 404 with `ReceiptUploadNotFound`.
+Malformed IDs return HTTP 400, and retrieval failures return HTTP 500 with
+`ReceiptUploadsUnavailable`.
 
 ### Delete a failed receipt upload
 
@@ -104,11 +136,12 @@ If a worker crash abandons the final attempt, the upload fails with
 database is available.
 
 Queued, processing, and succeeded uploads return HTTP 409 with
-`{"_tag":"Conflict"}`. To remove a successful scan and its photo, delete its
-receipt instead. Missing or previously deleted uploads return HTTP 404, and
-malformed UUIDs return HTTP 400.
+`ReceiptUploadConflict`. To remove a successful scan and its photo, delete its
+receipt instead. Missing or previously deleted uploads return HTTP 404 with
+`ReceiptUploadNotFound`, and malformed UUIDs return HTTP 400.
 
-Database or photo cleanup failures return HTTP 500. Database changes roll back
+Database or photo cleanup failures return HTTP 500 with
+`ReceiptUploadsUnavailable`. Database changes roll back
 so cleanup can be retried; an already missing photo does not block deletion.
 As with receipt deletion, a commit failure after photo removal can leave the
 upload without its photo until deletion is retried.
@@ -116,9 +149,9 @@ upload without its photo until deletion is retried.
 ### Get a receipt
 
 `GET /receipts/:receiptId` returns one complete receipt under `data`. A valid
-positive integer ID with no matching receipt returns HTTP 404 with `{"_tag":"NotFound"}`.
+positive integer ID with no matching receipt returns HTTP 404 with `ReceiptNotFound`.
 A malformed ID returns HTTP 400. Retrieval failures return
-HTTP 500 with `{"_tag":"InternalServerError"}`.
+HTTP 500 with `ReceiptsUnavailable`.
 
 ### Create a receipt
 
@@ -141,7 +174,7 @@ item order.
 
 Invalid payloads, including unsupported fields on the receipt or any item, return
 HTTP 400 with a validation problem and save nothing. Persistence failures
-return HTTP 500 with `{"_tag":"InternalServerError"}`.
+return HTTP 500 with `ReceiptsUnavailable`.
 
 ### Correct a receipt
 
@@ -163,9 +196,10 @@ Repeating a correction with the same values succeeds, and later corrections win.
 
 Empty bodies, unsupported or null fields, invalid values, malformed receipt IDs,
 and malformed or out-of-range item IDs return HTTP 400 with a validation problem;
-nothing is saved, even when some supplied fields are valid. A missing receipt, or an item
-ID that is not on that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
-return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
+nothing is saved, even when some supplied fields are valid. A missing receipt returns
+HTTP 404 with `ReceiptNotFound`. On an item correction, a missing receipt or an item ID
+that is not on that receipt returns HTTP 404 with `ReceiptItemNotFound`. Persistence
+failures return HTTP 500 with `ReceiptsUnavailable` and save nothing.
 
 ### Delete a receipt
 
@@ -173,9 +207,9 @@ return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
 upload record, original photo, and stored extraction data. It returns HTTP 204
 with no response body. Manually created receipts can also be deleted.
 
-A missing or previously deleted receipt returns HTTP 404. Malformed IDs return
-HTTP 400. Database or photo cleanup failures return HTTP 500; database changes
-roll back so deletion can be retried. An already missing photo does not block deletion.
+A missing or previously deleted receipt returns HTTP 404 with `ReceiptNotFound`.
+Malformed IDs return HTTP 400. Database or photo cleanup failures return HTTP 500
+with `ReceiptsUnavailable`; database changes roll back so deletion can be retried. An already missing photo does not block deletion.
 
 Photo storage does not participate in the database transaction. If the database
 commit fails after photo removal, the receipt may remain without its photo;

@@ -1,12 +1,14 @@
 import {
   type ReceiptUpload as PublicReceiptUpload,
+  ReceiptUploadConflict,
   ReceiptUploadContentType,
   ReceiptUploadId,
+  ReceiptUploadNotFound,
+  ReceiptUploadsUnavailable,
 } from "@goho/goho-api/receipt-uploads";
-import { ReceiptId } from "@goho/goho-api/receipts";
+import { ReceiptId, ReceiptImageNotFound, ReceiptsUnavailable } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
-import { HttpApiError } from "effect/http-api";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/file-storage.ts";
@@ -38,7 +40,7 @@ export interface UploadInput extends Schema.Schema.Type<typeof UploadInput> {}
 
 const deletionFailed = (error: unknown) =>
   Effect.logError("Receipt upload deletion failed", error).pipe(
-    Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+    Effect.andThen(Effect.fail(new ReceiptUploadsUnavailable())),
   );
 
 const toPublic = (upload: ReceiptUpload): PublicReceiptUpload => ({
@@ -63,23 +65,20 @@ export interface Interface {
     uploadId: ReceiptUploadId,
   ) => Effect.Effect<
     void,
-    HttpApiError.NotFound | HttpApiError.Conflict | HttpApiError.InternalServerError
+    ReceiptUploadNotFound | ReceiptUploadConflict | ReceiptUploadsUnavailable
   >;
-  readonly list: Effect.Effect<
-    ReadonlyArray<PublicReceiptUpload>,
-    HttpApiError.InternalServerError
-  >;
+  readonly list: Effect.Effect<ReadonlyArray<PublicReceiptUpload>, ReceiptUploadsUnavailable>;
   readonly create: (
     input: UploadInput,
-  ) => Effect.Effect<PublicReceiptUpload, HttpApiError.InternalServerError>;
+  ) => Effect.Effect<PublicReceiptUpload, ReceiptUploadsUnavailable>;
   readonly get: (
     uploadId: ReceiptUploadId,
-  ) => Effect.Effect<PublicReceiptUpload, HttpApiError.NotFound | HttpApiError.InternalServerError>;
+  ) => Effect.Effect<PublicReceiptUpload, ReceiptUploadNotFound | ReceiptUploadsUnavailable>;
   readonly getImage: (
     receiptId: ReceiptId,
   ) => Effect.Effect<
     { readonly bytes: Uint8Array; readonly contentType: string },
-    HttpApiError.NotFound | HttpApiError.InternalServerError
+    ReceiptImageNotFound | ReceiptsUnavailable
   >;
 }
 
@@ -118,9 +117,9 @@ export const layer = Layer.effect(
         ),
       Effect.catchTags({
         "GohoServer.ReceiptUploadRepository.UploadNotFound": () =>
-          Effect.fail(new HttpApiError.NotFound()),
+          Effect.fail(new ReceiptUploadNotFound()),
         "GohoServer.ReceiptUploadRepository.DeletionNotAllowed": () =>
-          Effect.fail(new HttpApiError.Conflict()),
+          Effect.fail(new ReceiptUploadConflict()),
         "GohoServer.ReceiptUploadRepository.PersistenceError": deletionFailed,
         "GohoServer.FileStorage.StorageError": deletionFailed,
         "GohoServer.Database.TransactionError": deletionFailed,
@@ -162,7 +161,7 @@ export const layer = Layer.effect(
       },
       Effect.catchCause((cause) =>
         Effect.logError("Receipt upload could not be stored and queued", cause).pipe(
-          Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+          Effect.andThen(Effect.fail(new ReceiptUploadsUnavailable())),
         ),
       ),
       Effect.uninterruptible,
@@ -172,13 +171,13 @@ export const layer = Layer.effect(
       repository.findById(uploadId).pipe(
         Effect.flatMap(
           Option.match({
-            onNone: () => Effect.fail(new HttpApiError.NotFound()),
+            onNone: () => Effect.fail(new ReceiptUploadNotFound()),
             onSome: (upload) => Effect.succeed(toPublic(upload)),
           }),
         ),
         Effect.catchTag("GohoServer.ReceiptUploadRepository.PersistenceError", (error) =>
           Effect.logError("Receipt upload retrieval failed", error).pipe(
-            Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+            Effect.andThen(Effect.fail(new ReceiptUploadsUnavailable())),
           ),
         ),
       ),
@@ -188,7 +187,7 @@ export const layer = Layer.effect(
       Effect.map((uploads) => uploads.map(toPublic)),
       Effect.catchTag("GohoServer.ReceiptUploadRepository.PersistenceError", (error) =>
         Effect.logError("Receipt upload listing failed", error).pipe(
-          Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+          Effect.andThen(Effect.fail(new ReceiptUploadsUnavailable())),
         ),
       ),
       Effect.withSpan("@goho/ReceiptUploads.list"),
@@ -197,18 +196,18 @@ export const layer = Layer.effect(
     const getImage = Effect.fn("@goho/ReceiptUploads.getImage")((receiptId: ReceiptId) =>
       Effect.gen(function* () {
         const found = yield* repository.findByReceiptId(receiptId);
-        if (Option.isNone(found)) return yield* new HttpApiError.NotFound();
+        if (Option.isNone(found)) return yield* new ReceiptImageNotFound();
         const bytes = yield* storage.get(found.value.fileId);
         return { bytes, contentType: found.value.contentType };
       }).pipe(
         Effect.catchTags({
           "GohoServer.ReceiptUploadRepository.PersistenceError": (error) =>
             Effect.logError("Receipt image lookup failed", error).pipe(
-              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+              Effect.andThen(Effect.fail(new ReceiptsUnavailable())),
             ),
           "GohoServer.FileStorage.StorageError": (error) =>
             Effect.logError("Receipt image retrieval failed", error).pipe(
-              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+              Effect.andThen(Effect.fail(new ReceiptsUnavailable())),
             ),
         }),
       ),

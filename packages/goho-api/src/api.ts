@@ -3,7 +3,6 @@ import { Multipart } from "effect/http";
 import {
   HttpApi,
   HttpApiEndpoint,
-  HttpApiError,
   HttpApiGroup,
   HttpApiMiddleware,
   HttpApiSchema,
@@ -27,15 +26,25 @@ import {
   CreateBookRequest,
   PatchBookRequest,
 } from "./books.ts";
-import { ReceiptUpload, ReceiptUploadId } from "./receipt-uploads.ts";
+import {
+  ReceiptUpload,
+  ReceiptUploadConflict,
+  ReceiptUploadId,
+  ReceiptUploadNotFound,
+  ReceiptUploadsUnavailable,
+} from "./receipt-uploads.ts";
 import {
   CreateReceiptRequest,
   PatchReceiptItemRequest,
   PatchReceiptRequest,
   Receipt,
   ReceiptId,
+  ReceiptImageNotFound,
   ReceiptItem,
   ReceiptItemId,
+  ReceiptItemNotFound,
+  ReceiptNotFound,
+  ReceiptsUnavailable,
 } from "./receipts.ts";
 import { DataResponse, ErrorResponse } from "./response.ts";
 
@@ -66,11 +75,27 @@ const UploadLimitExceeded = ErrorResponse.annotate({
   description: "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
 });
 
-// Built-in error bodies have no name of their own, so OpenAPI would call them `…Encoded`.
-const NotFound = HttpApiError.NotFound.pipe(Schema.annotateEncoded({ identifier: "NotFound" }));
-const Conflict = HttpApiError.Conflict.pipe(Schema.annotateEncoded({ identifier: "Conflict" }));
-const InternalServerError = HttpApiError.InternalServerError.pipe(
-  Schema.annotateEncoded({ identifier: "InternalServerError" }),
+// Problem bodies have no name of their own, so OpenAPI would call them `…Encoded`.
+const ReceiptNotFoundProblem = ReceiptNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptNotFound" }),
+);
+const ReceiptItemNotFoundProblem = ReceiptItemNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptItemNotFound" }),
+);
+const ReceiptImageNotFoundProblem = ReceiptImageNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptImageNotFound" }),
+);
+const ReceiptsUnavailableProblem = ReceiptsUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptsUnavailable" }),
+);
+const ReceiptUploadNotFoundProblem = ReceiptUploadNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptUploadNotFound" }),
+);
+const ReceiptUploadConflictProblem = ReceiptUploadConflict.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptUploadConflict" }),
+);
+const ReceiptUploadsUnavailableProblem = ReceiptUploadsUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "ReceiptUploadsUnavailable" }),
 );
 
 // API groups
@@ -121,7 +146,7 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             UploadLimitExceeded,
-            InternalServerError.annotate({
+            ReceiptUploadsUnavailableProblem.annotate({
               description: "The server could not store or queue the receipt image.",
             }),
           ],
@@ -136,7 +161,7 @@ export const api = HttpApi.make("goho-server")
         HttpApiEndpoint.get("list", "/receipt-uploads", {
           success: DataResponse(Schema.Array(ReceiptUpload)),
           error: [
-            InternalServerError.annotate({
+            ReceiptUploadsUnavailableProblem.annotate({
               description: "The server could not pull the uploads off the bench.",
             }),
           ],
@@ -152,14 +177,9 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: HttpApiSchema.NoContent,
           error: [
-            NotFound.annotate({
-              description: "No receipt upload is wearing that number, bud.",
-            }),
-            Conflict.annotate({
-              description:
-                "Only failed uploads can be deleted; this upload has a different status.",
-            }),
-            InternalServerError.annotate({
+            ReceiptUploadNotFoundProblem,
+            ReceiptUploadConflictProblem,
+            ReceiptUploadsUnavailableProblem.annotate({
               description: "The server could not delete this upload and its stored image.",
             }),
           ],
@@ -175,10 +195,8 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: DataResponse(ReceiptUpload),
           error: [
-            NotFound.annotate({
-              description: "No receipt upload is wearing that number, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptUploadNotFoundProblem,
+            ReceiptUploadsUnavailableProblem.annotate({
               description: "The server could not retrieve this receipt upload.",
             }),
           ],
@@ -200,7 +218,7 @@ export const api = HttpApi.make("goho-server")
             }),
           ),
           error: [
-            InternalServerError.annotate({
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not pull the receipts off the bench.",
             }),
           ],
@@ -216,10 +234,8 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: DataResponse(Receipt),
           error: [
-            NotFound.annotate({
-              description: "No receipt is wearing that number, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptNotFoundProblem,
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not retrieve this receipt.",
             }),
           ],
@@ -235,10 +251,8 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: HttpApiSchema.NoContent,
           error: [
-            NotFound.annotate({
-              description: "No receipt is wearing that number, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptNotFoundProblem,
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not delete this receipt and its stored image.",
             }),
           ],
@@ -254,10 +268,8 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: ImageResponse,
           error: [
-            NotFound.annotate({
-              description: "No scanned image is linked to this receipt, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptImageNotFoundProblem,
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not retrieve this receipt image.",
             }),
           ],
@@ -273,7 +285,7 @@ export const api = HttpApi.make("goho-server")
           payload: CreateReceiptRequest,
           success: DataResponse(Receipt),
           error: [
-            InternalServerError.annotate({
+            ReceiptsUnavailableProblem.annotate({
               description: "Receipt validation or persistence missed the net.",
             }),
           ],
@@ -291,10 +303,8 @@ export const api = HttpApi.make("goho-server")
           payload: PatchReceiptRequest,
           success: DataResponse(Receipt),
           error: [
-            NotFound.annotate({
-              description: "No receipt is wearing that number, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptNotFoundProblem,
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not save this correction; nothing changed.",
             }),
           ],
@@ -312,10 +322,8 @@ export const api = HttpApi.make("goho-server")
           payload: PatchReceiptItemRequest,
           success: DataResponse(ReceiptItem),
           error: [
-            NotFound.annotate({
-              description: "That receipt has no item wearing this number, bud.",
-            }),
-            InternalServerError.annotate({
+            ReceiptItemNotFoundProblem,
+            ReceiptsUnavailableProblem.annotate({
               description: "The server could not save this correction; nothing changed.",
             }),
           ],

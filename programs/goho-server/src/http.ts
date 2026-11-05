@@ -1,5 +1,6 @@
 import { api } from "@goho/goho-api/api";
 import { BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
+import { ReceiptUploadsUnavailable } from "@goho/goho-api/receipt-uploads";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { HttpMiddleware, HttpRouter } from "effect/http";
@@ -30,7 +31,7 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
             .pipe(
               Effect.catchCause((cause) =>
                 Effect.logError("Temporary receipt upload could not be read", cause).pipe(
-                  Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+                  Effect.andThen(Effect.fail(new ReceiptUploadsUnavailable())),
                 ),
               ),
             );

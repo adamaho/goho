@@ -50,7 +50,7 @@ export const handle = Effect.fn("@goho/PatchReceiptItem.handle")(function* ({
     .patchItem({ params: { receiptId: receipt_id, itemId: item_id }, payload: changes })
     .pipe(
       Effect.mapError((cause) => {
-        if (cause._tag === "NotFound")
+        if (cause._tag === "ReceiptItemNotFound")
           return `Item ${item_id} was not found on receipt ${receipt_id}.`;
         if (cause._tag === "BadRequestProblem")
           return "The item correction was rejected. Check the supplied changes.";

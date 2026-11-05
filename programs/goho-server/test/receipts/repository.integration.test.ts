@@ -923,7 +923,7 @@ it.effect("rolls back all receipt data when photo deletion fails, then completes
       ),
     );
     const result = yield* service.delete(receiptId).pipe(Effect.result);
-    expect(Result.isFailure(result) && result.failure._tag).toBe("InternalServerError");
+    expect(Result.isFailure(result) && result.failure._tag).toBe("ReceiptsUnavailable");
     expect(yield* repo.findById(receiptId)).toEqual(before);
     expect(yield* sql`SELECT * FROM receipt_uploads`).toEqual(uploadsBefore);
     expect(yield* historyRows).toEqual(historyBefore);

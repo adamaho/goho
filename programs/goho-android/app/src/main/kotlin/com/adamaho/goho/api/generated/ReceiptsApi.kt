@@ -9,14 +9,15 @@ import com.squareup.moshi.Json
 
 import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.CreateReceiptRequest
-import com.adamaho.goho.api.generated.model.InternalServerError
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
-import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.PatchReceiptItemRequest
 import com.adamaho.goho.api.generated.model.PatchReceiptRequest
+import com.adamaho.goho.api.generated.model.ReceiptImageNotFound
+import com.adamaho.goho.api.generated.model.ReceiptItemNotFound
+import com.adamaho.goho.api.generated.model.ReceiptNotFound
 import com.adamaho.goho.api.generated.model.ReceiptsCreate200Response
 import com.adamaho.goho.api.generated.model.ReceiptsGet200Response
 import com.adamaho.goho.api.generated.model.ReceiptsList200Response
+import com.adamaho.goho.api.generated.model.ReceiptsList500Response
 import com.adamaho.goho.api.generated.model.ReceiptsPatchItem200Response
 
 interface ReceiptsApi {

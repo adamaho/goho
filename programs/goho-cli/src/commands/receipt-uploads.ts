@@ -69,7 +69,7 @@ const viewCommand = Command.make("view", {
           new CommandError({
             code: getRequestErrorCode(cause),
             message:
-              cause._tag === "NotFound"
+              cause._tag === "ReceiptUploadNotFound"
                 ? `Receipt upload ${uploadId} was not found.`
                 : "Receipt upload status could not be retrieved. Check the server logs and try again.",
             cause,
@@ -134,9 +134,9 @@ const deleteCommand = Command.make("delete", {
           new CommandError({
             code: getRequestErrorCode(cause),
             message:
-              cause._tag === "NotFound"
+              cause._tag === "ReceiptUploadNotFound"
                 ? `Receipt upload ${uploadId} was not found.`
-                : cause._tag === "Conflict"
+                : cause._tag === "ReceiptUploadConflict"
                   ? `Receipt upload ${uploadId} has not failed, so it cannot be deleted. Delete the receipt to remove a successful scan.`
                   : "Receipt upload could not be deleted. Check the server logs and try again.",
             cause,

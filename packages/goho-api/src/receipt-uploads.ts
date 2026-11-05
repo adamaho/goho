@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { HttpApiError } from "effect/http-api";
 
 import { ReceiptId } from "./receipts.ts";
 
@@ -98,3 +99,58 @@ export const ReceiptUpload = Schema.Struct({
  * @since 0.1.0
  */
 export interface ReceiptUpload extends Schema.Schema.Type<typeof ReceiptUpload> {}
+
+/**
+ * No receipt upload has the requested ID.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptUploadNotFound extends HttpApiError.Problem<ReceiptUploadNotFound>()(
+  "ReceiptUploadNotFound",
+  {
+    type: "goho:problem:receipt-upload-not-found",
+    status: 404,
+    title: "Receipt upload not found",
+  },
+  {},
+  { description: "No receipt upload is wearing that number, bud." },
+) {}
+
+/**
+ * Only failed receipt uploads can be deleted on their own.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptUploadConflict extends HttpApiError.Problem<ReceiptUploadConflict>()(
+  "ReceiptUploadConflict",
+  {
+    type: "goho:problem:receipt-upload-conflict",
+    status: 409,
+    title: "Receipt upload cannot be deleted",
+  },
+  {},
+  {
+    description:
+      "Only failed uploads can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
+  },
+) {}
+
+/**
+ * Receipt uploads could not be stored, read, or deleted; details stay in the
+ * server logs.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class ReceiptUploadsUnavailable extends HttpApiError.Problem<ReceiptUploadsUnavailable>()(
+  "ReceiptUploadsUnavailable",
+  {
+    type: "goho:problem:receipt-uploads-unavailable",
+    status: 500,
+    title: "Receipt uploads unavailable",
+  },
+  {},
+  { description: "The server could not get to the receipt uploads; take another shot." },
+) {}

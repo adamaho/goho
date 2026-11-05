@@ -40,7 +40,7 @@ export const handle = Effect.fn("@goho/DeleteReceipt.handle")(function* ({
     .delete({ params: { receiptId: receipt_id } })
     .pipe(
       Effect.mapError((cause) =>
-        cause._tag === "NotFound"
+        cause._tag === "ReceiptNotFound"
           ? `Receipt ${receipt_id} was not found.`
           : "Could not delete receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
       ),

@@ -133,6 +133,20 @@ The server derives its OpenAPI document from the shared API at runtime. The
 generator uses the committed copy without running the server, so `openapi:check`
 fails when that copy is stale.
 
+### Deferred: problem-response decoding
+
+After the HTTP error slices are complete, evaluate switching the Kotlin generator
+from Moshi to `kotlinx.serialization`, including Retrofit's JSON converter.
+The current generator emits numeric status enums with names such as `"404.0"`,
+which Moshi cannot decode from the server's `"status": 404`. The app currently
+checks HTTP status codes without decoding problem bodies, so its existing error
+handling is unaffected.
+
+Before switching, manually verify actual problem responses, successful JSON
+responses, multipart uploads, and image downloads, and run the Android build,
+lint, and formatting checks above. Treat this as a candidate fix, not a verified
+drop-in replacement; do not hand-edit generated models.
+
 ## Code organization and style
 
 Keep this app small. `MainActivity` owns the Android entry point, receipt data
