@@ -3,7 +3,13 @@ import { Effect, FileSystem, Path, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import {
+  errorOutput,
+  runCommand,
+  validationResponse,
+  withJsonResponse,
+  withResponse,
+} from "#test/cli.ts";
 
 const uploadId = "00000000-0000-4000-8000-000000000001";
 const upload = {
@@ -149,7 +155,7 @@ describe("receipts uploads create", () => {
 
   it("reports a receipt rejected by the server", async () => {
     const result = await withTempFile("receipt.webp", new Uint8Array([1]), (filePath) =>
-      withResponse(Effect.succeed(HttpServerResponse.empty({ status: 400 })), (baseUrl) =>
+      withResponse(validationResponse, (baseUrl) =>
         runCommand(baseUrl, ["receipts", "uploads", "create", filePath]),
       ),
     );

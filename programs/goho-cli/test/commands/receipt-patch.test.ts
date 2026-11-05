@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
 
 const groceries = {
   id: "3",
@@ -45,7 +45,7 @@ const runPatch = (
       expect(request.url).toBe(url);
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(payload);
       return status === 400
-        ? HttpServerResponse.empty({ status })
+        ? yield* validationResponse
         : HttpServerResponse.jsonUnsafe(body, { status });
     }),
     (baseUrl) => runCommand(baseUrl, ["receipts", ...args]),
@@ -82,7 +82,7 @@ describe("receipts patch", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequest",
+      tag: "BadRequestProblem",
       message: "The receipt correction was rejected. Check the supplied changes.",
     },
     { status: 404, tag: "NotFound", message: "Receipt 42 was not found.", errorCode: "not_found" },
@@ -146,7 +146,7 @@ describe("receipts patch-item", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequest",
+      tag: "BadRequestProblem",
       message: "The item correction was rejected. Check the supplied changes.",
     },
     {

@@ -6,7 +6,9 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.HealthCheck200Response
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
 
 interface HealthApi {
     /**
@@ -15,6 +17,8 @@ interface HealthApi {
      * Confirms the server is awake; it does not skate over to the database or providers.
      * Responses:
      *  - 200: Success
+     *  - 400: Bad Request
+     *  - 500: Internal Server Error
      *
      * @return [HealthCheck200Response]
      */

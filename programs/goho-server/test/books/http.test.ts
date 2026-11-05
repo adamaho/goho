@@ -191,7 +191,12 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
     ]) {
       const response = yield* HttpClient.post("/books", { body: yield* HttpBody.json(payload) });
       expect(response.status, JSON.stringify(payload)).toBe(400);
-      expect(yield* response.text).toBe("");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Request validation failed",
+      });
     }
     for (const payload of [
       {},
@@ -227,7 +232,12 @@ it.effect("rejects missing, blank, null, unsupported, and malformed book input",
     // A search sent twice decodes as a list, not text.
     const repeated = yield* HttpClient.get("/books?search=hobbit&search=tolkien");
     expect(repeated.status).toBe(400);
-    expect(yield* repeated.text).toBe("");
+    expect(yield* repeated.json).toEqual({
+      type: "about:blank",
+      status: 400,
+      title: "Bad Request",
+      detail: "Request validation failed",
+    });
     expect(calls).toEqual([]);
   }).pipe(Effect.provide(layer));
 });

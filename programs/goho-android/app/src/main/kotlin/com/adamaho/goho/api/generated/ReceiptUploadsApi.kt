@@ -6,9 +6,11 @@ import retrofit2.Response
 import okhttp3.RequestBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.Conflict
 import com.adamaho.goho.api.generated.model.ErrorResponse
 import com.adamaho.goho.api.generated.model.InternalServerError
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
 import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202Response
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200Response
@@ -22,9 +24,9 @@ interface ReceiptUploadsApi {
      * Stores one receipt image and returns its queued status before processing starts.
      * Responses:
      *  - 202: Success
-     *  - 400: The upload is missing a supported receipt image.
+     *  - 400: Bad Request
      *  - 413: The upload exceeds a size or part-count limit, bud. Nothing is queued.
-     *  - 500: The server could not store or queue the receipt image.
+     *  - 500: The server could not store or queue the receipt image. | Internal Server Error
      *
      * @param file 
      * @return [ReceiptUploadsCreate202Response]
@@ -39,10 +41,10 @@ interface ReceiptUploadsApi {
      * Clears a failed upload and its original image off the bench. Queued, processing, and succeeded uploads return 409; delete the receipt to remove a successful scan.
      * Responses:
      *  - 204: <No Content>
-     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No receipt upload is wearing that number, bud.
      *  - 409: Only failed uploads can be deleted; this upload has a different status.
-     *  - 500: The server could not delete this upload and its stored image.
+     *  - 500: The server could not delete this upload and its stored image. | Internal Server Error
      *
      * @param uploadId 
      * @return [Unit]
@@ -56,9 +58,9 @@ interface ReceiptUploadsApi {
      * Returns the latest queue or processing status and the receipt ID after a clean finish.
      * Responses:
      *  - 200: Success
-     *  - 400: The upload ID is not a version 4 UUID; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No receipt upload is wearing that number, bud.
-     *  - 500: The server could not retrieve this receipt upload.
+     *  - 500: The server could not retrieve this receipt upload. | Internal Server Error
      *
      * @param uploadId 
      * @return [ReceiptUploadsCreate202Response]
@@ -72,7 +74,8 @@ interface ReceiptUploadsApi {
      * Pulls every receipt upload off the bench, newest first, with its current status.
      * Responses:
      *  - 200: Success
-     *  - 500: The server could not pull the uploads off the bench.
+     *  - 400: Bad Request
+     *  - 500: The server could not pull the uploads off the bench. | Internal Server Error
      *
      * @return [ReceiptUploadsList200Response]
      */

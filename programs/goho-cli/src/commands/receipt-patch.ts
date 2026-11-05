@@ -56,7 +56,7 @@ export const patchCommand = Command.make("patch", {
               message:
                 cause._tag === "NotFound"
                   ? `Receipt ${receiptId} was not found.`
-                  : cause._tag === "BadRequest"
+                  : cause._tag === "BadRequestProblem"
                     ? "The receipt correction was rejected. Check the supplied changes."
                     : "Receipt could not be patched. Check the server logs and try again.",
               cause,
@@ -119,7 +119,7 @@ export const patchItemCommand = Command.make("patch-item", {
                 message:
                   cause._tag === "NotFound"
                     ? `Item ${itemId} was not found on receipt ${receiptId}.`
-                    : cause._tag === "BadRequest"
+                    : cause._tag === "BadRequestProblem"
                       ? "The item correction was rejected. Check the supplied changes."
                       : "Receipt item could not be patched. Check the server logs and try again.",
                 cause,

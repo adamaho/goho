@@ -45,7 +45,7 @@ export const createCommand = Command.make("create", {
             new CommandError({
               code: getRequestErrorCode(cause),
               message:
-                cause._tag === "BadRequest"
+                cause._tag === "BadRequestProblem"
                   ? "The book was rejected. Check the supplied values."
                   : "Book could not be created. Check the server logs and try again.",
               cause,

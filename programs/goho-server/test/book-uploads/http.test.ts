@@ -121,7 +121,12 @@ it.effect("rejects unsupported and malformed cover uploads before the service", 
     ]) {
       const response = yield* request;
       expect(response.status).toBe(400);
-      expect(yield* response.text).toBe("");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Request validation failed",
+      });
     }
     expect(calls).toEqual([]);
   }).pipe(Effect.provide(layer));

@@ -1,5 +1,6 @@
 import { NodeHttpServer } from "@effect/platform-node";
 import { it } from "@effect/vitest";
+import { api } from "@goho/goho-api/api";
 import { Category, CategoryId } from "@goho/goho-api/categories";
 import { ReceiptUpload, ReceiptUploadId } from "@goho/goho-api/receipt-uploads";
 import {
@@ -13,7 +14,7 @@ import {
 import * as Client from "@goho/goho-server-client/client";
 import { Array, Effect, Layer, Option } from "effect";
 import { HttpBody, HttpClient, HttpRouter } from "effect/http";
-import { HttpApiError } from "effect/http-api";
+import { HttpApiClient, HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import * as BookUploads from "#src/book-uploads/service.ts";
@@ -117,6 +118,80 @@ const testLayer = (
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
 
 const TestLive = testLayer();
+
+it.effect("returns private, client-decodable problems for request validation failures", () =>
+  Effect.gen(function* () {
+    for (const [request, group, endpoint] of [
+      [HttpClient.get("/receipts/not-an-id"), "receipts", "get"],
+      [HttpClient.get("/books?search=one&search=two"), "books", "list"],
+      [
+        HttpClient.patch(`/receipts/${receipt.id}`, {
+          body: yield* HttpBody.json({
+            storeName: "Valid edit",
+            privateField: "private-test-value",
+          }),
+        }),
+        "receipts",
+        "patch",
+      ],
+      [
+        HttpClient.post("/receipts", {
+          body: yield* HttpBody.json({ ...createPayload, currency: "private-test-value" }),
+        }),
+        "receipts",
+        "create",
+      ],
+      [
+        HttpClient.post("/receipts", {
+          body: HttpBody.text("{private-test-value", "application/json"),
+        }),
+        "receipts",
+        "create",
+      ],
+      [
+        HttpClient.post("/receipts", { body: HttpBody.text("", "application/json") }),
+        "receipts",
+        "create",
+      ],
+    ] as const) {
+      const response = yield* request;
+      expect(response.status).toBe(400);
+      expect(response.headers["content-type"]).toContain("application/problem+json");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Request validation failed",
+      });
+      const decoded = yield* HttpApiClient.decodeResponse(api, { group, endpoint })(response).pipe(
+        Effect.flip,
+      );
+      expect(decoded).toBeInstanceOf(HttpApiError.BadRequestProblem);
+    }
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("returns a safe problem when a successful response cannot be encoded", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const decoded = yield* client.receipts
+      .get({ params: { receiptId: receipt.id } })
+      .pipe(Effect.flip);
+    expect(decoded).toBeInstanceOf(HttpApiError.InternalServerErrorProblem);
+    const response = yield* HttpClient.get(`/receipts/${receipt.id}`);
+    expect(response.status).toBe(500);
+    expect(response.headers["content-type"]).toContain("application/problem+json");
+    expect(yield* response.json).toEqual({
+      type: "about:blank",
+      status: 500,
+      title: "Internal Server Error",
+    });
+  }).pipe(
+    Effect.provide(
+      testLayer({ findById: () => Effect.succeedSome({ ...receipt, storeName: " " }) }),
+    ),
+  ),
+);
 
 it.effect("creates a receipt through the generated client and returns the complete receipt", () =>
   Effect.gen(function* () {
@@ -406,7 +481,12 @@ it.effect("rejects unknown receipt and item creation fields before saving anythi
         body: yield* HttpBody.json(payload),
       });
       expect(response.status, JSON.stringify(payload)).toBe(400);
-      expect(yield* response.text).toBe("");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Request validation failed",
+      });
     }
     expect(inserted).toEqual([]);
   }).pipe(
@@ -761,7 +841,12 @@ it.effect("rejects empty, unsupported, mixed, null, and invalid receipt correcti
         body: yield* HttpBody.json(payload),
       });
       expect(response.status, JSON.stringify(payload)).toBe(400);
-      expect(yield* response.text).toBe("");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Request validation failed",
+      });
     }
     const unparsable = yield* HttpClient.patch(`/receipts/${receipt.id}`, {
       body: HttpBody.text("{", "application/json"),
@@ -818,7 +903,12 @@ it.effect(
           body: yield* HttpBody.json({ name: "Pears" }),
         });
         expect(response.status, id).toBe(400);
-        expect(yield* response.text).toBe("");
+        expect(yield* response.json).toEqual({
+          type: "about:blank",
+          status: 400,
+          title: "Bad Request",
+          detail: "Request validation failed",
+        });
       }
       expect(recorded.itemUpdates).toEqual([]);
     }).pipe(Effect.provide(testLayer(recorded.repository)));

@@ -33,7 +33,7 @@ const createCommand = Command.make("create", {
               message:
                 "error" in cause
                   ? cause.error.message
-                  : cause._tag === "BadRequest"
+                  : cause._tag === "BadRequestProblem"
                     ? "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB."
                     : "Book cover could not be uploaded. Check the server logs and try again.",
               cause,

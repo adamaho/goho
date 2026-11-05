@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
 
 const book = {
   id: "12",
@@ -21,7 +21,7 @@ const runCreate = (flags: ReadonlyArray<string>, payload: unknown, status: numbe
       expect(request.url).toBe("/books");
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(payload);
       return status === 400
-        ? HttpServerResponse.empty({ status })
+        ? yield* validationResponse
         : HttpServerResponse.jsonUnsafe(body, { status });
     }),
     (baseUrl) => runCommand(baseUrl, ["books", "create", ...flags]),
@@ -54,7 +54,7 @@ describe("books create", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequest",
+      tag: "BadRequestProblem",
       message: "The book was rejected. Check the supplied values.",
     },
     {

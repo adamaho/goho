@@ -26,3 +26,9 @@ and Swagger UI at `/docs`.
 
 Successful responses use the shared `{ data: ... }` envelope defined by
 `@goho/goho-api` and re-exported from this package.
+
+HTTP schema validation failures decode as `HttpApiError.BadRequestProblem` from
+`effect/http-api`, not `BadRequest`. Response encoding failures decode as
+`HttpApiError.InternalServerErrorProblem`. Domain error tags and the upload-limit
+error envelope are unchanged. Upgrade the server and CLI/MCP together when adopting
+these problem responses; an older server's empty 400 fails problem decoding.

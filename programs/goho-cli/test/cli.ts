@@ -4,10 +4,22 @@ import { Effect, Layer, Path, Stream } from "effect";
 import {
   HttpServer,
   HttpServerRequest,
+  HttpServerRespondable,
   HttpServerResponse,
   type HttpServerResponse as HttpServerResponseType,
 } from "effect/http";
+import { HttpApiError } from "effect/http-api";
 import { ChildProcess } from "effect/process";
+
+/**
+ * Native HTTP validation problem returned by CLI test servers.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const validationResponse = HttpServerRespondable.toResponse(
+  new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
+);
 
 /**
  * Expected stderr for one handled CLI failure.

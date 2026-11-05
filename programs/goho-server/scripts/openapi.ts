@@ -16,7 +16,14 @@ const exportOpenApi = Effect.gen(function* () {
     new URL("../../../packages/goho-api/openapi.json", import.meta.url),
   );
   const spec = OpenApi.fromApi(api);
-  const unnamed = Object.keys(spec.components.schemas).filter((name) => name.endsWith("Encoded"));
+  // Effect's built-in middleware owns these encoded schema names.
+  const builtInProblems = new Set([
+    "BadRequestProblemEncoded",
+    "InternalServerErrorProblemEncoded",
+  ]);
+  const unnamed = Object.keys(spec.components.schemas).filter(
+    (name) => name.endsWith("Encoded") && !builtInProblems.has(name),
+  );
   if (unnamed.length > 0) {
     return yield* new OpenApiCommandError({
       message: `Name the encoded side of these schemas: ${unnamed.join(", ")}`,

@@ -1,6 +1,7 @@
 import { layer } from "@effect/vitest";
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
+import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import { book } from "#test/fixtures/book.ts";
@@ -31,7 +32,9 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.jsonUnsafe({ _tag: "BookConflict" }, { status: 409 });
   }
   if (request.url === "/books/400") {
-    return HttpServerResponse.empty({ status: 400 });
+    return yield* HttpServerRespondable.toResponse(
+      new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
+    );
   }
   return HttpServerResponse.empty({ status: 500 });
 });

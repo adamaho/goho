@@ -7,6 +7,7 @@ import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.BookConflict
 import com.adamaho.goho.api.generated.model.BookImageNotFound
 import com.adamaho.goho.api.generated.model.BookNotFound
@@ -15,6 +16,7 @@ import com.adamaho.goho.api.generated.model.BooksGet200Response
 import com.adamaho.goho.api.generated.model.BooksList200Response
 import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.CreateBookRequest
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
 import com.adamaho.goho.api.generated.model.PatchBookRequest
 
 interface BooksApi {
@@ -24,8 +26,8 @@ interface BooksApi {
      * Puts a book on the roster, adding an unfamiliar category too. When a saved book already has that title and author, ignoring case and extra spaces, you get that book back as saved and nothing else changes. A book with no author only matches another with none.
      * Responses:
      *  - 200: Success
-     *  - 400: The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.
-     *  - 500: The server could not save this book; nothing changed.
+     *  - 400: Bad Request
+     *  - 500: The server could not save this book; nothing changed. | Internal Server Error
      *
      * @param createBookRequest 
      * @return [BooksCreate200Response]
@@ -39,9 +41,9 @@ interface BooksApi {
      * Takes the book off the roster for good, along with every successful cover scan of it, their images, and extraction data. Its category stays. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
-     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No book is wearing that number, bud.
-     *  - 500: The server could not delete this book and its stored images; take another shot to finish the cleanup.
+     *  - 500: The server could not delete this book and its stored images; take another shot to finish the cleanup. | Internal Server Error
      *
      * @param bookId 
      * @return [Unit]
@@ -55,9 +57,9 @@ interface BooksApi {
      * 
      * Responses:
      *  - 200: Success
-     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No book is wearing that number, bud.
-     *  - 500: The server could not retrieve this book.
+     *  - 500: The server could not retrieve this book. | Internal Server Error
      *
      * @param bookId 
      * @return [BooksGet200Response]
@@ -71,9 +73,9 @@ interface BooksApi {
      * Returns the cover scan on file for the book. Books entered by hand have none until a scan of them succeeds.
      * Responses:
      *  - 200: Success
-     *  - 400: The book ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No cover is on file for that book number, bud.
-     *  - 500: The server could not retrieve this cover image.
+     *  - 500: The server could not retrieve this cover image. | Internal Server Error
      *
      * @param bookId 
      * @return [ResponseBody]
@@ -87,8 +89,8 @@ interface BooksApi {
      * Pulls saved books off the bench, newest first. Add &#x60;search&#x60; to find title or author matches for autocomplete.
      * Responses:
      *  - 200: Success
-     *  - 400: The query is a bad pass, such as `search` sent more than once; the response body stays empty.
-     *  - 500: The server could not pull the books off the bench.
+     *  - 400: Bad Request
+     *  - 500: The server could not pull the books off the bench. | Internal Server Error
      *
      * @param search  (optional)
      * @return [BooksList200Response]
@@ -102,10 +104,10 @@ interface BooksApi {
      * Updates the supplied fields and returns the complete book. An unfamiliar category name joins the roster. Matching another book&#39;s title and author returns 409; books are never merged.
      * Responses:
      *  - 200: Success
-     *  - 400: The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.
+     *  - 400: Bad Request
      *  - 404: No book is wearing that number, bud.
      *  - 409: Another book on the roster already has that title and author, or that title with no author either. Nothing changed and nothing merged.
-     *  - 500: The server could not save this correction; nothing changed.
+     *  - 500: The server could not save this correction; nothing changed. | Internal Server Error
      *
      * @param bookId 
      * @param patchBookRequest 

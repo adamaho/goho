@@ -39,6 +39,8 @@ openApiGenerate {
     packageName.set("com.adamaho.goho.api.generated")
     modelPackage.set("com.adamaho.goho.api.generated.model")
     library.set("jvm-retrofit2")
+    // BigDecimal numeric enums generate invalid Kotlin; money and IDs remain strings.
+    typeMappings.set(mapOf("number" to "kotlin.Double"))
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",

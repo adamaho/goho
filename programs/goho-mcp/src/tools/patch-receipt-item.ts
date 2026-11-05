@@ -52,7 +52,7 @@ export const handle = Effect.fn("@goho/PatchReceiptItem.handle")(function* ({
       Effect.mapError((cause) => {
         if (cause._tag === "NotFound")
           return `Item ${item_id} was not found on receipt ${receipt_id}.`;
-        if (cause._tag === "BadRequest")
+        if (cause._tag === "BadRequestProblem")
           return "The item correction was rejected. Check the supplied changes.";
         return "Could not patch receipt item. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
       }),

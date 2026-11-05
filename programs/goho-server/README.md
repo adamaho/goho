@@ -22,6 +22,36 @@ JSON resource responses return their payload under a top-level `data` field.
 Open [Swagger docs](http://127.0.0.1:3000/docs) after starting the server with the
 default port.
 
+### Validation errors
+
+Schema validation failures, including malformed JSON, invalid IDs and queries,
+and unsupported JSON fields, return HTTP 400 with `Content-Type:
+application/problem+json` using Effect's built-in Problem Details middleware:
+
+```json
+{
+  "type": "about:blank",
+  "status": 400,
+  "title": "Bad Request",
+  "detail": "Request validation failed"
+}
+```
+
+Field-level details are disabled: rejected values, field names, and schema issues
+are not returned. Unsupported upload MIME types or blank file names use the same
+problem format with safe upload instructions in `detail`.
+
+The typed client decodes these responses as `HttpApiError.BadRequestProblem`.
+Deploy the server and updated CLI/MCP together; older clients expecting empty
+400 responses cannot reliably classify these errors. Android uses HTTP status
+codes and does not need to read the problem body.
+
+The middleware also returns a generic HTTP 500 problem if a successful response
+cannot be encoded. Domain errors keep their existing tagged JSON bodies, upload
+limits keep their existing HTTP 413 JSON response, and malformed multipart,
+unsupported request content types, unknown routes, and unexpected defects retain
+Effect's default responses. This is not a normalization of every HTTP failure.
+
 ### List receipts
 
 `GET /receipts` returns every persisted receipt and its ordered items under
@@ -49,7 +79,7 @@ a limit returns HTTP 413 with this public JSON error; nothing is queued:
 ```
 
 This response uses the shared `ErrorResponse` schema and is also decoded by the
-typed client. Other endpoint error formats are unchanged.
+typed client. Validation problems are described above; domain error formats are unchanged.
 
 Set `GOHO_UPLOADS_DIRECTORY` to the directory where original receipt files should
 be retained. File names are opaque IDs; original names and MIME types are stored
@@ -110,7 +140,7 @@ category of its own: its `categories` lists each distinct item category once, in
 item order.
 
 Invalid payloads, including unsupported fields on the receipt or any item, return
-HTTP 400 with an empty body and save nothing. Validation or persistence failures
+HTTP 400 with a validation problem and save nothing. Persistence failures
 return HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 ### Correct a receipt
@@ -132,7 +162,7 @@ upload record, the original photo, and stored extraction data do not change.
 Repeating a correction with the same values succeeds, and later corrections win.
 
 Empty bodies, unsupported or null fields, invalid values, malformed receipt IDs,
-and malformed or out-of-range item IDs return HTTP 400 with an empty body;
+and malformed or out-of-range item IDs return HTTP 400 with a validation problem;
 nothing is saved, even when some supplied fields are valid. A missing receipt, or an item
 ID that is not on that receipt, returns HTTP 404 with `{"_tag":"NotFound"}`. Persistence failures
 return HTTP 500 with `{"_tag":"InternalServerError"}` and save nothing.
@@ -190,7 +220,7 @@ author, and it differs from every book of that title with one.
   category stays. As with receipts, a storage or commit failure after some images
   are removed can leave the book without them until deletion is retried.
 
-Malformed IDs and invalid bodies return HTTP 400 with an empty body. A missing
+Malformed IDs and invalid bodies return HTTP 400 with a validation problem. A missing
 book returns HTTP 404 with `{"_tag":"BookNotFound"}`. Persistence failures return
 HTTP 500 with `{"_tag":"BooksUnavailable"}` and save nothing.
 

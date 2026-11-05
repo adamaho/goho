@@ -7,8 +7,10 @@ import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import com.squareup.moshi.Json
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.CreateReceiptRequest
 import com.adamaho.goho.api.generated.model.InternalServerError
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
 import com.adamaho.goho.api.generated.model.NotFound
 import com.adamaho.goho.api.generated.model.PatchReceiptItemRequest
 import com.adamaho.goho.api.generated.model.PatchReceiptRequest
@@ -24,8 +26,8 @@ interface ReceiptsApi {
      * Creates the receipt and items in one clean play, adding any unfamiliar item category to the roster. Every call saves a new receipt.
      * Responses:
      *  - 200: Success
-     *  - 400: The payload is a bad pass; the response body stays empty.
-     *  - 500: Receipt validation or persistence missed the net.
+     *  - 400: Bad Request
+     *  - 500: Receipt validation or persistence missed the net. | Internal Server Error
      *
      * @param createReceiptRequest 
      * @return [ReceiptsCreate200Response]
@@ -39,9 +41,9 @@ interface ReceiptsApi {
      * Permanently removes the receipt, items, upload record, original image, and extraction data. Returns no body after a clean finish.
      * Responses:
      *  - 204: <No Content>
-     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No receipt is wearing that number, bud.
-     *  - 500: The server could not delete this receipt and its stored image.
+     *  - 500: The server could not delete this receipt and its stored image. | Internal Server Error
      *
      * @param receiptId 
      * @return [Unit]
@@ -55,9 +57,9 @@ interface ReceiptsApi {
      * Brings back one saved receipt with its items lined up by position.
      * Responses:
      *  - 200: Success
-     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No receipt is wearing that number, bud.
-     *  - 500: The server could not retrieve this receipt.
+     *  - 500: The server could not retrieve this receipt. | Internal Server Error
      *
      * @param receiptId 
      * @return [ReceiptsGet200Response]
@@ -71,9 +73,9 @@ interface ReceiptsApi {
      * Returns the scanned image for an uploaded receipt. Manually created receipts may not have one.
      * Responses:
      *  - 200: Success
-     *  - 400: The receipt ID is malformed or out of range; the response body stays empty.
+     *  - 400: Bad Request
      *  - 404: No scanned image is linked to this receipt, bud.
-     *  - 500: The server could not retrieve this receipt image.
+     *  - 500: The server could not retrieve this receipt image. | Internal Server Error
      *
      * @param receiptId 
      * @return [ResponseBody]
@@ -87,7 +89,8 @@ interface ReceiptsApi {
      * Pulls every saved receipt off the bench, newest first, with its items in position order.
      * Responses:
      *  - 200: Success
-     *  - 500: The server could not pull the receipts off the bench.
+     *  - 400: Bad Request
+     *  - 500: The server could not pull the receipts off the bench. | Internal Server Error
      *
      * @return [ReceiptsList200Response]
      */
@@ -100,9 +103,9 @@ interface ReceiptsApi {
      * Updates the supplied store name or receipt date and returns the complete receipt. Amounts, currency, and items stay on the bench.
      * Responses:
      *  - 200: Success
-     *  - 400: The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.
+     *  - 400: Bad Request
      *  - 404: No receipt is wearing that number, bud.
-     *  - 500: The server could not save this correction; nothing changed.
+     *  - 500: The server could not save this correction; nothing changed. | Internal Server Error
      *
      * @param receiptId 
      * @param patchReceiptRequest 
@@ -117,9 +120,9 @@ interface ReceiptsApi {
      * Updates the supplied name or category of one existing item and returns just that saved item. An unfamiliar category name joins the roster. Its amount, position, and the rest of the lineup stay put.
      * Responses:
      *  - 200: Success
-     *  - 400: The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.
+     *  - 400: Bad Request
      *  - 404: That receipt has no item wearing this number, bud.
-     *  - 500: The server could not save this correction; nothing changed.
+     *  - 500: The server could not save this correction; nothing changed. | Internal Server Error
      *
      * @param receiptId 
      * @param itemId 

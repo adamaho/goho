@@ -26,7 +26,7 @@ describe("getRequestErrorCode", () => {
     ).toBe("invalid_input");
   });
   it.each([
-    ["BadRequest", "invalid_input"],
+    ["BadRequestProblem", "invalid_input"],
     ["NotFound", "not_found"],
     ["BookNotFound", "not_found"],
     ["BookImageNotFound", "not_found"],

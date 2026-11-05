@@ -29,6 +29,26 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                }
+              }
+            }
           }
         },
         "description": "Confirms the server is awake; it does not skate over to the database or providers.",
@@ -122,7 +142,14 @@
             }
           },
           "400": {
-            "description": "The upload is missing a supported receipt image."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "413": {
             "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
@@ -135,11 +162,16 @@
             }
           },
           "500": {
-            "description": "The server could not store or queue the receipt image.",
+            "description": "The server could not store or queue the receipt image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -254,12 +286,27 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
           "500": {
-            "description": "The server could not pull the uploads off the bench.",
+            "description": "The server could not pull the uploads off the bench. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -291,7 +338,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
@@ -314,11 +368,16 @@
             }
           },
           "500": {
-            "description": "The server could not delete this upload and its stored image.",
+            "description": "The server could not delete this upload and its stored image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -424,7 +483,14 @@
             }
           },
           "400": {
-            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No receipt upload is wearing that number, bud.",
@@ -437,11 +503,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this receipt upload.",
+            "description": "The server could not retrieve this receipt upload. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -479,12 +550,27 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
           "500": {
-            "description": "The server could not pull the receipts off the bench.",
+            "description": "The server could not pull the receipts off the bench. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -517,14 +603,26 @@
             }
           },
           "400": {
-            "description": "The payload is a bad pass; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "500": {
-            "description": "Receipt validation or persistence missed the net.",
+            "description": "Receipt validation or persistence missed the net. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -578,7 +676,14 @@
             }
           },
           "400": {
-            "description": "The receipt ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No receipt is wearing that number, bud.",
@@ -591,11 +696,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this receipt.",
+            "description": "The server could not retrieve this receipt. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -623,7 +733,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "The receipt ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No receipt is wearing that number, bud.",
@@ -636,11 +753,16 @@
             }
           },
           "500": {
-            "description": "The server could not delete this receipt and its stored image.",
+            "description": "The server could not delete this receipt and its stored image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -682,7 +804,14 @@
             }
           },
           "400": {
-            "description": "The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No receipt is wearing that number, bud.",
@@ -695,11 +824,16 @@
             }
           },
           "500": {
-            "description": "The server could not save this correction; nothing changed.",
+            "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -755,7 +889,14 @@
             }
           },
           "400": {
-            "description": "The receipt ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No scanned image is linked to this receipt, bud.",
@@ -768,11 +909,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this receipt image.",
+            "description": "The server could not retrieve this receipt image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -824,7 +970,14 @@
             }
           },
           "400": {
-            "description": "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "That receipt has no item wearing this number, bud.",
@@ -837,11 +990,16 @@
             }
           },
           "500": {
-            "description": "The server could not save this correction; nothing changed.",
+            "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/InternalServerError"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -901,14 +1059,26 @@
             }
           },
           "400": {
-            "description": "The query is a bad pass, such as `search` sent more than once; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "500": {
-            "description": "The server could not pull the books off the bench.",
+            "description": "The server could not pull the books off the bench. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -941,14 +1111,26 @@
             }
           },
           "400": {
-            "description": "The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "500": {
-            "description": "The server could not save this book; nothing changed.",
+            "description": "The server could not save this book; nothing changed. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1002,7 +1184,14 @@
             }
           },
           "400": {
-            "description": "The book ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No book is wearing that number, bud.",
@@ -1015,11 +1204,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this book.",
+            "description": "The server could not retrieve this book. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1060,7 +1254,14 @@
             }
           },
           "400": {
-            "description": "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No book is wearing that number, bud.",
@@ -1083,11 +1284,16 @@
             }
           },
           "500": {
-            "description": "The server could not save this correction; nothing changed.",
+            "description": "The server could not save this correction; nothing changed. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1125,7 +1331,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "The book ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No book is wearing that number, bud.",
@@ -1138,11 +1351,16 @@
             }
           },
           "500": {
-            "description": "The server could not delete this book and its stored images; take another shot to finish the cleanup.",
+            "description": "The server could not delete this book and its stored images; take another shot to finish the cleanup. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1188,7 +1406,14 @@
             }
           },
           "400": {
-            "description": "The book ID is malformed or out of range; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No cover is on file for that book number, bud.",
@@ -1201,11 +1426,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this cover image.",
+            "description": "The server could not retrieve this cover image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BooksUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1240,7 +1470,14 @@
             }
           },
           "400": {
-            "description": "The upload is missing a supported cover image."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "413": {
             "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
@@ -1253,11 +1490,16 @@
             }
           },
           "500": {
-            "description": "The server could not store or queue the cover image.",
+            "description": "The server could not store or queue the cover image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1310,12 +1552,27 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
           "500": {
-            "description": "The server could not pull the cover scans off the bench.",
+            "description": "The server could not pull the cover scans off the bench. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1359,7 +1616,14 @@
             }
           },
           "400": {
-            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No cover scan is wearing that number, bud.",
@@ -1372,11 +1636,16 @@
             }
           },
           "500": {
-            "description": "The server could not retrieve this cover scan.",
+            "description": "The server could not retrieve this cover scan. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1404,7 +1673,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "The upload ID is not a version 4 UUID; the response body stays empty."
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
           },
           "404": {
             "description": "No cover scan is wearing that number, bud.",
@@ -1427,11 +1703,16 @@
             }
           },
           "500": {
-            "description": "The server could not delete this scan and its stored image.",
+            "description": "The server could not delete this scan and its stored image. | Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BookUploadsUnavailable"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
                 }
               }
             }
@@ -1444,6 +1725,86 @@
   },
   "components": {
     "schemas": {
+      "BadRequestProblemEncoded": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["path", "message"],
+              "additionalProperties": false
+            }
+          },
+          "type": {
+            "type": "string",
+            "enum": ["about:blank"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [400]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Bad Request"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "InternalServerErrorProblemEncoded": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["about:blank"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Internal Server Error"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
       "BookUploadsUnavailable": {
         "type": "object",
         "properties": {

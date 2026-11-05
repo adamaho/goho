@@ -5,6 +5,7 @@ import {
   HttpApiEndpoint,
   HttpApiError,
   HttpApiGroup,
+  HttpApiMiddleware,
   HttpApiSchema,
   OpenApi,
 } from "effect/http-api";
@@ -120,9 +121,6 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(ReceiptUpload).annotate({ httpApiStatus: 202 }),
           error: [
             UploadLimitExceeded,
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload is missing a supported receipt image.",
-            }),
             InternalServerError.annotate({
               description: "The server could not store or queue the receipt image.",
             }),
@@ -154,9 +152,6 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: HttpApiSchema.NoContent,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
-            }),
             NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
@@ -180,9 +175,6 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: ReceiptUploadId },
           success: DataResponse(ReceiptUpload),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
-            }),
             NotFound.annotate({
               description: "No receipt upload is wearing that number, bud.",
             }),
@@ -224,10 +216,6 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: DataResponse(Receipt),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The receipt ID is malformed or out of range; the response body stays empty.",
-            }),
             NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -247,10 +235,6 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: HttpApiSchema.NoContent,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The receipt ID is malformed or out of range; the response body stays empty.",
-            }),
             NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -270,10 +254,6 @@ export const api = HttpApi.make("goho-server")
           params: { receiptId: ReceiptId },
           success: ImageResponse,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The receipt ID is malformed or out of range; the response body stays empty.",
-            }),
             NotFound.annotate({
               description: "No scanned image is linked to this receipt, bud.",
             }),
@@ -293,9 +273,6 @@ export const api = HttpApi.make("goho-server")
           payload: CreateReceiptRequest,
           success: DataResponse(Receipt),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The payload is a bad pass; the response body stays empty.",
-            }),
             InternalServerError.annotate({
               description: "Receipt validation or persistence missed the net.",
             }),
@@ -314,10 +291,6 @@ export const api = HttpApi.make("goho-server")
           payload: PatchReceiptRequest,
           success: DataResponse(Receipt),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The correction is a bad pass: empty, unsupported fields, or invalid values. Nothing is saved.",
-            }),
             NotFound.annotate({
               description: "No receipt is wearing that number, bud.",
             }),
@@ -339,10 +312,6 @@ export const api = HttpApi.make("goho-server")
           payload: PatchReceiptItemRequest,
           success: DataResponse(ReceiptItem),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
-            }),
             NotFound.annotate({
               description: "That receipt has no item wearing this number, bud.",
             }),
@@ -381,10 +350,6 @@ export const api = HttpApi.make("goho-server")
             }),
           ),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The query is a bad pass, such as `search` sent more than once; the response body stays empty.",
-            }),
             BooksUnavailable.annotate({
               description: "The server could not pull the books off the bench.",
             }),
@@ -401,10 +366,6 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: DataResponse(Book),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The book ID is malformed or out of range; the response body stays empty.",
-            }),
             BookNotFound,
             BooksUnavailable.annotate({
               description: "The server could not retrieve this book.",
@@ -417,10 +378,6 @@ export const api = HttpApi.make("goho-server")
           payload: CreateBookRequest,
           success: DataResponse(Book),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The payload is a bad pass: missing, blank, or unsupported fields. Nothing is saved.",
-            }),
             BooksUnavailable.annotate({
               description: "The server could not save this book; nothing changed.",
             }),
@@ -439,10 +396,6 @@ export const api = HttpApi.make("goho-server")
           payload: PatchBookRequest,
           success: DataResponse(Book),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The correction is a bad pass: empty, blank, or unsupported fields, or a malformed ID. Nothing is saved.",
-            }),
             BookNotFound,
             BookConflict,
             BooksUnavailable.annotate({
@@ -462,10 +415,6 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: HttpApiSchema.NoContent,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The book ID is malformed or out of range; the response body stays empty.",
-            }),
             BookNotFound,
             BooksUnavailable.annotate({
               description:
@@ -484,10 +433,6 @@ export const api = HttpApi.make("goho-server")
           params: { bookId: BookId },
           success: ImageResponse,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description:
-                "The book ID is malformed or out of range; the response body stays empty.",
-            }),
             BookImageNotFound,
             BooksUnavailable.annotate({
               description: "The server could not retrieve this cover image.",
@@ -509,9 +454,6 @@ export const api = HttpApi.make("goho-server")
           success: DataResponse(BookUpload).annotate({ httpApiStatus: 202 }),
           error: [
             UploadLimitExceeded,
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload is missing a supported cover image.",
-            }),
             BookUploadsUnavailable.annotate({
               description: "The server could not store or queue the cover image.",
             }),
@@ -543,9 +485,6 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: BookUploadId },
           success: DataResponse(BookUpload),
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
-            }),
             BookUploadNotFound,
             BookUploadsUnavailable.annotate({
               description: "The server could not retrieve this cover scan.",
@@ -563,9 +502,6 @@ export const api = HttpApi.make("goho-server")
           params: { uploadId: BookUploadId },
           success: HttpApiSchema.NoContent,
           error: [
-            HttpApiError.BadRequestNoContent.annotate({
-              description: "The upload ID is not a version 4 UUID; the response body stays empty.",
-            }),
             BookUploadNotFound,
             BookUploadConflict,
             BookUploadsUnavailable.annotate({
@@ -579,4 +515,5 @@ export const api = HttpApi.make("goho-server")
             "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
           ),
       ),
-  );
+  )
+  .middleware(HttpApiMiddleware.ProblemDetails);

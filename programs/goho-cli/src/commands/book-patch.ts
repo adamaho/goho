@@ -57,7 +57,7 @@ export const patchCommand = Command.make("patch", {
                   ? `Book ${bookId} was not found.`
                   : cause._tag === "BookConflict"
                     ? "Another book already has that title and author."
-                    : cause._tag === "BadRequest"
+                    : cause._tag === "BadRequestProblem"
                       ? "The book correction was rejected. Check the supplied changes."
                       : "Book could not be patched. Check the server logs and try again.",
               cause,

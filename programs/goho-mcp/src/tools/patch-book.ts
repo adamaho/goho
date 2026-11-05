@@ -43,7 +43,7 @@ export const handle = Effect.fn("@goho/PatchBook.handle")(function* ({
         if (cause._tag === "BookNotFound") return `Book ${book_id} was not found.`;
         if (cause._tag === "BookConflict")
           return "Another saved book already has that title and author. Nothing changed.";
-        if (cause._tag === "BadRequest")
+        if (cause._tag === "BadRequestProblem")
           return "The book correction was rejected. Check the supplied changes.";
         return "Could not patch book. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
       }),

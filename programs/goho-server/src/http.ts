@@ -3,7 +3,13 @@ import { BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
 import { HttpMiddleware, HttpRouter } from "effect/http";
-import { HttpApiBuilder, HttpApiError, HttpApiSchema, HttpApiSwagger } from "effect/http-api";
+import {
+  HttpApiBuilder,
+  HttpApiError,
+  HttpApiMiddleware,
+  HttpApiSchema,
+  HttpApiSwagger,
+} from "effect/http-api";
 
 import * as BookUploads from "./book-uploads/service.ts";
 import * as Books from "./books/service.ts";
@@ -32,7 +38,14 @@ const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers
             name: payload.file.name,
             contentType: payload.file.contentType,
             bytes,
-          }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
+          }).pipe(
+            Effect.mapError(
+              () =>
+                new HttpApiError.BadRequestProblem({
+                  detail: "Send one JPEG, PNG, or WebP image with a nonblank file name.",
+                }),
+            ),
+          );
           return yield* uploads.create(input).pipe(Effect.map(withData));
         }),
       )
@@ -62,7 +75,14 @@ const BookUploadsLive = HttpApiBuilder.group(api, "bookUploads", (handlers) =>
             name: payload.file.name,
             contentType: payload.file.contentType,
             bytes,
-          }).pipe(Effect.mapError(() => new HttpApiError.BadRequest()));
+          }).pipe(
+            Effect.mapError(
+              () =>
+                new HttpApiError.BadRequestProblem({
+                  detail: "Send one JPEG, PNG, or WebP image with a nonblank file name.",
+                }),
+            ),
+          );
           return yield* uploads.create(input).pipe(Effect.map(withData));
         }),
       )
@@ -142,6 +162,7 @@ export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" })
     HealthLive,
     UploadErrorResponses.layer,
   ]),
+  Layer.provide(HttpApiMiddleware.layerProblemDetails()),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),

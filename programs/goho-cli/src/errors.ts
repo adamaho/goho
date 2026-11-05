@@ -25,7 +25,7 @@ export const getRequestErrorCode = (
 ): ErrorCode => {
   if ("error" in cause) return cause.error.code;
   switch (cause._tag) {
-    case "BadRequest":
+    case "BadRequestProblem":
       return "invalid_input";
     case "NotFound":
     case "BookNotFound":

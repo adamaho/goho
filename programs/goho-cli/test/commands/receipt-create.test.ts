@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withResponse } from "#test/cli.ts";
+import { errorOutput, runCommand, validationResponse, withResponse } from "#test/cli.ts";
 
 const payload = {
   storeName: "Example Store",
@@ -53,7 +53,7 @@ const runCreate = (args: ReadonlyArray<string>, expected: unknown, status: numbe
       expect(request.url).toBe("/receipts");
       expect(yield* request.json.pipe(Effect.orDie)).toEqual(expected);
       return status === 400
-        ? HttpServerResponse.empty({ status })
+        ? yield* validationResponse
         : HttpServerResponse.jsonUnsafe(body, { status });
     }),
     (baseUrl) => runCommand(baseUrl, ["receipts", "create", ...args]),
@@ -132,7 +132,7 @@ describe("receipts create", () => {
     {
       status: 400,
       errorCode: "invalid_input",
-      tag: "BadRequest",
+      tag: "BadRequestProblem",
       message: "The receipt was rejected. Check the supplied values.",
     },
     {
