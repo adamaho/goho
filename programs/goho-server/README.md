@@ -94,8 +94,9 @@ receipts share one catalog. A receipt has no
 category of its own: its `categories` lists each distinct item category once, in
 item order.
 
-Invalid payloads return HTTP 400 with an empty body; validation or persistence
-failures return HTTP 500 with `{"_tag":"InternalServerError"}`.
+Invalid payloads, including unsupported fields on the receipt or any item, return
+HTTP 400 with an empty body and save nothing. Validation or persistence failures
+return HTTP 500 with `{"_tag":"InternalServerError"}`.
 
 ### Correct a receipt
 

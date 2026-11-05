@@ -348,6 +348,38 @@ it.effect("rejects invalid receipt data at the HTTP boundary", () =>
   }).pipe(Effect.provide(TestLive)),
 );
 
+it.effect("rejects unknown receipt and item creation fields before saving anything", () => {
+  const inserted: CreateReceiptRequest[] = [];
+  return Effect.gen(function* () {
+    for (const payload of [
+      { ...createPayload, category: "Groceries" },
+      { ...createPayload, id: "43" },
+      { ...createPayload, items: [{ ...createPayload.items[0], position: 1 }] },
+      {
+        ...createPayload,
+        items: [createPayload.items[0], { ...createPayload.items[0], id: "8" }],
+      },
+    ]) {
+      const response = yield* HttpClient.post("/receipts", {
+        body: yield* HttpBody.json(payload),
+      });
+      expect(response.status, JSON.stringify(payload)).toBe(400);
+      expect(yield* response.text).toBe("");
+    }
+    expect(inserted).toEqual([]);
+  }).pipe(
+    Effect.provide(
+      testLayer({
+        insert: (input) =>
+          Effect.sync(() => {
+            inserted.push(input);
+            return receipt.id;
+          }),
+      }),
+    ),
+  );
+});
+
 it.effect("does not expose the removed receipt processing endpoint", () =>
   Effect.gen(function* () {
     const response = yield* HttpClient.post("/receipts/process", {

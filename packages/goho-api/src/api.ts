@@ -295,6 +295,7 @@ export const api = HttpApi.make("goho-server")
             }),
           ],
         })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
           .annotate(OpenApi.Summary, "Create a receipt")
           .annotate(
             OpenApi.Description,
