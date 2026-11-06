@@ -24,8 +24,9 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * Receipt details to correct, bud. Send at least one field; left-out fields stay put, and names are trimmed and stay nonempty.
@@ -33,16 +34,16 @@ import com.squareup.moshi.JsonClass
  * @param storeName Store or merchant named on the receipt.
  * @param receiptDate Date the purchase hit the ice.
  */
-
+@Serializable
 
 data class PatchReceiptRequest (
 
     /* Store or merchant named on the receipt. */
-    @Json(name = "storeName")
+    @SerialName(value = "storeName")
     val storeName: kotlin.String? = null,
 
     /* Date the purchase hit the ice. */
-    @Json(name = "receiptDate")
+    @SerialName(value = "receiptDate")
     val receiptDate: kotlin.String? = null
 
 ) {

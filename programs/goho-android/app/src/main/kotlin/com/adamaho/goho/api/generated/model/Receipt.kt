@@ -26,8 +26,9 @@ package com.adamaho.goho.api.generated.model
 import com.adamaho.goho.api.generated.model.Category
 import com.adamaho.goho.api.generated.model.ReceiptItem
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A saved receipt with trimmed names and normalized decimals; `11.00` comes back as `11`, beauty.
@@ -42,44 +43,44 @@ import com.squareup.moshi.JsonClass
  * @param categories Each distinct item category once, in order of first appearance.
  * @param items Items lined up by ascending position.
  */
-
+@Serializable
 
 data class Receipt (
 
     /* The receipt's roster number, kept the same on a replay. */
-    @Json(name = "id")
+    @SerialName(value = "id")
     val id: kotlin.String,
 
     /* Store or merchant named on the receipt. */
-    @Json(name = "storeName")
+    @SerialName(value = "storeName")
     val storeName: kotlin.String,
 
     /* Date the purchase hit the ice. */
-    @Json(name = "receiptDate")
+    @SerialName(value = "receiptDate")
     val receiptDate: kotlin.String,
 
     /* Amount before tax. */
-    @Json(name = "subtotal")
+    @SerialName(value = "subtotal")
     val subtotal: kotlin.String,
 
     /* Tax amount. */
-    @Json(name = "tax")
+    @SerialName(value = "tax")
     val tax: kotlin.String,
 
     /* Final receipt total. */
-    @Json(name = "total")
+    @SerialName(value = "total")
     val total: kotlin.String,
 
     /* Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry. */
-    @Json(name = "currency")
+    @SerialName(value = "currency")
     val currency: kotlin.String,
 
     /* Each distinct item category once, in order of first appearance. */
-    @Json(name = "categories")
+    @SerialName(value = "categories")
     val categories: kotlin.collections.List<Category>,
 
     /* Items lined up by ascending position. */
-    @Json(name = "items")
+    @SerialName(value = "items")
     val items: kotlin.collections.List<ReceiptItem>
 
 ) {

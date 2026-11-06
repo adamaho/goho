@@ -133,19 +133,40 @@ The server derives its OpenAPI document from the shared API at runtime. The
 generator uses the committed copy without running the server, so `openapi:check`
 fails when that copy is stale.
 
-### Deferred: problem-response decoding
+### Problem responses
 
-After the HTTP error slices are complete, evaluate switching the Kotlin generator
-from Moshi to `kotlinx.serialization`, including Retrofit's JSON converter.
-The current generator emits numeric status enums with names such as `"404.0"`,
-which Moshi cannot decode from the server's `"status": 404`. The app currently
-checks HTTP status codes without decoding problem bodies, so its existing error
-handling is unaffected.
+The client uses `kotlinx.serialization` and Retrofit's matching converter. The app
+still checks HTTP status codes without decoding problem bodies, so no Android
+screen has exercised this decoding yet. These generator settings in
+`app/build.gradle.kts` keep the models usable when you do:
 
-Before switching, manually verify actual problem responses, successful JSON
-responses, multipart uploads, and image downloads, and run the Android build,
-lint, and formatting checks above. Treat this as a candidate fix, not a verified
-drop-in replacement; do not hand-edit generated models.
+- `RESOLVE_INLINE_ENUMS` lifts inline enums to top-level models, such as
+  `BookUploadStatus` and `CategoryColor`. Numeric status enums then decode as
+  numbers instead of matching a string name.
+- `number` maps to `kotlin.Double`, because the default `BigDecimal` doesn't compile
+  for those enums. Compare statuses with `404.0`. Encoding one writes `404.0`.
+- `generateOneOfAnyOfWrappers` turns each 500 union into a sealed type, such as
+  `BooksList500Response`, with a `BooksUnavailableValue` or
+  `InternalServerErrorProblemEncodedValue` branch. A body matching neither fails to
+  decode.
+- `errors[].path` items map to `JsonPrimitive`, because the generated wrapper for
+  this string-or-number union doesn't compile. Use `isString` to tell a key from an
+  index.
+
+Decode a body with `apiJson` from `api/ApiJson.kt`, such as
+`apiJson.decodeFromString<BooksList500Response>(body)`. The generator doesn't
+provide its Moshi `getErrorResponse` helper for this library. Don't use the
+generated `Serializer.kotlinxSerializationJson` or its configuration hook: it's
+lenient, and the hook throws once that `Json` exists. Pass
+`apiConverterFactories` to every `ApiClient` so Retrofit uses the same reader.
+`apiJson` reuses the generated adapters, such as the one for `UUID`, and keeps
+the generated `encodeDefaults` and `ignoreUnknownKeys` settings. It also sets:
+
+- `explicitNulls = false`, so requests omit null fields and responses may omit
+  nullable ones. The server rejects null in patch fields.
+- `isLenient = false`, so a bare number can't decode into a money or ID string. The
+  library still accepts quoted numbers and booleans in this mode, such as
+  `"status": "404"`.
 
 ## Code organization and style
 

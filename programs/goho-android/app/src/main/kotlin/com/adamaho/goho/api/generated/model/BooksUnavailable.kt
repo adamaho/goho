@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BooksUnavailableTitle
+import com.adamaho.goho.api.generated.model.BooksUnavailableType
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BooksUnavailable (
 
-    @Json(name = "type")
-    val type: BooksUnavailable.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BooksUnavailableType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BooksUnavailable.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: InternalServerErrorProblemEncodedStatus? = null,
 
-    @Json(name = "title")
-    val title: BooksUnavailable.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BooksUnavailableTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBooksMinusUnavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:books-unavailable") gohoColonProblemColonBooksMinusUnavailable("goho:problem:books-unavailable");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Books_unavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Books unavailable") Books_unavailable("Books unavailable");
-    }
 
 }
 

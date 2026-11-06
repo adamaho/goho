@@ -1,19 +1,22 @@
 package com.adamaho.goho.api.generated.infrastructure
 
-import com.squareup.moshi.FromJson
-import com.squareup.moshi.ToJson
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.SerialDescriptor
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class LocalDateAdapter {
-    @ToJson
-    fun toJson(value: LocalDate): String {
-        return DateTimeFormatter.ISO_LOCAL_DATE.format(value)
+object LocalDateAdapter : KSerializer<LocalDate> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: LocalDate) {
+        encoder.encodeString(DateTimeFormatter.ISO_LOCAL_DATE.format(value))
     }
 
-    @FromJson
-    fun fromJson(value: String): LocalDate {
-        return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE)
+    override fun deserialize(decoder: Decoder): LocalDate {
+        return LocalDate.parse(decoder.decodeString(), DateTimeFormatter.ISO_LOCAL_DATE)
     }
-
 }

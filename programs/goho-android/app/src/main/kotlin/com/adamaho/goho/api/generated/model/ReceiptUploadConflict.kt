@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadConflictStatus
+import com.adamaho.goho.api.generated.model.ReceiptUploadConflictTitle
+import com.adamaho.goho.api.generated.model.ReceiptUploadConflictType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class ReceiptUploadConflict (
 
-    @Json(name = "type")
-    val type: ReceiptUploadConflict.Type,
+    @Contextual @SerialName(value = "type")
+    val type: ReceiptUploadConflictType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: ReceiptUploadConflict.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadConflictStatus? = null,
 
-    @Json(name = "title")
-    val title: ReceiptUploadConflict.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: ReceiptUploadConflictTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptMinusUploadMinusConflict
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipt-upload-conflict") gohoColonProblemColonReceiptMinusUploadMinusConflict("goho:problem:receipt-upload-conflict");
-    }
-    /**
-     * 
-     *
-     * Values: _409
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "409.0") _409(409.0);
-    }
-    /**
-     * 
-     *
-     * Values: Receipt_upload_cannot_be_deleted
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Receipt upload cannot be deleted") Receipt_upload_cannot_be_deleted("Receipt upload cannot be deleted");
-    }
 
 }
 

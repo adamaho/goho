@@ -24,8 +24,9 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * Line item details to correct. Send a name, a category, or both; left-out fields stay put, and values are trimmed and stay nonempty.
@@ -33,16 +34,16 @@ import com.squareup.moshi.JsonClass
  * @param name Item name on the receipt.
  * @param category Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  */
-
+@Serializable
 
 data class PatchReceiptItemRequest (
 
     /* Item name on the receipt. */
-    @Json(name = "name")
+    @SerialName(value = "name")
     val name: kotlin.String? = null,
 
     /* Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: kotlin.String? = null
 
 ) {

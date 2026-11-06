@@ -23,95 +23,61 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadContentType
+import com.adamaho.goho.api.generated.model.BookUploadFailureCode
+import com.adamaho.goho.api.generated.model.BookUploadStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A cover scan and how its processing is going.
  *
  * @param id The cover scan's version 4 UUID; use it to check on this upload.
  * @param fileName File name the scan arrived with.
- * @param contentType MIME type of the stored scan.
- * @param status Where the scan is in the play: queued, processing, succeeded, or failed.
+ * @param contentType 
+ * @param status 
  * @param bookId The book this scan saved or matched, once it succeeds; several scans can land on one book.
- * @param failureCode Why the scan failed, once it fails; details stay in the server logs.
+ * @param failureCode 
  * @param createdAt When the scan came off the bench.
  * @param updatedAt When the scan's status last changed.
  */
-
+@Serializable
 
 data class BookUpload (
 
     /* The cover scan's version 4 UUID; use it to check on this upload. */
-    @Json(name = "id")
+    @Contextual @SerialName(value = "id")
     val id: java.util.UUID,
 
     /* File name the scan arrived with. */
-    @Json(name = "fileName")
+    @SerialName(value = "fileName")
     val fileName: kotlin.String,
 
-    /* MIME type of the stored scan. */
-    @Json(name = "contentType")
-    val contentType: BookUpload.ContentType,
+    @Contextual @SerialName(value = "contentType")
+    val contentType: BookUploadContentType,
 
-    /* Where the scan is in the play: queued, processing, succeeded, or failed. */
-    @Json(name = "status")
-    val status: BookUpload.Status,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadStatus,
 
     /* The book this scan saved or matched, once it succeeds; several scans can land on one book. */
-    @Json(name = "bookId")
+    @SerialName(value = "bookId")
     val bookId: kotlin.String?,
 
-    /* Why the scan failed, once it fails; details stay in the server logs. */
-    @Json(name = "failureCode")
-    val failureCode: BookUpload.FailureCode?,
+    @Contextual @SerialName(value = "failureCode")
+    val failureCode: BookUploadFailureCode?,
 
     /* When the scan came off the bench. */
-    @Json(name = "createdAt")
+    @SerialName(value = "createdAt")
     val createdAt: kotlin.String,
 
     /* When the scan's status last changed. */
-    @Json(name = "updatedAt")
+    @SerialName(value = "updatedAt")
     val updatedAt: kotlin.String
 
 ) {
 
-    /**
-     * MIME type of the stored scan.
-     *
-     * Values: imageSlashJpeg,imageSlashPng,imageSlashWebp
-     */
-    @JsonClass(generateAdapter = false)
-    enum class ContentType(val value: kotlin.String) {
-        @Json(name = "image/jpeg") imageSlashJpeg("image/jpeg"),
-        @Json(name = "image/png") imageSlashPng("image/png"),
-        @Json(name = "image/webp") imageSlashWebp("image/webp");
-    }
-    /**
-     * Where the scan is in the play: queued, processing, succeeded, or failed.
-     *
-     * Values: queued,processing,succeeded,failed
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.String) {
-        @Json(name = "queued") queued("queued"),
-        @Json(name = "processing") processing("processing"),
-        @Json(name = "succeeded") succeeded("succeeded"),
-        @Json(name = "failed") failed("failed");
-    }
-    /**
-     * Why the scan failed, once it fails; details stay in the server logs.
-     *
-     * Values: storage_failed,processing_failed,book_creation_failed,internal_error
-     */
-    @JsonClass(generateAdapter = false)
-    enum class FailureCode(val value: kotlin.String) {
-        @Json(name = "storage_failed") storage_failed("storage_failed"),
-        @Json(name = "processing_failed") processing_failed("processing_failed"),
-        @Json(name = "book_creation_failed") book_creation_failed("book_creation_failed"),
-        @Json(name = "internal_error") internal_error("internal_error");
-    }
 
 }
 

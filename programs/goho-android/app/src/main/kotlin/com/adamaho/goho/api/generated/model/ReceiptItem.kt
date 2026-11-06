@@ -25,8 +25,9 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Category
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A saved receipt line item in its original slot.
@@ -37,28 +38,28 @@ import com.squareup.moshi.JsonClass
  * @param amount Item amount; negative adjustments can suit up too.
  * @param category The item's category.
  */
-
+@Serializable
 
 data class ReceiptItem (
 
     /* The item's roster number; use it to target this item. */
-    @Json(name = "id")
+    @SerialName(value = "id")
     val id: kotlin.String,
 
     /* Zero-based spot in the receipt lineup. */
-    @Json(name = "position")
+    @SerialName(value = "position")
     val position: kotlin.Int,
 
     /* Item name on the receipt. */
-    @Json(name = "name")
+    @SerialName(value = "name")
     val name: kotlin.String,
 
     /* Item amount; negative adjustments can suit up too. */
-    @Json(name = "amount")
+    @SerialName(value = "amount")
     val amount: kotlin.String,
 
     /* The item's category. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: Category
 
 ) {

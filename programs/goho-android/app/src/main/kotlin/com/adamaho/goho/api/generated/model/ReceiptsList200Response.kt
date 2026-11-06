@@ -25,20 +25,21 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Receipt
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
  *
  * @param `data` Complete receipts, newest off the bench first; empty when none exist.
  */
-
+@Serializable
 
 data class ReceiptsList200Response (
 
     /* Complete receipts, newest off the bench first; empty when none exist. */
-    @Json(name = "data")
+    @SerialName(value = "data")
     val `data`: kotlin.collections.List<Receipt>
 
 ) {

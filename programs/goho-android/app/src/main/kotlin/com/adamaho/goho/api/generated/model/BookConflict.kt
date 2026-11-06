@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookConflictTitle
+import com.adamaho.goho.api.generated.model.BookConflictType
+import com.adamaho.goho.api.generated.model.BookUploadConflictStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BookConflict (
 
-    @Json(name = "type")
-    val type: BookConflict.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BookConflictType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BookConflict.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadConflictStatus? = null,
 
-    @Json(name = "title")
-    val title: BookConflict.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BookConflictTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBookMinusConflict
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:book-conflict") gohoColonProblemColonBookMinusConflict("goho:problem:book-conflict");
-    }
-    /**
-     * 
-     *
-     * Values: _409
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "409.0") _409(409.0);
-    }
-    /**
-     * 
-     *
-     * Values: Book_already_exists
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Book already exists") Book_already_exists("Book already exists");
-    }
 
 }
 

@@ -25,8 +25,9 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.ReceiptItemInput
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * The full receipt lineup, bud. Names are trimmed and stay nonempty; amounts are not rounded, converted, or checked against the totals.
@@ -39,36 +40,36 @@ import com.squareup.moshi.JsonClass
  * @param currency Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry.
  * @param items Line items in receipt order.
  */
-
+@Serializable
 
 data class CreateReceiptRequest (
 
     /* Store or merchant named on the receipt. */
-    @Json(name = "storeName")
+    @SerialName(value = "storeName")
     val storeName: kotlin.String,
 
     /* Date the purchase hit the ice. */
-    @Json(name = "receiptDate")
+    @SerialName(value = "receiptDate")
     val receiptDate: kotlin.String,
 
     /* Amount before tax. */
-    @Json(name = "subtotal")
+    @SerialName(value = "subtotal")
     val subtotal: kotlin.String,
 
     /* Tax amount. */
-    @Json(name = "tax")
+    @SerialName(value = "tax")
     val tax: kotlin.String,
 
     /* Final receipt total. */
-    @Json(name = "total")
+    @SerialName(value = "total")
     val total: kotlin.String,
 
     /* Required three-letter currency code for all items and totals, bud. Codes are not checked against a registry. */
-    @Json(name = "currency")
+    @SerialName(value = "currency")
     val currency: kotlin.String,
 
     /* Line items in receipt order. */
-    @Json(name = "items")
+    @SerialName(value = "items")
     val items: kotlin.collections.List<ReceiptItemInput>
 
 ) {

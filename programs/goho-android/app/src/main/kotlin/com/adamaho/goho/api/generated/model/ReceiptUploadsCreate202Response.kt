@@ -25,19 +25,20 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
  *
  * @param `data` 
  */
-
+@Serializable
 
 data class ReceiptUploadsCreate202Response (
 
-    @Json(name = "data")
+    @SerialName(value = "data")
     val `data`: ReceiptUploadsCreate202ResponseData
 
 ) {

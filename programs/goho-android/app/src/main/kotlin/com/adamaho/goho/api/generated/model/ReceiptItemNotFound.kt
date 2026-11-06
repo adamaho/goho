@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
+import com.adamaho.goho.api.generated.model.ReceiptItemNotFoundTitle
+import com.adamaho.goho.api.generated.model.ReceiptItemNotFoundType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class ReceiptItemNotFound (
 
-    @Json(name = "type")
-    val type: ReceiptItemNotFound.Type,
+    @Contextual @SerialName(value = "type")
+    val type: ReceiptItemNotFoundType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: ReceiptItemNotFound.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadNotFoundStatus? = null,
 
-    @Json(name = "title")
-    val title: ReceiptItemNotFound.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: ReceiptItemNotFoundTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptMinusItemMinusNotMinusFound
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipt-item-not-found") gohoColonProblemColonReceiptMinusItemMinusNotMinusFound("goho:problem:receipt-item-not-found");
-    }
-    /**
-     * 
-     *
-     * Values: _404
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "404.0") _404(404.0);
-    }
-    /**
-     * 
-     *
-     * Values: Receipt_item_not_found
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Receipt item not found") Receipt_item_not_found("Receipt item not found");
-    }
 
 }
 

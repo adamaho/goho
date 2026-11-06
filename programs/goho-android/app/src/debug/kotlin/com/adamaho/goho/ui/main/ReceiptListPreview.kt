@@ -7,6 +7,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import com.adamaho.goho.api.generated.model.*
+import com.adamaho.goho.api.generated.model.CategoryColor
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerContentType
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerFailureCode
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
 import com.adamaho.goho.theme.GohoTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -15,7 +19,7 @@ import java.util.UUID
 private val previewTime = Instant.parse("2026-09-30T12:00:00Z")
 
 private val shopping =
-    Category("1", "shopping", "shopping", Category.Color.purple, setOf(CategoryKind.receipt))
+    Category("1", "shopping", "shopping", CategoryColor.purple, setOf(CategoryKind.receipt))
 
 private fun receipt(id: String, merchant: String, date: String, total: String, currency: String) =
     Receipt(
@@ -30,15 +34,15 @@ private fun receipt(id: String, merchant: String, date: String, total: String, c
         listOf(ReceiptItem(id, 0, "Purchase", total, shopping)),
     )
 
-private fun upload(id: Int, status: ReceiptUploadsList200ResponseDataInner.Status, time: String) =
+private fun upload(id: Int, status: ReceiptUploadsList200ResponseDataInnerStatus, time: String) =
     ReceiptUploadsList200ResponseDataInner(
         UUID(0, id.toLong()),
         "scan.jpg",
-        ReceiptUploadsList200ResponseDataInner.ContentType.imageSlashJpeg,
+        ReceiptUploadsList200ResponseDataInnerContentType.imageSlashJpeg,
         status,
         null,
-        if (status == ReceiptUploadsList200ResponseDataInner.Status.failed)
-            ReceiptUploadsList200ResponseDataInner.FailureCode.processing_failed
+        if (status == ReceiptUploadsList200ResponseDataInnerStatus.failed)
+            ReceiptUploadsList200ResponseDataInnerFailureCode.processing_failed
         else null,
         time,
         time,
@@ -50,12 +54,12 @@ internal val receiptListPreviewState =
             listOf(
                 upload(
                     1,
-                    ReceiptUploadsList200ResponseDataInner.Status.processing,
+                    ReceiptUploadsList200ResponseDataInnerStatus.processing,
                     "2026-09-30 11:59:50.123456+00",
                 ),
                 upload(
                     2,
-                    ReceiptUploadsList200ResponseDataInner.Status.failed,
+                    ReceiptUploadsList200ResponseDataInnerStatus.failed,
                     "2026-09-30 10:41:00+00",
                 ),
             ),

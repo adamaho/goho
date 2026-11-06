@@ -10,6 +10,7 @@ import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.BookUpload
+import com.adamaho.goho.api.generated.model.BookUploadStatus
 import com.adamaho.goho.api.generated.model.PatchBookRequest
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
@@ -61,7 +62,7 @@ internal class BookListController(
                         deletions.contains(
                             DeletionKey(DeletionKind.BookUpload, it.id.toString())
                         ) ||
-                            (it.status == BookUpload.Status.succeeded &&
+                            (it.status == BookUploadStatus.succeeded &&
                                 it.bookId?.let { id ->
                                     deletions.contains(DeletionKey(DeletionKind.Book, id))
                                 } == true)
@@ -121,7 +122,7 @@ internal class BookListController(
     suspend fun pollPendingUploads() {
         snapshotFlow {
             state.uploads.any {
-                it.status == BookUpload.Status.queued || it.status == BookUpload.Status.processing
+                it.status == BookUploadStatus.queued || it.status == BookUploadStatus.processing
             }
         }
             .collectLatest { hasPendingUploads ->
@@ -144,9 +145,7 @@ internal class BookListController(
             val response = uploadsApi.bookUploadsCreate(cover)
             val upload = response.body()?.data
             if (
-                response.code() == 202 &&
-                    upload != null &&
-                    upload.status != BookUpload.Status.failed
+                response.code() == 202 && upload != null && upload.status != BookUploadStatus.failed
             ) {
                 changeRevision++
                 if (state.hasLoaded)
@@ -247,7 +246,7 @@ internal class BookListController(
                 books = state.books.filterNot { it.id == bookId },
                 uploads =
                     state.uploads.filterNot {
-                        it.status == BookUpload.Status.succeeded && it.bookId == bookId
+                        it.status == BookUploadStatus.succeeded && it.bookId == bookId
                     },
             )
     }

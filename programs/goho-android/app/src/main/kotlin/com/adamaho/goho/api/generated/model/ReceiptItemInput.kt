@@ -24,8 +24,9 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * One receipt line item; repeat names are fair game.
@@ -34,20 +35,20 @@ import com.squareup.moshi.JsonClass
  * @param amount Item amount; negative adjustments can suit up too.
  * @param category Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  */
-
+@Serializable
 
 data class ReceiptItemInput (
 
     /* Item name on the receipt. */
-    @Json(name = "name")
+    @SerialName(value = "name")
     val name: kotlin.String,
 
     /* Item amount; negative adjustments can suit up too. */
-    @Json(name = "amount")
+    @SerialName(value = "amount")
     val amount: kotlin.String,
 
     /* Item category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: kotlin.String
 
 ) {

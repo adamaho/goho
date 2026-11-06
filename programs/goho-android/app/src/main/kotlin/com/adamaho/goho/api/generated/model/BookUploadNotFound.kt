@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundTitle
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BookUploadNotFound (
 
-    @Json(name = "type")
-    val type: BookUploadNotFound.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BookUploadNotFoundType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BookUploadNotFound.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadNotFoundStatus? = null,
 
-    @Json(name = "title")
-    val title: BookUploadNotFound.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BookUploadNotFoundTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBookMinusUploadMinusNotMinusFound
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:book-upload-not-found") gohoColonProblemColonBookMinusUploadMinusNotMinusFound("goho:problem:book-upload-not-found");
-    }
-    /**
-     * 
-     *
-     * Values: _404
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "404.0") _404(404.0);
-    }
-    /**
-     * 
-     *
-     * Values: Book_upload_not_found
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Book upload not found") Book_upload_not_found("Book upload not found");
-    }
 
 }
 

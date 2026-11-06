@@ -37,6 +37,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.adamaho.goho.api.apiConverterFactories
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
@@ -44,8 +45,7 @@ import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.Receipt
-import com.adamaho.goho.api.generated.model.ReceiptUploadsCreate202ResponseData
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.FeedbackSnackbar
@@ -146,6 +146,7 @@ class MainActivity : ComponentActivity() {
         ApiClient(
                 baseUrl = BuildConfig.GOHO_SERVER_URL,
                 okHttpClientBuilder = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS),
+                converterFactories = apiConverterFactories,
             )
             .createService(T::class.java)
 
@@ -378,8 +379,8 @@ class MainActivity : ComponentActivity() {
             launch { books.pollPendingUploads() }
             snapshotFlow {
                 overviewState.uploads.any {
-                    it.status == ReceiptUploadsList200ResponseDataInner.Status.queued ||
-                        it.status == ReceiptUploadsList200ResponseDataInner.Status.processing
+                    it.status == ReceiptUploadsList200ResponseDataInnerStatus.queued ||
+                        it.status == ReceiptUploadsList200ResponseDataInnerStatus.processing
                 }
             }
                 .collectLatest { hasPendingUploads ->
@@ -660,7 +661,7 @@ class MainActivity : ComponentActivity() {
             if (
                 response.code() == 202 &&
                     upload != null &&
-                    upload.status != ReceiptUploadsCreate202ResponseData.Status.failed
+                    upload.status != ReceiptUploadsList200ResponseDataInnerStatus.failed
             ) {
                 receiptUploadToReveal = upload.id.toString()
                 selectSection(Section.Receipts)

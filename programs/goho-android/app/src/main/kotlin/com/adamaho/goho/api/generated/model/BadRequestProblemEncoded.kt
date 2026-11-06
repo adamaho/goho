@@ -24,9 +24,13 @@
 package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedErrorsInner
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedTitle
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -38,57 +42,30 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BadRequestProblemEncoded (
 
-    @Json(name = "type")
-    val type: BadRequestProblemEncoded.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BadRequestProblemEncodedType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "errors")
+    @SerialName(value = "errors")
     val errors: kotlin.collections.List<BadRequestProblemEncodedErrorsInner>? = null,
 
-    @Json(name = "status")
-    val status: BadRequestProblemEncoded.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BadRequestProblemEncodedStatus? = null,
 
-    @Json(name = "title")
-    val title: BadRequestProblemEncoded.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BadRequestProblemEncodedTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: aboutColonBlank
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "about:blank") aboutColonBlank("about:blank");
-    }
-    /**
-     * 
-     *
-     * Values: _400
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "400.0") _400(400.0);
-    }
-    /**
-     * 
-     *
-     * Values: Bad_Request
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Bad Request") Bad_Request("Bad Request");
-    }
 
 }
 

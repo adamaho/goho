@@ -23,34 +23,26 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.HealthDataStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * Whether the server is awake for the shift.
  *
- * @param status The server's bench status.
+ * @param status 
  */
-
+@Serializable
 
 data class HealthData (
 
-    /* The server's bench status. */
-    @Json(name = "status")
-    val status: HealthData.Status
+    @Contextual @SerialName(value = "status")
+    val status: HealthDataStatus
 
 ) {
 
-    /**
-     * The server's bench status.
-     *
-     * Values: ok
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.String) {
-        @Json(name = "ok") ok("ok");
-    }
 
 }
 

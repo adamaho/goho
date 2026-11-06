@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.ReceiptsUnavailableTitle
+import com.adamaho.goho.api.generated.model.ReceiptsUnavailableType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class ReceiptsUnavailable (
 
-    @Json(name = "type")
-    val type: ReceiptsUnavailable.Type,
+    @Contextual @SerialName(value = "type")
+    val type: ReceiptsUnavailableType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: ReceiptsUnavailable.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: InternalServerErrorProblemEncodedStatus? = null,
 
-    @Json(name = "title")
-    val title: ReceiptsUnavailable.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: ReceiptsUnavailableTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptsMinusUnavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipts-unavailable") gohoColonProblemColonReceiptsMinusUnavailable("goho:problem:receipts-unavailable");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Receipts_unavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Receipts unavailable") Receipts_unavailable("Receipts unavailable");
-    }
 
 }
 

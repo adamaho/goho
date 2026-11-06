@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
+import com.adamaho.goho.api.generated.model.ReceiptImageNotFoundTitle
+import com.adamaho.goho.api.generated.model.ReceiptImageNotFoundType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class ReceiptImageNotFound (
 
-    @Json(name = "type")
-    val type: ReceiptImageNotFound.Type,
+    @Contextual @SerialName(value = "type")
+    val type: ReceiptImageNotFoundType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: ReceiptImageNotFound.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadNotFoundStatus? = null,
 
-    @Json(name = "title")
-    val title: ReceiptImageNotFound.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: ReceiptImageNotFoundTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptMinusImageMinusNotMinusFound
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipt-image-not-found") gohoColonProblemColonReceiptMinusImageMinusNotMinusFound("goho:problem:receipt-image-not-found");
-    }
-    /**
-     * 
-     *
-     * Values: _404
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "404.0") _404(404.0);
-    }
-    /**
-     * 
-     *
-     * Values: Receipt_image_not_found
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Receipt image not found") Receipt_image_not_found("Receipt image not found");
-    }
 
 }
 

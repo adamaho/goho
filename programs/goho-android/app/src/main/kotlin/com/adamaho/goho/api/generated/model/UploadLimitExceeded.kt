@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.UploadLimitExceededStatus
+import com.adamaho.goho.api.generated.model.UploadLimitExceededTitle
+import com.adamaho.goho.api.generated.model.UploadLimitExceededType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class UploadLimitExceeded (
 
-    @Json(name = "type")
-    val type: UploadLimitExceeded.Type,
+    @Contextual @SerialName(value = "type")
+    val type: UploadLimitExceededType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: UploadLimitExceeded.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: UploadLimitExceededStatus? = null,
 
-    @Json(name = "title")
-    val title: UploadLimitExceeded.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: UploadLimitExceededTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonUploadMinusLimitMinusExceeded
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:upload-limit-exceeded") gohoColonProblemColonUploadMinusLimitMinusExceeded("goho:problem:upload-limit-exceeded");
-    }
-    /**
-     * 
-     *
-     * Values: _413
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "413.0") _413(413.0);
-    }
-    /**
-     * 
-     *
-     * Values: Upload_limit_exceeded
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Upload limit exceeded") Upload_limit_exceeded("Upload limit exceeded");
-    }
 
 }
 

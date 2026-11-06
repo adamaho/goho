@@ -24,8 +24,9 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * Book details to correct, bud. Send at least one field; left-out fields stay put. Values must be nonempty text; null cannot clear them.
@@ -35,24 +36,24 @@ import com.squareup.moshi.JsonClass
  * @param category Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it.
  * @param readingLevel Reading level to set or replace; cannot be cleared.
  */
-
+@Serializable
 
 data class PatchBookRequest (
 
     /* Book title, shown as spelled. Case and extra spaces don't make it a different book. */
-    @Json(name = "title")
+    @SerialName(value = "title")
     val title: kotlin.String? = null,
 
     /* Author to set or replace; cannot be cleared. */
-    @Json(name = "author")
+    @SerialName(value = "author")
     val author: kotlin.String? = null,
 
     /* Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: kotlin.String? = null,
 
     /* Reading level to set or replace; cannot be cleared. */
-    @Json(name = "readingLevel")
+    @SerialName(value = "readingLevel")
     val readingLevel: kotlin.String? = null
 
 ) {

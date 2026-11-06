@@ -23,70 +23,80 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
 import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedTitle
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 
 /**
  * 
  *
- * @param type 
- * @param detail 
- * @param instance 
- * @param status 
- * @param title 
  */
+@Serializable(with = BooksList500ResponseSerializer::class)
 
+sealed interface BooksList500Response {
+    @JvmInline
+    value class BooksUnavailableValue(val value: BooksUnavailable) : BooksList500Response
 
-data class BooksList500Response (
+    @JvmInline
+    value class InternalServerErrorProblemEncodedValue(val value: InternalServerErrorProblemEncoded) : BooksList500Response
 
-    @Json(name = "type")
-    val type: BooksList500Response.Type,
+}
 
-    @Json(name = "detail")
-    val detail: kotlin.String? = null,
+object BooksList500ResponseSerializer : KSerializer<BooksList500Response> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("BooksList500Response")
 
-    @Json(name = "instance")
-    val instance: kotlin.String? = null,
+    override fun serialize(encoder: Encoder, value: BooksList500Response) {
+        val jsonEncoder = encoder as? JsonEncoder ?: throw SerializationException("BooksList500Response can only be serialized with Json")
 
-    @Json(name = "status")
-    val status: BooksList500Response.Status? = null,
-
-    @Json(name = "title")
-    val title: BooksList500Response.Title? = null
-
-) {
-
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBooksMinusUnavailable,aboutColonBlank
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:books-unavailable") gohoColonProblemColonBooksMinusUnavailable("goho:problem:books-unavailable"),
-        @Json(name = "about:blank") aboutColonBlank("about:blank");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Internal_Server_Error
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Internal Server Error") Internal_Server_Error("Internal Server Error");
+        when (value) {
+            is BooksList500Response.BooksUnavailableValue -> jsonEncoder.encodeSerializableValue(BooksUnavailable.serializer(), value.value)
+            is BooksList500Response.InternalServerErrorProblemEncodedValue -> jsonEncoder.encodeSerializableValue(InternalServerErrorProblemEncoded.serializer(), value.value)
+        }
     }
 
+    override fun deserialize(decoder: Decoder): BooksList500Response {
+        val jsonDecoder = decoder as? JsonDecoder ?: throw SerializationException("BooksList500Response can only be deserialized with Json")
+        val jsonElement = jsonDecoder.decodeJsonElement()
+
+        val errorMessages = mutableListOf<String>()
+
+        if (jsonElement !is JsonPrimitive) {
+            try {
+                val instance = jsonDecoder.json.decodeFromJsonElement<BooksUnavailable>(jsonElement)
+                return BooksList500Response.BooksUnavailableValue(instance)
+            } catch (e: Exception) {
+                errorMessages.add("Failed to deserialize as BooksUnavailable: ${e.message}")
+            }
+        }
+        if (jsonElement !is JsonPrimitive) {
+            try {
+                val instance = jsonDecoder.json.decodeFromJsonElement<InternalServerErrorProblemEncoded>(jsonElement)
+                return BooksList500Response.InternalServerErrorProblemEncodedValue(instance)
+            } catch (e: Exception) {
+                errorMessages.add("Failed to deserialize as InternalServerErrorProblemEncoded: ${e.message}")
+            }
+        }
+
+        throw SerializationException("Cannot deserialize BooksList500Response. Tried: ${errorMessages.joinToString(", ")}")
+    }
 }
 

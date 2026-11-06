@@ -25,8 +25,9 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Category
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A saved book with its display spelling and category.
@@ -38,32 +39,32 @@ import com.squareup.moshi.JsonClass
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
  * @param hasImage Whether a cover image is on file; the first scan of a book without one adds it.
  */
-
+@Serializable
 
 data class Book (
 
     /* The book's roster number; use it to target this book. */
-    @Json(name = "id")
+    @SerialName(value = "id")
     val id: kotlin.String,
 
     /* Book title, shown as spelled. Case and extra spaces don't make it a different book. */
-    @Json(name = "title")
+    @SerialName(value = "title")
     val title: kotlin.String,
 
     /* Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book. */
-    @Json(name = "author")
+    @SerialName(value = "author")
     val author: kotlin.String?,
 
     /* The book's category. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: Category,
 
     /* Reading level as you'd write it, or null when nobody has set one. */
-    @Json(name = "readingLevel")
+    @SerialName(value = "readingLevel")
     val readingLevel: kotlin.String?,
 
     /* Whether a cover image is on file; the first scan of a book without one adds it. */
-    @Json(name = "hasImage")
+    @SerialName(value = "hasImage")
     val hasImage: kotlin.Boolean
 
 ) {

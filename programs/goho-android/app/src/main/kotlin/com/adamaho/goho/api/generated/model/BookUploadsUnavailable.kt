@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadsUnavailableTitle
+import com.adamaho.goho.api.generated.model.BookUploadsUnavailableType
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BookUploadsUnavailable (
 
-    @Json(name = "type")
-    val type: BookUploadsUnavailable.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BookUploadsUnavailableType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BookUploadsUnavailable.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: InternalServerErrorProblemEncodedStatus? = null,
 
-    @Json(name = "title")
-    val title: BookUploadsUnavailable.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BookUploadsUnavailableTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBookMinusUploadsMinusUnavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:book-uploads-unavailable") gohoColonProblemColonBookMinusUploadsMinusUnavailable("goho:problem:book-uploads-unavailable");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Book_uploads_unavailable
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Book uploads unavailable") Book_uploads_unavailable("Book uploads unavailable");
-    }
 
 }
 

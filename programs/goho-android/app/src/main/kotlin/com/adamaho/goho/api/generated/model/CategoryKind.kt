@@ -24,22 +24,22 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
 
 /**
  * Which lineup a category plays for: receipt items or books.
  *
  * Values: receipt,book
  */
-
-@JsonClass(generateAdapter = false)
+@Serializable
 enum class CategoryKind(val value: kotlin.String) {
 
-    @Json(name = "receipt")
+    @SerialName(value = "receipt")
     receipt("receipt"),
 
-    @Json(name = "book")
+    @SerialName(value = "book")
     book("book");
 
     /**
@@ -68,4 +68,5 @@ enum class CategoryKind(val value: kotlin.String) {
         }
     }
 }
+
 

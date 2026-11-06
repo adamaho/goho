@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookImageNotFoundTitle
+import com.adamaho.goho.api.generated.model.BookImageNotFoundType
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BookImageNotFound (
 
-    @Json(name = "type")
-    val type: BookImageNotFound.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BookImageNotFoundType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BookImageNotFound.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadNotFoundStatus? = null,
 
-    @Json(name = "title")
-    val title: BookImageNotFound.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BookImageNotFoundTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBookMinusImageMinusNotMinusFound
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:book-image-not-found") gohoColonProblemColonBookMinusImageMinusNotMinusFound("goho:problem:book-image-not-found");
-    }
-    /**
-     * 
-     *
-     * Values: _404
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "404.0") _404(404.0);
-    }
-    /**
-     * 
-     *
-     * Values: Book_image_not_found
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Book image not found") Book_image_not_found("Book image not found");
-    }
 
 }
 

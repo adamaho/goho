@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
+import com.adamaho.goho.api.generated.model.ReceiptNotFoundTitle
+import com.adamaho.goho.api.generated.model.ReceiptNotFoundType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class ReceiptNotFound (
 
-    @Json(name = "type")
-    val type: ReceiptNotFound.Type,
+    @Contextual @SerialName(value = "type")
+    val type: ReceiptNotFoundType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: ReceiptNotFound.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadNotFoundStatus? = null,
 
-    @Json(name = "title")
-    val title: ReceiptNotFound.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: ReceiptNotFoundTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptMinusNotMinusFound
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipt-not-found") gohoColonProblemColonReceiptMinusNotMinusFound("goho:problem:receipt-not-found");
-    }
-    /**
-     * 
-     *
-     * Values: _404
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "404.0") _404(404.0);
-    }
-    /**
-     * 
-     *
-     * Values: Receipt_not_found
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Receipt not found") Receipt_not_found("Receipt not found");
-    }
 
 }
 

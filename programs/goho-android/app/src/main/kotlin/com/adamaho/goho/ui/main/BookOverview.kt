@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.BookUpload
+import com.adamaho.goho.api.generated.model.BookUploadStatus
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import java.time.Instant
@@ -83,7 +84,7 @@ internal fun BookOverview(
                     when (it) {
                         is BookListEntry.Scan -> it.uploadId == upload.id
                         is BookListEntry.Saved ->
-                            upload.status == BookUpload.Status.succeeded &&
+                            upload.status == BookUploadStatus.succeeded &&
                                 it.book.id == upload.bookId
                     }
                 }

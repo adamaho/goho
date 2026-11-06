@@ -23,70 +23,80 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
 import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedTitle
 import com.adamaho.goho.api.generated.model.ReceiptUploadsUnavailable
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 
 /**
  * 
  *
- * @param type 
- * @param detail 
- * @param instance 
- * @param status 
- * @param title 
  */
+@Serializable(with = ReceiptUploadsList500ResponseSerializer::class)
 
+sealed interface ReceiptUploadsList500Response {
+    @JvmInline
+    value class ReceiptUploadsUnavailableValue(val value: ReceiptUploadsUnavailable) : ReceiptUploadsList500Response
 
-data class ReceiptUploadsList500Response (
+    @JvmInline
+    value class InternalServerErrorProblemEncodedValue(val value: InternalServerErrorProblemEncoded) : ReceiptUploadsList500Response
 
-    @Json(name = "type")
-    val type: ReceiptUploadsList500Response.Type,
+}
 
-    @Json(name = "detail")
-    val detail: kotlin.String? = null,
+object ReceiptUploadsList500ResponseSerializer : KSerializer<ReceiptUploadsList500Response> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("ReceiptUploadsList500Response")
 
-    @Json(name = "instance")
-    val instance: kotlin.String? = null,
+    override fun serialize(encoder: Encoder, value: ReceiptUploadsList500Response) {
+        val jsonEncoder = encoder as? JsonEncoder ?: throw SerializationException("ReceiptUploadsList500Response can only be serialized with Json")
 
-    @Json(name = "status")
-    val status: ReceiptUploadsList500Response.Status? = null,
-
-    @Json(name = "title")
-    val title: ReceiptUploadsList500Response.Title? = null
-
-) {
-
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonReceiptMinusUploadsMinusUnavailable,aboutColonBlank
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:receipt-uploads-unavailable") gohoColonProblemColonReceiptMinusUploadsMinusUnavailable("goho:problem:receipt-uploads-unavailable"),
-        @Json(name = "about:blank") aboutColonBlank("about:blank");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Internal_Server_Error
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Internal Server Error") Internal_Server_Error("Internal Server Error");
+        when (value) {
+            is ReceiptUploadsList500Response.ReceiptUploadsUnavailableValue -> jsonEncoder.encodeSerializableValue(ReceiptUploadsUnavailable.serializer(), value.value)
+            is ReceiptUploadsList500Response.InternalServerErrorProblemEncodedValue -> jsonEncoder.encodeSerializableValue(InternalServerErrorProblemEncoded.serializer(), value.value)
+        }
     }
 
+    override fun deserialize(decoder: Decoder): ReceiptUploadsList500Response {
+        val jsonDecoder = decoder as? JsonDecoder ?: throw SerializationException("ReceiptUploadsList500Response can only be deserialized with Json")
+        val jsonElement = jsonDecoder.decodeJsonElement()
+
+        val errorMessages = mutableListOf<String>()
+
+        if (jsonElement !is JsonPrimitive) {
+            try {
+                val instance = jsonDecoder.json.decodeFromJsonElement<ReceiptUploadsUnavailable>(jsonElement)
+                return ReceiptUploadsList500Response.ReceiptUploadsUnavailableValue(instance)
+            } catch (e: Exception) {
+                errorMessages.add("Failed to deserialize as ReceiptUploadsUnavailable: ${e.message}")
+            }
+        }
+        if (jsonElement !is JsonPrimitive) {
+            try {
+                val instance = jsonDecoder.json.decodeFromJsonElement<InternalServerErrorProblemEncoded>(jsonElement)
+                return ReceiptUploadsList500Response.InternalServerErrorProblemEncodedValue(instance)
+            } catch (e: Exception) {
+                errorMessages.add("Failed to deserialize as InternalServerErrorProblemEncoded: ${e.message}")
+            }
+        }
+
+        throw SerializationException("Cannot deserialize ReceiptUploadsList500Response. Tried: ${errorMessages.joinToString(", ")}")
+    }
 }
 

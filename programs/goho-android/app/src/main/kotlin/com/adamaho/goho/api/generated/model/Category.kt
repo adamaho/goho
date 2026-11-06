@@ -23,10 +23,12 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.CategoryColor
 import com.adamaho.goho.api.generated.model.CategoryKind
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A category on the shared roster. New names suit up with the `other` icon and `grey` colour.
@@ -34,52 +36,34 @@ import com.squareup.moshi.JsonClass
  * @param id The category's roster number.
  * @param name Trimmed lowercase category name.
  * @param icon Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know.
- * @param color Stable colour key for showing the category.
+ * @param color 
  * @param kinds Each lineup the category plays for, once. Using a category for receipts or books adds it here.
  */
-
+@Serializable
 
 data class Category (
 
     /* The category's roster number. */
-    @Json(name = "id")
+    @SerialName(value = "id")
     val id: kotlin.String,
 
     /* Trimmed lowercase category name. */
-    @Json(name = "name")
+    @SerialName(value = "name")
     val name: kotlin.String,
 
     /* Icon identifier for showing the category. Any string can suit up, so pick a fallback for ones you don't know. */
-    @Json(name = "icon")
+    @SerialName(value = "icon")
     val icon: kotlin.String,
 
-    /* Stable colour key for showing the category. */
-    @Json(name = "color")
-    val color: Category.Color,
+    @Contextual @SerialName(value = "color")
+    val color: CategoryColor,
 
     /* Each lineup the category plays for, once. Using a category for receipts or books adds it here. */
-    @Json(name = "kinds")
-    val kinds: kotlin.collections.Set<CategoryKind>
+    @SerialName(value = "kinds")
+    val kinds: kotlin.collections.Set<@Contextual CategoryKind>
 
 ) {
 
-    /**
-     * Stable colour key for showing the category.
-     *
-     * Values: green,orange,purple,brown,pink,red,blue,yellow,grey
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Color(val value: kotlin.String) {
-        @Json(name = "green") green("green"),
-        @Json(name = "orange") orange("orange"),
-        @Json(name = "purple") purple("purple"),
-        @Json(name = "brown") brown("brown"),
-        @Json(name = "pink") pink("pink"),
-        @Json(name = "red") red("red"),
-        @Json(name = "blue") blue("blue"),
-        @Json(name = "yellow") yellow("yellow"),
-        @Json(name = "grey") grey("grey");
-    }
 
 }
 

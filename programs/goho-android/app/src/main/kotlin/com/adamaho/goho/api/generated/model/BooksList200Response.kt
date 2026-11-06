@@ -25,20 +25,21 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Book
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
  *
  * @param `data` Matching books, newest on the roster first; empty when none match.
  */
-
+@Serializable
 
 data class BooksList200Response (
 
     /* Matching books, newest on the roster first; empty when none match. */
-    @Json(name = "data")
+    @SerialName(value = "data")
     val `data`: kotlin.collections.List<Book>
 
 ) {

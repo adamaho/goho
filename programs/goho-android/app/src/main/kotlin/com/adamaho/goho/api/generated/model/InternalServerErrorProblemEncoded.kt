@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedTitle
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class InternalServerErrorProblemEncoded (
 
-    @Json(name = "type")
-    val type: InternalServerErrorProblemEncoded.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BadRequestProblemEncodedType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: InternalServerErrorProblemEncoded.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: InternalServerErrorProblemEncodedStatus? = null,
 
-    @Json(name = "title")
-    val title: InternalServerErrorProblemEncoded.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: InternalServerErrorProblemEncodedTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: aboutColonBlank
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "about:blank") aboutColonBlank("about:blank");
-    }
-    /**
-     * 
-     *
-     * Values: _500
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "500.0") _500(500.0);
-    }
-    /**
-     * 
-     *
-     * Values: Internal_Server_Error
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Internal Server Error") Internal_Server_Error("Internal Server Error");
-    }
 
 }
 

@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Category
+import com.adamaho.goho.api.generated.model.CategoryColor
 import com.adamaho.goho.theme.TagColor
 import java.util.Locale
 
@@ -50,15 +51,15 @@ internal val Category?.iconRes: Int
 internal val Category?.tagColor: TagColor
     get() =
         when (this?.color) {
-            Category.Color.green -> TagColor.Green
-            Category.Color.orange -> TagColor.Orange
-            Category.Color.purple -> TagColor.Purple
-            Category.Color.brown -> TagColor.Brown
-            Category.Color.pink -> TagColor.Pink
-            Category.Color.red -> TagColor.Red
-            Category.Color.blue -> TagColor.Blue
-            Category.Color.yellow -> TagColor.Yellow
-            Category.Color.grey,
+            CategoryColor.green -> TagColor.Green
+            CategoryColor.orange -> TagColor.Orange
+            CategoryColor.purple -> TagColor.Purple
+            CategoryColor.brown -> TagColor.Brown
+            CategoryColor.pink -> TagColor.Pink
+            CategoryColor.red -> TagColor.Red
+            CategoryColor.blue -> TagColor.Blue
+            CategoryColor.yellow -> TagColor.Yellow
+            CategoryColor.grey,
             null -> TagColor.Grey
         }
 

@@ -2,6 +2,7 @@ package com.adamaho.goho.ui.main
 
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.BookUpload
+import com.adamaho.goho.api.generated.model.BookUploadStatus
 import java.text.Collator
 import java.time.Instant
 import java.util.Locale
@@ -36,11 +37,11 @@ fun bookListEntries(
 ): List<BookListEntry> {
     val titles = Collator.getInstance(locale).apply { strength = Collator.SECONDARY }
     return uploads
-        .filter { it.status != BookUpload.Status.succeeded }
+        .filter { it.status != BookUploadStatus.succeeded }
         .map {
             BookListEntry.Scan(
                 uploadId = it.id,
-                failed = it.status == BookUpload.Status.failed,
+                failed = it.status == BookUploadStatus.failed,
                 uploadedAt = uploadInstant(it.createdAt),
             )
         } + books.sortedWith(compareBy(titles) { it.title }).map(BookListEntry::Saved)

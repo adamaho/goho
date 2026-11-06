@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerContentType
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerFailureCode
+import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -39,73 +43,37 @@ import com.squareup.moshi.JsonClass
  * @param createdAt 
  * @param updatedAt 
  */
-
+@Serializable
 
 data class ReceiptUploadsList200ResponseDataInner (
 
-    @Json(name = "id")
+    @Contextual @SerialName(value = "id")
     val id: java.util.UUID,
 
-    @Json(name = "fileName")
+    @SerialName(value = "fileName")
     val fileName: kotlin.String,
 
-    @Json(name = "contentType")
-    val contentType: ReceiptUploadsList200ResponseDataInner.ContentType,
+    @Contextual @SerialName(value = "contentType")
+    val contentType: ReceiptUploadsList200ResponseDataInnerContentType,
 
-    @Json(name = "status")
-    val status: ReceiptUploadsList200ResponseDataInner.Status,
+    @Contextual @SerialName(value = "status")
+    val status: ReceiptUploadsList200ResponseDataInnerStatus,
 
     /* The receipt's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud. */
-    @Json(name = "receiptId")
+    @SerialName(value = "receiptId")
     val receiptId: kotlin.String?,
 
-    @Json(name = "failureCode")
-    val failureCode: ReceiptUploadsList200ResponseDataInner.FailureCode?,
+    @Contextual @SerialName(value = "failureCode")
+    val failureCode: ReceiptUploadsList200ResponseDataInnerFailureCode?,
 
-    @Json(name = "createdAt")
+    @SerialName(value = "createdAt")
     val createdAt: kotlin.String,
 
-    @Json(name = "updatedAt")
+    @SerialName(value = "updatedAt")
     val updatedAt: kotlin.String
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: imageSlashJpeg,imageSlashPng,imageSlashWebp
-     */
-    @JsonClass(generateAdapter = false)
-    enum class ContentType(val value: kotlin.String) {
-        @Json(name = "image/jpeg") imageSlashJpeg("image/jpeg"),
-        @Json(name = "image/png") imageSlashPng("image/png"),
-        @Json(name = "image/webp") imageSlashWebp("image/webp");
-    }
-    /**
-     * 
-     *
-     * Values: queued,processing,succeeded,failed
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.String) {
-        @Json(name = "queued") queued("queued"),
-        @Json(name = "processing") processing("processing"),
-        @Json(name = "succeeded") succeeded("succeeded"),
-        @Json(name = "failed") failed("failed");
-    }
-    /**
-     * 
-     *
-     * Values: unsupported_file_type,storage_failed,processing_failed,receipt_creation_failed,internal_error
-     */
-    @JsonClass(generateAdapter = false)
-    enum class FailureCode(val value: kotlin.String) {
-        @Json(name = "unsupported_file_type") unsupported_file_type("unsupported_file_type"),
-        @Json(name = "storage_failed") storage_failed("storage_failed"),
-        @Json(name = "processing_failed") processing_failed("processing_failed"),
-        @Json(name = "receipt_creation_failed") receipt_creation_failed("receipt_creation_failed"),
-        @Json(name = "internal_error") internal_error("internal_error");
-    }
 
 }
 

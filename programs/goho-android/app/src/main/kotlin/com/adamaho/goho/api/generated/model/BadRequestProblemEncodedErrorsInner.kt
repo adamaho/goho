@@ -23,10 +23,10 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedErrorsInnerPathInner
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -34,14 +34,14 @@ import com.squareup.moshi.JsonClass
  * @param path 
  * @param message 
  */
-
+@Serializable
 
 data class BadRequestProblemEncodedErrorsInner (
 
-    @Json(name = "path")
-    val path: kotlin.collections.List<BadRequestProblemEncodedErrorsInnerPathInner>,
+    @SerialName(value = "path")
+    val path: kotlin.collections.List<kotlinx.serialization.json.JsonPrimitive>,
 
-    @Json(name = "message")
+    @SerialName(value = "message")
     val message: kotlin.String
 
 ) {

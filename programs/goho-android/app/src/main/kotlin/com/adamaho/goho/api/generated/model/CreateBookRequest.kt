@@ -24,8 +24,9 @@
 package com.adamaho.goho.api.generated.model
 
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * A book to put on the roster. Values are trimmed and stay nonempty; leave out the author or reading level, or send null, when it isn't known.
@@ -35,24 +36,24 @@ import com.squareup.moshi.JsonClass
  * @param author Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book.
  * @param readingLevel Reading level as you'd write it, or null when nobody has set one.
  */
-
+@Serializable
 
 data class CreateBookRequest (
 
     /* Book title, shown as spelled. Case and extra spaces don't make it a different book. */
-    @Json(name = "title")
+    @SerialName(value = "title")
     val title: kotlin.String,
 
     /* Book category name. It is saved trimmed and lowercase; a name not on the roster yet joins it. */
-    @Json(name = "category")
+    @SerialName(value = "category")
     val category: kotlin.String,
 
     /* Author, shown as spelled, or null when nobody knows. The same title by a different author, or without one, is a different book. */
-    @Json(name = "author")
+    @SerialName(value = "author")
     val author: kotlin.String? = null,
 
     /* Reading level as you'd write it, or null when nobody has set one. */
-    @Json(name = "readingLevel")
+    @SerialName(value = "readingLevel")
     val readingLevel: kotlin.String? = null
 
 ) {

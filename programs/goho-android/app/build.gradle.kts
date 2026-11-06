@@ -39,12 +39,22 @@ openApiGenerate {
     packageName.set("com.adamaho.goho.api.generated")
     modelPackage.set("com.adamaho.goho.api.generated.model")
     library.set("jvm-retrofit2")
-    // BigDecimal numeric enums generate invalid Kotlin; money and IDs remain strings.
+    // The default BigDecimal has no serializer for numeric enums. Money and IDs remain strings.
     typeMappings.set(mapOf("number" to "kotlin.Double"))
+    // Generated wrappers can't compile a string-or-number union once number maps to Double.
+    schemaMappings.set(
+        mapOf(
+            "BadRequestProblemEncoded_errors_inner_path_inner" to
+                "kotlinx.serialization.json.JsonPrimitive"
+        )
+    )
+    // Top-level enums decode numeric statuses as numbers, without lenient Json.
+    inlineSchemaOptions.set(mapOf("RESOLVE_INLINE_ENUMS" to "true"))
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",
-            "serializationLibrary" to "moshi",
+            "generateOneOfAnyOfWrappers" to "true",
+            "serializationLibrary" to "kotlinx_serialization",
             "useCoroutines" to "true",
         )
     )
@@ -127,14 +137,11 @@ dependencies {
     implementation(libs.play.services.mlkit.document.scanner)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
-    implementation(libs.kotlin.reflect)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.serialization.core)
-    implementation(libs.moshi.kotlin)
-    implementation(libs.moshi.adapters)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.moshi)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.retrofit.converter.scalars)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

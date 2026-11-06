@@ -23,9 +23,13 @@
 
 package com.adamaho.goho.api.generated.model
 
+import com.adamaho.goho.api.generated.model.BookUploadConflictStatus
+import com.adamaho.goho.api.generated.model.BookUploadConflictTitle
+import com.adamaho.goho.api.generated.model.BookUploadConflictType
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Contextual
 
 /**
  * 
@@ -36,54 +40,27 @@ import com.squareup.moshi.JsonClass
  * @param status 
  * @param title 
  */
-
+@Serializable
 
 data class BookUploadConflict (
 
-    @Json(name = "type")
-    val type: BookUploadConflict.Type,
+    @Contextual @SerialName(value = "type")
+    val type: BookUploadConflictType,
 
-    @Json(name = "detail")
+    @SerialName(value = "detail")
     val detail: kotlin.String? = null,
 
-    @Json(name = "instance")
+    @SerialName(value = "instance")
     val instance: kotlin.String? = null,
 
-    @Json(name = "status")
-    val status: BookUploadConflict.Status? = null,
+    @Contextual @SerialName(value = "status")
+    val status: BookUploadConflictStatus? = null,
 
-    @Json(name = "title")
-    val title: BookUploadConflict.Title? = null
+    @Contextual @SerialName(value = "title")
+    val title: BookUploadConflictTitle? = null
 
 ) {
 
-    /**
-     * 
-     *
-     * Values: gohoColonProblemColonBookMinusUploadMinusConflict
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Type(val value: kotlin.String) {
-        @Json(name = "goho:problem:book-upload-conflict") gohoColonProblemColonBookMinusUploadMinusConflict("goho:problem:book-upload-conflict");
-    }
-    /**
-     * 
-     *
-     * Values: _409
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Status(val value: kotlin.Double) {
-        @Json(name = "409.0") _409(409.0);
-    }
-    /**
-     * 
-     *
-     * Values: Book_upload_cannot_be_deleted
-     */
-    @JsonClass(generateAdapter = false)
-    enum class Title(val value: kotlin.String) {
-        @Json(name = "Book upload cannot be deleted") Book_upload_cannot_be_deleted("Book upload cannot be deleted");
-    }
 
 }
 
