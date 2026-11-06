@@ -12,7 +12,7 @@ one running on port 3000.
 - Install a JDK 17 or newer to run Gradle. The project requests a Java 17
   toolchain, and the checked-in Gradle wrapper supplies Gradle itself.
 - Create an [Android Virtual Device](https://developer.android.com/studio/run/managing-avds)
-  with API level 24 or newer, or connect a physical Android device with
+  running Android 16 (API level 36) or newer, or connect a physical Android device with
   [USB debugging](https://developer.android.com/studio/run/device) enabled.
 
 Android Studio normally configures the SDK location in the ignored
