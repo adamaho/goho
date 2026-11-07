@@ -31,19 +31,25 @@ import kotlinx.serialization.Serializable
 /**
  * 
  *
- * Values: imageSlashJpeg,imageSlashPng,imageSlashWebp
+ * Values: unsupported_file_type,storage_failed,processing_failed,receipt_creation_failed,internal_error
  */
 @Serializable
-enum class ReceiptUploadsList200ResponseDataInnerContentType(val value: kotlin.String) {
+enum class ReceiptUploadFailureCode(val value: kotlin.String) {
 
-    @SerialName(value = "image/jpeg")
-    imageSlashJpeg("image/jpeg"),
+    @SerialName(value = "unsupported_file_type")
+    unsupported_file_type("unsupported_file_type"),
 
-    @SerialName(value = "image/png")
-    imageSlashPng("image/png"),
+    @SerialName(value = "storage_failed")
+    storage_failed("storage_failed"),
 
-    @SerialName(value = "image/webp")
-    imageSlashWebp("image/webp");
+    @SerialName(value = "processing_failed")
+    processing_failed("processing_failed"),
+
+    @SerialName(value = "receipt_creation_failed")
+    receipt_creation_failed("receipt_creation_failed"),
+
+    @SerialName(value = "internal_error")
+    internal_error("internal_error");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use
@@ -58,12 +64,12 @@ enum class ReceiptUploadsList200ResponseDataInnerContentType(val value: kotlin.S
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadsList200ResponseDataInnerContentType) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadFailureCode) "$data" else null
 
         /**
-         * Returns a valid [ReceiptUploadsList200ResponseDataInnerContentType] for [data], null otherwise.
+         * Returns a valid [ReceiptUploadFailureCode] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): ReceiptUploadsList200ResponseDataInnerContentType? = data?.let {
+        fun decode(data: kotlin.Any?): ReceiptUploadFailureCode? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()

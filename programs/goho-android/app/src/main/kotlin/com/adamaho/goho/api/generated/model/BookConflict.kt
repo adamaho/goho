@@ -25,7 +25,7 @@ package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.BookConflictTitle
 import com.adamaho.goho.api.generated.model.BookConflictType
-import com.adamaho.goho.api.generated.model.BookUploadConflictStatus
+import com.adamaho.goho.api.generated.model.ProblemStatus409
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -54,7 +54,7 @@ data class BookConflict (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: BookUploadConflictStatus? = null,
+    val status: ProblemStatus409? = null,
 
     @Contextual @SerialName(value = "title")
     val title: BookConflictTitle? = null

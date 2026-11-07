@@ -34,7 +34,7 @@ import kotlinx.serialization.Serializable
  * Values: aboutColonBlank
  */
 @Serializable
-enum class BadRequestProblemEncodedType(val value: kotlin.String) {
+enum class AboutBlankProblemType(val value: kotlin.String) {
 
     @SerialName(value = "about:blank")
     aboutColonBlank("about:blank");
@@ -52,12 +52,12 @@ enum class BadRequestProblemEncodedType(val value: kotlin.String) {
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is BadRequestProblemEncodedType) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is AboutBlankProblemType) "$data" else null
 
         /**
-         * Returns a valid [BadRequestProblemEncodedType] for [data], null otherwise.
+         * Returns a valid [AboutBlankProblemType] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): BadRequestProblemEncodedType? = data?.let {
+        fun decode(data: kotlin.Any?): AboutBlankProblemType? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()

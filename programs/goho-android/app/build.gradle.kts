@@ -50,6 +50,61 @@ openApiGenerate {
     )
     // Top-level enums decode numeric statuses as numbers, without lenient Json.
     inlineSchemaOptions.set(mapOf("RESOLVE_INLINE_ENUMS" to "true"))
+    // Identical inline enums reuse the model of whichever schema the generator meets first, before
+    // this mapping applies. Map every schema that repeats an enum, so spec order can't rename it.
+    inlineSchemaNameMappings.set(
+        mapOf(
+                "ProblemStatus404" to
+                    listOf(
+                        "BookImageNotFound_status",
+                        "BookNotFound_status",
+                        "BookUploadNotFound_status",
+                        "ReceiptImageNotFound_status",
+                        "ReceiptItemNotFound_status",
+                        "ReceiptNotFound_status",
+                        "ReceiptUploadNotFound_status",
+                    ),
+                "ProblemStatus409" to
+                    listOf(
+                        "BookConflict_status",
+                        "BookUploadConflict_status",
+                        "ReceiptUploadConflict_status",
+                    ),
+                "ProblemStatus500" to
+                    listOf(
+                        "BooksUnavailable_status",
+                        "BookUploadsUnavailable_status",
+                        "InternalServerErrorProblemEncoded_status",
+                        "ReceiptsUnavailable_status",
+                        "ReceiptUploadsUnavailable_status",
+                    ),
+                "AboutBlankProblemType" to
+                    listOf(
+                        "BadRequestProblemEncoded_type",
+                        "InternalServerErrorProblemEncoded_type",
+                    ),
+                "ReceiptUploadContentType" to
+                    listOf(
+                        "receiptUploads_create_202_response_data_contentType",
+                        "receiptUploads_get_200_response_data_contentType",
+                        "receiptUploads_list_200_response_data_inner_contentType",
+                    ),
+                "ReceiptUploadFailureCode" to
+                    listOf(
+                        "receiptUploads_create_202_response_data_failureCode",
+                        "receiptUploads_get_200_response_data_failureCode",
+                        "receiptUploads_list_200_response_data_inner_failureCode",
+                    ),
+                "ReceiptUploadStatus" to
+                    listOf(
+                        "receiptUploads_create_202_response_data_status",
+                        "receiptUploads_get_200_response_data_status",
+                        "receiptUploads_list_200_response_data_inner_status",
+                    ),
+            )
+            .flatMap { (name, keys) -> keys.map { it to name } }
+            .toMap()
+    )
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",

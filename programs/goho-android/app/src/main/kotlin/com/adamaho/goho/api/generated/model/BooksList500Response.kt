@@ -23,11 +23,11 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
+import com.adamaho.goho.api.generated.model.AboutBlankProblemType
 import com.adamaho.goho.api.generated.model.BooksUnavailable
 import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncoded
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
 import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedTitle
+import com.adamaho.goho.api.generated.model.ProblemStatus500
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName

@@ -23,9 +23,9 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BadRequestProblemEncodedType
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.AboutBlankProblemType
 import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedTitle
+import com.adamaho.goho.api.generated.model.ProblemStatus500
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -45,7 +45,7 @@ import kotlinx.serialization.Contextual
 data class InternalServerErrorProblemEncoded (
 
     @Contextual @SerialName(value = "type")
-    val type: BadRequestProblemEncodedType,
+    val type: AboutBlankProblemType,
 
     @SerialName(value = "detail")
     val detail: kotlin.String? = null,
@@ -54,7 +54,7 @@ data class InternalServerErrorProblemEncoded (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: InternalServerErrorProblemEncodedStatus? = null,
+    val status: ProblemStatus500? = null,
 
     @Contextual @SerialName(value = "title")
     val title: InternalServerErrorProblemEncodedTitle? = null

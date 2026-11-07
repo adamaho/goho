@@ -1,8 +1,8 @@
 package com.adamaho.goho.ui.main
 
 import com.adamaho.goho.api.generated.model.Receipt
+import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
 import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInner
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
 import java.math.RoundingMode
 import java.text.NumberFormat
 import java.time.Instant
@@ -51,9 +51,7 @@ fun receiptListEntries(
     zone: ZoneId,
 ): List<ReceiptListEntry> {
     val completed =
-        uploads
-            .filter { it.status == ReceiptUploadsList200ResponseDataInnerStatus.succeeded }
-            .associateBy { it.receiptId }
+        uploads.filter { it.status == ReceiptUploadStatus.succeeded }.associateBy { it.receiptId }
     val saved = receipts.map { receipt ->
         val upload = completed[receipt.id]
         ReceiptListEntry(
@@ -69,7 +67,7 @@ fun receiptListEntries(
     }
     val unfinished =
         uploads
-            .filter { it.status != ReceiptUploadsList200ResponseDataInnerStatus.succeeded }
+            .filter { it.status != ReceiptUploadStatus.succeeded }
             .map { upload ->
                 val instant = uploadInstant(upload.createdAt)
                 ReceiptListEntry(
@@ -82,7 +80,7 @@ fun receiptListEntries(
                     total = null,
                     currency = null,
                     status =
-                        if (upload.status == ReceiptUploadsList200ResponseDataInnerStatus.failed)
+                        if (upload.status == ReceiptUploadStatus.failed)
                             ReceiptListStatus.NotProcessed
                         else ReceiptListStatus.Processing,
                 )

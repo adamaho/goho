@@ -31,25 +31,22 @@ import kotlinx.serialization.Serializable
 /**
  * 
  *
- * Values: unsupported_file_type,storage_failed,processing_failed,receipt_creation_failed,internal_error
+ * Values: queued,processing,succeeded,failed
  */
 @Serializable
-enum class ReceiptUploadsList200ResponseDataInnerFailureCode(val value: kotlin.String) {
+enum class ReceiptUploadStatus(val value: kotlin.String) {
 
-    @SerialName(value = "unsupported_file_type")
-    unsupported_file_type("unsupported_file_type"),
+    @SerialName(value = "queued")
+    queued("queued"),
 
-    @SerialName(value = "storage_failed")
-    storage_failed("storage_failed"),
+    @SerialName(value = "processing")
+    processing("processing"),
 
-    @SerialName(value = "processing_failed")
-    processing_failed("processing_failed"),
+    @SerialName(value = "succeeded")
+    succeeded("succeeded"),
 
-    @SerialName(value = "receipt_creation_failed")
-    receipt_creation_failed("receipt_creation_failed"),
-
-    @SerialName(value = "internal_error")
-    internal_error("internal_error");
+    @SerialName(value = "failed")
+    failed("failed");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use
@@ -64,12 +61,12 @@ enum class ReceiptUploadsList200ResponseDataInnerFailureCode(val value: kotlin.S
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadsList200ResponseDataInnerFailureCode) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadStatus) "$data" else null
 
         /**
-         * Returns a valid [ReceiptUploadsList200ResponseDataInnerFailureCode] for [data], null otherwise.
+         * Returns a valid [ReceiptUploadStatus] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): ReceiptUploadsList200ResponseDataInnerFailureCode? = data?.let {
+        fun decode(data: kotlin.Any?): ReceiptUploadStatus? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()

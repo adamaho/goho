@@ -143,6 +143,14 @@ screen has exercised this decoding yet. These generator settings in
 - `RESOLVE_INLINE_ENUMS` lifts inline enums to top-level models, such as
   `BookUploadStatus` and `CategoryColor`. Numeric status enums then decode as
   numbers instead of matching a string name.
+- `inlineSchemaNameMappings` names enums that several schemas repeat, such as
+  `ProblemStatus404`, `AboutBlankProblemType` and `ReceiptUploadStatus`. Without
+  it, a repeated enum takes the name of whichever schema the generator reads first,
+  so reordering the contract can rename it. When a new schema repeats one of these
+  enums, add its `<schema>_<property>` key, such as `BookNotFound_status`, to the
+  matching list. Otherwise a regenerated client may rename the enum after the new
+  schema. A numbered copy such as `ReceiptUploadStatus1` means a mapped enum no
+  longer matches the others exactly; give it its own name instead.
 - `number` maps to `kotlin.Double`, because the default `BigDecimal` doesn't compile
   for those enums. Compare statuses with `404.0`. Encoding one writes `404.0`.
 - `generateOneOfAnyOfWrappers` turns each 500 union into a sealed type, such as

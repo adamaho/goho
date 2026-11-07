@@ -23,9 +23,9 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
 import com.adamaho.goho.api.generated.model.BookUploadNotFoundTitle
 import com.adamaho.goho.api.generated.model.BookUploadNotFoundType
+import com.adamaho.goho.api.generated.model.ProblemStatus404
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -54,7 +54,7 @@ data class BookUploadNotFound (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: BookUploadNotFoundStatus? = null,
+    val status: ProblemStatus404? = null,
 
     @Contextual @SerialName(value = "title")
     val title: BookUploadNotFoundTitle? = null

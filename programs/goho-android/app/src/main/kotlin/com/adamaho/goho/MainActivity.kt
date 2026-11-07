@@ -45,7 +45,7 @@ import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.Receipt
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
+import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.FeedbackSnackbar
@@ -379,8 +379,8 @@ class MainActivity : ComponentActivity() {
             launch { books.pollPendingUploads() }
             snapshotFlow {
                 overviewState.uploads.any {
-                    it.status == ReceiptUploadsList200ResponseDataInnerStatus.queued ||
-                        it.status == ReceiptUploadsList200ResponseDataInnerStatus.processing
+                    it.status == ReceiptUploadStatus.queued ||
+                        it.status == ReceiptUploadStatus.processing
                 }
             }
                 .collectLatest { hasPendingUploads ->
@@ -661,7 +661,7 @@ class MainActivity : ComponentActivity() {
             if (
                 response.code() == 202 &&
                     upload != null &&
-                    upload.status != ReceiptUploadsList200ResponseDataInnerStatus.failed
+                    upload.status != ReceiptUploadStatus.failed
             ) {
                 receiptUploadToReveal = upload.id.toString()
                 selectSection(Section.Receipts)

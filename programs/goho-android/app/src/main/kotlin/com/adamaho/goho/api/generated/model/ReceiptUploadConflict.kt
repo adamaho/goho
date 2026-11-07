@@ -23,7 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BookUploadConflictStatus
+import com.adamaho.goho.api.generated.model.ProblemStatus409
 import com.adamaho.goho.api.generated.model.ReceiptUploadConflictTitle
 import com.adamaho.goho.api.generated.model.ReceiptUploadConflictType
 
@@ -54,7 +54,7 @@ data class ReceiptUploadConflict (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: BookUploadConflictStatus? = null,
+    val status: ProblemStatus409? = null,
 
     @Contextual @SerialName(value = "title")
     val title: ReceiptUploadConflictTitle? = null

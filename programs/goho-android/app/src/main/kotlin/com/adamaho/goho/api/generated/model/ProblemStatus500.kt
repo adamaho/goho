@@ -41,8 +41,8 @@ import kotlinx.serialization.encoding.Encoder
  *
  * Values: _500
  */
-@Serializable(with = InternalServerErrorProblemEncodedStatusSerializer::class)
-enum class InternalServerErrorProblemEncodedStatus(val value: kotlin.Double) {
+@Serializable(with = ProblemStatus500Serializer::class)
+enum class ProblemStatus500(val value: kotlin.Double) {
 
     _500(500.0);
 
@@ -59,12 +59,12 @@ enum class InternalServerErrorProblemEncodedStatus(val value: kotlin.Double) {
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is InternalServerErrorProblemEncodedStatus) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ProblemStatus500) "$data" else null
 
         /**
-         * Returns a valid [InternalServerErrorProblemEncodedStatus] for [data], null otherwise.
+         * Returns a valid [ProblemStatus500] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): InternalServerErrorProblemEncodedStatus? = data?.let {
+        fun decode(data: kotlin.Any?): ProblemStatus500? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()
@@ -73,16 +73,16 @@ enum class InternalServerErrorProblemEncodedStatus(val value: kotlin.Double) {
     }
 }
 
-internal object InternalServerErrorProblemEncodedStatusSerializer : KSerializer<InternalServerErrorProblemEncodedStatus> {
+internal object ProblemStatus500Serializer : KSerializer<ProblemStatus500> {
     override val descriptor = kotlin.Double.serializer().descriptor
 
-    override fun deserialize(decoder: Decoder): InternalServerErrorProblemEncodedStatus {
+    override fun deserialize(decoder: Decoder): ProblemStatus500 {
         val value = decoder.decodeSerializableValue(kotlin.Double.serializer())
-        return InternalServerErrorProblemEncodedStatus.entries.firstOrNull { it.value == value }
+        return ProblemStatus500.entries.firstOrNull { it.value == value }
             ?: throw IllegalArgumentException("Unknown enum value: $value")
     }
 
-    override fun serialize(encoder: Encoder, value: InternalServerErrorProblemEncodedStatus) {
+    override fun serialize(encoder: Encoder, value: ProblemStatus500) {
         encoder.encodeSerializableValue(kotlin.Double.serializer(), value.value)
     }
 }

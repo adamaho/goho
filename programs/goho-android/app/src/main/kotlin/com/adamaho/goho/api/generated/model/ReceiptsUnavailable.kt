@@ -23,7 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.InternalServerErrorProblemEncodedStatus
+import com.adamaho.goho.api.generated.model.ProblemStatus500
 import com.adamaho.goho.api.generated.model.ReceiptsUnavailableTitle
 import com.adamaho.goho.api.generated.model.ReceiptsUnavailableType
 
@@ -54,7 +54,7 @@ data class ReceiptsUnavailable (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: InternalServerErrorProblemEncodedStatus? = null,
+    val status: ProblemStatus500? = null,
 
     @Contextual @SerialName(value = "title")
     val title: ReceiptsUnavailableTitle? = null

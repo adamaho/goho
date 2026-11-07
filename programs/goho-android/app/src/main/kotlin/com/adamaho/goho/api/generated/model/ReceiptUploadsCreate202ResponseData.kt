@@ -23,9 +23,9 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerContentType
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerFailureCode
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
+import com.adamaho.goho.api.generated.model.ReceiptUploadContentType
+import com.adamaho.goho.api.generated.model.ReceiptUploadFailureCode
+import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -54,17 +54,17 @@ data class ReceiptUploadsCreate202ResponseData (
     val fileName: kotlin.String,
 
     @Contextual @SerialName(value = "contentType")
-    val contentType: ReceiptUploadsList200ResponseDataInnerContentType,
+    val contentType: ReceiptUploadContentType,
 
     @Contextual @SerialName(value = "status")
-    val status: ReceiptUploadsList200ResponseDataInnerStatus,
+    val status: ReceiptUploadStatus,
 
     /* The receipt's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud. */
     @SerialName(value = "receiptId")
     val receiptId: kotlin.String?,
 
     @Contextual @SerialName(value = "failureCode")
-    val failureCode: ReceiptUploadsList200ResponseDataInnerFailureCode?,
+    val failureCode: ReceiptUploadFailureCode?,
 
     @SerialName(value = "createdAt")
     val createdAt: kotlin.String,

@@ -31,22 +31,19 @@ import kotlinx.serialization.Serializable
 /**
  * 
  *
- * Values: queued,processing,succeeded,failed
+ * Values: imageSlashJpeg,imageSlashPng,imageSlashWebp
  */
 @Serializable
-enum class ReceiptUploadsList200ResponseDataInnerStatus(val value: kotlin.String) {
+enum class ReceiptUploadContentType(val value: kotlin.String) {
 
-    @SerialName(value = "queued")
-    queued("queued"),
+    @SerialName(value = "image/jpeg")
+    imageSlashJpeg("image/jpeg"),
 
-    @SerialName(value = "processing")
-    processing("processing"),
+    @SerialName(value = "image/png")
+    imageSlashPng("image/png"),
 
-    @SerialName(value = "succeeded")
-    succeeded("succeeded"),
-
-    @SerialName(value = "failed")
-    failed("failed");
+    @SerialName(value = "image/webp")
+    imageSlashWebp("image/webp");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use
@@ -61,12 +58,12 @@ enum class ReceiptUploadsList200ResponseDataInnerStatus(val value: kotlin.String
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadsList200ResponseDataInnerStatus) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ReceiptUploadContentType) "$data" else null
 
         /**
-         * Returns a valid [ReceiptUploadsList200ResponseDataInnerStatus] for [data], null otherwise.
+         * Returns a valid [ReceiptUploadContentType] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): ReceiptUploadsList200ResponseDataInnerStatus? = data?.let {
+        fun decode(data: kotlin.Any?): ReceiptUploadContentType? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()

@@ -8,9 +8,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import com.adamaho.goho.api.generated.model.*
 import com.adamaho.goho.api.generated.model.CategoryColor
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerContentType
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerFailureCode
-import com.adamaho.goho.api.generated.model.ReceiptUploadsList200ResponseDataInnerStatus
+import com.adamaho.goho.api.generated.model.ReceiptUploadContentType
+import com.adamaho.goho.api.generated.model.ReceiptUploadFailureCode
+import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
 import com.adamaho.goho.theme.GohoTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -34,15 +34,14 @@ private fun receipt(id: String, merchant: String, date: String, total: String, c
         listOf(ReceiptItem(id, 0, "Purchase", total, shopping)),
     )
 
-private fun upload(id: Int, status: ReceiptUploadsList200ResponseDataInnerStatus, time: String) =
+private fun upload(id: Int, status: ReceiptUploadStatus, time: String) =
     ReceiptUploadsList200ResponseDataInner(
         UUID(0, id.toLong()),
         "scan.jpg",
-        ReceiptUploadsList200ResponseDataInnerContentType.imageSlashJpeg,
+        ReceiptUploadContentType.imageSlashJpeg,
         status,
         null,
-        if (status == ReceiptUploadsList200ResponseDataInnerStatus.failed)
-            ReceiptUploadsList200ResponseDataInnerFailureCode.processing_failed
+        if (status == ReceiptUploadStatus.failed) ReceiptUploadFailureCode.processing_failed
         else null,
         time,
         time,
@@ -54,12 +53,12 @@ internal val receiptListPreviewState =
             listOf(
                 upload(
                     1,
-                    ReceiptUploadsList200ResponseDataInnerStatus.processing,
+                    ReceiptUploadStatus.processing,
                     "2026-09-30 11:59:50.123456+00",
                 ),
                 upload(
                     2,
-                    ReceiptUploadsList200ResponseDataInnerStatus.failed,
+                    ReceiptUploadStatus.failed,
                     "2026-09-30 10:41:00+00",
                 ),
             ),

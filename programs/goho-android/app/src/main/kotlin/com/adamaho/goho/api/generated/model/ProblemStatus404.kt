@@ -41,8 +41,8 @@ import kotlinx.serialization.encoding.Encoder
  *
  * Values: _404
  */
-@Serializable(with = BookUploadNotFoundStatusSerializer::class)
-enum class BookUploadNotFoundStatus(val value: kotlin.Double) {
+@Serializable(with = ProblemStatus404Serializer::class)
+enum class ProblemStatus404(val value: kotlin.Double) {
 
     _404(404.0);
 
@@ -59,12 +59,12 @@ enum class BookUploadNotFoundStatus(val value: kotlin.Double) {
         /**
          * Converts the provided [data] to a [String] on success, null otherwise.
          */
-        fun encode(data: kotlin.Any?): kotlin.String? = if (data is BookUploadNotFoundStatus) "$data" else null
+        fun encode(data: kotlin.Any?): kotlin.String? = if (data is ProblemStatus404) "$data" else null
 
         /**
-         * Returns a valid [BookUploadNotFoundStatus] for [data], null otherwise.
+         * Returns a valid [ProblemStatus404] for [data], null otherwise.
          */
-        fun decode(data: kotlin.Any?): BookUploadNotFoundStatus? = data?.let {
+        fun decode(data: kotlin.Any?): ProblemStatus404? = data?.let {
           val normalizedData = "$it".lowercase()
           entries.firstOrNull { value ->
             it == value || normalizedData == "$value".lowercase()
@@ -73,16 +73,16 @@ enum class BookUploadNotFoundStatus(val value: kotlin.Double) {
     }
 }
 
-internal object BookUploadNotFoundStatusSerializer : KSerializer<BookUploadNotFoundStatus> {
+internal object ProblemStatus404Serializer : KSerializer<ProblemStatus404> {
     override val descriptor = kotlin.Double.serializer().descriptor
 
-    override fun deserialize(decoder: Decoder): BookUploadNotFoundStatus {
+    override fun deserialize(decoder: Decoder): ProblemStatus404 {
         val value = decoder.decodeSerializableValue(kotlin.Double.serializer())
-        return BookUploadNotFoundStatus.entries.firstOrNull { it.value == value }
+        return ProblemStatus404.entries.firstOrNull { it.value == value }
             ?: throw IllegalArgumentException("Unknown enum value: $value")
     }
 
-    override fun serialize(encoder: Encoder, value: BookUploadNotFoundStatus) {
+    override fun serialize(encoder: Encoder, value: ProblemStatus404) {
         encoder.encodeSerializableValue(kotlin.Double.serializer(), value.value)
     }
 }

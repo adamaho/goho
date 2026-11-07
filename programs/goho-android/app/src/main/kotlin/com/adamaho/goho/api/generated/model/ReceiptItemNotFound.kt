@@ -23,7 +23,7 @@
 
 package com.adamaho.goho.api.generated.model
 
-import com.adamaho.goho.api.generated.model.BookUploadNotFoundStatus
+import com.adamaho.goho.api.generated.model.ProblemStatus404
 import com.adamaho.goho.api.generated.model.ReceiptItemNotFoundTitle
 import com.adamaho.goho.api.generated.model.ReceiptItemNotFoundType
 
@@ -54,7 +54,7 @@ data class ReceiptItemNotFound (
     val instance: kotlin.String? = null,
 
     @Contextual @SerialName(value = "status")
-    val status: BookUploadNotFoundStatus? = null,
+    val status: ProblemStatus404? = null,
 
     @Contextual @SerialName(value = "title")
     val title: ReceiptItemNotFoundTitle? = null
