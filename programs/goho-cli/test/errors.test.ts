@@ -1,44 +1,26 @@
+import { Cause, Effect } from "effect";
+import { CliError } from "effect/cli";
 import { describe, expect, it } from "vitest";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
+import { getProblem } from "#src/errors.ts";
 
-describe("CommandError", () => {
-  it.each([
-    "invalid_input",
-    "not_found",
-    "conflict",
-    "request_failed",
-    "file_error",
-    "configuration_error",
-  ] as const)("accepts %s on a command error", (code) => {
-    const cause = new Error("internal diagnostic");
-    const error = new CommandError({ code, message: "Safe message", cause });
-    expect(error.code).toBe(code);
-    expect(error.message).toBe("Safe message");
-    expect(error.cause).toBe(cause);
+// Parse errors, server problems and request failures are covered by CLI
+// subprocess tests; these cover failures a real command cannot trigger.
+describe("getProblem", () => {
+  it("leaves implicit group help and interruption to the runtime", async () => {
+    const help = new CliError.ShowHelp({ commandPath: ["goho"], errors: [] });
+    expect(await getProblem(Cause.fail(help)).pipe(Effect.runPromise)).toBeUndefined();
+    expect(await getProblem(Cause.interrupt()).pipe(Effect.runPromise)).toBeUndefined();
   });
-});
 
-describe("getRequestErrorCode", () => {
   it.each([
-    ["BadRequestProblem", "invalid_input"],
-    ["UploadLimitExceeded", "invalid_input"],
-    ["ReceiptNotFound", "not_found"],
-    ["ReceiptItemNotFound", "not_found"],
-    ["ReceiptImageNotFound", "not_found"],
-    ["ReceiptUploadNotFound", "not_found"],
-    ["BookNotFound", "not_found"],
-    ["BookImageNotFound", "not_found"],
-    ["BookUploadNotFound", "not_found"],
-    ["ReceiptUploadConflict", "conflict"],
-    ["BookConflict", "conflict"],
-    ["BookUploadConflict", "conflict"],
-    ["BooksUnavailable", "request_failed"],
-    ["ReceiptsUnavailable", "request_failed"],
-    ["ReceiptUploadsUnavailable", "request_failed"],
-    ["HttpClientError", "request_failed"],
-    ["SchemaError", "request_failed"],
-  ])("maps %s to %s", (tag, code) => {
-    expect(getRequestErrorCode({ _tag: tag })).toBe(code);
+    ["a defect", Cause.die(new Error("PRIVATE_SECRET"))],
+    ["an unknown failure", Cause.fail(new Error("PRIVATE_SECRET"))],
+  ])("reports %s as a generic unexpected failure", async (_, cause) => {
+    expect(await getProblem(cause).pipe(Effect.runPromise)).toEqual({
+      type: "goho:cli:unexpected-failure",
+      title: "Unexpected failure",
+      detail: "The command failed unexpectedly. Try again.",
+    });
   });
 });

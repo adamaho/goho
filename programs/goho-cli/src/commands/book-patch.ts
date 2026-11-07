@@ -2,7 +2,7 @@ import { BookId, PatchBookRequest } from "@goho/goho-server-client/books";
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
+import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -37,34 +37,18 @@ export const patchCommand = Command.make("patch", {
       if (Option.isSome(readingLevel)) changes.readingLevel = readingLevel.value;
       const payload = yield* Schema.decodeEffect(PatchBookRequest)(changes).pipe(
         Effect.mapError(
-          (cause) =>
+          () =>
             new CommandError({
-              code: "invalid_input",
-              message:
+              type: "goho:cli:invalid-input",
+              detail:
                 "Supply at least one of --title, --author, --category, or --reading-level. Values must be nonblank.",
-              cause,
             }),
         ),
       );
       const client = yield* GohoServer.Service;
-      const response = yield* client.books.patch({ params: { bookId }, payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "BookNotFound"
-                  ? `Book ${bookId} was not found.`
-                  : cause._tag === "BookConflict"
-                    ? "Another book already has that title and author."
-                    : cause._tag === "BadRequestProblem"
-                      ? "The book correction was rejected. Check the supplied changes."
-                      : "Book could not be patched. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.books.patch({ params: { bookId }, payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );

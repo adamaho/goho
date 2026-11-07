@@ -2,16 +2,15 @@ import { CreateReceiptRequest } from "@goho/goho-server-client/receipts";
 import { Console, Effect, Schema } from "effect";
 import { Command, Flag } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
+import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 const itemKeys = ["name", "amount", "category"];
 
 const invalidItem = (item: string, problem: string) =>
   new CommandError({
-    code: "invalid_input",
-    message: `Invalid --item "${item}": ${problem}. Expected name=<text>,amount=<decimal>,category=<text>, with commas in values written as \\, and backslashes as \\\\.`,
-    cause: item,
+    type: "goho:cli:invalid-input",
+    detail: `Invalid --item "${item}": ${problem}. Expected name=<text>,amount=<decimal>,category=<text>, with commas in values written as \\, and backslashes as \\\\.`,
   });
 
 const splitItemFields = (item: string) => {
@@ -94,27 +93,15 @@ export const createCommand = Command.make("create", {
         Effect.mapError(
           (cause) =>
             new CommandError({
-              code: "invalid_input",
-              message: `Receipt is not valid: ${cause.message}`,
-              cause,
+              type: "goho:cli:invalid-input",
+              detail: `Receipt is not valid: ${cause.message}`,
             }),
         ),
       );
       const client = yield* GohoServer.Service;
-      const response = yield* client.receipts.create({ payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "BadRequestProblem"
-                  ? "The receipt was rejected. Check the supplied values."
-                  : "Receipt could not be created. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.receipts.create({ payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );

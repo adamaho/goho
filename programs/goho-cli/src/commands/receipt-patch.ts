@@ -7,7 +7,7 @@ import {
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
+import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -38,34 +38,20 @@ export const patchCommand = Command.make("patch", {
       if (Option.isSome(receiptDate)) changes.receiptDate = receiptDate.value;
       const payload = yield* Schema.decodeEffect(PatchReceiptRequest)(changes).pipe(
         Effect.mapError(
-          (cause) =>
+          () =>
             new CommandError({
-              code: "invalid_input",
-              message:
+              type: "goho:cli:invalid-input",
+              detail:
                 "Supply at least one of --store-name or --receipt-date. Names must be nonblank and dates must be real dates in YYYY-MM-DD format.",
-              cause,
             }),
         ),
       );
       const client = yield* GohoServer.Service;
-      const response = yield* client.receipts.patch({ params: { receiptId }, payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "ReceiptNotFound"
-                  ? `Receipt ${receiptId} was not found.`
-                  : cause._tag === "BadRequestProblem"
-                    ? "The receipt correction was rejected. Check the supplied changes."
-                    : "Receipt could not be patched. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.receipts.patch({ params: { receiptId }, payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -100,33 +86,17 @@ export const patchItemCommand = Command.make("patch-item", {
       if (Option.isSome(category)) changes.category = category.value;
       const payload = yield* Schema.decodeEffect(PatchReceiptItemRequest)(changes).pipe(
         Effect.mapError(
-          (cause) =>
+          () =>
             new CommandError({
-              code: "invalid_input",
-              message: "Supply --name, --category, or both. Values must be nonblank.",
-              cause,
+              type: "goho:cli:invalid-input",
+              detail: "Supply --name, --category, or both. Values must be nonblank.",
             }),
         ),
       );
       const client = yield* GohoServer.Service;
-      const response = yield* client.receipts
-        .patchItem({ params: { receiptId, itemId }, payload })
-        .pipe(
-          Effect.mapError(
-            (cause) =>
-              new CommandError({
-                code: getRequestErrorCode(cause),
-                message:
-                  cause._tag === "ReceiptItemNotFound"
-                    ? `Item ${itemId} was not found on receipt ${receiptId}.`
-                    : cause._tag === "BadRequestProblem"
-                      ? "The item correction was rejected. Check the supplied changes."
-                      : "Receipt item could not be patched. Check the server logs and try again.",
-                cause,
-              }),
-          ),
-        );
+      const response = yield* client.receipts.patchItem({ params: { receiptId, itemId }, payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );

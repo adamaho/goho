@@ -2,7 +2,6 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command, Flag } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { saveImageFile } from "#src/utils/save-image-file.ts";
 
@@ -26,19 +25,7 @@ export const imageCommand = Command.make("image", {
   Command.withHandler(({ receiptId, output }) =>
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
-      const response = yield* client.receipts.getImage({ params: { receiptId } }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "ReceiptImageNotFound"
-                  ? `Receipt ${receiptId} was not found or has no scanned image.`
-                  : "Receipt image could not be retrieved. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.receipts.getImage({ params: { receiptId } });
       const saved = yield* saveImageFile({
         label: "Receipt image",
         defaultName: `receipt-${receiptId}`,
@@ -49,4 +36,5 @@ export const imageCommand = Command.make("image", {
       yield* Console.log(JSON.stringify(saved, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );

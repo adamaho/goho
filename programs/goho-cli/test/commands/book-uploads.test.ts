@@ -10,9 +10,11 @@ import { HttpServerRequest, HttpServerResponse, Multipart } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
+  cliProblemOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
+  validationProblem,
   validationResponse,
   withJsonResponse,
   withResponse,
@@ -61,7 +63,12 @@ describe("books upload command structure", () => {
   ])("rejects the previous flat form: %j", async (...args) => {
     const result = await runWithoutRequest(args);
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain(`Unknown subcommand "${args[0]}"`);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toEqual({
+      type: "goho:cli:invalid-input",
+      title: "Invalid command input",
+      detail: expect.stringContaining(`Unknown subcommand "${args[0]}"`),
+    });
   });
 
   it.each([["create"], ["view"], ["view", "not-a-uuid"], ["delete"]])(
@@ -145,7 +152,7 @@ describe("books uploads create", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      errorOutput("invalid_input", "Book cover must be a JPEG, PNG, or WebP image."),
+      cliProblemOutput("goho:cli:invalid-input", "Book cover must be a JPEG, PNG, or WebP image."),
     );
   });
 
@@ -156,7 +163,10 @@ describe("books uploads create", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      errorOutput("file_error", "Book cover file could not be read: /missing/cover.png"),
+      cliProblemOutput(
+        "goho:cli:file-error",
+        "Book cover file could not be read: /missing/cover.png",
+      ),
     );
   });
 
@@ -168,12 +178,7 @@ describe("books uploads create", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "invalid_input",
-        "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(validationProblem));
   });
 });
 
@@ -186,7 +191,11 @@ describe("books uploads create limit errors", () => {
         runCommand(baseUrl, ["books", "uploads", "create", filePath]),
       ),
     );
-    expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput("invalid_input", message) });
+    expect(result).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: serverProblemOutput(new UploadLimitExceeded({ detail: message })),
+    });
   });
 });
 
@@ -208,7 +217,7 @@ describe("books uploads view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Book upload ${uploadId} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadNotFound()));
   });
 
   it("reports server failures", async () => {
@@ -217,12 +226,7 @@ describe("books uploads view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Book upload status could not be retrieved. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadsUnavailable()));
   });
 });
 
@@ -257,12 +261,7 @@ describe("books uploads list", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Book uploads could not be listed. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadsUnavailable()));
   });
 });
 
@@ -293,31 +292,21 @@ describe("books uploads delete", () => {
     const result = await runDelete(404, new BookUploadNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Book upload ${uploadId} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadNotFound()));
   });
 
   it("reports an upload that has not failed and exits nonzero", async () => {
     const result = await runDelete(409, new BookUploadConflict());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "conflict",
-        `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.`,
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadConflict()));
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await runDelete(500, new BookUploadsUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Book upload could not be deleted. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BookUploadsUnavailable()));
   });
 
   it("rejects a malformed upload ID and exits nonzero", async () => {

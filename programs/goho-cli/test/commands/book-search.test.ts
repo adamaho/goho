@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import { runCommand, serverProblemOutput, withJsonResponse, withResponse } from "#test/cli.ts";
 
 const book = {
   id: "12",
@@ -46,10 +46,7 @@ describe("books search", () => {
     expect(result).toEqual({
       code: 1,
       stdout: "",
-      stderr: errorOutput(
-        "request_failed",
-        "Books could not be searched. Check the server logs and try again.",
-      ),
+      stderr: serverProblemOutput(new BooksUnavailable()),
     });
   });
 

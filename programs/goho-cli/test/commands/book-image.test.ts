@@ -4,7 +4,13 @@ import { Effect, FileSystem, Path } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import {
+  cliProblemOutput,
+  runCommand,
+  serverProblemOutput,
+  withJsonResponse,
+  withResponse,
+} from "#test/cli.ts";
 
 const bytes = new Uint8Array([0, 1, 2, 255]);
 
@@ -99,8 +105,8 @@ describe("books image", () => {
       expect(result).toEqual({
         code: 1,
         stdout: "",
-        stderr: errorOutput(
-          "file_error",
+        stderr: cliProblemOutput(
+          "goho:cli:file-error",
           "Book cover has an unexpected type, image/gif. Choose a file name with --output.",
         ),
       });
@@ -124,7 +130,10 @@ describe("books image", () => {
       expect(result).toEqual({
         code: 1,
         stdout: "",
-        stderr: errorOutput("file_error", `Book cover could not be saved to ${output}.`),
+        stderr: cliProblemOutput(
+          "goho:cli:file-error",
+          `Book cover could not be saved to ${output}.`,
+        ),
       });
     });
   });
@@ -136,7 +145,7 @@ describe("books image", () => {
     expect(result).toEqual({
       code: 1,
       stdout: "",
-      stderr: errorOutput("not_found", "Book 12 was not found or has no cover image."),
+      stderr: serverProblemOutput(new BookImageNotFound()),
     });
   });
 
@@ -147,10 +156,7 @@ describe("books image", () => {
     expect(result).toEqual({
       code: 1,
       stdout: "",
-      stderr: errorOutput(
-        "request_failed",
-        "Book cover could not be retrieved. Check the server logs and try again.",
-      ),
+      stderr: serverProblemOutput(new BooksUnavailable()),
     });
   });
 

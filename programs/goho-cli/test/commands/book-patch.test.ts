@@ -4,8 +4,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   validationProblem,
   withResponse,
@@ -78,40 +78,29 @@ describe("books patch", () => {
   it.each([
     {
       status: 400,
-      errorCode: "invalid_input",
       problem: validationProblem,
-      message: "The book correction was rejected. Check the supplied changes.",
     },
     {
       status: 404,
       problem: new BookNotFound(),
-      message: "Book 12 was not found.",
-      errorCode: "not_found",
     },
     {
       status: 409,
-      errorCode: "conflict",
       problem: new BookConflict(),
-      message: "Another book already has that title and author.",
     },
     {
       status: 500,
-      errorCode: "request_failed",
       problem: new BooksUnavailable(),
-      message: "Book could not be patched. Check the server logs and try again.",
     },
-  ] as const)(
-    "reports HTTP $status and exits nonzero",
-    async ({ status, problem, message, errorCode }) => {
-      const result = await runPatch(
-        ["patch", book.id, "--title", "The Hobbit"],
-        { title: "The Hobbit" },
-        status,
-        problem,
-      );
-      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
-    },
-  );
+  ] as const)("reports HTTP $status and exits nonzero", async ({ status, problem }) => {
+    const result = await runPatch(
+      ["patch", book.id, "--title", "The Hobbit"],
+      { title: "The Hobbit" },
+      status,
+      problem,
+    );
+    expect(result).toEqual({ code: 1, stdout: "", stderr: serverProblemOutput(problem) });
+  });
 });
 
 describe("book patch validation", () => {

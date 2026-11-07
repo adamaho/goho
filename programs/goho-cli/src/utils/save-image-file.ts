@@ -36,19 +36,17 @@ export const saveImageFile = Effect.fn("@goho/Utils.saveImageFile")(function* (o
   const extension = getImageExtension(contentType);
   if (Option.isNone(output) && extension === undefined) {
     return yield* new CommandError({
-      code: "file_error",
-      message: `${label} has an unexpected type, ${contentType}. Choose a file name with --output.`,
-      cause: contentType,
+      type: "goho:cli:file-error",
+      detail: `${label} has an unexpected type, ${contentType}. Choose a file name with --output.`,
     });
   }
   const path = Option.getOrElse(output, () => `${defaultName}${extension}`);
   yield* fileSystem.writeFile(path, bytes).pipe(
     Effect.mapError(
-      (cause) =>
+      () =>
         new CommandError({
-          code: "file_error",
-          message: `${label} could not be saved to ${path}.`,
-          cause,
+          type: "goho:cli:file-error",
+          detail: `${label} could not be saved to ${path}.`,
         }),
     ),
   );

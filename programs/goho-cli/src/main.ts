@@ -1,31 +1,44 @@
 #!/usr/bin/env node
 
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
-import { ErrorResponse } from "@goho/goho-server-client/response";
-import { Console, Effect } from "effect";
-import { Command } from "effect/cli";
+import { ConfigProvider, Console, Effect } from "effect";
+import { CliOutput, Command } from "effect/cli";
 
 import { booksCommand } from "./commands/books.ts";
 import { receiptsCommand } from "./commands/receipts.ts";
 import { statusCommand } from "./commands/status.ts";
-import * as GohoServer from "./goho-server.ts";
+import { getProblem } from "./errors.ts";
 
 const command = Command.make("goho").pipe(
   Command.withDescription("Command-line interface for Goho"),
   Command.withSubcommands([receiptsCommand, booksCommand, statusCommand]),
 );
 
+// An empty GOHO_SERVER_URL is a configuration error, not a request for the default.
+const configProvider = ConfigProvider.layer(ConfigProvider.fromEnv({ preserveEmptyStrings: true }));
+
+// Invalid invocations print only the JSON error below, not help.
+const presenter = CliOutput.layerPresenter({
+  present: (event) =>
+    event._tag === "InvalidInvocation" ? Effect.void : CliOutput.defaultPresenter.present(event),
+});
+
 Command.run(command, { version: "0.0.0" }).pipe(
-  Effect.provide(GohoServer.layer),
-  Effect.catchTag("GohoCli.CommandError", (error) =>
-    Effect.gen(function* () {
-      const response = yield* ErrorResponse.makeEffect({
-        error: { code: error.code, message: error.message },
-      });
-      yield* Console.error(JSON.stringify(response, null, 2));
-      process.exitCode = 1;
-    }),
+  Effect.catchCause((cause) =>
+    getProblem(cause).pipe(
+      Effect.flatMap((problem) =>
+        problem === undefined
+          ? Effect.failCause(cause)
+          : Console.error(JSON.stringify(problem, null, 2)).pipe(
+              Effect.andThen(
+                Effect.sync(() => {
+                  process.exitCode = 1;
+                }),
+              ),
+            ),
+      ),
+    ),
   ),
-  Effect.provide(NodeServices.layer),
+  Effect.provide([configProvider, presenter, NodeServices.layer]),
   NodeRuntime.runMain,
 );

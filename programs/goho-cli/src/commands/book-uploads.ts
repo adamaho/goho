@@ -2,7 +2,6 @@ import { BookUploadId } from "@goho/goho-server-client/book-uploads";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 import { readImageFile } from "#src/utils/read-image-file.ts";
@@ -25,24 +24,11 @@ const createCommand = Command.make("create", {
       const file = yield* readImageFile("Book cover", filePath);
       const payload = new FormData();
       payload.set("file", new File([file.bytes], file.fileName, { type: file.contentType }));
-      const response = yield* client.bookUploads.create({ payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "UploadLimitExceeded"
-                  ? cause.message
-                  : cause._tag === "BadRequestProblem"
-                    ? "Book cover must be a JPEG, PNG, or WebP image no larger than 20 MB."
-                    : "Book cover could not be uploaded. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.bookUploads.create({ payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -63,20 +49,9 @@ const viewCommand = Command.make("view", {
       const client = yield* GohoServer.Service;
       const response = yield* client.bookUploads.get({ params: { uploadId } });
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "BookUploadNotFound"
-                ? `Book upload ${uploadId} was not found.`
-                : "Book upload status could not be retrieved. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -92,17 +67,9 @@ const listCommand = Command.make("list").pipe(
       const client = yield* GohoServer.Service;
       const response = yield* client.bookUploads.list();
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message: "Book uploads could not be listed. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -128,22 +95,9 @@ const deleteCommand = Command.make("delete", {
         id: uploadId,
       });
       yield* Console.log(JSON.stringify(result, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "BookUploadNotFound"
-                ? `Book upload ${uploadId} was not found.`
-                : cause._tag === "BookUploadConflict"
-                  ? `Book upload ${uploadId} has not failed, so it cannot be deleted. Delete the book to remove a successful scan.`
-                  : "Book upload could not be deleted. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**

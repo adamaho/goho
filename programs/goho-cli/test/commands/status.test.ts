@@ -2,7 +2,13 @@ import { Effect } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
-import { errorOutput, runCommand, withJsonResponse, withResponse } from "#test/cli.ts";
+import {
+  cliProblemOutput,
+  connectionDetail,
+  runCommand,
+  withJsonResponse,
+  withResponse,
+} from "#test/cli.ts";
 
 const runStatus = (baseUrl: string) => runCommand(baseUrl, ["status"]);
 
@@ -29,9 +35,9 @@ describe("status", () => {
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Server status could not be retrieved. Check that the server is running.",
+      cliProblemOutput(
+        "goho:cli:unexpected-response",
+        "The server sent a response the CLI could not read. Check that GOHO_SERVER_URL points to a Goho server.",
       ),
     );
   });
@@ -40,11 +46,6 @@ describe("status", () => {
     const result = await runStatus("http://127.0.0.1:1");
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Server status could not be retrieved. Check that the server is running.",
-      ),
-    );
+    expect(result.stderr).toBe(cliProblemOutput("goho:cli:connection-failed", connectionDetail));
   });
 });
