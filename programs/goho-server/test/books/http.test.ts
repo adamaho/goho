@@ -22,10 +22,10 @@ import * as BookUploads from "#src/book-uploads/service.ts";
 import * as BookRepository from "#src/books/repository.ts";
 import * as Books from "#src/books/service.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
-import * as Http from "#src/http.ts";
+import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 const book = Book.make({
   id: BookId.make("12"),

@@ -14,7 +14,7 @@ import {
 import { Array, BigDecimal, Context, Effect, Layer, Option } from "effect";
 
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 import * as ReceiptRepository from "./repository.ts";
 

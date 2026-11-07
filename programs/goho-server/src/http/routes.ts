@@ -12,11 +12,12 @@ import {
   HttpApiSwagger,
 } from "effect/http-api";
 
-import * as BookUploads from "./book-uploads/service.ts";
-import * as Books from "./books/service.ts";
-import * as ReceiptUploads from "./receipt-uploads/service.ts";
-import * as Receipts from "./receipts/service.ts";
-import * as UploadErrorResponses from "./upload-error-responses.ts";
+import * as BookUploads from "#src/book-uploads/service.ts";
+import * as Books from "#src/books/service.ts";
+import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
+import * as Receipts from "#src/receipts/service.ts";
+
+import * as ProblemDetails from "./problem-details.ts";
 
 const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers) =>
   Effect.gen(function* () {
@@ -155,17 +156,11 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([
-    ReceiptUploadsLive,
-    ReceiptsLive,
-    BooksLive,
-    BookUploadsLive,
-    HealthLive,
-    UploadErrorResponses.layer,
-  ]),
+  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, BookUploadsLive, HealthLive]),
   Layer.provide(HttpApiMiddleware.layerProblemDetails()),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(
     HttpRouter.middleware(HttpMiddleware.cors({ allowedOrigins: () => false }), { global: true }),
   ),
+  Layer.merge(ProblemDetails.layer),
 );

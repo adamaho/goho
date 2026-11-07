@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect";
 import { HttpClient, HttpRouter, HttpServerResponse, Multipart } from "effect/http";
 import { expect } from "vitest";
 
-import * as UploadErrorResponses from "#src/upload-error-responses.ts";
+import * as ProblemDetails from "#src/http/problem-details.ts";
 
 const expected = {
   type: "goho:problem:upload-limit-exceeded",
@@ -14,7 +14,12 @@ const expected = {
     "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB.",
 };
 
-it.effect("only replaces 413 bodies on upload POST routes and preserves response headers", () => {
+const serve = <E, R>(routes: Layer.Layer<never, E, R>) =>
+  HttpRouter.serve(Layer.merge(routes, ProblemDetails.layer)).pipe(
+    Layer.provideMerge(NodeHttpServer.layerTest),
+  );
+
+it.effect("only uses the upload problem for 413s on upload POST routes and keeps headers", () => {
   const routes = Layer.mergeAll(
     HttpRouter.add(
       "POST",
@@ -23,7 +28,7 @@ it.effect("only replaces 413 bodies on upload POST routes and preserves response
     ),
     HttpRouter.add("GET", "/book-uploads", HttpServerResponse.empty({ status: 413 })),
     HttpRouter.add("POST", "/receipts", HttpServerResponse.empty({ status: 413 })),
-  ).pipe(Layer.provide(UploadErrorResponses.layer));
+  );
   return Effect.gen(function* () {
     const book = yield* HttpClient.post("/book-uploads?source=test");
     expect(book.status).toBe(413);
@@ -35,11 +40,13 @@ it.effect("only replaces 413 bodies on upload POST routes and preserves response
       yield* HttpClient.post("/receipts"),
     ]) {
       expect(response.status).toBe(413);
-      expect(yield* response.text).toBe("");
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 413,
+        title: "Payload Too Large",
+      });
     }
-  }).pipe(
-    Effect.provide(HttpRouter.serve(routes).pipe(Layer.provideMerge(NodeHttpServer.layerTest))),
-  );
+  }).pipe(Effect.provide(serve(routes)));
 });
 
 it.effect("renders every multipart limit reason, on both routes, as the shared problem", () =>
@@ -55,12 +62,8 @@ it.effect("renders every multipart limit reason, on both routes, as the shared p
           "POST",
           path,
           Effect.die(Multipart.MultipartError.fromReason(reason)),
-        ).pipe(Layer.provide(UploadErrorResponses.layer));
-        const response = yield* HttpClient.post(path).pipe(
-          Effect.provide(
-            HttpRouter.serve(routes).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
-          ),
         );
+        const response = yield* HttpClient.post(path).pipe(Effect.provide(serve(routes)));
         expect(response.status, `${path} ${reason}`).toBe(413);
         expect(response.headers["content-type"]).toContain("application/problem+json");
         expect(yield* response.json).toEqual(expected);
@@ -69,21 +72,22 @@ it.effect("renders every multipart limit reason, on both routes, as the shared p
   }),
 );
 
-it.effect("does not rewrite other upload response statuses or multipart failures", () =>
+it.effect("renders other non-problem errors as generic problems without their bodies", () =>
   Effect.gen(function* () {
-    for (const [handler, status, body] of [
-      [HttpServerResponse.text("unsupported", { status: 415 }), 415, "unsupported"],
-      [Effect.die(Multipart.MultipartError.fromReason("Parse")), 400, ""],
-      [Effect.die(Multipart.MultipartError.fromReason("InternalError")), 500, ""],
+    for (const [handler, status, title] of [
+      [HttpServerResponse.text("unsupported", { status: 415 }), 415, "Unsupported Media Type"],
+      [Effect.die(Multipart.MultipartError.fromReason("Parse")), 400, "Bad Request"],
+      [
+        Effect.die(Multipart.MultipartError.fromReason("InternalError")),
+        500,
+        "Internal Server Error",
+      ],
     ] as const) {
-      const routes = HttpRouter.add("POST", "/book-uploads", handler).pipe(
-        Layer.provide(UploadErrorResponses.layer),
-      );
-      const response = yield* HttpClient.post("/book-uploads").pipe(
-        Effect.provide(HttpRouter.serve(routes).pipe(Layer.provideMerge(NodeHttpServer.layerTest))),
-      );
+      const routes = HttpRouter.add("POST", "/book-uploads", handler);
+      const response = yield* HttpClient.post("/book-uploads").pipe(Effect.provide(serve(routes)));
       expect(response.status).toBe(status);
-      expect(yield* response.text).toBe(body);
+      expect(response.headers["content-type"]).toContain("application/problem+json");
+      expect(yield* response.json).toEqual({ type: "about:blank", status, title });
     }
   }),
 );

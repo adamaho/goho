@@ -7,9 +7,9 @@ import {
 import { ReceiptId } from "@goho/goho-api/receipts";
 import { Schema } from "effect";
 
-import { FileId } from "#src/file-storage.ts";
 import type { ParsedReceipt } from "#src/receipts/model.ts";
 import { NonEmptyText } from "#src/schema.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 /**
  * Metadata required to create a queued upload after its file has been stored.

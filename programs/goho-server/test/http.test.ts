@@ -32,13 +32,13 @@ import { expect } from "vitest";
 import * as BookUploads from "#src/book-uploads/service.ts";
 import * as Books from "#src/books/service.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
-import * as Http from "#src/http.ts";
+import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 const createPayload = CreateReceiptRequest.make({
   storeName: "Example Store",

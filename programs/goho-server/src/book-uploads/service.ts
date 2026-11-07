@@ -10,8 +10,8 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
 import { NonEmptyText } from "#src/schema.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 import type { BookUpload } from "./model.ts";
 import * as BookUploadQueue from "./queue.ts";

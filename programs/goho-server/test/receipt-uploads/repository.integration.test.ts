@@ -9,8 +9,8 @@ import { SqlClient } from "effect/sql";
 import { expect } from "vitest";
 
 import * as Migrations from "#src/database/migrations.ts";
-import { FileId } from "#src/file-storage.ts";
 import * as Repository from "#src/receipt-uploads/repository.ts";
+import { FileId } from "#src/services/file-storage.ts";
 import { parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const DatabaseLive = Layer.effectContext(

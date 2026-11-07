@@ -8,8 +8,8 @@ import { BookId } from "@goho/goho-api/books";
 import { Schema } from "effect";
 
 import type { ParsedBook } from "#src/books/extraction.ts";
-import { FileId } from "#src/file-storage.ts";
 import { NonEmptyText } from "#src/schema.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 /**
  * Metadata required to create a queued cover upload after its file has been stored.

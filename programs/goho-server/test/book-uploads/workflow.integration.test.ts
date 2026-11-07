@@ -18,8 +18,8 @@ import * as Books from "#src/books/service.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Migrations from "#src/database/migrations.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 import { behindOpenTransaction } from "#test/helpers/locks.ts";
 import { generateObject } from "#test/receipts/fixtures.ts";
 

@@ -8,13 +8,13 @@ import { expect } from "vitest";
 
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
-import { FileId } from "#src/file-storage.ts";
 import type { ReceiptExtraction, ReceiptUpload } from "#src/receipt-uploads/model.ts";
 import * as ReceiptUploadQueue from "#src/receipt-uploads/queue.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
+import { FileId } from "#src/services/file-storage.ts";
 import { generateObject, parsedReceipt } from "#test/receipts/fixtures.ts";
 
 const upload: ReceiptUpload = {

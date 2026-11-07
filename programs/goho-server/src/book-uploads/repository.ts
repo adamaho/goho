@@ -3,8 +3,8 @@ import { BookId } from "@goho/goho-api/books";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
-import { FileId } from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 import { type BookExtraction, BookUpload, QueuedBookUpload } from "./model.ts";
 import * as BookUploadQueue from "./queue.ts";

@@ -34,13 +34,13 @@ import receiptHistoryMigration from "#src/database/migrations/0011-receipt-histo
 import receiptCategoriesMigration from "#src/database/migrations/0012-receipt-categories.ts";
 import itemCategoriesMigration from "#src/database/migrations/0013-item-categories.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
-import * as Http from "#src/http.ts";
+import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as Repository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 import { generateObject, parsedReceipt, receipt } from "./fixtures.ts";
 

@@ -7,9 +7,9 @@ import { ReceiptId } from "@goho/goho-api/receipts";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
-import { FileId } from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
 import { ReceiptIdFromDatabase } from "#src/schema.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 import { QueuedReceiptUpload, type ReceiptExtraction, ReceiptUpload } from "./model.ts";
 import * as ReceiptUploadQueue from "./queue.ts";

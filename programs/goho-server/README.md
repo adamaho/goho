@@ -47,9 +47,29 @@ Deploy the server and updated CLI/MCP together; older clients expecting empty
 codes and does not need to read the problem body.
 
 The middleware also returns a generic HTTP 500 problem if a successful response
-cannot be encoded. Upload limits return their own HTTP 413 problem, and
-malformed multipart, unsupported request content types, unknown routes, and unexpected defects retain
-Effect's default responses. This is not a normalization of every HTTP failure.
+cannot be encoded. Upload limits return their own HTTP 413 problem.
+
+Every other server error uses the same format with `type` `about:blank`, the
+response status, Node.js's status text as `title` (for example `Payload Too
+Large` for 413), and no `detail`. This covers unknown routes and methods (404),
+unsupported request content types (415), malformed multipart bodies (400),
+unexpected failures (500), and requests interrupted by shutdown (503):
+
+```json
+{
+  "type": "about:blank",
+  "status": 404,
+  "title": "Not Found"
+}
+```
+
+The status and response headers are unchanged, and the original error body is
+never returned. A client that disconnects gets no response. The typed client
+decodes the generic 400 and 500 as `HttpApiError.BadRequestProblem` and
+`HttpApiError.InternalServerErrorProblem`; other generic statuses are not
+declared on endpoints. So the CLI would report a malformed multipart upload as
+invalid input rather than a failed request, though it always sends well-formed
+uploads.
 
 ### Receipt errors
 

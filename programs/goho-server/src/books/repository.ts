@@ -11,7 +11,7 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import * as CategoryRepository from "#src/categories/repository.ts";
-import { FileId } from "#src/file-storage.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 /**
  * Expected failure while reading or saving books.

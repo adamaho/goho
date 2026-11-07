@@ -4,7 +4,7 @@ import { Effect, FileSystem, Path, Result } from "effect";
 import { SecureRandom } from "effect/crypto";
 import { expect } from "vitest";
 
-import * as FileStorage from "#src/file-storage.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 it.effect("stores, reads, and deletes files in its configured directory", () =>
   Effect.gen(function* () {

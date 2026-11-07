@@ -6,8 +6,8 @@ import * as BookExtraction from "#src/books/extraction.ts";
 import * as BookRepository from "#src/books/repository.ts";
 import * as CategoryRepository from "#src/categories/repository.ts";
 import * as Transaction from "#src/database/transaction.ts";
-import * as FileStorage from "#src/file-storage.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
+import * as FileStorage from "#src/services/file-storage.ts";
 
 import { type BookUploadJob, Service as BookUploadQueue } from "./queue.ts";
 import * as BookUploadRepository from "./repository.ts";

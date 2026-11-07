@@ -15,8 +15,8 @@ import { Array, Context, Effect, Layer, Option, pipe, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import * as CategoryRepository from "#src/categories/repository.ts";
-import { FileId } from "#src/file-storage.ts";
 import { ReceiptIdFromDatabase, ReceiptItemIdFromDatabase } from "#src/schema.ts";
+import { FileId } from "#src/services/file-storage.ts";
 
 /**
  * Expected failure while reading or saving a receipt.
