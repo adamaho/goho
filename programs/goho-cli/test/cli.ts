@@ -1,5 +1,4 @@
 import { NodeHttpServer, NodeServices } from "@effect/platform-node";
-import type { ErrorCode } from "@goho/goho-server-client/response";
 import { Effect, Layer, Path, Stream } from "effect";
 import {
   HttpServer,
@@ -7,6 +6,7 @@ import {
   HttpServerRespondable,
   HttpServerResponse,
   type HttpServerResponse as HttpServerResponseType,
+  type ProblemDetails,
 } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { ChildProcess } from "effect/process";
@@ -40,14 +40,68 @@ export const toTestResponse = (status: number, body: unknown) =>
     ? HttpServerRespondable.toResponse(body)
     : Effect.succeed(HttpServerResponse.jsonUnsafe(body, { status }));
 
+const cliTitles = {
+  "goho:cli:invalid-input": "Invalid command input",
+  "goho:cli:configuration-error": "Invalid CLI configuration",
+  "goho:cli:connection-failed": "Could not reach the Goho server",
+  "goho:cli:file-error": "Local file error",
+  "goho:cli:unexpected-response": "Unexpected server response",
+  "goho:cli:unexpected-failure": "Unexpected failure",
+} as const;
+
 /**
- * Expected stderr for one handled CLI failure.
+ * Expected stderr for one problem, printed as written.
  *
  * @category testing
  * @since 0.1.0
  */
-export const errorOutput = (code: ErrorCode, message: string) =>
-  `${JSON.stringify({ error: { code, message } }, null, 2)}\n`;
+export const problemOutput = (problem: ProblemDetails.ProblemDetails) =>
+  `${JSON.stringify(problem, null, 2)}\n`;
+
+/**
+ * Expected stderr for a failure the CLI detects itself.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const cliProblemOutput = (type: keyof typeof cliTitles, detail: string) =>
+  problemOutput({ type, title: cliTitles[type], detail });
+
+/**
+ * Expected stderr for a declared server problem without extensions: its public
+ * members in the order the CLI prints them.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const serverProblemOutput = (problem: {
+  readonly type: string;
+  readonly status: number;
+  readonly title: string;
+  readonly detail?: string | undefined;
+}) => {
+  const { type, status, title, detail } = problem;
+  return problemOutput(
+    detail === undefined ? { type, status, title } : { type, status, title, detail },
+  );
+};
+
+/**
+ * Detail for a server that refuses or drops the connection.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const connectionDetail = "Check that it is running and that GOHO_SERVER_URL is correct.";
+
+/**
+ * Detail for a response the CLI could not read.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const unexpectedResponseDetail =
+  "The server sent a response the CLI could not read. Check that GOHO_SERVER_URL points to a Goho server.";
 
 /**
  * Captured output from one CLI process.

@@ -4,8 +4,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   withJsonResponse,
   withResponse,
@@ -52,12 +52,7 @@ describe("books list", () => {
     const result = await withJsonResponse(500, new BooksUnavailable(), runList);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Books could not be listed. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BooksUnavailable()));
   });
 });
 
@@ -79,7 +74,7 @@ describe("books view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Book ${book.id} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new BookNotFound()));
   });
 });
 
@@ -110,19 +105,14 @@ describe("books delete", () => {
     const result = await runDelete(404, new BookNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Book ${book.id} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new BookNotFound()));
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await runDelete(500, new BooksUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Book could not be deleted. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new BooksUnavailable()));
   });
 
   it("rejects a malformed book ID and exits nonzero", async () => {

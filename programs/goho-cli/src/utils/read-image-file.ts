@@ -21,18 +21,16 @@ export const readImageFile = Effect.fn("@goho/Utils.readImageFile")(function* (
   const contentType = getImageContentType(extension);
   if (contentType === undefined) {
     return yield* new CommandError({
-      code: "invalid_input",
-      message: `${label} must be a JPEG, PNG, or WebP image.`,
-      cause: extension,
+      type: "goho:cli:invalid-input",
+      detail: `${label} must be a JPEG, PNG, or WebP image.`,
     });
   }
   const bytes = yield* fileSystem.readFile(filePath).pipe(
     Effect.mapError(
-      (cause) =>
+      () =>
         new CommandError({
-          code: "file_error",
-          message: `${label} file could not be read: ${filePath}`,
-          cause,
+          type: "goho:cli:file-error",
+          detail: `${label} file could not be read: ${filePath}`,
         }),
     ),
   );

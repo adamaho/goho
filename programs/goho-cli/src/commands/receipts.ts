@@ -2,7 +2,6 @@ import { ReceiptId } from "@goho/goho-server-client/receipts";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 
@@ -18,17 +17,9 @@ const listCommand = Command.make("list").pipe(
       const client = yield* GohoServer.Service;
       const response = yield* client.receipts.list();
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message: "Receipts could not be listed. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 const viewCommand = Command.make("view", {
@@ -43,20 +34,9 @@ const viewCommand = Command.make("view", {
       const client = yield* GohoServer.Service;
       const response = yield* client.receipts.get({ params: { receiptId } });
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "ReceiptNotFound"
-                ? `Receipt ${receiptId} was not found.`
-                : "Receipt could not be retrieved. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 const deleteCommand = Command.make("delete", {
@@ -76,20 +56,9 @@ const deleteCommand = Command.make("delete", {
         id: receiptId,
       });
       yield* Console.log(JSON.stringify(result, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "ReceiptNotFound"
-                ? `Receipt ${receiptId} was not found.`
-                : "Receipt could not be deleted. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**

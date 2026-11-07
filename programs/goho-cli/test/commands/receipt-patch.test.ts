@@ -8,8 +8,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   validationProblem,
   withResponse,
@@ -90,35 +90,26 @@ describe("receipts patch", () => {
   it.each([
     {
       status: 400,
-      errorCode: "invalid_input",
       problem: validationProblem,
-      message: "The receipt correction was rejected. Check the supplied changes.",
     },
     {
       status: 404,
       problem: new ReceiptNotFound(),
-      message: "Receipt 42 was not found.",
-      errorCode: "not_found",
     },
     {
       status: 500,
-      errorCode: "request_failed",
       problem: new ReceiptsUnavailable(),
-      message: "Receipt could not be patched. Check the server logs and try again.",
     },
-  ] as const)(
-    "reports HTTP $status and exits nonzero",
-    async ({ status, problem, message, errorCode }) => {
-      const result = await runPatch(
-        ["patch", receipt.id, "--store-name", "Corner Store"],
-        `/receipts/${receipt.id}`,
-        { storeName: "Corner Store" },
-        status,
-        problem,
-      );
-      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
-    },
-  );
+  ] as const)("reports HTTP $status and exits nonzero", async ({ status, problem }) => {
+    const result = await runPatch(
+      ["patch", receipt.id, "--store-name", "Corner Store"],
+      `/receipts/${receipt.id}`,
+      { storeName: "Corner Store" },
+      status,
+      problem,
+    );
+    expect(result).toEqual({ code: 1, stdout: "", stderr: serverProblemOutput(problem) });
+  });
 });
 
 describe("receipts patch-item", () => {
@@ -159,35 +150,26 @@ describe("receipts patch-item", () => {
   it.each([
     {
       status: 400,
-      errorCode: "invalid_input",
       problem: validationProblem,
-      message: "The item correction was rejected. Check the supplied changes.",
     },
     {
       status: 404,
       problem: new ReceiptItemNotFound(),
-      message: `Item ${item.id} was not found on receipt 42.`,
-      errorCode: "not_found",
     },
     {
       status: 500,
-      errorCode: "request_failed",
       problem: new ReceiptsUnavailable(),
-      message: "Receipt item could not be patched. Check the server logs and try again.",
     },
-  ] as const)(
-    "reports HTTP $status and exits nonzero",
-    async ({ status, problem, message, errorCode }) => {
-      const result = await runPatch(
-        ["patch-item", receipt.id, item.id, "--name", "Apples"],
-        `/receipts/${receipt.id}/items/${item.id}`,
-        { name: "Apples" },
-        status,
-        problem,
-      );
-      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
-    },
-  );
+  ] as const)("reports HTTP $status and exits nonzero", async ({ status, problem }) => {
+    const result = await runPatch(
+      ["patch-item", receipt.id, item.id, "--name", "Apples"],
+      `/receipts/${receipt.id}/items/${item.id}`,
+      { name: "Apples" },
+      status,
+      problem,
+    );
+    expect(result).toEqual({ code: 1, stdout: "", stderr: serverProblemOutput(problem) });
+  });
 });
 
 describe("receipt patch validation", () => {

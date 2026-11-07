@@ -11,7 +11,9 @@ From the repository root after the [development setup](../../CONTRIBUTING.md#dev
 cp programs/goho-cli/.env.example programs/goho-cli/.env
 ```
 
-`GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`.
+`GOHO_SERVER_URL` defaults to `http://127.0.0.1:3000`. It must be an absolute `http` or
+`https` URL and may include a base path; an empty or malformed value fails with
+`goho:cli:configuration-error` before any request. Help, version, and command-group usage work without it.
 Start the server before invoking the CLI.
 
 Upload operations live under `books uploads` and `receipts uploads`, each with
@@ -39,29 +41,41 @@ string. Failures still exit nonzero and print an error to stderr without a succe
 
 ## Error responses
 
-Handled command failures print one JSON object to stderr and exit with code `1`:
+Every failure prints one problem object to stderr, nothing to stdout, and exits with
+code `1`. Scripts should branch on `type`.
+
+A problem from the server is printed with the public members it sent: `type`,
+`status`, `title`, and `detail`, `instance`, or declared extensions such as `errors`
+when present:
 
 ```json
-{ "error": { "code": "not_found", "message": "Book 12 was not found." } }
+{ "type": "goho:problem:book-not-found", "status": 404, "title": "Book not found" }
 ```
 
-| Code                  | Meaning                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------ |
-| `invalid_input`       | Handler validation failed, or the API rejected the supplied values                         |
-| `not_found`           | The API could not find the requested record, upload, or image                              |
-| `conflict`            | A book correction conflicts, or an upload is not eligible for deletion                     |
-| `request_failed`      | A request failed due to the server, transport, or response decoding                        |
-| `file_error`          | A local image could not be read or saved, or its default extension could not be determined |
-| `configuration_error` | CLI configuration could not be loaded                                                      |
+Failures the CLI detects itself use a `goho:cli:` type, a `title`, and a `detail`,
+with no HTTP `status`:
 
-Successful JSON output is unchanged. Internal diagnostic causes are not included in the
-error response. Parser errors, such as missing arguments and unknown flags, still use
-Effect CLI's text rendering and may print help to stdout; unhandled defects are also
-outside this response contract.
+```json
+{
+  "type": "goho:cli:invalid-input",
+  "title": "Invalid command input",
+  "detail": "Missing required argument: book-id"
+}
+```
 
-Upload-limit failures (HTTP 413) print here too. The CLI shows the guidance from the
-server's `UploadLimitExceeded` problem with code `invalid_input` instead of a
-generic request-failure message.
+| Type                           | Meaning                                                               |
+| ------------------------------ | --------------------------------------------------------------------- |
+| `goho:cli:invalid-input`       | Arguments, flags, or local values are invalid; no request was sent    |
+| `goho:cli:configuration-error` | `GOHO_SERVER_URL` is empty or not an absolute `http` or `https` URL   |
+| `goho:cli:connection-failed`   | The server could not be reached                                       |
+| `goho:cli:file-error`          | A local image could not be read or saved, or its extension is unknown |
+| `goho:cli:unexpected-response` | The server sent a body or status the API does not declare             |
+| `goho:cli:unexpected-failure`  | Anything else; the detail is generic                                  |
+
+Successful JSON output is unchanged. Causes, stacks, and undeclared response members
+are never printed. Parse errors do not print help; several share one `detail`, one per
+line. Run a command with `--help` for its usage. Interrupting the CLI exits with code
+`130` and prints nothing.
 
 ## Check server status
 
@@ -129,7 +143,7 @@ pnpm --filter @goho/goho-cli start receipts view <positive-integer-receipt-id>
 ```
 
 The command prints the complete receipt as JSON. A malformed ID or a valid ID
-that does not exist exits nonzero; a missing receipt prints a specific message.
+that does not exist exits nonzero; a missing receipt prints the server's not-found problem.
 
 ## Download a receipt image
 
@@ -205,7 +219,7 @@ pnpm --filter @goho/goho-cli start receipts delete <positive-integer-receipt-id>
 
 The command permanently removes the receipt, its items, and any scanned image,
 then prints a JSON confirmation with `resource: "receipt"`. There is no confirmation prompt. A missing
-receipt exits nonzero with a specific message.
+receipt exits nonzero with the server's not-found problem.
 
 ## List books
 
@@ -275,7 +289,7 @@ pnpm --filter @goho/goho-cli start books view <positive-integer-book-id>
 ```
 
 The command prints the complete book as JSON. A malformed ID or a valid ID that
-does not exist exits nonzero; a missing book prints a specific message.
+does not exist exits nonzero; a missing book prints the server's not-found problem.
 
 ## Download a book cover
 
@@ -328,6 +342,6 @@ pnpm --filter @goho/goho-cli start books delete <positive-integer-book-id>
 
 The command permanently removes the book, its successful cover scans, and their
 images, then prints a JSON confirmation with `resource: "book"`. There is no confirmation prompt. A missing
-book exits nonzero with a specific message.
+book exits nonzero with the server's not-found problem.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.

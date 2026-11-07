@@ -4,8 +4,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   withJsonResponse,
   withResponse,
@@ -55,12 +55,7 @@ describe("receipts list", () => {
     const result = await withJsonResponse(500, new ReceiptsUnavailable(), runList);
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Receipts could not be listed. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new ReceiptsUnavailable()));
   });
 });
 
@@ -82,7 +77,7 @@ describe("receipts view", () => {
     );
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Receipt ${receipt.id} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new ReceiptNotFound()));
   });
 
   it("does not retain the old show command", async () => {
@@ -90,8 +85,12 @@ describe("receipts view", () => {
       runCommand(baseUrl, ["receipts", "show", receipt.id]),
     );
     expect(result.code).toBe(1);
-    expect(result.stdout).toMatch(/view\s+View one persisted receipt\./);
-    expect(result.stdout).not.toMatch(/show\s+/);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toEqual({
+      type: "goho:cli:invalid-input",
+      title: "Invalid command input",
+      detail: expect.stringContaining('Unknown subcommand "show" for "goho receipts"'),
+    });
   });
 });
 
@@ -122,19 +121,14 @@ describe("receipts delete", () => {
     const result = await runDelete(404, new ReceiptNotFound());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(errorOutput("not_found", `Receipt ${receipt.id} was not found.`));
+    expect(result.stderr).toBe(serverProblemOutput(new ReceiptNotFound()));
   });
 
   it("reports server failures and exits nonzero", async () => {
     const result = await runDelete(500, new ReceiptsUnavailable());
     expect(result.code).toBe(1);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toBe(
-      errorOutput(
-        "request_failed",
-        "Receipt could not be deleted. Check the server logs and try again.",
-      ),
-    );
+    expect(result.stderr).toBe(serverProblemOutput(new ReceiptsUnavailable()));
   });
 
   it("rejects a malformed receipt ID and exits nonzero", async () => {

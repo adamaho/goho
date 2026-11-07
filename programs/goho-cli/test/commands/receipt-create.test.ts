@@ -4,8 +4,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   validationProblem,
   withResponse,
@@ -136,23 +136,16 @@ describe("receipts create", () => {
   it.each([
     {
       status: 400,
-      errorCode: "invalid_input",
       problem: validationProblem,
-      message: "The receipt was rejected. Check the supplied values.",
     },
     {
       status: 500,
-      errorCode: "request_failed",
       problem: new ReceiptsUnavailable(),
-      message: "Receipt could not be created. Check the server logs and try again.",
     },
-  ] as const)(
-    "reports HTTP $status and exits nonzero",
-    async ({ status, problem, message, errorCode }) => {
-      const result = await runCreate([...flags(), ...apples], payload, status, problem);
-      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
-    },
-  );
+  ] as const)("reports HTTP $status and exits nonzero", async ({ status, problem }) => {
+    const result = await runCreate([...flags(), ...apples], payload, status, problem);
+    expect(result).toEqual({ code: 1, stdout: "", stderr: serverProblemOutput(problem) });
+  });
 });
 
 describe("receipt create validation", () => {
@@ -210,9 +203,10 @@ describe("receipt create validation", () => {
     expect(result.code).toBe(1);
     expect(requests).toBe(0);
     expect(result.stdout).toBe("");
-    expect(JSON.parse(result.stderr).error).toMatchObject({
-      code: "invalid_input",
-      message: expect.stringContaining(`Invalid --item "${item}": ${problem}.`),
+    expect(JSON.parse(result.stderr)).toEqual({
+      type: "goho:cli:invalid-input",
+      title: "Invalid command input",
+      detail: expect.stringContaining(`Invalid --item "${item}": ${problem}.`),
     });
   });
 
@@ -229,9 +223,12 @@ describe("receipt create validation", () => {
     expect(result.code).toBe(1);
     expect(requests).toBe(0);
     expect(result.stdout).toBe("");
-    const error = JSON.parse(result.stderr).error;
-    expect(error.code).toBe("invalid_input");
-    expect(error.message).toContain("Receipt is not valid: ");
-    expect(error.message).toContain(`["items"][1]["${at}"]`);
+    const problem = JSON.parse(result.stderr);
+    expect(problem).toEqual({
+      type: "goho:cli:invalid-input",
+      title: "Invalid command input",
+      detail: expect.stringContaining("Receipt is not valid: "),
+    });
+    expect(problem.detail).toContain(`["items"][1]["${at}"]`);
   });
 });

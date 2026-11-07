@@ -2,7 +2,6 @@ import { ReceiptUploadId } from "@goho/goho-server-client/receipt-uploads";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 import { readImageFile } from "#src/utils/read-image-file.ts";
@@ -25,24 +24,11 @@ const createCommand = Command.make("create", {
       const file = yield* readImageFile("Receipt", filePath);
       const payload = new FormData();
       payload.set("file", new File([file.bytes], file.fileName, { type: file.contentType }));
-      const response = yield* client.receiptUploads.create({ payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "UploadLimitExceeded"
-                  ? cause.message
-                  : cause._tag === "BadRequestProblem"
-                    ? "Receipt must be a JPEG, PNG, or WebP image no larger than 20 MB."
-                    : "Receipt could not be uploaded. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.receiptUploads.create({ payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -63,20 +49,9 @@ const viewCommand = Command.make("view", {
       const client = yield* GohoServer.Service;
       const response = yield* client.receiptUploads.get({ params: { uploadId } });
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "ReceiptUploadNotFound"
-                ? `Receipt upload ${uploadId} was not found.`
-                : "Receipt upload status could not be retrieved. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -92,17 +67,9 @@ const listCommand = Command.make("list").pipe(
       const client = yield* GohoServer.Service;
       const response = yield* client.receiptUploads.list();
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message: "Receipt uploads could not be listed. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**
@@ -128,22 +95,9 @@ const deleteCommand = Command.make("delete", {
         id: uploadId,
       });
       yield* Console.log(JSON.stringify(result, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message:
-              cause._tag === "ReceiptUploadNotFound"
-                ? `Receipt upload ${uploadId} was not found.`
-                : cause._tag === "ReceiptUploadConflict"
-                  ? `Receipt upload ${uploadId} has not failed, so it cannot be deleted. Delete the receipt to remove a successful scan.`
-                  : "Receipt upload could not be deleted. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
 
 /**

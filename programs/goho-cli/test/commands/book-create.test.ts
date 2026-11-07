@@ -4,8 +4,8 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
-  errorOutput,
   runCommand,
+  serverProblemOutput,
   toTestResponse,
   validationProblem,
   withResponse,
@@ -58,28 +58,21 @@ describe("books create", () => {
   it.each([
     {
       status: 400,
-      errorCode: "invalid_input",
       problem: validationProblem,
-      message: "The book was rejected. Check the supplied values.",
     },
     {
       status: 500,
-      errorCode: "request_failed",
       problem: new BooksUnavailable(),
-      message: "Book could not be created. Check the server logs and try again.",
     },
-  ] as const)(
-    "reports HTTP $status and exits nonzero",
-    async ({ status, problem, message, errorCode }) => {
-      const result = await runCreate(
-        ["--title", "The Hobbit", "--category", "Fiction"],
-        { title: "The Hobbit", category: "Fiction" },
-        status,
-        problem,
-      );
-      expect(result).toEqual({ code: 1, stdout: "", stderr: errorOutput(errorCode, message) });
-    },
-  );
+  ] as const)("reports HTTP $status and exits nonzero", async ({ status, problem }) => {
+    const result = await runCreate(
+      ["--title", "The Hobbit", "--category", "Fiction"],
+      { title: "The Hobbit", category: "Fiction" },
+      status,
+      problem,
+    );
+    expect(result).toEqual({ code: 1, stdout: "", stderr: serverProblemOutput(problem) });
+  });
 });
 
 describe("book create validation", () => {

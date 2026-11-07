@@ -2,7 +2,7 @@ import { CreateBookRequest } from "@goho/goho-server-client/books";
 import { Console, Effect, Option, Schema, type Types } from "effect";
 import { Command, Flag } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
+import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -29,30 +29,18 @@ export const createCommand = Command.make("create", {
       if (Option.isSome(readingLevel)) fields.readingLevel = readingLevel.value;
       const payload = yield* Schema.decodeEffect(CreateBookRequest)(fields).pipe(
         Effect.mapError(
-          (cause) =>
+          () =>
             new CommandError({
-              code: "invalid_input",
-              message:
+              type: "goho:cli:invalid-input",
+              detail:
                 "Values for --title, --category, --author, and --reading-level must be nonblank.",
-              cause,
             }),
         ),
       );
       const client = yield* GohoServer.Service;
-      const response = yield* client.books.create({ payload }).pipe(
-        Effect.mapError(
-          (cause) =>
-            new CommandError({
-              code: getRequestErrorCode(cause),
-              message:
-                cause._tag === "BadRequestProblem"
-                  ? "The book was rejected. Check the supplied values."
-                  : "Book could not be created. Check the server logs and try again.",
-              cause,
-            }),
-        ),
-      );
+      const response = yield* client.books.create({ payload });
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
+  Command.provide(GohoServer.layer),
 );

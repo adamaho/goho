@@ -1,7 +1,6 @@
 import { Console, Effect, Schema } from "effect";
 import { Argument, Command } from "effect/cli";
 
-import { CommandError, getRequestErrorCode } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 
 /**
@@ -22,15 +21,7 @@ export const searchCommand = Command.make("search", {
       const client = yield* GohoServer.Service;
       const response = yield* client.books.list({ query: { search: text } });
       yield* Console.log(JSON.stringify(response.data, null, 2));
-    }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new CommandError({
-            code: getRequestErrorCode(cause),
-            message: "Books could not be searched. Check the server logs and try again.",
-            cause,
-          }),
-      ),
-    ),
+    }),
   ),
+  Command.provide(GohoServer.layer),
 );
