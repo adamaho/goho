@@ -1,11 +1,11 @@
 import { layer } from "@effect/vitest";
-import { BookNotFound } from "@goho/goho-server-client/books";
+import { BookNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
 import { book } from "#test/fixtures/book.ts";
-import { BookResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, BookResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const routes = Effect.gen(function* () {
@@ -18,7 +18,7 @@ const routes = Effect.gen(function* () {
   if (request.url === "/books/999") {
     return yield* HttpServerRespondable.toResponse(new BookNotFound());
   }
-  return HttpServerResponse.empty({ status: 500 });
+  return yield* HttpServerRespondable.toResponse(new BooksUnavailable());
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_book", (it) => {
@@ -34,15 +34,16 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_book", (it) => {
     }),
   );
 
-  it.effect("reports a missing book by ID through MCP", () =>
+  it.effect("reports missing books and server failures through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const missing = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "get_book", { book_id: "999" }),
+      expect(yield* client.call(2, "get_book", { book_id: "999" })).toEqual(
+        toolError("Book 999 was not found."),
       );
-      expect(missing.isError).toBe(true);
-      expect(missing.content[0]?.text).toContain("Book 999 was not found.");
+      expect(yield* client.call(3, "get_book", { book_id: "500" })).toEqual(
+        toolError(`Could not get book. ${apiAdvice.serverFailed}`),
+      );
     }),
   );
 
@@ -54,8 +55,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_book", (it) => {
         yield* client.call(2, "get_book", { book_id: "0" }),
       );
       expect(invalid.isError).toBe(true);
-      expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'get_book'");
+      expect(invalid.content[0]?.text).toMatch(/^Invalid parameters for tool 'get_book': /);
       expect(invalid.content[0]?.text).toContain("book_id");
+      expect(yield* McpFixture.apiRequests).toEqual([]);
     }),
   );
 });

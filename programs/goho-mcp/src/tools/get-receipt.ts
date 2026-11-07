@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the get receipt MCP tool.
  *
@@ -14,8 +16,7 @@ export const tool = Tool.make("get_receipt", {
   description: "Get one saved Goho receipt, including its items, by receipt ID.",
   parameters: Schema.Struct({ receipt_id: ReceiptId }),
   success: Schema.Struct({ receipt: Receipt }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, true)
@@ -40,8 +41,8 @@ export const handle = Effect.fn("@goho/GetReceipt.handle")(function* ({
     .pipe(
       Effect.mapError((cause) =>
         cause._tag === "ReceiptNotFound"
-          ? `Receipt ${receipt_id} was not found.`
-          : "Could not get receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
+          ? new ToolFailure({ message: `Receipt ${receipt_id} was not found.` })
+          : apiFailure("get receipt", cause),
       ),
     );
   return { receipt: response.data };

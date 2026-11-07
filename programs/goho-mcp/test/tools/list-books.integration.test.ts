@@ -1,10 +1,11 @@
 import { layer } from "@effect/vitest";
+import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
 import { book } from "#test/fixtures/book.ts";
-import { BookListResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, BookListResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const routes = Effect.gen(function* () {
@@ -42,16 +43,24 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("list_books", (it) => 
     }),
   );
 
-  it.effect("returns an MCP tool error when listing books and Goho server is unavailable", () =>
+  it.effect("returns MCP tool errors when listing books fails", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
-      yield* McpFixture.respondWith(McpFixture.dropConnections);
+      const cases = [
+        {
+          routes: McpFixture.dropConnections,
+          text: `Could not list books. ${apiAdvice.unreachable}`,
+        },
+        {
+          routes: HttpServerRespondable.toResponse(new BooksUnavailable()),
+          text: `Could not list books. ${apiAdvice.serverFailed}`,
+        },
+      ];
 
-      const unavailable = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "list_books", {}),
-      );
-      expect(unavailable.isError).toBe(true);
-      expect(unavailable.content[0]?.text).toMatch(/Could not list books/);
+      for (const [index, testCase] of cases.entries()) {
+        yield* McpFixture.respondWith(testCase.routes);
+        expect(yield* client.call(index + 2, "list_books", {})).toEqual(toolError(testCase.text));
+      }
     }),
   );
 });

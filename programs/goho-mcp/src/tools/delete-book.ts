@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the delete book MCP tool.
  *
@@ -15,8 +17,7 @@ export const tool = Tool.make("delete_book", {
     "Permanently delete one saved Goho book by book ID, including its cover scans and images. Its category stays. Only call this when the user clearly asks to delete that book.",
   parameters: Schema.Struct({ book_id: BookId }),
   success: Schema.Struct({ deleted_book_id: BookId }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, false)
@@ -41,8 +42,8 @@ export const handle = Effect.fn("@goho/DeleteBook.handle")(function* ({
     .pipe(
       Effect.mapError((cause) =>
         cause._tag === "BookNotFound"
-          ? `Book ${book_id} was not found.`
-          : "Could not delete book. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
+          ? new ToolFailure({ message: `Book ${book_id} was not found.` })
+          : apiFailure("delete book", cause),
       ),
     );
   return { deleted_book_id: book_id };

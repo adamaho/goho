@@ -232,3 +232,24 @@ opencode mcp list
   `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. Omitted fields stay
   unchanged; null and blank values are rejected. It returns the complete saved book. A title and
   author matching another saved book is rejected; books are never merged.
+
+## Tool errors
+
+When a tool runs and fails, it returns a tool result with `isError: true` and
+one plain text message, with no structured content. Missing records, book
+conflicts, and input the API rejects get their own message, such as
+`Book 12 was not found.`
+
+Arguments that don't match the tool's input schema are rejected before the Goho
+API is called, with a message starting `Invalid parameters for tool '<name>':`.
+Under protocol `2025-11-25` that message is a tool result with `isError: true`;
+under `2025-06-18` it is a JSON-RPC error with code `-32602`.
+
+Any other failure starts with `Could not <action>.`, such as
+`Could not get book.`, followed by one of these:
+
+| Cause                                         | Advice                                                                                                          |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| No connection to the Goho API                 | The Goho API could not be reached; check GOHO_SERVER_URL and the network.                                       |
+| The Goho API failed, with any 5xx status      | The Goho API could not complete the request; try again, and contact the Goho operator if it keeps failing.      |
+| A response or request this program cannot use | This MCP server and the Goho API disagree on the request or response; check that their versions are compatible. |

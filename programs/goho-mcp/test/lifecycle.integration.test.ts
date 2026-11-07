@@ -1,10 +1,10 @@
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
-import { Effect, Schema } from "effect";
+import { Effect } from "effect";
 import { FetchHttpClient, HttpClient } from "effect/http";
 import { expect } from "vitest";
 
-import { connectMcpClient, ErrorResult, startMcpServer } from "./support/mcp-client.ts";
+import { apiAdvice, connectMcpClient, startMcpServer, toolError } from "./support/mcp-client.ts";
 import * as McpFixture from "./support/mcp-fixture.ts";
 
 // Each test here owns its program, because it ends that program or needs a different environment.
@@ -31,11 +31,9 @@ it.live(
     Effect.gen(function* () {
       const { url } = yield* startMcpServer(unreachableApi);
       const client = yield* connectMcpClient(url);
-      const refused = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "list_receipts", {}),
+      expect(yield* client.call(2, "list_receipts", {})).toEqual(
+        toolError(`Could not list receipts. ${apiAdvice.unreachable}`),
       );
-      expect(refused.isError).toBe(true);
-      expect(refused.content[0]?.text).toMatch(/Could not list receipts/);
     }).pipe(Effect.provide(NodeServices.layer)),
   McpFixture.coldStartTimeout,
 );
