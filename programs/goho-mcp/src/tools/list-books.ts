@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the list books MCP tool.
  *
@@ -15,8 +17,7 @@ export const tool = Tool.make("list_books", {
     "List saved Goho books, newest first. Supply search to find books whose title or author contains that text, ignoring case.",
   parameters: Schema.Struct({ search: Schema.optionalKey(Schema.String) }),
   success: Schema.Struct({ books: Schema.Array(Book) }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, true)
@@ -36,11 +37,6 @@ export const handle = Effect.fn("@goho/ListBooks.handle")(function* (
   const client = yield* GohoServerClient.Service;
   const response = yield* client.books
     .list({ query })
-    .pipe(
-      Effect.mapError(
-        () =>
-          "Could not list books. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
-      ),
-    );
+    .pipe(Effect.mapError((cause) => apiFailure("list books", cause)));
   return { books: response.data };
 });

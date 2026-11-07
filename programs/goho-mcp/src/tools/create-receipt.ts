@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the create receipt MCP tool.
  *
@@ -15,17 +17,13 @@ export const tool = Tool.make("create_receipt", {
     "Create a saved Goho receipt from supplied details. Use fictional receipt details only when the user asks for an example.",
   parameters: CreateReceiptRequest,
   success: Schema.Struct({ receipt: Receipt }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, false)
   .annotate(Tool.Destructive, false)
   .annotate(Tool.Idempotent, false)
   .annotate(Tool.OpenWorld, false);
-
-const createFailureMessage =
-  "Could not create receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
 
 /**
  * Handles a create receipt request with the Goho server client.
@@ -37,8 +35,14 @@ export const handle = Effect.fn("@goho/CreateReceipt.handle")(function* (
   payload: CreateReceiptRequest,
 ) {
   const client = yield* GohoServerClient.Service;
-  const response = yield* client.receipts
-    .create({ payload })
-    .pipe(Effect.mapError(() => createFailureMessage));
+  const response = yield* client.receipts.create({ payload }).pipe(
+    Effect.mapError((cause) =>
+      cause._tag === "BadRequestProblem"
+        ? new ToolFailure({
+            message: "The receipt details were rejected. Check the supplied details.",
+          })
+        : apiFailure("create receipt", cause),
+    ),
+  );
   return { receipt: response.data };
 });

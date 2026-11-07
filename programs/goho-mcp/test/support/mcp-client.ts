@@ -74,7 +74,30 @@ export const DeleteBookResult = Schema.Struct({
 });
 
 /**
- * Response shape for an MCP tool failure.
+ * The complete MCP result of a tool failure: one plain text message and no structured content.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const toolError = (text: string) => ({ isError: true, content: [{ type: "text", text }] });
+
+/**
+ * Advice that follows `Could not <action>.` when a Goho API call fails without a tool-specific
+ * reason.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const apiAdvice = {
+  unreachable: "The Goho API could not be reached; check GOHO_SERVER_URL and the network.",
+  serverFailed:
+    "The Goho API could not complete the request; try again, and contact the Goho operator if it keeps failing.",
+  incompatible:
+    "This MCP server and the Goho API disagree on the request or response; check that their versions are compatible.",
+};
+
+/**
+ * Response shape for an MCP tool failure whose text varies, such as invalid parameters.
  *
  * @category testing
  * @since 0.1.0

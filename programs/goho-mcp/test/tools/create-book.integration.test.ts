@@ -1,10 +1,12 @@
 import { layer } from "@effect/vitest";
+import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/http";
+import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
+import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import { book, createBookPayload } from "#test/fixtures/book.ts";
-import { BookResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, BookResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const routes = Effect.gen(function* () {
@@ -42,20 +44,38 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_book", (it) =>
           yield* client.call(index + 2, "create_book", input),
         );
         expect(invalid.isError).toBe(true);
-        expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'create_book'");
+        expect(invalid.content[0]?.text).toMatch(/^Invalid parameters for tool 'create_book': /);
       }
+      expect(yield* McpFixture.apiRequests).toEqual([]);
     }),
   );
 
-  it.effect("reports an unavailable API when creating a book", () =>
+  it.effect("reports rejected details, server failures, and an unavailable API through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
-      yield* McpFixture.respondWith(McpFixture.dropConnections);
-      const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "create_book", createBookPayload),
-      );
-      expect(failed.isError).toBe(true);
-      expect(failed.content[0]?.text).toContain("Could not create book.");
+      const cases = [
+        {
+          routes: HttpServerRespondable.toResponse(
+            new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
+          ),
+          text: "The book details were rejected. Check the supplied details.",
+        },
+        {
+          routes: HttpServerRespondable.toResponse(new BooksUnavailable()),
+          text: `Could not create book. ${apiAdvice.serverFailed}`,
+        },
+        {
+          routes: McpFixture.dropConnections,
+          text: `Could not create book. ${apiAdvice.unreachable}`,
+        },
+      ];
+
+      for (const [index, testCase] of cases.entries()) {
+        yield* McpFixture.respondWith(testCase.routes);
+        expect(yield* client.call(index + 2, "create_book", createBookPayload)).toEqual(
+          toolError(testCase.text),
+        );
+      }
     }),
   );
 });

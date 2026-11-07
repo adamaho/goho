@@ -9,6 +9,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Exposes item name and category corrections with strict API-compatible validation.
  *
@@ -24,8 +26,7 @@ export const tool = Tool.make("patch_receipt_item", {
     changes: PatchReceiptItemRequest,
   }),
   success: Schema.Struct({ item: ReceiptItem }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Strict, true)
@@ -51,10 +52,14 @@ export const handle = Effect.fn("@goho/PatchReceiptItem.handle")(function* ({
     .pipe(
       Effect.mapError((cause) => {
         if (cause._tag === "ReceiptItemNotFound")
-          return `Item ${item_id} was not found on receipt ${receipt_id}.`;
+          return new ToolFailure({
+            message: `Item ${item_id} was not found on receipt ${receipt_id}.`,
+          });
         if (cause._tag === "BadRequestProblem")
-          return "The item correction was rejected. Check the supplied changes.";
-        return "Could not patch receipt item. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
+          return new ToolFailure({
+            message: "The item correction was rejected. Check the supplied changes.",
+          });
+        return apiFailure("patch receipt item", cause);
       }),
     );
   return { item: response.data };

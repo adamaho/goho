@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the list receipts MCP tool.
  *
@@ -13,8 +15,7 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
 export const tool = Tool.make("list_receipts", {
   description: "List all saved Goho receipts, newest first, including their items.",
   success: Schema.Struct({ receipts: Schema.Array(Receipt) }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, true)
@@ -32,11 +33,6 @@ export const handle = Effect.fn("@goho/ListReceipts.handle")(function* () {
   const client = yield* GohoServerClient.Service;
   const response = yield* client.receipts
     .list()
-    .pipe(
-      Effect.mapError(
-        () =>
-          "Could not list receipts. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
-      ),
-    );
+    .pipe(Effect.mapError((cause) => apiFailure("list receipts", cause)));
   return { receipts: response.data };
 });

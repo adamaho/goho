@@ -1,10 +1,10 @@
 import { layer } from "@effect/vitest";
-import { BookNotFound } from "@goho/goho-server-client/books";
+import { BookNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
-import { DeleteBookResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, DeleteBookResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const routes = Effect.gen(function* () {
@@ -17,7 +17,7 @@ const routes = Effect.gen(function* () {
   if (request.url === "/books/999") {
     return yield* HttpServerRespondable.toResponse(new BookNotFound());
   }
-  return HttpServerResponse.empty({ status: 500 });
+  return yield* HttpServerRespondable.toResponse(new BooksUnavailable());
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_book", (it) => {
@@ -37,11 +37,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_book", (it) =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const missing = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "delete_book", { book_id: "999" }),
+      expect(yield* client.call(2, "delete_book", { book_id: "999" })).toEqual(
+        toolError("Book 999 was not found."),
       );
-      expect(missing.isError).toBe(true);
-      expect(missing.content[0]?.text).toContain("Book 999 was not found.");
     }),
   );
 
@@ -49,11 +47,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_book", (it) =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "delete_book", { book_id: "7" }),
+      expect(yield* client.call(2, "delete_book", { book_id: "7" })).toEqual(
+        toolError(`Could not delete book. ${apiAdvice.serverFailed}`),
       );
-      expect(failed.isError).toBe(true);
-      expect(failed.content[0]?.text).toContain("Could not delete book.");
     }),
   );
 
@@ -65,7 +61,8 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_book", (it) =>
         yield* client.call(2, "delete_book", { book_id: "0" }),
       );
       expect(invalid.isError).toBe(true);
-      expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'delete_book'");
+      expect(invalid.content[0]?.text).toMatch(/^Invalid parameters for tool 'delete_book': /);
+      expect(yield* McpFixture.apiRequests).toEqual([]);
     }),
   );
 });

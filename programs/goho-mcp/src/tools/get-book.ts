@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Describes the get book MCP tool.
  *
@@ -14,8 +16,7 @@ export const tool = Tool.make("get_book", {
   description: "Get one saved Goho book by book ID.",
   parameters: Schema.Struct({ book_id: BookId }),
   success: Schema.Struct({ book: Book }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Readonly, true)
@@ -40,8 +41,8 @@ export const handle = Effect.fn("@goho/GetBook.handle")(function* ({
     .pipe(
       Effect.mapError((cause) =>
         cause._tag === "BookNotFound"
-          ? `Book ${book_id} was not found.`
-          : "Could not get book. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.",
+          ? new ToolFailure({ message: `Book ${book_id} was not found.` })
+          : apiFailure("get book", cause),
       ),
     );
   return { book: response.data };

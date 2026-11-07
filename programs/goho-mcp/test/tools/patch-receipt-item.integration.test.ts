@@ -1,11 +1,11 @@
 import { layer } from "@effect/vitest";
-import { ReceiptItemNotFound } from "@goho/goho-server-client/receipts";
+import { ReceiptItemNotFound, ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
-import { ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const item = {
@@ -37,7 +37,7 @@ const routes = Effect.gen(function* () {
       new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
     );
   }
-  return HttpServerResponse.empty({ status: 500 });
+  return yield* HttpServerRespondable.toResponse(new ReceiptsUnavailable());
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_receipt_item", (it) => {
@@ -65,20 +65,26 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_receipt_item", 
         const cases = [
           { receipt_id: "999", item_id: "7", message: "Item 7 was not found on receipt 999." },
           { receipt_id: "42", item_id: "999", message: "Item 999 was not found on receipt 42." },
-          { receipt_id: "42", item_id: "400", message: "The item correction was rejected." },
-          { receipt_id: "42", item_id: "500", message: "Could not patch receipt item." },
+          {
+            receipt_id: "42",
+            item_id: "400",
+            message: "The item correction was rejected. Check the supplied changes.",
+          },
+          {
+            receipt_id: "42",
+            item_id: "500",
+            message: `Could not patch receipt item. ${apiAdvice.serverFailed}`,
+          },
         ];
 
         for (const [index, testCase] of cases.entries()) {
-          const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
+          expect(
             yield* client.call(index + 2, "patch_receipt_item", {
               receipt_id: testCase.receipt_id,
               item_id: testCase.item_id,
               changes: { name: item.name },
             }),
-          );
-          expect(failed.isError).toBe(true);
-          expect(failed.content[0]?.text).toContain(testCase.message);
+          ).toEqual(toolError(testCase.message));
         }
       }),
   );
@@ -117,8 +123,8 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_receipt_item", 
           yield* client.call(index + 2, "patch_receipt_item", input),
         );
         expect(invalid.isError).toBe(true);
-        expect(invalid.content[0]?.text).toContain(
-          "Invalid parameters for tool 'patch_receipt_item'",
+        expect(invalid.content[0]?.text).toMatch(
+          /^Invalid parameters for tool 'patch_receipt_item': /,
         );
       }
       expect(yield* McpFixture.apiRequests).toEqual([]);
@@ -129,15 +135,13 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_receipt_item", 
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       yield* McpFixture.respondWith(McpFixture.dropConnections);
-      const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
+      expect(
         yield* client.call(2, "patch_receipt_item", {
           receipt_id: "42",
           item_id: "7",
           changes: { name: item.name },
         }),
-      );
-      expect(failed.isError).toBe(true);
-      expect(failed.content[0]?.text).toContain("Could not patch receipt item.");
+      ).toEqual(toolError(`Could not patch receipt item. ${apiAdvice.unreachable}`));
     }),
   );
 });

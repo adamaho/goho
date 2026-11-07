@@ -1,10 +1,10 @@
 import { layer } from "@effect/vitest";
-import { ReceiptNotFound } from "@goho/goho-server-client/receipts";
+import { ReceiptNotFound, ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
-import { DeleteResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, DeleteResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const routes = Effect.gen(function* () {
@@ -17,7 +17,7 @@ const routes = Effect.gen(function* () {
   if (request.url === "/receipts/999") {
     return yield* HttpServerRespondable.toResponse(new ReceiptNotFound());
   }
-  return HttpServerResponse.empty({ status: 500 });
+  return yield* HttpServerRespondable.toResponse(new ReceiptsUnavailable());
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_receipt", (it) => {
@@ -37,11 +37,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_receipt", (it)
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const missing = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "delete_receipt", { receipt_id: "999" }),
+      expect(yield* client.call(2, "delete_receipt", { receipt_id: "999" })).toEqual(
+        toolError("Receipt 999 was not found."),
       );
-      expect(missing.isError).toBe(true);
-      expect(missing.content[0]?.text).toContain("Receipt 999 was not found.");
     }),
   );
 
@@ -49,11 +47,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_receipt", (it)
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
-        yield* client.call(2, "delete_receipt", { receipt_id: "7" }),
+      expect(yield* client.call(2, "delete_receipt", { receipt_id: "7" })).toEqual(
+        toolError(`Could not delete receipt. ${apiAdvice.serverFailed}`),
       );
-      expect(failed.isError).toBe(true);
-      expect(failed.content[0]?.text).toContain("Could not delete receipt.");
     }),
   );
 
@@ -65,7 +61,8 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_receipt", (it)
         yield* client.call(2, "delete_receipt", { receipt_id: "0" }),
       );
       expect(invalid.isError).toBe(true);
-      expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'delete_receipt'");
+      expect(invalid.content[0]?.text).toMatch(/^Invalid parameters for tool 'delete_receipt': /);
+      expect(yield* McpFixture.apiRequests).toEqual([]);
     }),
   );
 });

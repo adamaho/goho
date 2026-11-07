@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Exposes receipt corrections with strict API-compatible validation.
  *
@@ -15,8 +17,7 @@ export const tool = Tool.make("patch_receipt", {
     "Correct a saved Goho receipt's store name or receipt date. Supply at least one field in changes; omitted fields stay unchanged. Amounts, currency, and items cannot be changed with this tool; use patch_receipt_item for item names and categories.",
   parameters: Schema.Struct({ receipt_id: ReceiptId, changes: PatchReceiptRequest }),
   success: Schema.Struct({ receipt: Receipt }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Strict, true)
@@ -40,10 +41,13 @@ export const handle = Effect.fn("@goho/PatchReceipt.handle")(function* ({
     .patch({ params: { receiptId: receipt_id }, payload: changes })
     .pipe(
       Effect.mapError((cause) => {
-        if (cause._tag === "ReceiptNotFound") return `Receipt ${receipt_id} was not found.`;
+        if (cause._tag === "ReceiptNotFound")
+          return new ToolFailure({ message: `Receipt ${receipt_id} was not found.` });
         if (cause._tag === "BadRequestProblem")
-          return "The receipt correction was rejected. Check the supplied changes.";
-        return "Could not patch receipt. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
+          return new ToolFailure({
+            message: "The receipt correction was rejected. Check the supplied changes.",
+          });
+        return apiFailure("patch receipt", cause);
       }),
     );
   return { receipt: response.data };

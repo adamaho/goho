@@ -4,6 +4,8 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
+import { apiFailure, ToolFailure } from "./failure.ts";
+
 /**
  * Exposes book corrections with strict API-compatible validation.
  *
@@ -15,8 +17,7 @@ export const tool = Tool.make("patch_book", {
     "Correct a saved Goho book's title, author, category, or reading level. Supply at least one field in changes; omitted fields stay unchanged. Values must be nonempty text; author and readingLevel cannot be cleared with null. Categories are saved in lowercase, and an unfamiliar name adds a new category. Books are never merged, so a title and author matching another saved book is rejected.",
   parameters: Schema.Struct({ book_id: BookId, changes: PatchBookRequest }),
   success: Schema.Struct({ book: Book }),
-  failure: Schema.String,
-  failureMode: "return",
+  failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
   .annotate(Tool.Strict, true)
@@ -40,12 +41,17 @@ export const handle = Effect.fn("@goho/PatchBook.handle")(function* ({
     .patch({ params: { bookId: book_id }, payload: changes })
     .pipe(
       Effect.mapError((cause) => {
-        if (cause._tag === "BookNotFound") return `Book ${book_id} was not found.`;
+        if (cause._tag === "BookNotFound")
+          return new ToolFailure({ message: `Book ${book_id} was not found.` });
         if (cause._tag === "BookConflict")
-          return "Another saved book already has that title and author. Nothing changed.";
+          return new ToolFailure({
+            message: "Another saved book already has that title and author. Nothing changed.",
+          });
         if (cause._tag === "BadRequestProblem")
-          return "The book correction was rejected. Check the supplied changes.";
-        return "Could not patch book. Start Goho server with pnpm server:dev and check GOHO_SERVER_URL.";
+          return new ToolFailure({
+            message: "The book correction was rejected. Check the supplied changes.",
+          });
+        return apiFailure("patch book", cause);
       }),
     );
   return { book: response.data };

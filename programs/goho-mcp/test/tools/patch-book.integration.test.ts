@@ -1,12 +1,12 @@
 import { layer } from "@effect/vitest";
-import { BookConflict, BookNotFound } from "@goho/goho-server-client/books";
+import { BookConflict, BookNotFound, BooksUnavailable } from "@goho/goho-server-client/books";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import { book } from "#test/fixtures/book.ts";
-import { BookResult, ErrorResult } from "#test/support/mcp-client.ts";
+import { apiAdvice, BookResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const corrections = {
@@ -37,7 +37,7 @@ const routes = Effect.gen(function* () {
       new HttpApiError.BadRequestProblem({ detail: "Request validation failed" }),
     );
   }
-  return HttpServerResponse.empty({ status: 500 });
+  return yield* HttpServerRespondable.toResponse(new BooksUnavailable());
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_book", (it) => {
@@ -71,20 +71,24 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_book", (it) => 
         const client = yield* McpFixture.openSession;
         const cases = [
           { book_id: "999", message: "Book 999 was not found." },
-          { book_id: "409", message: "Another saved book already has that title and author." },
-          { book_id: "400", message: "The book correction was rejected." },
-          { book_id: "500", message: "Could not patch book." },
+          {
+            book_id: "409",
+            message: "Another saved book already has that title and author. Nothing changed.",
+          },
+          {
+            book_id: "400",
+            message: "The book correction was rejected. Check the supplied changes.",
+          },
+          { book_id: "500", message: `Could not patch book. ${apiAdvice.serverFailed}` },
         ];
 
         for (const [index, testCase] of cases.entries()) {
-          const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
+          expect(
             yield* client.call(index + 2, "patch_book", {
               book_id: testCase.book_id,
               changes: { title: "The Hobbit" },
             }),
-          );
-          expect(failed.isError).toBe(true);
-          expect(failed.content[0]?.text).toContain(testCase.message);
+          ).toEqual(toolError(testCase.message));
         }
       }),
   );
@@ -120,7 +124,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_book", (it) => 
           yield* client.call(index + 2, "patch_book", input),
         );
         expect(invalid.isError).toBe(true);
-        expect(invalid.content[0]?.text).toContain("Invalid parameters for tool 'patch_book'");
+        expect(invalid.content[0]?.text).toMatch(/^Invalid parameters for tool 'patch_book': /);
       }
       expect(yield* McpFixture.apiRequests).toEqual([]);
     }),
@@ -130,11 +134,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("patch_book", (it) => 
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       yield* McpFixture.respondWith(McpFixture.dropConnections);
-      const failed = yield* Schema.decodeUnknownEffect(ErrorResult)(
+      expect(
         yield* client.call(2, "patch_book", { book_id: "12", changes: { title: "The Hobbit" } }),
-      );
-      expect(failed.isError).toBe(true);
-      expect(failed.content[0]?.text).toContain("Could not patch book.");
+      ).toEqual(toolError(`Could not patch book. ${apiAdvice.unreachable}`));
     }),
   );
 });
