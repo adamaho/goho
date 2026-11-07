@@ -9,9 +9,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.model.Book
+import com.adamaho.goho.api.generated.model.BookImageNotFound
+import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BookUpload
+import com.adamaho.goho.api.generated.model.BookUploadNotFound
 import com.adamaho.goho.api.generated.model.BookUploadStatus
 import com.adamaho.goho.api.generated.model.PatchBookRequest
+import com.adamaho.goho.api.isNotFound
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -176,6 +180,7 @@ internal class BookListController(
                 deleteAndConfirm(
                     delete = { booksApi.booksDelete(bookId) },
                     lookup = { booksApi.booksGet(bookId) },
+                    notFound = BookNotFound.serializer(),
                 )
             if (deleted) removeBook(bookId) else refresh()
             deleted
@@ -269,6 +274,7 @@ internal class BookListController(
                 deleteAndConfirm(
                     delete = { uploadsApi.bookUploadsDelete(scan.uploadId) },
                     lookup = { uploadsApi.bookUploadsGet(scan.uploadId) },
+                    notFound = BookUploadNotFound.serializer(),
                 )
             if (deleted) {
                 changeRevision++
@@ -303,9 +309,9 @@ internal class BookListController(
         try {
             val response = booksApi.booksGetImage(bookId)
             when {
-                response.code() == 404 -> null
                 response.isSuccessful ->
                     withContext(Dispatchers.IO) { response.body()?.use { it.bytes() } }
+                response.isNotFound(BookImageNotFound.serializer()) -> null
                 else -> {
                     Log.w("GohoBooks", "Book cover request failed: ${response.code()}")
                     null

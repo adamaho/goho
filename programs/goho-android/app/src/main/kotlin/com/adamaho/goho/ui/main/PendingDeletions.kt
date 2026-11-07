@@ -4,9 +4,11 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.adamaho.goho.api.isNotFound
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.DeserializationStrategy
 import retrofit2.Response
 
 internal enum class DeletionKind {
@@ -47,26 +49,26 @@ internal class PendingDeletions(
 }
 
 /**
- * A lost acknowledgement is not proof of failure: check the resource before restoring it. A 404
- * from DELETE or the follow-up GET means it is already absent. If neither request can confirm
- * absence, release the optimistic mask and report the uncertainty; a normal refresh reconciles the
- * cached row. No automatic destructive retry is made.
+ * A lost acknowledgement is not proof of failure: check the resource before restoring it. A 204
+ * from DELETE, or the resource's own [notFound] problem from DELETE or the follow-up GET, means it
+ * is already absent; any other 404 does not. If neither request can confirm absence, release the
+ * optimistic mask and report the uncertainty; a normal refresh reconciles the cached row. No
+ * automatic destructive retry is made.
  */
 internal suspend fun deleteAndConfirm(
     delete: suspend () -> Response<*>,
     lookup: suspend () -> Response<*>,
+    notFound: DeserializationStrategy<*>,
 ): Boolean {
-    suspend fun status(request: suspend () -> Response<*>): Int? =
+    suspend fun confirms(request: suspend () -> Response<*>, absentCode: Int?): Boolean =
         try {
             val response = request()
-            response.errorBody()?.close()
-            response.code()
+            response.code() == absentCode || response.isNotFound(notFound)
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             Log.w("GohoDeletion", "Deletion could not be confirmed", error)
-            null
+            false
         }
 
-    val result = status(delete)
-    return result == 204 || result == 404 || status(lookup) == 404
+    return confirms(delete, absentCode = 204) || confirms(lookup, absentCode = null)
 }

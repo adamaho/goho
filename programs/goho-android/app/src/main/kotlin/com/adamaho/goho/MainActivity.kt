@@ -45,7 +45,11 @@ import com.adamaho.goho.api.generated.ReceiptsApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.Receipt
+import com.adamaho.goho.api.generated.model.ReceiptImageNotFound
+import com.adamaho.goho.api.generated.model.ReceiptNotFound
+import com.adamaho.goho.api.generated.model.ReceiptUploadNotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
+import com.adamaho.goho.api.isNotFound
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.FeedbackSnackbar
@@ -469,9 +473,9 @@ class MainActivity : ComponentActivity() {
         try {
             val response = receiptsApi.receiptsGetImage(receiptId)
             when {
-                response.code() == 404 -> null
                 response.isSuccessful ->
                     withContext(Dispatchers.IO) { response.body()?.use { it.bytes() } }
+                response.isNotFound(ReceiptImageNotFound.serializer()) -> null
                 else -> {
                     Log.w("GohoReceipts", "Receipt image request failed: ${response.code()}")
                     null
@@ -518,12 +522,14 @@ class MainActivity : ComponentActivity() {
                     deleteAndConfirm(
                         delete = { receiptsApi.receiptsDelete(key.id) },
                         lookup = { receiptsApi.receiptsGet(key.id) },
+                        notFound = ReceiptNotFound.serializer(),
                     )
                 else {
                     val uploadId = UUID.fromString(key.id)
                     deleteAndConfirm(
                         delete = { receiptUploadsApi.receiptUploadsDelete(uploadId) },
                         lookup = { receiptUploadsApi.receiptUploadsGet(uploadId) },
+                        notFound = ReceiptUploadNotFound.serializer(),
                     )
                 }
             if (absent) {

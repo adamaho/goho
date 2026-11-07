@@ -5,7 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.adamaho.goho.api.generated.model.Book
+import com.adamaho.goho.api.generated.model.BookNotFound
 import com.adamaho.goho.api.generated.model.BooksGet200Response
+import com.adamaho.goho.api.isNotFound
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -56,28 +58,34 @@ internal class PendingAuthors(private val scope: CoroutineScope) {
  * book is looked up before reporting failure: an author on it means the save, or another one, got
  * there. With [lookupFirst], as for Try again, an author already on the book is kept instead of
  * being overwritten; PATCH itself is unconditional, so this narrows the race rather than closing
- * it.
+ * it. Only a `BookNotFound` 404 means the book is gone; any other 404 is an uncertain answer.
  */
 internal suspend fun patchAndConfirm(
     patch: suspend () -> Response<BooksGet200Response>,
     lookup: suspend () -> Response<BooksGet200Response>,
     lookupFirst: Boolean,
 ): AuthorOutcome {
-    suspend fun send(request: suspend () -> Response<BooksGet200Response>): Response<*>? =
+    /** A response whose error body has been read and closed; [missing] for `BookNotFound`. */
+    class Sent(val response: Response<BooksGet200Response>, val missing: Boolean) {
+        val book
+            get() = response.body()?.data?.takeIf { response.isSuccessful }
+    }
+
+    suspend fun send(request: suspend () -> Response<BooksGet200Response>): Sent? =
         try {
-            request().also { it.errorBody()?.close() }
+            val response = request()
+            Sent(response, missing = response.isNotFound(BookNotFound.serializer()))
         } catch (error: Exception) {
             if (error is CancellationException) throw error
             Log.w("GohoBooks", "Author request failed", error)
             null
         }
-    fun Response<*>.book() = (body() as? BooksGet200Response)?.data?.takeIf { isSuccessful }
 
     suspend fun confirm(unanswered: Boolean): AuthorOutcome {
         val found = send(lookup)
-        val book = found?.book()
+        val book = found?.book
         return when {
-            found?.code() == 404 -> AuthorOutcome.Missing
+            found?.missing == true -> AuthorOutcome.Missing
             book?.author != null -> AuthorOutcome.Saved(book)
             else -> AuthorOutcome.Failed(unanswered && found == null)
         }
@@ -85,21 +93,21 @@ internal suspend fun patchAndConfirm(
 
     if (lookupFirst) {
         val found = send(lookup)
-        if (found?.code() == 404) return AuthorOutcome.Missing
+        if (found?.missing == true) return AuthorOutcome.Missing
         found
-            ?.book()
+            ?.book
             ?.takeIf { it.author != null }
             ?.let {
                 return AuthorOutcome.Saved(it)
             }
     }
     val result = send(patch) ?: return confirm(unanswered = true)
-    val saved = result.book()
+    val saved = result.book
     return when {
         saved != null -> AuthorOutcome.Saved(saved)
-        result.code() == 409 -> AuthorOutcome.Conflict
-        result.code() == 404 -> AuthorOutcome.Missing
-        result.code() == 400 -> AuthorOutcome.Failed(unanswered = false)
+        result.response.code() == 409 -> AuthorOutcome.Conflict
+        result.missing -> AuthorOutcome.Missing
+        result.response.code() == 400 -> AuthorOutcome.Failed(unanswered = false)
         else -> confirm(unanswered = false)
     }
 }

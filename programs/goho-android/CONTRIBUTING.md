@@ -135,10 +135,15 @@ fails when that copy is stale.
 
 ### Problem responses
 
-The client uses `kotlinx.serialization` and Retrofit's matching converter. The app
-still checks HTTP status codes without decoding problem bodies, so no Android
-screen has exercised this decoding yet. These generator settings in
-`app/build.gradle.kts` keep the models usable when you do:
+The client uses `kotlinx.serialization` and Retrofit's matching converter. Most
+failures are still handled by HTTP status alone. A 404 means a resource is gone
+only when its body decodes as that resource's not-found problem, through
+`isNotFound` in `api/NotFound.kt`, such as
+`response.isNotFound(BookNotFound.serializer())`. The required `type` rejects a
+route's `about:blank` 404 and other resources' problems. A deletion or author
+save treats any other 404 as unconfirmed, and an image loader as a failed request.
+`isNotFound` reads and closes the error body, so call it once per response. These
+generator settings in `app/build.gradle.kts` keep the models usable:
 
 - `RESOLVE_INLINE_ENUMS` lifts inline enums to top-level models, such as
   `BookUploadStatus` and `CategoryColor`. Numeric status enums then decode as
