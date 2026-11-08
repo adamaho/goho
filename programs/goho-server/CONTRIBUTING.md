@@ -221,7 +221,8 @@ and each keeps its original file.
 
 ### Recipes
 
-Migration 0019 adds the recipe tables. Nothing reads or writes them yet.
+Migration 0019 adds the recipe tables. The recipe and recipe upload
+repositories read and write them; no endpoint or worker uses them yet.
 
 - `recipes` stands alone, with a generated `bigint` identity `id`, a nonblank
   `title`, nonempty JSON arrays of `ingredients` and `steps`, an optional JSON
@@ -241,7 +242,35 @@ Migration 0019 adds the recipe tables. Nothing reads or writes them yet.
   deleted with its upload, freeing the URL for a fresh import.
 - Each URL is limited to 2048 bytes of UTF-8, not characters. The API will check
   the limit on both URLs, the normalized one after normalization.
-- A recipe with an upload cannot be deleted directly; delete its upload first.
+- The foreign key stops a direct SQL delete of a recipe that still has an upload;
+  delete the upload first. The repository's recipe deletion does this for you.
+
+The repositories decode every stored recipe and upload with the API schemas, so
+stored JSON that no longer validates, or a linked upload missing its URL row,
+fails the read instead of being dropped or coerced.
+
+- Saving a recipe always inserts a new one; titles are not unique. A missing
+  yield or total time is SQL `NULL`. Create, get and list read through one
+  selection, and a recipe's `source` is its succeeded upload's URL as submitted,
+  or null. Listing reads no ingredients, steps or yield, and sorts by title
+  ignoring case, then newest first.
+- Importing a URL finds the upload of its normalized URL in any status, or
+  inserts a queued upload and its URL in one savepoint and reports whether it
+  was created, so only a new upload needs a job. A concurrent import of the same
+  page waits on the `recipe_upload_urls_normalized_url_key` insert, rolls back
+  its own upload and returns the committed one; only that key is tolerated. The
+  reread relies on READ COMMITTED, PostgreSQL's default.
+- Status changes are guarded updates. `markProcessing` accepts queued or
+  processing uploads, so a redelivered job continues; `markFailed` accepts
+  queued or processing; `markSucceeded` accepts only processing and locks the
+  recipe first. Saving the recipe and marking its upload succeeded can share a
+  caller's transaction, so a refused status change rolls back the recipe.
+- Deleting a recipe locks it, deletes its upload and URL, then the recipe, and
+  returns the photo's file ID for the caller to remove before committing. An
+  upload that links the recipe concurrently either commits first and is deleted
+  with it, or fails without changes.
+- Only a failed upload can be deleted on its own; deleting it frees the URL for
+  a new import. There is no retry: delete the failed upload and import again.
 
 ### Uploads and transactions
 
