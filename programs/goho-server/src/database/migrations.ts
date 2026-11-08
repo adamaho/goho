@@ -18,6 +18,7 @@ import categoryKinds from "./migrations/0014-category-kinds.ts";
 import books from "./migrations/0015-books.ts";
 import bookUploads from "./migrations/0016-book-uploads.ts";
 import optionalBookAuthor from "./migrations/0018-optional-book-author.ts";
+import recipes from "./migrations/0019-recipes.ts";
 
 /**
  * Every migration by ID. Upgrade tests run a prefix of it.
@@ -43,6 +44,7 @@ export const all = {
   "0015_books": books,
   "0016_book_uploads": bookUploads,
   "0018_optional_book_author": optionalBookAuthor,
+  "0019_recipes": recipes,
 };
 
 /**

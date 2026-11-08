@@ -122,14 +122,15 @@ it.effect("enforces book identity in the database", () =>
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-const BeforeOptionalAuthorLive = databaseMigratedBy(
+const migrationsBefore = (next: string) =>
   PgMigrator.run({
     loader: PgMigrator.fromRecord(
-      Object.fromEntries(Object.entries(Migrations.all).filter(([id]) => id < "0018")),
+      Object.fromEntries(Object.entries(Migrations.all).filter(([id]) => id < next)),
     ),
     table: "goho_migrations",
-  }),
-);
+  });
+
+const BeforeOptionalAuthorLive = databaseMigratedBy(migrationsBefore("0018"));
 
 it.effect("upgrades saved books and covers unchanged to allow unknown authors", () =>
   Effect.gen(function* () {
@@ -160,7 +161,7 @@ it.effect("upgrades saved books and covers unchanged to allow unknown authors", 
     const before = yield* snapshot;
     // Some databases already record an unrelated migration 0017; 0018 must still run.
     yield* sql`INSERT INTO goho_migrations (migration_id, name) VALUES (17, 'issued_upload_ids')`;
-    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([
+    expect(yield* migrationsBefore("0019").pipe(Effect.provide(NodeServices.layer))).toEqual([
       [18, "optional_book_author"],
     ]);
     expect((yield* migrationIds).slice(-2)).toEqual([17, 18]);

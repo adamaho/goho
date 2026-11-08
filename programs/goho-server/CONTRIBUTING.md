@@ -219,6 +219,30 @@ and each keeps its original file.
 - Deleting a failed upload removes only its row and file. Other states return
   409; deleting the book removes its successful scans.
 
+### Recipes
+
+Migration 0019 adds the recipe tables. Nothing reads or writes them yet.
+
+- `recipes` stands alone, with a generated `bigint` identity `id`, a nonblank
+  `title`, nonempty JSON arrays of `ingredients` and `steps`, an optional JSON
+  object `yield` and an optional nonnegative `total_time_seconds`. The database
+  checks only these top-level shapes; the API schemas validate the rest. A
+  recipe needs no upload.
+- A recipe's optional photo is a stored file: `image_file_id` and
+  `image_content_type` (JPEG, PNG or WebP) are both set or both null.
+- `recipe_uploads` tracks one import with `status` and, as in `receipt_uploads`,
+  only a succeeded upload has a `recipe_id` and only a failed one has a
+  `failure_code` (`page_unavailable`, `no_recipe_found`, `ambiguous_recipe`,
+  `incomplete_recipe`, `processing_failed`, `recipe_creation_failed`,
+  `internal_error`). `recipe_id` is unique, so a recipe has at most one upload.
+- An upload's source is a row in its own table. `recipe_upload_urls` keeps the
+  `url` as submitted and its `normalized_url`, which is unique, so concurrent
+  imports of the same page share one upload whatever its status. The row is
+  deleted with its upload, freeing the URL for a fresh import.
+- Each URL is limited to 2048 bytes of UTF-8, not characters. The API will check
+  the limit on both URLs, the normalized one after normalization.
+- A recipe with an upload cannot be deleted directly; delete its upload first.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload
@@ -254,7 +278,7 @@ commit can leave rows whose files are gone until deletion is retried.
 
 ### Record timestamps
 
-`books`, `book_uploads`, `categories`, `receipts`, `receipt_items`, and `receipt_uploads` have required
+`books`, `book_uploads`, `categories`, `receipts`, `receipt_items`, `receipt_uploads`, `recipes`, and `recipe_uploads` have required
 `created_at` and `updated_at` columns. They use `timestamptz`, which stores an absolute instant
 whatever the session time zone.
 
