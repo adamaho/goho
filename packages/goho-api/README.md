@@ -10,4 +10,6 @@ clients. It depends only on Effect and contains no server infrastructure.
 - `/categories`: the shared category schema and its kinds.
 - `/receipt-uploads`: receipt upload identity, status, and error schemas.
 - `/receipts`: receipt request, response, and error schemas.
+- `/recipe-uploads`: recipe import identity, request, status, and error schemas.
+- `/recipes`: recipe source URL and its normalization, request, response, and error schemas.
 - `/response`: shared successful response envelope and public error code/message schema.
