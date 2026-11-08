@@ -19,8 +19,9 @@ const normalize = (url: string) => {
 };
 
 /**
- * Submitted recipe page URL, trimmed: an absolute http or https URL of at most
- * 2048 UTF-8 bytes, both as sent and once normalized. It is checked for format
+ * Submitted recipe page URL, trimmed: an absolute http or https URL without a
+ * username or password, of at most 2048 UTF-8 bytes, both as sent and once
+ * normalized. It is checked for format
  * only; whether the page is public and reachable is decided when it is fetched.
  *
  * @category models
@@ -39,6 +40,16 @@ export const RecipeUrl = Schema.Trim.check(
       toJsonSchema: () => [{}, true],
     },
     true,
+  ),
+  Schema.makeFilter(
+    (value) => {
+      const parsed = new URL(value);
+      return parsed.username === "" && parsed.password === "";
+    },
+    {
+      expected: "a URL without a username or password",
+      toJsonSchema: () => [{}, true],
+    },
   ),
   Schema.makeFilter(
     (value) => utf8Bytes(value) <= maxUrlBytes && utf8Bytes(normalize(value)) <= maxUrlBytes,
@@ -79,7 +90,7 @@ export const RecipeSource = Schema.Struct({
   kind: Schema.tag("url"),
   url: RecipeUrl.pipe(
     Schema.annotateEncoded({
-      description: `The http or https page URL as sent, trimmed, up to ${maxUrlBytes} UTF-8 bytes, bud; redirects don't change it.`,
+      description: `The http or https page URL as sent, trimmed, up to ${maxUrlBytes} UTF-8 bytes and without a username or password, bud; redirects don't change it.`,
       examples: ["https://example.com/recipes/pancakes"],
     }),
   ),

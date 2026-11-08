@@ -272,6 +272,52 @@ fails the read instead of being dropped or coerced.
 - Only a failed upload can be deleted on its own; deleting it frees the URL for
   a new import. There is no retry: delete the failed upload and import again.
 
+### Recipe imports
+
+`recipes/import.ts` reads one recipe from its page; no worker calls it yet. It
+fetches the URL as submitted, extracts the recipe with `OPENAI_MODEL`, then
+downloads the page's photo. The submitted URL stays the source wherever
+redirects lead.
+
+- `services/web-fetch.ts` fetches only public internet addresses. Every URL,
+  including each redirect and the photo, must be http or https without a
+  username or password, and an IP literal must be public. A URL with
+  credentials is refused before any lookup, never fetched with them dropped;
+  the API's `RecipeUrl` rejects them in submitted URLs too.
+- Each hostname resolves once per connection, through the connection's own
+  lookup, and every address it returns must be public. The socket connects to
+  those addresses, so DNS cannot rebind between check and connect, and TLS
+  still verifies the URL's hostname. Loopback, private, link-local, shared,
+  reserved, multicast, documentation, IPv4-mapped and NAT64 ranges are refused.
+- Requests carry no trace headers, so Goho's tracing never reaches the sites.
+- Limits: five redirects, 15 seconds per fetch with its redirects, a 5 MiB page
+  and a 10 MiB photo. Bodies must be uncompressed.
+- The page must be HTML. It is decoded by its byte order mark, then the HTTP
+  charset, then a `<meta>` charset in its first 1024 bytes, then UTF-8.
+- The page reader is a small linear scanner, not a full HTML parser, so hostile
+  markup cannot stall it. Its JSON-LD Recipe objects, wherever they appear,
+  including in a footer, and its visible text without scripts, styles,
+  navigation or footers go to the model as untrusted data. Each is capped at
+  40,000 characters, and the title and description at 1,000.
+- The model either returns one main recipe or reports `no_recipe_found`,
+  `ambiguous_recipe` or `incomplete_recipe`. Steps get a light cleanup that
+  keeps their cooking meaning. Temperatures are written in Fahrenheit only: a
+  page's Fahrenheit value is kept, and a Celsius-only one is converted and
+  rounded to the nearest 5 °F (180 °C is 355 °F). Cup and spoon measures keep their unit. The
+  server converts ounces and pounds to grams, and US or imperial fluid ounces
+  to millilitres, exactly with integer fractions; a result outside safe
+  integers fails rather than rounds. Any other unit stays a text quantity
+  without a unit. The converted recipe must decode as a `CreateRecipeRequest`.
+- Failures are an `ImportError` with the upload failure code and `retryable`:
+  timeouts, transport errors, 408, 429 and 5xx responses, and retryable model
+  failures, including output that does not validate, can be retried; blocked
+  addresses, other statuses, non-HTML pages and the three content rejections
+  cannot.
+- The photo is the only Recipe object's image, or else the Open Graph or
+  Twitter image. Its type comes from its bytes: JPEG, PNG or WebP. A photo that
+  fails to download or has another type is logged and dropped; it never fails
+  the import.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload

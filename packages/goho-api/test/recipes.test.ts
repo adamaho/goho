@@ -74,6 +74,18 @@ describe("RecipeSource", () => {
     },
   );
 
+  it.each([
+    "https://cook:secret@example.com/a",
+    "https://cook@example.com/a",
+    "https://:secret@example.com/a",
+  ])("rejects a URL with a username or password: %j", (url) => {
+    expect(decodes(RecipeSource, source(url))).toBe(false);
+  });
+
+  it("accepts an empty userinfo, which carries no credentials", () => {
+    expect(decodes(RecipeSource, source("https://@example.com/a"))).toBe(true);
+  });
+
   it("limits the submitted URL to 2048 UTF-8 bytes", () => {
     const base = "https://example.com/";
     expect(decodes(RecipeSource, source(base + "a".repeat(2048 - base.length)))).toBe(true);
