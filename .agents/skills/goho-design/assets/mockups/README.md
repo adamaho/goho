@@ -1,5 +1,16 @@
 # Mockups
 
+## Recipes (November 8, 2026, approved design)
+
+Design renders from the Goho art-boards canvas (“Recipes”) at 296dp width and 2×, light unless named dark. They are design references, not native captures, and Recipes is not implemented; recipes, sites and times are sample data, and the food photo is a placeholder (the board's review photo isn't committed). The [section 12 spec](../../references/screens.md#12-recipes-list-add-from-a-link-details) wins where they differ.
+
+- `recipes-list-light.png`: Recipes All, rows with photo placeholders, title and “time · site”, A–Z.
+- `recipes-add-menu-light.png`: the shared Add menu with Add recipe above Scan book and Scan receipt.
+- `recipes-add-link-sheet-light.png`: the paste-a-link sheet.
+- `recipes-reading-light.png`: a link reading inline at the top of All, a failed “No recipe found” row, and the plain-text Needs attention count.
+- `recipe-details-light.png`, `recipe-details-dark.png`: details with the photo hero, sheet, stat row, Ingredients, Steps with inline ingredient marks, and Details.
+- `recipe-details-no-photo-light.png`: the no-photo hero, with only the stats the page gives.
+
 ## Add author, Books rows and feedback snackbar (native implementation)
 
 October 31, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator at 280dpi, using an isolated disposable real backend and database with sample books only; no production or family records. Captures are 720×1600px at standard text size unless noted. They were taken from three candidate builds of the same change; each later build left the parts shown in earlier captures unchanged, so all of them show the current behavior.
