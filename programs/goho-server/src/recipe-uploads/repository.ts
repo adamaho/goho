@@ -8,7 +8,10 @@ import { normalizeRecipeUrl, RecipeId, type RecipeSource } from "@goho/goho-api/
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
+import * as QueueConstants from "#src/queues/constants.ts";
+
 import type { FoundOrCreated } from "./model.ts";
+import * as RecipeUploadQueue from "./queue.ts";
 
 /**
  * Unexpected failure while reading or saving recipe imports, including stored
@@ -119,6 +122,12 @@ export interface Interface {
   readonly deleteFailed: (
     uploadId: RecipeUploadId,
   ) => Effect.Effect<void, PersistenceError | UploadNotFound | DeletionNotAllowed>;
+  /**
+   * Marks queued or processing imports failed with `internal_error` when their
+   * queue job has already failed, and returns the imports it changed. Requires
+   * the queue table, which the queue layer creates.
+   */
+  readonly markAbandonedFailed: Effect.Effect<ReadonlyArray<RecipeUpload>, PersistenceError>;
 }
 
 /**
@@ -262,6 +271,23 @@ export const layer = Layer.effect(
       `,
     });
 
+    const updateAbandonedToFailed = SqlSchema.findAll({
+      Request: Schema.Void,
+      Result: RecipeUpload,
+      execute: () => sql`
+        WITH u AS (
+          UPDATE recipe_uploads SET status = 'failed', failure_code = 'internal_error'
+          WHERE status IN ('queued', 'processing')
+          AND id::text IN (
+            SELECT id FROM ${sql(QueueConstants.tableName)}
+            WHERE queue_name = ${RecipeUploadQueue.name} AND state = 'failed'
+          )
+          RETURNING *
+        )
+        SELECT ${columns} FROM u ${withSource}
+      `,
+    });
+
     // The URL needs its upload first, so a URL that loses the race rolls back the
     // upload inserted before it.
     const insertNew = (uploadId: RecipeUploadId, url: string, normalizedUrl: string) =>
@@ -368,11 +394,19 @@ export const layer = Layer.effect(
       return yield* new DeletionNotAllowed({ uploadId, currentStatus: current.value.status });
     });
 
+    // The queue does not redeliver failed jobs, so their unfinished imports need
+    // reconciling. The status guard leaves imports a running worker already finished.
+    const markAbandonedFailed = updateAbandonedToFailed(undefined).pipe(
+      persistenceError("markAbandonedFailed"),
+      Effect.withSpan("@goho/RecipeUploadRepository.markAbandonedFailed"),
+    );
+
     return Service.of({
       deleteFailed,
       findById,
       findOrCreateQueued,
       list,
+      markAbandonedFailed,
       markFailed,
       markProcessing,
       markSucceeded,

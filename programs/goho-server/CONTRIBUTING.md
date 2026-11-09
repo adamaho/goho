@@ -222,7 +222,8 @@ and each keeps its original file.
 ### Recipes
 
 Migration 0019 adds the recipe tables. The recipe and recipe upload
-repositories read and write them; no endpoint or worker uses them yet.
+repositories read and write them, behind the `recipes` and `recipe-uploads`
+services and the recipe upload worker; no endpoint uses them yet.
 
 - `recipes` stands alone, with a generated `bigint` identity `id`, a nonblank
   `title`, nonempty JSON arrays of `ingredients` and `steps`, an optional JSON
@@ -274,8 +275,8 @@ fails the read instead of being dropped or coerced.
 
 ### Recipe imports
 
-`recipes/import.ts` reads one recipe from its page; no worker calls it yet. It
-fetches the URL as submitted, extracts the recipe with `OPENAI_MODEL`, then
+`recipes/import.ts` reads one recipe from its page for the recipe upload
+worker. It fetches the URL as submitted, extracts the recipe with `OPENAI_MODEL`, then
 downloads the page's photo. The submitted URL stays the source wherever
 redirects lead.
 
@@ -318,6 +319,36 @@ redirects lead.
   fails to download or has another type is logged and dropped; it never fails
   the import.
 
+### Recipe upload processing
+
+- Submitting a URL saves a queued upload and offers its job in one
+  transaction, only when the upload is new. A page already imported in any
+  status returns that upload and source, with no new job; `created` tells the
+  two apart for the HTTP status.
+- Each worker process takes one queue job at a time, as the receipt and book
+  workers do, so a process runs at most one recipe import at once. The 5 MiB
+  page and 10 MiB photo caps bound the downloaded bytes, not the import's
+  memory: received chunks, the decoded page text and its lowercase copies,
+  parsed JSON-LD and the text sent to the model add to it. Receipt and book
+  jobs run alongside, one of each, and every server replica runs its own
+  workers.
+- The page fetch and AI run before any transaction. Then the photo is stored,
+  and the recipe is saved and the upload marked succeeded in one transaction,
+  which a redelivered job's finished upload refuses. A failed save removes the
+  stored photo again; a photo that cannot be stored is logged and the recipe
+  saved without it. A crash between storing the photo and committing can leave
+  an unreferenced file.
+- A temporary failure, as the import's `retryable` reports it, or a failed save,
+  fails the attempt so the queue retries it; after the third attempt its
+  failure code is recorded. A save that fails records `recipe_creation_failed`,
+  and other unexpected failures `internal_error`. A rejection of the page
+  (`no_recipe_found`, `ambiguous_recipe`, `incomplete_recipe` or an unusable
+  page) is recorded at once and completes the job.
+- A `CreateRecipeRequest` saved directly is saved at once, with no upload, job
+  or AI. Its `source` is null.
+- Deleting a recipe deletes its upload and URL and removes its photo before
+  committing.
+
 ### Uploads and transactions
 
 `receipt_uploads` links each processed upload to its receipt. Once the upload
@@ -328,10 +359,10 @@ caller's transaction, the insert joins it as a savepoint. Upload processing
 inserts the receipt and marks the upload succeeded in one transaction. That
 status change is what stops redelivered jobs from creating duplicate receipts.
 
-Both upload queues share one persisted queue store on `goho_queues`, one
+Every upload queue shares one persisted queue store on `goho_queues`, one
 cleanup fiber, three attempts and the retry schedule. A job can fail in its
-queue, `receipt-uploads` or `book-uploads`, without the worker recording it on
-the upload:
+queue, `receipt-uploads`, `book-uploads` or `recipe-uploads`, without the worker
+recording it on the upload:
 
 - If the process crashes during the final attempt, Effect's queue fails the job
   once its lock expires after two minutes. It checks every 30 seconds while a
@@ -346,8 +377,8 @@ processing uploads whose job failed in their own queue as `failed` with
 uploads and existing failure codes stay unchanged. A failed pass is logged and
 retried at the next interval.
 
-Stored files are not part of SQL transactions. Upload deletion and book or
-receipt deletion remove files before committing: a storage failure rolls the
+Stored files are not part of SQL transactions. Upload deletion and book, receipt
+or recipe deletion remove files before committing: a storage failure rolls the
 rows back for a retry, but files already removed stay removed, and a failed
 commit can leave rows whose files are gone until deletion is retried.
 

@@ -26,8 +26,13 @@ import * as ReceiptUploads from "./receipt-uploads/service.ts";
 import * as ReceiptUploadWorker from "./receipt-uploads/worker.ts";
 import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
+import * as RecipeUploadQueue from "./recipe-uploads/queue.ts";
+import * as RecipeUploadRepository from "./recipe-uploads/repository.ts";
+import * as RecipeUploadWorker from "./recipe-uploads/worker.ts";
+import * as RecipeRepository from "./recipes/repository.ts";
 import * as Ai from "./services/ai.ts";
 import * as FileStorage from "./services/file-storage.ts";
+import * as WebFetch from "./services/web-fetch.ts";
 
 const CategoryRepositoryLive = CategoryRepository.layer.pipe(Layer.provide(Database.layer));
 
@@ -45,10 +50,16 @@ const ReceiptUploadRepositoryLive = ReceiptUploadRepository.layer.pipe(
 
 const BookUploadRepositoryLive = BookUploadRepository.layer.pipe(Layer.provide(Database.layer));
 
-// Both queues share one memoized queue store and cleanup fiber.
+const RecipeRepositoryLive = RecipeRepository.layer.pipe(Layer.provide(Database.layer));
+
+const RecipeUploadRepositoryLive = RecipeUploadRepository.layer.pipe(Layer.provide(Database.layer));
+
+// Every queue shares one memoized queue store and cleanup fiber.
 const ReceiptUploadQueueLive = ReceiptUploadQueue.layer.pipe(Layer.provide(Database.layer));
 
 const BookUploadQueueLive = BookUploadQueue.layer.pipe(Layer.provide(Database.layer));
+
+const RecipeUploadQueueLive = RecipeUploadQueue.layer.pipe(Layer.provide(Database.layer));
 
 const TransactionLive = Transaction.layer.pipe(Layer.provide(Database.layer));
 
@@ -110,6 +121,20 @@ const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
   ]),
 );
 
+// One consumer fiber imports one page at a time, bounding this process to one
+// in-memory page and photo.
+const RecipeUploadWorkerLive = RecipeUploadWorker.layer.pipe(
+  Layer.provide([
+    Ai.layer,
+    FileStorageLive,
+    RecipeRepositoryLive,
+    RecipeUploadQueueLive,
+    RecipeUploadRepositoryLive,
+    TransactionLive,
+    WebFetch.layer,
+  ]),
+);
+
 const ServerLive = HttpRouter.serve(
   Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive, BooksLive, BookUploadsLive])),
 ).pipe(
@@ -123,6 +148,6 @@ const ServerLive = HttpRouter.serve(
     }),
   ),
 );
-Layer.launch(Layer.mergeAll(ServerLive, ReceiptUploadWorkerLive, BookUploadWorkerLive)).pipe(
-  NodeRuntime.runMain,
-);
+Layer.launch(
+  Layer.mergeAll(ServerLive, ReceiptUploadWorkerLive, BookUploadWorkerLive, RecipeUploadWorkerLive),
+).pipe(NodeRuntime.runMain);
