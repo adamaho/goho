@@ -1,8 +1,9 @@
-import { NodeCrypto, NodeServices } from "@effect/platform-node";
+import { NodeCrypto, NodeHttpServer, NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Ai, Postgres } from "@goho/core";
-import { RecipeUploadId } from "@goho/goho-api/recipe-uploads";
-import { RecipeUrl } from "@goho/goho-api/recipes";
+import { RecipeUpload, RecipeUploadId } from "@goho/goho-api/recipe-uploads";
+import { RecipeNotFound, RecipeUrl } from "@goho/goho-api/recipes";
+import * as Client from "@goho/goho-server-client/client";
 import {
   Config,
   Context,
@@ -14,16 +15,23 @@ import {
   Redacted,
   Ref,
   Result,
+  Schema,
 } from "effect";
 import { SecureRandom } from "effect/crypto";
+import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { PersistedQueue } from "effect/persistence";
 import { SqlClient } from "effect/sql";
 import { TestClock } from "effect/testing";
 import { expect } from "vitest";
 
+import * as BookUploads from "#src/book-uploads/service.ts";
+import * as Books from "#src/books/service.ts";
 import * as Migrations from "#src/database/migrations.ts";
 import * as Transaction from "#src/database/transaction.ts";
+import * as Http from "#src/http/routes.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
+import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
+import * as Receipts from "#src/receipts/service.ts";
 import * as RecipeUploadQueue from "#src/recipe-uploads/queue.ts";
 import * as RecipeUploadRepository from "#src/recipe-uploads/repository.ts";
 import * as RecipeUploads from "#src/recipe-uploads/service.ts";
@@ -578,4 +586,102 @@ it.effect("deletes only a failed import", () =>
     expect(yield* failureTag(uploads.get(upload.id))).toBe("RecipeUploadNotFound");
     expect(yield* failureTag(uploads.delete(upload.id))).toBe("RecipeUploadNotFound");
   }).pipe(Effect.provide(TestLive)),
+);
+
+// The routes over the real recipe services, queue, and database.
+const HttpLive = HttpRouter.serve(
+  Http.layer.pipe(
+    Layer.provide([
+      Layer.mock(Books.Service, {}),
+      Layer.mock(BookUploads.Service, {}),
+      Layer.mock(Receipts.Service, {}),
+      Layer.mock(ReceiptUploads.Service, {}),
+    ]),
+  ),
+).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(TestLive));
+
+const decodeUpload = Schema.decodeUnknownEffect(Schema.Struct({ data: RecipeUpload }));
+
+it.effect("imports, serves, and deletes recipes over HTTP", () =>
+  Effect.gen(function* () {
+    const fakes = yield* Fakes;
+    const client = yield* Client.make("");
+    const queue = yield* RecipeUploadQueue.Service;
+    const body = yield* HttpBody.json({ source });
+
+    const accepted = yield* HttpClient.post("/recipe-uploads", { body });
+    expect(accepted.status).toBe(202);
+    const { data: first } = yield* accepted.json.pipe(Effect.flatMap(decodeUpload));
+    expect(first).toMatchObject({ source, status: "queued", recipeId: null });
+
+    // Every submission of a page is a new import with its own job.
+    const { data: second } = yield* client.recipeUploads.create({
+      payload: { source: samePage },
+    });
+    expect(second).toMatchObject({ source: samePage, status: "queued", recipeId: null });
+    expect(second.id).not.toBe(first.id);
+    const jobs = yield* jobStates;
+    expect(jobs).toHaveLength(2);
+    expect(jobs).toEqual(
+      expect.arrayContaining([
+        { id: first.id, state: "pending" },
+        { id: second.id, state: "pending" },
+      ]),
+    );
+
+    // The first job saves the recipe; the second links it without the model.
+    yield* queue.take(Worker.process);
+    yield* queue.take(Worker.process);
+    const { data: uploads } = yield* client.recipeUploads.list();
+    expect(uploads.map(({ id, status }) => [id, status])).toEqual([
+      [second.id, "succeeded"],
+      [first.id, "succeeded"],
+    ]);
+    const recipeId = Option.getOrThrow(Option.fromNullishOr(uploads[0]?.recipeId));
+    expect(uploads[1]?.recipeId).toBe(recipeId);
+    expect(yield* Ref.get(fakes.modelCalls)).toBe(1);
+    const { data: imported } = yield* client.recipes.get({ params: { recipeId } });
+    expect(imported).toMatchObject({ ...toast, id: recipeId, source, hasImage: true });
+    const photo = yield* HttpClient.get(`/recipes/${recipeId}/image`);
+    expect(photo.status).toBe(200);
+    expect(photo.headers["content-type"]).toBe("image/png");
+    expect(new Uint8Array(yield* photo.arrayBuffer)).toEqual(png);
+
+    // Direct saves skip the queue, and a repeated title is another recipe.
+    const direct = { ...toast, title: "apple toast" };
+    const created = yield* HttpClient.post("/recipes", { body: yield* HttpBody.json(direct) });
+    expect(created.status).toBe(200);
+    const { data: again } = yield* client.recipes.create({ payload: direct });
+    expect(again).toMatchObject({ ...direct, source: null, hasImage: false });
+    expect(yield* jobStates).toHaveLength(2);
+    const { data: summaries } = yield* client.recipes.list();
+    expect(summaries.map(({ title, source }) => [title, source])).toEqual([
+      ["apple toast", null],
+      ["apple toast", null],
+      ["Toast", source],
+    ]);
+    expect(summaries[0]).toEqual({
+      id: again.id,
+      title: again.title,
+      source: null,
+      totalTimeSeconds: 300,
+      hasImage: false,
+      createdAt: again.createdAt,
+      updatedAt: again.updatedAt,
+    });
+    const noPhoto = yield* HttpClient.get(`/recipes/${again.id}/image`);
+    expect([noPhoto.status, yield* noPhoto.json]).toEqual([
+      404,
+      { type: "goho:problem:recipe-image-not-found", status: 404, title: "Recipe image not found" },
+    ]);
+
+    // Deleting the imported recipe takes both imports and the photo.
+    expect((yield* HttpClient.del(`/recipes/${recipeId}`)).status).toBe(204);
+    const gone = yield* client.recipes.get({ params: { recipeId } }).pipe(Effect.flip);
+    expect(gone).toBeInstanceOf(RecipeNotFound);
+    for (const { id } of [first, second]) {
+      expect((yield* HttpClient.get(`/recipe-uploads/${id}`)).status).toBe(404);
+    }
+    expect(yield* storedFiles).toEqual([]);
+  }).pipe(Effect.provide(HttpLive)),
 );

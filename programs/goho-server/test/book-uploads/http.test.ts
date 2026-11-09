@@ -25,6 +25,8 @@ import * as Transaction from "#src/database/transaction.ts";
 import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import * as Recipes from "#src/recipes/service.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 
 const bookUpload = BookUpload.make({
@@ -71,6 +73,8 @@ const testLayer = (uploads: Partial<BookUploads.Interface> = {}) => {
         Layer.mock(Books.Service, {}),
         Layer.mock(Receipts.Service, {}),
         Layer.mock(ReceiptUploads.Service, {}),
+        Layer.mock(Recipes.Service, {}),
+        Layer.mock(RecipeUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
@@ -229,6 +233,8 @@ const serviceLayer = (
         Layer.mock(Books.Service, {}),
         Layer.mock(Receipts.Service, {}),
         Layer.mock(ReceiptUploads.Service, {}),
+        Layer.mock(Recipes.Service, {}),
+        Layer.mock(RecipeUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));

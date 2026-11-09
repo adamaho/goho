@@ -38,6 +38,8 @@ import * as ReceiptUploadRepository from "#src/receipt-uploads/repository.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as ReceiptRepository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import * as Recipes from "#src/recipes/service.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 
 const createPayload = CreateReceiptRequest.make({
@@ -127,6 +129,8 @@ const testLayer = (
         receiptUploadsTest(receiptUploads),
         Layer.mock(Books.Service, {}),
         Layer.mock(BookUploads.Service, {}),
+        Layer.mock(Recipes.Service, {}),
+        Layer.mock(RecipeUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));
@@ -559,6 +563,8 @@ it.effect(
               receiptUploadsTest(),
               Layer.mock(Books.Service, {}),
               Layer.mock(BookUploads.Service, {}),
+              Layer.mock(Recipes.Service, {}),
+              Layer.mock(RecipeUploads.Service, {}),
             ]),
           ),
         ).pipe(Layer.provideMerge(NodeHttpServer.layerTest)),
@@ -968,6 +974,8 @@ const uploadServiceLayer = (
         Layer.mock(Receipts.Service, {}),
         Layer.mock(Books.Service, {}),
         Layer.mock(BookUploads.Service, {}),
+        Layer.mock(Recipes.Service, {}),
+        Layer.mock(RecipeUploads.Service, {}),
       ]),
     ),
   ).pipe(Layer.provideMerge(NodeHttpServer.layerTest));

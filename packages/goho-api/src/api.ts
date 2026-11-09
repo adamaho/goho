@@ -46,6 +46,23 @@ import {
   ReceiptNotFound,
   ReceiptsUnavailable,
 } from "./receipts.ts";
+import {
+  CreateRecipeUploadRequest,
+  RecipeUpload,
+  RecipeUploadConflict,
+  RecipeUploadId,
+  RecipeUploadNotFound,
+  RecipeUploadsUnavailable,
+} from "./recipe-uploads.ts";
+import {
+  CreateRecipeRequest,
+  Recipe,
+  RecipeId,
+  RecipeImageNotFound,
+  RecipeNotFound,
+  RecipesUnavailable,
+  RecipeSummary,
+} from "./recipes.ts";
 import { DataResponse, UploadLimitExceeded } from "./response.ts";
 
 // Payload schemas
@@ -117,6 +134,25 @@ const BookUploadsUnavailableProblem = BookUploadsUnavailable.pipe(
   Schema.annotateEncoded({ identifier: "BookUploadsUnavailable" }),
 );
 
+const RecipeNotFoundProblem = RecipeNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeNotFound" }),
+);
+const RecipeImageNotFoundProblem = RecipeImageNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeImageNotFound" }),
+);
+const RecipesUnavailableProblem = RecipesUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "RecipesUnavailable" }),
+);
+const RecipeUploadNotFoundProblem = RecipeUploadNotFound.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeUploadNotFound" }),
+);
+const RecipeUploadConflictProblem = RecipeUploadConflict.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeUploadConflict" }),
+);
+const RecipeUploadsUnavailableProblem = RecipeUploadsUnavailable.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeUploadsUnavailable" }),
+);
+
 // API groups
 
 /**
@@ -130,7 +166,7 @@ export const api = HttpApi.make("goho-server")
   .annotate(OpenApi.Version, "0.0.0")
   .annotate(
     OpenApi.Description,
-    "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud.",
+    "Runs the receipt playbook: upload and track images, and manage finished receipts, the shared book roster and recipes, by hand, from cover scans or from recipe pages. No authentication required, bud.",
   )
   .add(
     // Health
@@ -540,6 +576,171 @@ export const api = HttpApi.make("goho-server")
           .annotate(
             OpenApi.Description,
             "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
+          ),
+      ),
+    // Recipes
+    HttpApiGroup.make("recipes")
+      .annotate(
+        OpenApi.Description,
+        "Recipes entered by hand or pulled from web pages, with their ingredients and steps.",
+      )
+      .add(
+        HttpApiEndpoint.get("list", "/recipes", {
+          success: DataResponse(
+            Schema.Array(RecipeSummary).annotate({
+              description:
+                "Recipe headlines by title A to Z, ignoring case, then newest first; empty when none exist.",
+            }),
+          ),
+          error: [
+            RecipesUnavailableProblem.annotate({
+              description: "The server could not pull the recipes off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List recipes")
+          .annotate(
+            OpenApi.Description,
+            "Pulls every saved recipe's headline details by title, without ingredients, steps or yield. Get a recipe for the full play.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/recipes/:recipeId", {
+          params: { recipeId: RecipeId },
+          success: DataResponse(Recipe),
+          error: [
+            RecipeNotFoundProblem,
+            RecipesUnavailableProblem.annotate({
+              description: "The server could not retrieve this recipe.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a recipe")
+          .annotate(
+            OpenApi.Description,
+            "Brings back one saved recipe with its ingredients, steps and yield.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.post("create", "/recipes", {
+          payload: CreateRecipeRequest,
+          success: DataResponse(Recipe),
+          error: [
+            RecipesUnavailableProblem.annotate({
+              description: "The server could not save this recipe; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Add a recipe")
+          .annotate(
+            OpenApi.Description,
+            "Saves a complete recipe straight to the roster, with no source or photo. Every call saves a new recipe, even with a title already on the roster.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/recipes/:recipeId", {
+          params: { recipeId: RecipeId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            RecipeNotFoundProblem,
+            RecipesUnavailableProblem.annotate({
+              description:
+                "The server could not delete this recipe and its photo; take another shot to finish the cleanup.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a recipe")
+          .annotate(
+            OpenApi.Description,
+            "Takes the recipe off the roster for good, along with every import linked to it and its photo, so its page can be pulled in fresh. Returns no body after a clean finish.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("getImage", "/recipes/:recipeId/image", {
+          params: { recipeId: RecipeId },
+          success: ImageResponse,
+          error: [
+            RecipeImageNotFoundProblem,
+            RecipesUnavailableProblem.annotate({
+              description: "The server could not retrieve this recipe photo.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get a recipe photo")
+          .annotate(
+            OpenApi.Description,
+            "Returns the JPEG, PNG or WebP photo on file for the recipe. Recipes entered by hand have none.",
+          ),
+      ),
+    // Recipe uploads
+    HttpApiGroup.make("recipeUploads")
+      .annotate(OpenApi.Description, "Recipe imports from web pages and their processing status.")
+      .add(
+        HttpApiEndpoint.post("create", "/recipe-uploads", {
+          payload: CreateRecipeUploadRequest,
+          success: DataResponse(RecipeUpload).annotate({ httpApiStatus: 202 }),
+          error: [
+            RecipeUploadsUnavailableProblem.annotate({
+              description: "The server could not save or queue the import; nothing changed.",
+            }),
+          ],
+        })
+          .annotate(HttpApi.PayloadParseOptions, strictPayload)
+          .annotate(OpenApi.Summary, "Import a recipe from a page")
+          .annotate(
+            OpenApi.Description,
+            "Queues a new import of the page and returns 202 before the page is fetched, every time you send it. A page already saved as a recipe, ignoring its fragment, links that recipe without another fetch, and the recipe keeps the URL it was first saved from. After a miss, just send the page again.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("list", "/recipe-uploads", {
+          success: DataResponse(Schema.Array(RecipeUpload)),
+          error: [
+            RecipeUploadsUnavailableProblem.annotate({
+              description: "The server could not pull the imports off the bench.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "List recipe imports")
+          .annotate(
+            OpenApi.Description,
+            "Pulls every recipe import off the bench, newest first, with its current status.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.get("get", "/recipe-uploads/:uploadId", {
+          params: { uploadId: RecipeUploadId },
+          success: DataResponse(RecipeUpload),
+          error: [
+            RecipeUploadNotFoundProblem,
+            RecipeUploadsUnavailableProblem.annotate({
+              description: "The server could not retrieve this import.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Get recipe import status")
+          .annotate(
+            OpenApi.Description,
+            "Returns the latest queue or processing status, the recipe ID after a clean finish, and the failure code after a miss.",
+          ),
+      )
+      .add(
+        HttpApiEndpoint.delete("delete", "/recipe-uploads/:uploadId", {
+          params: { uploadId: RecipeUploadId },
+          success: HttpApiSchema.NoContent,
+          error: [
+            RecipeUploadNotFoundProblem,
+            RecipeUploadConflictProblem,
+            RecipeUploadsUnavailableProblem.annotate({
+              description: "The server could not delete this import.",
+            }),
+          ],
+        })
+          .annotate(OpenApi.Summary, "Delete a failed recipe import")
+          .annotate(
+            OpenApi.Description,
+            "Clears a failed import off the bench. You don't need this to take another shot at the page; just send it again. Queued, processing, and succeeded imports return 409; delete the recipe to remove its successful imports.",
           ),
       ),
   )

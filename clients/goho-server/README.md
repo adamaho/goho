@@ -2,8 +2,8 @@
 
 The typed Effect client for the Goho server. The complete client is derived
 from the shared `@goho/goho-api` contract by calling `make(baseUrl)`. Public
-receipt, book, book upload, and category schemas and types are re-exported so
-consumers only need this package.
+receipt, book, book upload, category, recipe, and recipe upload schemas and types
+are re-exported so consumers only need this package.
 
 ```ts
 import { make } from "@goho/goho-server-client/client";
@@ -20,8 +20,8 @@ const listReceipts = Effect.gen(function* () {
 Call the effect from the consuming program's runtime. Requests are not automatically retried.
 
 See the [server API reference](../../programs/goho-server/README.md#api) for
-receipt uploads, retrieval, creation, correction, and deletion, and for books and
-their cover uploads. The server exposes OpenAPI at `/openapi.json`
+receipt uploads, retrieval, creation, correction, and deletion, for books and
+their cover uploads, and for recipes and their page imports. The server exposes OpenAPI at `/openapi.json`
 and Swagger UI at `/docs`.
 
 Successful responses use the shared `{ data: ... }` envelope defined by
@@ -48,7 +48,11 @@ Book routes fail with `BookNotFound`, `BookImageNotFound`, `BookConflict`, or
 `BookUploadConflict`, or `BookUploadsUnavailable`. These keep their tags and now
 arrive as problem responses too.
 
-Both upload routes also fail with `UploadLimitExceeded`, exported from
+Recipe routes fail with `RecipeNotFound`, `RecipeImageNotFound`, or
+`RecipesUnavailable`; recipe import routes fail with `RecipeUploadNotFound`,
+`RecipeUploadConflict`, or `RecipeUploadsUnavailable`.
+
+Both image upload routes also fail with `UploadLimitExceeded`, exported from
 `@goho/goho-server-client/response`, when an upload goes over a size or part-count
 limit. Its `detail` says what to send instead.
 

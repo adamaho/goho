@@ -16,6 +16,8 @@ import * as BookUploads from "#src/book-uploads/service.ts";
 import * as Books from "#src/books/service.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import * as Recipes from "#src/recipes/service.ts";
 
 import * as ProblemDetails from "./problem-details.ts";
 
@@ -145,6 +147,38 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
   }),
 );
 
+const RecipesLive = HttpApiBuilder.group(api, "recipes", (handlers) =>
+  Effect.gen(function* () {
+    const recipes = yield* Recipes.Service;
+    return handlers
+      .handle("list", () => recipes.list.pipe(Effect.map(withData)))
+      .handle("get", ({ params }) => recipes.get(params.recipeId).pipe(Effect.map(withData)))
+      .handle("create", ({ payload }) => recipes.create(payload).pipe(Effect.map(withData)))
+      .handle("delete", ({ params }) => recipes.delete(params.recipeId))
+      .handle("getImage", ({ params }) =>
+        recipes.getImage(params.recipeId).pipe(
+          Effect.map(({ bytes, contentType }) =>
+            HttpApiSchema.withHeaders({
+              body: bytes,
+              headers: { "content-type": contentType, "cache-control": "private, no-store" },
+            }),
+          ),
+        ),
+      );
+  }),
+);
+
+const RecipeUploadsLive = HttpApiBuilder.group(api, "recipeUploads", (handlers) =>
+  Effect.gen(function* () {
+    const uploads = yield* RecipeUploads.Service;
+    return handlers
+      .handle("create", ({ payload }) => uploads.create(payload.source).pipe(Effect.map(withData)))
+      .handle("list", () => uploads.list.pipe(Effect.map(withData)))
+      .handle("get", ({ params }) => uploads.get(params.uploadId).pipe(Effect.map(withData)))
+      .handle("delete", ({ params }) => uploads.delete(params.uploadId));
+  }),
+);
+
 const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
   handlers.handle("check", () => Effect.succeed(withData({ status: "ok" as const }))),
 );
@@ -156,7 +190,15 @@ const HealthLive = HttpApiBuilder.group(api, "health", (handlers) =>
  * @since 0.1.0
  */
 export const layer = HttpApiBuilder.layer(api, { openapiPath: "/openapi.json" }).pipe(
-  Layer.provide([ReceiptUploadsLive, ReceiptsLive, BooksLive, BookUploadsLive, HealthLive]),
+  Layer.provide([
+    ReceiptUploadsLive,
+    ReceiptsLive,
+    BooksLive,
+    BookUploadsLive,
+    RecipesLive,
+    RecipeUploadsLive,
+    HealthLive,
+  ]),
   Layer.provide(HttpApiMiddleware.layerProblemDetails()),
   Layer.merge(HttpApiSwagger.layer(api, { path: "/docs" })),
   Layer.merge(

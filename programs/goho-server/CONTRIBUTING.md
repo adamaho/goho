@@ -41,15 +41,20 @@ Once the server is ready, seed the local database from a second terminal:
 pnpm --filter @goho/goho-server db:seed
 ```
 
-- Seeding creates four fictional receipts and five books through the receipt and
-  book creation APIs. The books cover several categories, with and without reading
-  levels, and one long title.
+- Seeding creates four fictional receipts, five books and three recipes through
+  the receipt, book and recipe creation APIs. The books cover several categories,
+  with and without reading levels, and one long title. The recipes cover exact,
+  range and text amounts, split ingredient portions, marked wording, and recipes
+  with and without a yield or total time.
 - It targets `http://127.0.0.1:3000`; set `GOHO_SERVER_URL` for another local server.
-- Receipts and books seed independently. Receipts are skipped when any receipt
-  already exists. Each book is created by title and author, which returns an
-  existing match unchanged. Reruns add no duplicates.
-- It does not upload images or call OpenAI, so seeded books have no covers or
-  book uploads.
+- Receipts, books and recipes seed independently. Receipts are skipped when any
+  receipt already exists. Each book is created by title and author, which returns
+  an existing match unchanged. Recipe titles are not unique, so each recipe is
+  skipped when a recipe with exactly its title already exists, whoever saved it;
+  a deleted one comes back on the next run. Reruns add no duplicates and delete
+  nothing.
+- It does not upload images, import pages or call OpenAI, so seeded books have no
+  covers or book uploads, and seeded recipes have no source, photo or import.
 
 An OpenAI key is not needed to create, read, or seed receipts locally. To process
 uploaded receipt images, put a real `OPENAI_API_KEY` in the ignored `.env` file.
@@ -232,7 +237,7 @@ and each keeps its original file.
 Migration 0019 adds the recipe tables, and migration 0020 makes the saved
 recipe, not the import, the identity of a page. The recipe and recipe upload
 repositories read and write them, behind the `recipes` and `recipe-uploads`
-services and the recipe upload worker; no endpoint uses them yet.
+services, their [endpoints](./README.md#recipes) and the recipe upload worker.
 
 - `recipes` stands alone, with a generated `bigint` identity `id`, a nonblank
   `title`, nonempty JSON arrays of `ingredients` and `steps`, an optional JSON

@@ -28,8 +28,10 @@ import * as ReceiptRepository from "./receipts/repository.ts";
 import * as Receipts from "./receipts/service.ts";
 import * as RecipeUploadQueue from "./recipe-uploads/queue.ts";
 import * as RecipeUploadRepository from "./recipe-uploads/repository.ts";
+import * as RecipeUploads from "./recipe-uploads/service.ts";
 import * as RecipeUploadWorker from "./recipe-uploads/worker.ts";
 import * as RecipeRepository from "./recipes/repository.ts";
+import * as Recipes from "./recipes/service.ts";
 import * as Ai from "./services/ai.ts";
 import * as FileStorage from "./services/file-storage.ts";
 import * as WebFetch from "./services/web-fetch.ts";
@@ -121,6 +123,19 @@ const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
   ]),
 );
 
+const RecipesLive = Recipes.layer.pipe(
+  Layer.provide([FileStorageLive, RecipeRepositoryLive, TransactionLive]),
+);
+
+const RecipeUploadsLive = RecipeUploads.layer.pipe(
+  Layer.provide([
+    NodeCrypto.layer,
+    RecipeUploadQueueLive,
+    RecipeUploadRepositoryLive,
+    TransactionLive,
+  ]),
+);
+
 // One consumer fiber imports one page at a time, bounding this process to one
 // in-memory page and photo.
 const RecipeUploadWorkerLive = RecipeUploadWorker.layer.pipe(
@@ -136,7 +151,16 @@ const RecipeUploadWorkerLive = RecipeUploadWorker.layer.pipe(
 );
 
 const ServerLive = HttpRouter.serve(
-  Http.layer.pipe(Layer.provide([ReceiptsLive, ReceiptUploadsLive, BooksLive, BookUploadsLive])),
+  Http.layer.pipe(
+    Layer.provide([
+      ReceiptsLive,
+      ReceiptUploadsLive,
+      BooksLive,
+      BookUploadsLive,
+      RecipesLive,
+      RecipeUploadsLive,
+    ]),
+  ),
 ).pipe(
   Layer.provide(
     NodeHttpServer.layerConfig(createServer, {

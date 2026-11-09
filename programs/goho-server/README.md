@@ -1,7 +1,8 @@
 # @goho/goho-server
 
 Exposes receipt uploads, retrieval, creation, correction, deletion, a shared book
-list with cover scans, health checks, and API documentation. The server implements the shared
+list with cover scans, recipes entered by hand or imported from web pages, health
+checks, and API documentation. The server implements the shared
 [@goho/goho-api](../../packages/goho-api/README.md) contract, and the CLI connects
 through the derived [typed client](../../clients/goho-server/README.md).
 
@@ -319,3 +320,67 @@ returns one. Each has `status` (`queued`, `processing`, `succeeded`, or
 the book to remove its successful scans. Missing uploads return HTTP 404 with
 `BookUploadNotFound`, and malformed UUIDs return HTTP 400. Storage or
 database failures return HTTP 500 with `BookUploadsUnavailable`.
+
+### Recipes
+
+A recipe has `id` (a decimal string like receipt IDs), `title`, `source`,
+`totalTimeSeconds`, `hasImage`, `createdAt` and `updatedAt`; the full recipe adds
+`ingredients`, `steps` and `yield`. Amounts are exact fractions of safe integers
+(`{"numerator":3,"denominator":2}`), ranges, or source wording, and step text is
+kept exactly, spaces included. See the `CreateRecipeRequest` and `Recipe` schemas
+in [OpenAPI](http://127.0.0.1:3000/docs) for every field.
+
+- `POST /recipes` saves a complete `CreateRecipeRequest` at once, with no import,
+  job or AI, and returns HTTP 200 with the recipe under `data`. Its `source` is
+  null and it has no photo. Titles are not unique: every call saves a new recipe.
+  Invalid recipes, such as a step mark naming no ingredient or unsupported
+  fields, return HTTP 400.
+- `GET /recipes` lists summaries without ingredients, steps or yield, by title
+  A to Z ignoring case, then newest first.
+- `GET /recipes/:recipeId` returns one full recipe.
+- `GET /recipes/:recipeId/image` returns the photo's bytes with its MIME type
+  (`image/jpeg`, `image/png` or `image/webp`) and `Cache-Control: private,
+  no-store`. A recipe without a photo, or a missing recipe, returns HTTP 404 with
+  `RecipeImageNotFound`.
+- `DELETE /recipes/:recipeId` removes the recipe with every import that linked
+  it and its photo, and returns HTTP 204. Queued, processing or failed imports of
+  the page stay. As with receipts, a storage or commit failure after the photo is
+  removed can leave the recipe without it until deletion is retried.
+
+### Recipe imports
+
+`POST /recipe-uploads` takes `{"source":{"kind":"url","url":"https://..."}}`: an
+http or https URL without a username or password, up to 2048 UTF-8 bytes. It is
+trimmed and otherwise kept as sent; the server fetches it later, never during the
+request, and only public addresses.
+
+Every submission returns HTTP 202 with a new queued import under `data`, with
+its own job, even for a page submitted, imported or failed before. When the
+page, compared without its fragment, is already saved as a recipe, the job
+links that recipe without fetching the page or calling OpenAI; the recipe keeps
+the URL it was first saved from as its `source`.
+
+`GET /recipe-uploads` lists imports newest first, and `GET
+/recipe-uploads/:uploadId` returns one. Each has `status` (`queued`,
+`processing`, `succeeded`, or `failed`), the `recipeId` after success, and a
+`failureCode` after failure: `page_unavailable`, `no_recipe_found`,
+`ambiguous_recipe`, `incomplete_recipe`, `processing_failed`,
+`recipe_creation_failed`, or `internal_error`.
+
+`DELETE /recipe-uploads/:uploadId` removes a failed import with HTTP 204. It is
+not needed before sending the page again. Other statuses return HTTP 409 with
+`RecipeUploadConflict`; delete the recipe to remove its successful imports.
+There is no retry or cancel.
+
+Recipe failures use the same `application/problem+json` shape as receipts, with
+the same rules for `type` and private details. Malformed IDs and invalid bodies
+return HTTP 400 with a validation problem.
+
+| HTTP | `type`                                    | Client error               | Meaning                                               |
+| ---- | ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
+| 404  | `goho:problem:recipe-not-found`           | `RecipeNotFound`           | No recipe has this ID.                                |
+| 404  | `goho:problem:recipe-image-not-found`     | `RecipeImageNotFound`      | The recipe is missing or has no photo on file.        |
+| 500  | `goho:problem:recipes-unavailable`        | `RecipesUnavailable`       | Recipes or their photos could not be read or changed. |
+| 404  | `goho:problem:recipe-upload-not-found`    | `RecipeUploadNotFound`     | No recipe import has this ID.                         |
+| 409  | `goho:problem:recipe-upload-conflict`     | `RecipeUploadConflict`     | The import has not failed, so it cannot be deleted.   |
+| 500  | `goho:problem:recipe-uploads-unavailable` | `RecipeUploadsUnavailable` | Imports could not be saved, queued, read, or deleted. |

@@ -19,6 +19,8 @@ import * as Transaction from "#src/database/transaction.ts";
 import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import * as Recipes from "#src/recipes/service.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 import { behindOpenTransaction } from "#test/helpers/locks.ts";
 
@@ -491,6 +493,8 @@ const HttpDatabaseLive = HttpRouter.serve(
       Layer.mock(Receipts.Service, {}),
       Layer.mock(ReceiptUploads.Service, {}),
       Layer.mock(BookUploads.Service, {}),
+      Layer.mock(Recipes.Service, {}),
+      Layer.mock(RecipeUploads.Service, {}),
     ]),
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));

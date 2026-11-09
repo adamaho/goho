@@ -40,6 +40,8 @@ import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Worker from "#src/receipt-uploads/worker.ts";
 import * as Repository from "#src/receipts/repository.ts";
 import * as Receipts from "#src/receipts/service.ts";
+import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import * as Recipes from "#src/recipes/service.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 
 import { generateObject, parsedReceipt, receipt } from "./fixtures.ts";
@@ -1689,6 +1691,8 @@ const HttpDatabaseLive = HttpRouter.serve(
       unusedUploads,
       Layer.mock(Books.Service, {}),
       Layer.mock(BookUploads.Service, {}),
+      Layer.mock(Recipes.Service, {}),
+      Layer.mock(RecipeUploads.Service, {}),
     ]),
   ),
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest), Layer.provideMerge(DatabaseLive));

@@ -3,7 +3,7 @@
   "info": {
     "title": "Goho API",
     "version": "0.0.0",
-    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts and the shared book roster, by hand or from cover scans. No authentication required, bud."
+    "description": "Runs the receipt playbook: upload and track images, and manage finished receipts, the shared book roster and recipes, by hand, from cover scans or from recipe pages. No authentication required, bud."
   },
   "paths": {
     "/health": {
@@ -1763,6 +1763,608 @@
         "description": "Clears a failed scan and its original image off the bench. Queued, processing, and succeeded scans return 409; delete the book to remove its successful scans.",
         "summary": "Delete a failed book cover upload"
       }
+    },
+    "/recipes": {
+      "get": {
+        "tags": ["recipes"],
+        "operationId": "recipes.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RecipeSummary"
+                      },
+                      "description": "Recipe headlines by title A to Z, ignoring case, then newest first; empty when none exist."
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the recipes off the bench. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every saved recipe's headline details by title, without ingredients, steps or yield. Get a recipe for the full play.",
+        "summary": "List recipes"
+      },
+      "post": {
+        "tags": ["recipes"],
+        "operationId": "recipes.create",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Recipe"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save this recipe; nothing changed. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Saves a complete recipe straight to the roster, with no source or photo. Every call saves a new recipe, even with a title already on the roster.",
+        "summary": "Add a recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecipeRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/recipes/{recipeId}": {
+      "get": {
+        "tags": ["recipes"],
+        "operationId": "recipes.get",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Recipe"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this recipe. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Brings back one saved recipe with its ingredients, steps and yield.",
+        "summary": "Get a recipe"
+      },
+      "delete": {
+        "tags": ["recipes"],
+        "operationId": "recipes.delete",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this recipe and its photo; take another shot to finish the cleanup. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Takes the recipe off the roster for good, along with every import linked to it and its photo, so its page can be pulled in fresh. Returns no body after a clean finish.",
+        "summary": "Delete a recipe"
+      }
+    },
+    "/recipes/{recipeId}/image": {
+      "get": {
+        "tags": ["recipes"],
+        "operationId": "recipes.getImage",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "cache-control": {
+                "schema": {
+                  "type": "string"
+                },
+                "required": true
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No photo is on file for that recipe number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeImageNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this recipe photo. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the JPEG, PNG or WebP photo on file for the recipe. Recipes entered by hand have none.",
+        "summary": "Get a recipe photo"
+      }
+    },
+    "/recipe-uploads": {
+      "post": {
+        "tags": ["recipeUploads"],
+        "operationId": "recipeUploads.create",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RecipeUpload"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save or queue the import; nothing changed. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipeUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Queues a new import of the page and returns 202 before the page is fetched, every time you send it. A page already saved as a recipe, ignoring its fragment, links that recipe without another fetch, and the recipe keeps the URL it was first saved from. After a miss, just send the page again.",
+        "summary": "Import a recipe from a page",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecipeUploadRequest"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "get": {
+        "tags": ["recipeUploads"],
+        "operationId": "recipeUploads.list",
+        "parameters": [],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RecipeUpload"
+                      }
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not pull the imports off the bench. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipeUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Pulls every recipe import off the bench, newest first, with its current status.",
+        "summary": "List recipe imports"
+      }
+    },
+    "/recipe-uploads/{uploadId}": {
+      "get": {
+        "tags": ["recipeUploads"],
+        "operationId": "recipeUploads.get",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RecipeUpload"
+                    }
+                  },
+                  "required": ["data"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe import is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeUploadNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not retrieve this import. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipeUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns the latest queue or processing status, the recipe ID after a clean finish, and the failure code after a miss.",
+        "summary": "Get recipe import status"
+      },
+      "delete": {
+        "tags": ["recipeUploads"],
+        "operationId": "recipeUploads.delete",
+        "parameters": [
+          {
+            "name": "uploadId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeUploadId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe import is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeUploadNotFound"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Only failed imports can be deleted; this one is queued, processing, or succeeded. Nothing changed.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeUploadConflict"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not delete this import. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipeUploadsUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Clears a failed import off the bench. You don't need this to take another shot at the page; just send it again. Queued, processing, and succeeded imports return 409; delete the recipe to remove its successful imports.",
+        "summary": "Delete a failed recipe import"
+      }
     }
   },
   "components": {
@@ -1846,6 +2448,903 @@
         },
         "required": ["type"],
         "additionalProperties": false
+      },
+      "RecipeUploadsUnavailable": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-uploads-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe uploads unavailable"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeUploadConflict": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-upload-conflict"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [409]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe upload cannot be deleted"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeUploadNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-upload-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe upload not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeUploadId": {
+        "type": "string",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+        "format": "uuid",
+        "description": "The recipe import's version 4 UUID; use it to check on this upload.",
+        "examples": ["7c1e4b2a-9d3f-4a6b-8c5d-2e1f0a9b8c7d"]
+      },
+      "RecipeUpload": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RecipeUploadId"
+          },
+          "source": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSource"
+              },
+              {
+                "description": "The page this import pulls from."
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "processing", "succeeded", "failed"],
+            "description": "Where the import is in the play: queued, processing, succeeded, or failed."
+          },
+          "recipeId": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The recipe this import saved, once it succeeds."
+          },
+          "failureCode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "page_unavailable",
+                  "no_recipe_found",
+                  "ambiguous_recipe",
+                  "incomplete_recipe",
+                  "processing_failed",
+                  "recipe_creation_failed",
+                  "internal_error"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the import failed, once it fails; details stay in the server logs."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the import came off the bench."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When the import's status last changed."
+          }
+        },
+        "required": ["id", "source", "status", "recipeId", "failureCode", "createdAt", "updatedAt"],
+        "additionalProperties": false,
+        "description": "A recipe import and how its processing is going.",
+        "examples": [
+          {
+            "id": "7c1e4b2a-9d3f-4a6b-8c5d-2e1f0a9b8c7d",
+            "source": {
+              "kind": "url",
+              "url": "https://example.com/recipes/pancakes"
+            },
+            "status": "succeeded",
+            "recipeId": "5",
+            "failureCode": null,
+            "createdAt": "2026-11-08 14:03:11.52+00",
+            "updatedAt": "2026-11-08 14:03:19.07+00"
+          }
+        ]
+      },
+      "RecipeId": {
+        "type": "string",
+        "pattern": "^[1-9]\\d{0,18}$",
+        "description": "The recipe's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
+        "examples": ["5"]
+      },
+      "RecipeSource": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["url"]
+          },
+          "url": {
+            "type": "string",
+            "description": "The http or https page URL as sent, trimmed, up to 2048 UTF-8 bytes and without a username or password, bud; redirects don't change it.",
+            "examples": ["https://example.com/recipes/pancakes"]
+          }
+        },
+        "required": ["kind", "url"],
+        "additionalProperties": false,
+        "description": "The web page a recipe was pulled from.",
+        "examples": [
+          {
+            "kind": "url",
+            "url": "https://example.com/recipes/pancakes"
+          }
+        ]
+      },
+      "CreateRecipeUploadRequest": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/RecipeSource"
+          }
+        },
+        "required": ["source"],
+        "additionalProperties": false,
+        "description": "The page to pull a recipe from, bud.",
+        "examples": [
+          {
+            "source": {
+              "kind": "url",
+              "url": "https://example.com/recipes/pancakes"
+            }
+          }
+        ]
+      },
+      "RecipesUnavailable": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipes-unavailable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [500]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipes unavailable"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeImageNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-image-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe image not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "Recipe": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              },
+              {
+                "description": "The recipe's roster number; use it to target this recipe."
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Recipe title, trimmed.",
+            "examples": ["Pancakes"]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the recipe was pulled from, or null when it was saved directly."
+          },
+          "totalTimeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total time in seconds, or null when the source doesn't state one.",
+            "examples": [1800, null]
+          },
+          "hasImage": {
+            "type": "boolean",
+            "description": "Whether a recipe photo is on file."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the recipe hit the roster."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When the recipe last changed."
+          },
+          "ingredients": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Ingredient"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Ingredient"
+            },
+            "description": "Ingredients in recipe order, each with an ID unique within the recipe."
+          },
+          "steps": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Step"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "description": "Steps in order; ingredient marks point at this recipe's ingredients."
+          },
+          "yield": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeYield"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much the recipe makes, or null when the source doesn't say."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source",
+          "totalTimeSeconds",
+          "hasImage",
+          "createdAt",
+          "updatedAt",
+          "ingredients",
+          "steps",
+          "yield"
+        ],
+        "additionalProperties": false,
+        "description": "A saved recipe with its ingredients and steps."
+      },
+      "RecipeYield": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "$ref": "#/components/schemas/Quantity"
+          },
+          "label": {
+            "type": "string",
+            "description": "What the quantity counts.",
+            "examples": ["servings"]
+          }
+        },
+        "required": ["quantity", "label"],
+        "additionalProperties": false,
+        "description": "How much the recipe makes, as the source states it.",
+        "examples": [
+          {
+            "quantity": {
+              "kind": "exact",
+              "value": {
+                "numerator": 4,
+                "denominator": 1
+              }
+            },
+            "label": "servings"
+          }
+        ]
+      },
+      "Quantity": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ExactQuantity"
+          },
+          {
+            "$ref": "#/components/schemas/RangeQuantity"
+          },
+          {
+            "$ref": "#/components/schemas/TextQuantity"
+          }
+        ],
+        "description": "How much: an exact fraction, a range with min below max, or the source wording when it isn't a number.",
+        "examples": [
+          {
+            "kind": "exact",
+            "value": {
+              "numerator": 1,
+              "denominator": 2
+            }
+          },
+          {
+            "kind": "range",
+            "min": {
+              "numerator": 2,
+              "denominator": 1
+            },
+            "max": {
+              "numerator": 3,
+              "denominator": 1
+            }
+          },
+          {
+            "kind": "text",
+            "text": "to taste"
+          }
+        ]
+      },
+      "TextQuantity": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["text"]
+          },
+          "text": {
+            "type": "string",
+            "description": "Source wording for an amount that isn't a number, trimmed.",
+            "examples": ["to taste"]
+          }
+        },
+        "required": ["kind", "text"],
+        "additionalProperties": false,
+        "description": "An amount in the source's words."
+      },
+      "RangeQuantity": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["range"]
+          },
+          "min": {
+            "$ref": "#/components/schemas/Fraction"
+          },
+          "max": {
+            "$ref": "#/components/schemas/Fraction"
+          }
+        },
+        "required": ["kind", "min", "max"],
+        "additionalProperties": false,
+        "description": "An amount from min up to max."
+      },
+      "Fraction": {
+        "type": "object",
+        "properties": {
+          "numerator": {
+            "type": "integer",
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "exclusiveMinimum": 0
+          },
+          "denominator": {
+            "type": "integer",
+            "format": "int64",
+            "maximum": 9007199254740991,
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": ["numerator", "denominator"],
+        "additionalProperties": false,
+        "description": "An exact positive fraction; 4 is 4/1 and a half is 1/2, bud.",
+        "examples": [
+          {
+            "numerator": 1,
+            "denominator": 2
+          },
+          {
+            "numerator": 4,
+            "denominator": 1
+          }
+        ]
+      },
+      "ExactQuantity": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["exact"]
+          },
+          "value": {
+            "$ref": "#/components/schemas/Fraction"
+          }
+        },
+        "required": ["kind", "value"],
+        "additionalProperties": false,
+        "description": "An exact amount."
+      },
+      "Step": {
+        "type": "object",
+        "properties": {
+          "segments": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Segment"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "description": "Step wording in reading order."
+          }
+        },
+        "required": ["segments"],
+        "additionalProperties": false,
+        "description": "One step of the play, in segments.",
+        "examples": [
+          {
+            "segments": [
+              {
+                "kind": "text",
+                "text": "Melt "
+              },
+              {
+                "kind": "mark",
+                "content": {
+                  "kind": "ingredient",
+                  "ingredientId": "butter",
+                  "portion": {
+                    "numerator": 1,
+                    "denominator": 1
+                  }
+                }
+              },
+              {
+                "kind": "text",
+                "text": " in a pan."
+              }
+            ]
+          }
+        ]
+      },
+      "Segment": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TextSegment"
+          },
+          {
+            "$ref": "#/components/schemas/MarkSegment"
+          }
+        ],
+        "description": "Plain wording or a mark; join the segments in order to read the step."
+      },
+      "MarkSegment": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["mark"]
+          },
+          "content": {
+            "$ref": "#/components/schemas/MarkContent"
+          }
+        },
+        "required": ["kind", "content"],
+        "additionalProperties": false,
+        "description": "A marked part of the step."
+      },
+      "MarkContent": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TextMark"
+          },
+          {
+            "$ref": "#/components/schemas/IngredientMark"
+          }
+        ],
+        "description": "What a step mark shows: marked wording or part of one ingredient."
+      },
+      "IngredientMark": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["ingredient"]
+          },
+          "ingredientId": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+            "description": "The ingredient's ID within this recipe; step marks use it to point at the ingredient.",
+            "examples": ["butter"]
+          },
+          "portion": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Fraction"
+              },
+              {
+                "description": "Share of the ingredient's quantity this step uses, up to 1/1 for all of it.",
+                "examples": [
+                  {
+                    "numerator": 1,
+                    "denominator": 1
+                  },
+                  {
+                    "numerator": 1,
+                    "denominator": 2
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "required": ["kind", "ingredientId", "portion"],
+        "additionalProperties": false,
+        "description": "Part of one ingredient."
+      },
+      "TextMark": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["text"]
+          },
+          "text": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Marked wording, kept exactly as written, such as an amount that isn't a number.",
+            "examples": ["a pinch"]
+          }
+        },
+        "required": ["kind", "text"],
+        "additionalProperties": false,
+        "description": "Marked wording."
+      },
+      "TextSegment": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["text"]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain wording, kept exactly, including leading and trailing spaces.",
+            "examples": ["Melt "]
+          }
+        },
+        "required": ["kind", "text"],
+        "additionalProperties": false,
+        "description": "Plain step wording."
+      },
+      "Ingredient": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S[\\s\\S]*\\S$|^\\S$|^$",
+            "description": "The ingredient's ID within this recipe; step marks use it to point at the ingredient.",
+            "examples": ["butter"]
+          },
+          "name": {
+            "type": "string",
+            "description": "Ingredient name with any preparation or package wording, trimmed.",
+            "examples": ["unsalted butter, melted"]
+          },
+          "quantity": {
+            "$ref": "#/components/schemas/Quantity"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeUnit"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Unit for an exact or range quantity; null for a text quantity."
+          }
+        },
+        "required": ["id", "name", "quantity", "unit"],
+        "additionalProperties": false,
+        "description": "One ingredient on the recipe's roster.",
+        "examples": [
+          {
+            "id": "butter",
+            "name": "unsalted butter, melted",
+            "quantity": {
+              "kind": "exact",
+              "value": {
+                "numerator": 1,
+                "denominator": 4
+              }
+            },
+            "unit": "cup"
+          }
+        ]
+      },
+      "RecipeUnit": {
+        "type": "string",
+        "enum": [
+          "millilitre",
+          "litre",
+          "cup",
+          "tablespoon",
+          "teaspoon",
+          "gram",
+          "kilogram",
+          "count",
+          "clove",
+          "can",
+          "bunch",
+          "pinch",
+          "dash",
+          "handful",
+          "knob"
+        ],
+        "description": "Unit for an exact or range quantity."
+      },
+      "CreateRecipeRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Recipe title, trimmed.",
+            "examples": ["Pancakes"]
+          },
+          "ingredients": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Ingredient"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Ingredient"
+            },
+            "description": "Ingredients in recipe order, each with an ID unique within the recipe."
+          },
+          "steps": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Step"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "description": "Steps in order; ingredient marks point at this recipe's ingredients."
+          },
+          "yield": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeYield"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How much the recipe makes, or null when the source doesn't say."
+          },
+          "totalTimeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total time in seconds, or null when the source doesn't state one.",
+            "examples": [1800, null]
+          }
+        },
+        "required": ["title", "ingredients", "steps"],
+        "additionalProperties": false,
+        "description": "A full recipe to put on the roster, bud. Leave out the yield or total time, or send null, when it isn't known."
+      },
+      "RecipeSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              },
+              {
+                "description": "The recipe's roster number; use it to target this recipe."
+              }
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "Recipe title, trimmed.",
+            "examples": ["Pancakes"]
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the recipe was pulled from, or null when it was saved directly."
+          },
+          "totalTimeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total time in seconds, or null when the source doesn't state one.",
+            "examples": [1800, null]
+          },
+          "hasImage": {
+            "type": "boolean",
+            "description": "Whether a recipe photo is on file."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the recipe hit the roster."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When the recipe last changed."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source",
+          "totalTimeSeconds",
+          "hasImage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "additionalProperties": false,
+        "description": "A saved recipe's headline details."
       },
       "BookUploadsUnavailable": {
         "type": "object",
@@ -3006,6 +4505,14 @@
     {
       "name": "bookUploads",
       "description": "Single-file book cover scans and their processing status."
+    },
+    {
+      "name": "recipes",
+      "description": "Recipes entered by hand or pulled from web pages, with their ingredients and steps."
+    },
+    {
+      "name": "recipeUploads",
+      "description": "Recipe imports from web pages and their processing status."
     }
   ]
 }

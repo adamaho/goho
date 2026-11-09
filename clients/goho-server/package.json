@@ -14,6 +14,8 @@
     "./client": "./src/client.ts",
     "./receipt-uploads": "./src/receipt-uploads.ts",
     "./receipts": "./src/receipts.ts",
+    "./recipe-uploads": "./src/recipe-uploads.ts",
+    "./recipes": "./src/recipes.ts",
     "./response": "./src/response.ts"
   },
   "scripts": {
