@@ -145,6 +145,7 @@ describe("CLI problem output", () => {
     [[], "goho <subcommand> [flags]"],
     [["receipts"], "goho receipts <subcommand> [flags]"],
     [["recipes"], "goho recipes <subcommand> [flags]"],
+    [["recipes", "uploads"], "goho recipes uploads <subcommand> [flags]"],
     [["books", "uploads"], "goho books uploads <subcommand> [flags]"],
     [["--version"], "goho v0.0.0"],
     [["--completions", "bash"], "###-begin-goho-completions-###"],

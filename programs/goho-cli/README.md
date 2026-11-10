@@ -1,7 +1,8 @@
 # @goho/goho-cli
 
 Calls the Goho server to check its status; to upload, inspect, list, patch, and delete receipts and
-books; to add receipts and books by hand; and to list, view, download photos for, and delete recipes. OpenAI credentials belong only to the [server](../goho-server/README.md).
+books; to add receipts and books by hand; to list, view, download photos for, and delete recipes; and
+to import recipes from web pages. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -28,15 +29,18 @@ Upload operations live under `books uploads` and `receipts uploads`, each with
 
 The old forms are no longer supported. `goho status` still checks server health.
 
+Recipe imports live under `recipes uploads` with the same four subcommands; its `create`
+takes a recipe page URL instead of an image path.
+
 ## Delete responses
 
-All five delete commands print a JSON confirmation instead of a text message:
+All six delete commands print a JSON confirmation instead of a text message:
 
 ```json
 { "deleted": true, "resource": "book", "id": "12" }
 ```
 
-`resource` is `book`, `receipt`, `recipe`, `book-upload`, or `receipt-upload`, and `id` stays a
+`resource` is `book`, `receipt`, `recipe`, `book-upload`, `receipt-upload`, or `recipe-upload`, and `id` stays a
 string. Failures still exit nonzero and print an error to stderr without a success result.
 
 ## Error responses
@@ -388,5 +392,52 @@ pnpm --filter @goho/goho-cli start recipes delete <positive-integer-recipe-id>
 The command permanently removes the recipe, every import linked to it, and its photo,
 then prints a JSON confirmation with `resource: "recipe"`. There is no confirmation
 prompt. A missing recipe exits nonzero with the server's not-found problem.
+
+## Import a recipe from a web page
+
+```bash
+pnpm --filter @goho/goho-cli start recipes uploads create "https://example.com/recipes/pancakes"
+```
+
+The command sends the page URL to the server and immediately prints the queued import as
+JSON; the CLI never fetches the page itself. Keep its UUID to check processing status. The
+URL is trimmed and must be an absolute `http` or `https` URL without a username or password,
+up to 2048 UTF-8 bytes. Whether the page is public and reachable is only known once the
+server fetches it. An invalid URL exits nonzero before sending a request.
+
+Every call queues a new import. When the page, ignoring its fragment, is already saved as a
+recipe, the server links that recipe instead of fetching the page again.
+
+## Check recipe import status
+
+```bash
+pnpm --filter @goho/goho-cli start recipes uploads view <upload-id>
+```
+
+The command prints the import as JSON, including its `source` and current status: `queued`,
+`processing`, `succeeded`, or `failed`. A successful import includes the saved recipe's
+`recipeId`; a failed import includes a stable `failureCode`. To retry a failed import, run
+`recipes uploads create` with the same URL again; there is no need to delete the failed
+import first.
+
+## List recipe imports
+
+```bash
+pnpm --filter @goho/goho-cli start recipes uploads list
+```
+
+The command prints a JSON array containing every recipe import and its current status,
+newest first. No imports prints `[]`.
+
+## Delete a failed recipe import
+
+```bash
+pnpm --filter @goho/goho-cli start recipes uploads delete <upload-id>
+```
+
+The command permanently removes the failed import, then prints a JSON confirmation with
+`resource: "recipe-upload"`. There is no confirmation prompt. An import that is queued,
+processing, or succeeded exits nonzero and nothing changes; delete the recipe to remove its
+successful imports. A missing import also exits nonzero.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.
