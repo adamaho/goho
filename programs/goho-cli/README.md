@@ -1,8 +1,8 @@
 # @goho/goho-cli
 
 Calls the Goho server to check its status; to upload, inspect, list, patch, and delete receipts and
-books; to add receipts and books by hand; to list, view, download photos for, and delete recipes; and
-to import recipes from web pages. OpenAI credentials belong only to the [server](../goho-server/README.md).
+books; to add receipts, books, and recipes by hand; to list, view, download photos for, and delete
+recipes; and to import recipes from web pages. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -382,6 +382,95 @@ extension, in the current directory. `--output` is used exactly as given, so che
 `contentType` if its extension matters, and its folder must already exist.
 
 An existing file is overwritten. A missing recipe, or one with no photo on file, exits nonzero.
+
+## Add a recipe
+
+```bash
+pnpm --filter @goho/goho-cli start recipes create \
+  --title Pancakes \
+  --ingredient 'id=flour,name=Flour,quantity=2,unit=cup' \
+  --ingredient 'id=butter,name=Butter\, melted,quantity=1/2,unit=cup' \
+  --ingredient 'id=salt,name=Salt,quantity=to taste' \
+  --step 'Mix {{ingredient=flour}} flour with salt.' \
+  --step 'Stir in {{ingredient=butter,portion=1/2}} butter and {{text=a pinch}} of salt.' \
+  --yield 'quantity=4,label=servings' \
+  --total-time-seconds 1800
+```
+
+`--title`, at least one `--ingredient`, and at least one `--step` are required. Repeat
+`--ingredient` and `--step` in recipe order. `--yield` and `--total-time-seconds` are
+optional; leaving one out saves it as unknown rather than guessing it. There is no JSON
+file or stdin input, no source URL, and no photo. Every successful call saves a new recipe,
+even with a title already saved, so running the command twice leaves two recipes. The
+server assigns the ID and timestamps, and the recipe has `hasImage: false` and a null
+`source`. The command prints the complete saved recipe as JSON.
+
+### Ingredients
+
+Each `--ingredient` takes `id`, `name`, and `quantity`, plus `unit` for a numeric amount, in
+any order. The `id` is how step marks name the ingredient and must be unique in the recipe;
+it must be nonblank with no surrounding spaces. Names are trimmed and must be nonblank.
+
+| Amount         | Example                | Meaning                                        |
+| -------------- | ---------------------- | ---------------------------------------------- |
+| Whole number   | `2`                    | Exactly 2                                      |
+| Fraction       | `1/2`, `3/2`           | Exactly that fraction, kept as written         |
+| Decimal        | `0.5`, `2.25`          | Converted exactly to a fraction, such as `9/4` |
+| Range          | `2..3`, `1/2..3/4`     | From the first amount up to the second         |
+| Wording        | `to taste`, `a few`    | Saved as written, trimmed                      |
+| Forced wording | `text:1 or 2 handfuls` | Everything after `text:`, never a number       |
+
+Numbers must be above zero, with a numerator and denominator no larger than
+9007199254740991; decimals are converted without rounding, so one that is too precise fails.
+A range's first amount must be below its second. Mixed numbers are not supported: write
+`1 1/2` as `3/2`. Anything that starts with a digit, sign, or dot, or spells `Infinity` or
+`NaN`, must be one of the number forms above and never becomes wording; `-1`, `.5`, `1e3`,
+`1/0`, `2..1`, `1..`, and `2 cups` all fail. Prefix wording that starts like a number with
+`text:`; spaces before the prefix are ignored.
+
+Numeric amounts need a `unit`: `millilitre`, `litre`, `cup`, `tablespoon`, `teaspoon`, `gram`,
+`kilogram`, `count`, `clove`, `can`, `bunch`, `pinch`, `dash`, `handful`, or `knob`. Wording
+takes no unit, and supplying one fails rather than being ignored.
+
+`--yield` takes `quantity` and `label`, with the same amount forms and no `unit`; the label
+says what the quantity counts. `--total-time-seconds` is a whole number of seconds from `0`
+to `2147483647`; durations such as `30m` are not read.
+
+In `--ingredient` and `--yield` values, write a comma as `\,` and a backslash as `\\`. Any
+other backslash is kept as written. An unescaped comma, an unknown or repeated key, or a
+missing key fails.
+
+### Steps
+
+A step is plain text with optional marks. Plain text is kept exactly, spaces included.
+
+| Mark                               | Meaning                                 |
+| ---------------------------------- | --------------------------------------- |
+| `{{ingredient=butter}}`            | All of the `butter` ingredient          |
+| `{{ingredient=flour,portion=1/2}}` | Half of the `flour` ingredient          |
+| `{{text=a pinch}}`                 | Marked wording, kept exactly as written |
+
+An ingredient mark takes `ingredient` and an optional `portion`, the share of that
+ingredient's quantity the step uses: a whole number, fraction, or decimal above 0 and up
+to 1, defaulting to `1`. It names an ingredient ID from the same recipe. A text mark takes
+only `text`, which must not be blank.
+
+Outside marks, write a literal `{{` as `\{{` and a backslash as `\\`; a lone `{`, `}` or
+`}}` stays plain text, and any other backslash is kept as written. Inside a mark, write a
+comma as `\,`, a `}` as `\}`, a `{{` as `\{{`, and a backslash as `\\`:
+
+```bash
+--step 'Add {{text=salt\, pepper}}.'
+--step 'Write \{{example}} literally.'
+```
+
+A value that starts with `-` must be attached with `=`, such as `--step='- Stir well.'`;
+otherwise it is read as another flag.
+
+An empty step, an unclosed or nested mark, a lone `}` inside a mark, an empty mark, unknown
+or repeated keys, or a mark mixing `text` with `ingredient` or `portion` fails.
+
+Invalid input exits nonzero with `goho:cli:invalid-input` before sending a request.
 
 ## Delete a recipe
 
