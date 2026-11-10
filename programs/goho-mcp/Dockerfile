@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # Build from the repository root: docker build -f programs/goho-mcp/Dockerfile .
-FROM node:24.22.2-bookworm-slim AS base
+FROM node:26.13.0-bookworm-slim AS base
 # Keep in sync with packageManager in the root package.json.
-RUN npm install --global pnpm@12.16.1 && npm cache clean --force
+RUN npm install --global pnpm@12.18.0 && npm cache clean --force
 WORKDIR /app
 
 FROM base AS pruner
@@ -17,7 +17,7 @@ COPY --from=pruner /app/out/json/ ./
 RUN pnpm install --frozen-lockfile --prod --filter "@goho/goho-mcp..."
 COPY --from=pruner /app/out/full/ ./
 
-FROM node:24.22.2-bookworm-slim
+FROM node:26.13.0-bookworm-slim
 LABEL org.opencontainers.image.title="goho-mcp"
 LABEL org.opencontainers.image.source="https://github.com/adamaho/goho"
 ENV NODE_ENV=production \

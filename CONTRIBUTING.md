@@ -6,7 +6,7 @@ Keep changes to Goho small, explicit, and easy to review.
 
 Install these before working in the repo:
 
-- [Node.js](https://nodejs.org/en/download) 24, matching `engines.node` in `package.json`
+- [Node.js](https://nodejs.org/en/download) 26, matching `engines.node` in `package.json`
 - [pnpm](https://pnpm.io/installation) at the version pinned in `packageManager`
 - [Docker with Compose](https://docs.docker.com/get-docker/) when using local services
 

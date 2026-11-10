@@ -34,5 +34,6 @@ export const readImageFile = Effect.fn("@goho/Utils.readImageFile")(function* (
         }),
     ),
   );
-  return { bytes, contentType, fileName: path.basename(filePath) };
+  // File parts must be backed by an ArrayBuffer, not a SharedArrayBuffer.
+  return { bytes: new Uint8Array(bytes), contentType, fileName: path.basename(filePath) };
 });
