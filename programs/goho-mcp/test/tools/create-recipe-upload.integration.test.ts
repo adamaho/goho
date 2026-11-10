@@ -6,7 +6,7 @@ import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
 import { queuedUpload, recipeUploadUrl } from "#test/fixtures/recipe-upload.ts";
-import { apiAdvice, ErrorResult, RecipeUploadResult, toolError } from "#test/support/mcp-client.ts";
+import { apiAdvice, ErrorResult, UploadResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const request = { source: { kind: "url", url: recipeUploadUrl } };
@@ -28,7 +28,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe_upload"
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const created = yield* Schema.decodeUnknownEffect(RecipeUploadResult)(
+      const created = yield* Schema.decodeUnknownEffect(UploadResult)(
         yield* client.call(2, "create_recipe_upload", {
           source: { kind: "url", url: `  ${recipeUploadUrl} ` },
         }),
@@ -47,7 +47,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe_upload"
       const upload = { ...queuedUpload, source: local.source };
       yield* McpFixture.respondWith(expectPayload(local, upload));
 
-      const created = yield* Schema.decodeUnknownEffect(RecipeUploadResult)(
+      const created = yield* Schema.decodeUnknownEffect(UploadResult)(
         yield* client.call(2, "create_recipe_upload", local),
       );
       expect(created.isError).toBe(false);
@@ -70,7 +70,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe_upload"
 
       const returned: Array<unknown> = [];
       for (const id of [2, 3]) {
-        const created = yield* Schema.decodeUnknownEffect(RecipeUploadResult)(
+        const created = yield* Schema.decodeUnknownEffect(UploadResult)(
           yield* client.call(id, "create_recipe_upload", request),
         );
         expect(created.isError).toBe(false);

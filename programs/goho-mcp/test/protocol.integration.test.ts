@@ -23,7 +23,7 @@ const ToolList = Schema.Struct({
 const routes = Effect.succeed(HttpServerResponse.empty({ status: 500 }));
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) => {
-  it.effect("registers the receipt, book, recipe, and recipe upload tools through MCP", () =>
+  it.effect("registers the receipt, book, recipe, and upload tools through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
@@ -52,6 +52,12 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "get_recipe_upload",
         "create_recipe_upload",
         "delete_recipe_upload",
+        "list_receipt_uploads",
+        "get_receipt_upload",
+        "delete_receipt_upload",
+        "list_book_uploads",
+        "get_book_upload",
+        "delete_book_upload",
       ]);
       for (const name of ["list_receipts", "get_receipt", "list_books", "get_book"]) {
         expect(annotationsOf(name)?.readOnlyHint).toBe(true);
@@ -82,6 +88,10 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "get_recipe",
         "list_recipe_uploads",
         "get_recipe_upload",
+        "list_receipt_uploads",
+        "get_receipt_upload",
+        "list_book_uploads",
+        "get_book_upload",
       ]) {
         expect(annotationsOf(name)).toEqual({
           readOnlyHint: true,
@@ -96,7 +106,12 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         idempotentHint: false,
         openWorldHint: false,
       });
-      for (const name of ["delete_recipe", "delete_recipe_upload"]) {
+      for (const name of [
+        "delete_recipe",
+        "delete_recipe_upload",
+        "delete_receipt_upload",
+        "delete_book_upload",
+      ]) {
         expect(annotationsOf(name)).toEqual({
           readOnlyHint: false,
           destructiveHint: true,
@@ -121,7 +136,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools).toHaveLength(19);
+      expect(discovered.tools).toHaveLength(25);
     }),
   );
 

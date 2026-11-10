@@ -13,7 +13,7 @@ import {
   queuedUpload,
   succeededUpload,
 } from "#test/fixtures/recipe-upload.ts";
-import { apiAdvice, ErrorResult, RecipeUploadResult, toolError } from "#test/support/mcp-client.ts";
+import { apiAdvice, ErrorResult, UploadResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const uploads = [queuedUpload, processingUpload, succeededUpload, failedUpload];
@@ -48,7 +48,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_recipe_upload", (
       const client = yield* McpFixture.openSession;
 
       for (const [index, upload] of uploads.entries()) {
-        const found = yield* Schema.decodeUnknownEffect(RecipeUploadResult)(
+        const found = yield* Schema.decodeUnknownEffect(UploadResult)(
           yield* client.call(index + 2, "get_recipe_upload", { upload_id: upload.id }),
         );
         // A failed upload is still a successful lookup.

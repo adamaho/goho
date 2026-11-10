@@ -1,4 +1,6 @@
+import { BookUploadsUnavailable } from "@goho/goho-server-client/book-uploads";
 import { BooksUnavailable } from "@goho/goho-server-client/books";
+import { ReceiptUploadsUnavailable } from "@goho/goho-server-client/receipt-uploads";
 import { ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { RecipeUploadsUnavailable } from "@goho/goho-server-client/recipe-uploads";
 import { RecipesUnavailable } from "@goho/goho-server-client/recipes";
@@ -28,7 +30,9 @@ export type ApiFailure =
   | HttpApiError.BadRequestProblem
   | HttpApiError.InternalServerErrorProblem
   | BooksUnavailable
+  | BookUploadsUnavailable
   | ReceiptsUnavailable
+  | ReceiptUploadsUnavailable
   | RecipesUnavailable
   | RecipeUploadsUnavailable;
 
