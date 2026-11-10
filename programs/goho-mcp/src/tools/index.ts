@@ -7,15 +7,21 @@ import * as CreateBook from "./create-book.ts";
 import * as CreateReceipt from "./create-receipt.ts";
 import * as CreateRecipeUpload from "./create-recipe-upload.ts";
 import * as CreateRecipe from "./create-recipe.ts";
+import * as DeleteBookUpload from "./delete-book-upload.ts";
 import * as DeleteBook from "./delete-book.ts";
+import * as DeleteReceiptUpload from "./delete-receipt-upload.ts";
 import * as DeleteReceipt from "./delete-receipt.ts";
 import * as DeleteRecipeUpload from "./delete-recipe-upload.ts";
 import * as DeleteRecipe from "./delete-recipe.ts";
+import * as GetBookUpload from "./get-book-upload.ts";
 import * as GetBook from "./get-book.ts";
+import * as GetReceiptUpload from "./get-receipt-upload.ts";
 import * as GetReceipt from "./get-receipt.ts";
 import * as GetRecipeUpload from "./get-recipe-upload.ts";
 import * as GetRecipe from "./get-recipe.ts";
+import * as ListBookUploads from "./list-book-uploads.ts";
 import * as ListBooks from "./list-books.ts";
+import * as ListReceiptUploads from "./list-receipt-uploads.ts";
 import * as ListReceipts from "./list-receipts.ts";
 import * as ListRecipeUploads from "./list-recipe-uploads.ts";
 import * as ListRecipes from "./list-recipes.ts";
@@ -24,7 +30,8 @@ import * as PatchReceiptItem from "./patch-receipt-item.ts";
 import * as PatchReceipt from "./patch-receipt.ts";
 
 /**
- * The receipt, book, recipe, and recipe upload tools offered over MCP.
+ * The receipt, book, recipe, and upload tools offered over MCP. Receipt and book uploads can be
+ * read and, once failed, deleted; only recipe uploads can be created here.
  *
  * @category tools
  * @since 0.1.0
@@ -49,10 +56,16 @@ export const toolkit = Toolkit.make(
   GetRecipeUpload.tool,
   CreateRecipeUpload.tool,
   DeleteRecipeUpload.tool,
+  ListReceiptUploads.tool,
+  GetReceiptUpload.tool,
+  DeleteReceiptUpload.tool,
+  ListBookUploads.tool,
+  GetBookUpload.tool,
+  DeleteBookUpload.tool,
 );
 
 /**
- * Provides receipt, book, recipe, and recipe upload tool handlers and their client dependency for MCP registration.
+ * Provides receipt, book, recipe, and upload tool handlers and their client dependency for MCP registration.
  *
  * @category layers
  * @since 0.1.0
@@ -78,5 +91,11 @@ export const layer = toolkit
     get_recipe_upload: GetRecipeUpload.handle,
     create_recipe_upload: CreateRecipeUpload.handle,
     delete_recipe_upload: DeleteRecipeUpload.handle,
+    list_receipt_uploads: ListReceiptUploads.handle,
+    get_receipt_upload: GetReceiptUpload.handle,
+    delete_receipt_upload: DeleteReceiptUpload.handle,
+    list_book_uploads: ListBookUploads.handle,
+    get_book_upload: GetBookUpload.handle,
+    delete_book_upload: DeleteBookUpload.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));

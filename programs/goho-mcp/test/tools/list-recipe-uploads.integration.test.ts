@@ -10,7 +10,7 @@ import {
   queuedUpload,
   succeededUpload,
 } from "#test/fixtures/recipe-upload.ts";
-import { apiAdvice, RecipeUploadListResult, toolError } from "#test/support/mcp-client.ts";
+import { apiAdvice, UploadListResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 // Newest first, as the API returns them.
@@ -31,7 +31,7 @@ layer(McpFixture.layer(respondWithUploads(uploads)), McpFixture.moduleOptions)(
       Effect.gen(function* () {
         const client = yield* McpFixture.openSession;
 
-        const listed = yield* Schema.decodeUnknownEffect(RecipeUploadListResult)(
+        const listed = yield* Schema.decodeUnknownEffect(UploadListResult)(
           yield* client.call(2, "list_recipe_uploads", {}),
         );
         expect(listed.isError).toBe(false);
@@ -45,7 +45,7 @@ layer(McpFixture.layer(respondWithUploads(uploads)), McpFixture.moduleOptions)(
         const client = yield* McpFixture.openSession;
         yield* McpFixture.respondWith(respondWithUploads([]));
 
-        const listed = yield* Schema.decodeUnknownEffect(RecipeUploadListResult)(
+        const listed = yield* Schema.decodeUnknownEffect(UploadListResult)(
           yield* client.call(2, "list_recipe_uploads", {}),
         );
         expect(listed.isError).toBe(false);

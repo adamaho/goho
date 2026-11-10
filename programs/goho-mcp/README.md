@@ -3,7 +3,8 @@
 Goho receipts, books, and recipes are small, structured records that give an MCP
 client a useful read and write workflow. This local Streamable HTTP server exposes
 receipt and book lookup, creation, correction, and deletion, saved recipe
-lookup, creation, and deletion, and recipe uploads from web page URLs, through
+lookup, creation, and deletion, recipe uploads from web page URLs, and status
+checks and cleanup for receipt and book cover uploads made elsewhere, through
 the existing Goho HTTP API, so it can be tested without hosting or an OpenAI key.
 
 ## Agent-first setup
@@ -329,11 +330,37 @@ create a new upload; there is no need to delete the failed one first.
 Extracting a new page uses the Goho API's OpenAI model, so with the placeholder
 key from `.env.example`, expect uploads of new pages to fail.
 
+### Receipt and book uploads
+
+Receipt images and book cover scans are uploaded elsewhere, such as the Goho
+app. These tools check on those uploads and clear away failed ones; they can't
+create an upload or send an image from disk. Upload IDs are version 4 UUIDs,
+such as `{"upload_id":"3b5f0a8e-2c4d-4e8f-9a1b-6c7d8e9f0a1b"}`; they are not the
+string IDs of saved receipts and books.
+
+- `list_receipt_uploads` and `list_book_uploads` return every upload of that
+  kind, newest first, with its file name, image type, and `status`: `queued`,
+  `processing`, `succeeded`, or `failed`. They take no arguments.
+- `get_receipt_upload` and `get_book_upload` take a string `upload_id` and
+  return that upload's latest status. Nothing checks on its own; call again
+  when you want an update. When the status is `succeeded`, pass its `receiptId`
+  to `get_receipt` or its `bookId` to `get_book`. Several cover scans can land
+  on the same book.
+- `delete_receipt_upload` and `delete_book_upload` take a string `upload_id`
+  and remove a `failed` upload and its stored image. They return the deleted
+  ID. The Goho API decides what can be deleted: queued, processing, and
+  succeeded uploads are refused, and nothing changes. They never delete a saved
+  receipt or book; use `delete_receipt` or `delete_book` for that, which also
+  removes its scans.
+
+A `failed` upload is a normal result, not a tool error. Its `failureCode`, such
+as `processing_failed`, says why.
+
 ## Tool errors
 
 When a tool runs and fails, it returns a tool result with `isError: true` and
 one plain text message, with no structured content. Missing records, book
-conflicts, recipe uploads that can't be deleted, and input the API rejects get
+conflicts, uploads that can't be deleted, and input the API rejects get
 their own message, such as `Book 12 was not found.`
 
 Arguments that don't match the tool's input schema are rejected before the Goho

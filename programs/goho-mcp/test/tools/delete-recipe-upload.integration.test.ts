@@ -9,12 +9,7 @@ import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "ef
 import { expect } from "vitest";
 
 import { failedUpload, succeededUpload } from "#test/fixtures/recipe-upload.ts";
-import {
-  apiAdvice,
-  DeleteRecipeUploadResult,
-  ErrorResult,
-  toolError,
-} from "#test/support/mcp-client.ts";
+import { apiAdvice, DeleteUploadResult, ErrorResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
 const missingId = "11111111-2222-4333-8444-555555555555";
@@ -41,7 +36,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("delete_recipe_upload"
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
-      const deleted = yield* Schema.decodeUnknownEffect(DeleteRecipeUploadResult)(
+      const deleted = yield* Schema.decodeUnknownEffect(DeleteUploadResult)(
         yield* client.call(2, "delete_recipe_upload", { upload_id: failedUpload.id }),
       );
       expect(deleted.isError).toBe(false);
