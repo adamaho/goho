@@ -1,4 +1,4 @@
-import { Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { Toolkit } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
@@ -13,10 +13,13 @@ import * as DeleteReceiptUpload from "./delete-receipt-upload.ts";
 import * as DeleteReceipt from "./delete-receipt.ts";
 import * as DeleteRecipeUpload from "./delete-recipe-upload.ts";
 import * as DeleteRecipe from "./delete-recipe.ts";
+import * as GetBookImage from "./get-book-image.ts";
 import * as GetBookUpload from "./get-book-upload.ts";
 import * as GetBook from "./get-book.ts";
+import * as GetReceiptImage from "./get-receipt-image.ts";
 import * as GetReceiptUpload from "./get-receipt-upload.ts";
 import * as GetReceipt from "./get-receipt.ts";
+import * as GetRecipeImage from "./get-recipe-image.ts";
 import * as GetRecipeUpload from "./get-recipe-upload.ts";
 import * as GetRecipe from "./get-recipe.ts";
 import * as ListBookUploads from "./list-book-uploads.ts";
@@ -99,3 +102,16 @@ export const layer = toolkit
     delete_book_upload: DeleteBookUpload.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));
+
+/**
+ * Registers the saved receipt, book, and recipe image tools, which return native MCP image
+ * content rather than JSON, so they sit outside the toolkit. Register them after the toolkit to
+ * keep its tools listed first.
+ *
+ * @category tools
+ * @since 0.1.0
+ */
+export const registerImageTools = Effect.all(
+  [GetReceiptImage.register, GetBookImage.register, GetRecipeImage.register],
+  { discard: true },
+);

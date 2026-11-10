@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
-import { Config, Layer, Schema } from "effect";
+import { Config, Effect, Layer, Schema } from "effect";
 import { McpProtocol, McpServer } from "effect/ai";
 import { HttpRouter, HttpServerResponse } from "effect/http";
 
@@ -9,9 +9,9 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
 
 import * as GohoTools from "./tools/index.ts";
 
-const McpLive = Layer.effectDiscard(McpServer.registerToolkit(GohoTools.toolkit)).pipe(
-  Layer.provide(GohoTools.layer),
-);
+const McpLive = Layer.effectDiscard(
+  Effect.andThen(McpServer.registerToolkit(GohoTools.toolkit), GohoTools.registerImageTools),
+).pipe(Layer.provide(GohoTools.layer));
 
 const McpHttpLive = McpServer.layerHttp({
   name: "goho-mcp",

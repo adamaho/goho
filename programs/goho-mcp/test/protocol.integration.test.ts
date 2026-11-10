@@ -10,6 +10,8 @@ const ToolList = Schema.Struct({
   tools: Schema.Array(
     Schema.Struct({
       name: Schema.String,
+      inputSchema: Schema.Unknown,
+      outputSchema: Schema.optional(Schema.Unknown),
       annotations: Schema.Struct({
         readOnlyHint: Schema.Boolean,
         destructiveHint: Schema.Boolean,
@@ -58,6 +60,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "list_book_uploads",
         "get_book_upload",
         "delete_book_upload",
+        "get_receipt_image",
+        "get_book_image",
+        "get_recipe_image",
       ]);
       for (const name of ["list_receipts", "get_receipt", "list_books", "get_book"]) {
         expect(annotationsOf(name)?.readOnlyHint).toBe(true);
@@ -92,6 +97,9 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "get_receipt_upload",
         "list_book_uploads",
         "get_book_upload",
+        "get_receipt_image",
+        "get_book_image",
+        "get_recipe_image",
       ]) {
         expect(annotationsOf(name)).toEqual({
           readOnlyHint: true,
@@ -119,6 +127,15 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
           openWorldHint: false,
         });
       }
+      // Image tools return native image content with no structured copy, and take the same saved
+      // ID as the matching record lookup.
+      for (const kind of ["receipt", "book", "recipe"]) {
+        const image = discovered.tools.find((tool) => tool.name === `get_${kind}_image`);
+        const record = discovered.tools.find((tool) => tool.name === `get_${kind}`);
+        expect(image).not.toHaveProperty("outputSchema");
+        expect(record?.outputSchema).toBeDefined();
+        expect(image?.inputSchema).toEqual(record?.inputSchema);
+      }
       // Creating an upload leads the API to fetch a page outside Goho.
       expect(annotationsOf("create_recipe_upload")).toEqual({
         readOnlyHint: false,
@@ -136,7 +153,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools).toHaveLength(25);
+      expect(discovered.tools).toHaveLength(28);
     }),
   );
 

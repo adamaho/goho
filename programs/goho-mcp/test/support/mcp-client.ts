@@ -149,6 +149,18 @@ export const DeleteUploadResult = Schema.Struct({
 export const toolError = (text: string) => ({ isError: true, content: [{ type: "text", text }] });
 
 /**
+ * The complete MCP result of a saved image: one native image block with the bytes in base64, and
+ * no text or structured copy.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const imageResult = (bytes: Uint8Array, mimeType: string) => ({
+  isError: false,
+  content: [{ type: "image", data: Buffer.from(bytes).toString("base64"), mimeType }],
+});
+
+/**
  * Advice that follows `Could not <action>.` when a Goho API call fails without a tool-specific
  * reason.
  *

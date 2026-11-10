@@ -4,7 +4,8 @@ Goho receipts, books, and recipes are small, structured records that give an MCP
 client a useful read and write workflow. This local Streamable HTTP server exposes
 receipt and book lookup, creation, correction, and deletion, saved recipe
 lookup, creation, and deletion, recipe uploads from web page URLs, and status
-checks and cleanup for receipt and book cover uploads made elsewhere, through
+checks and cleanup for receipt and book cover uploads made elsewhere, and saved
+receipt, book, and recipe images, through
 the existing Goho HTTP API, so it can be tested without hosting or an OpenAI key.
 
 ## Agent-first setup
@@ -239,8 +240,9 @@ opencode mcp list
 
 ### Recipes
 
-These tools work with saved recipes. They can't edit a recipe or manage its
-photo; to import one from a web page, see [Recipe uploads](#recipe-uploads).
+These tools work with saved recipes. They can't edit a recipe or change its
+photo; to read the photo, see [Saved images](#saved-images), and to import a
+recipe from a web page, see [Recipe uploads](#recipe-uploads).
 Recipe IDs are strings, such as `"9007199254740993"`, so large IDs are never
 rounded.
 
@@ -355,6 +357,28 @@ string IDs of saved receipts and books.
 
 A `failed` upload is a normal result, not a tool error. Its `failureCode`, such
 as `processing_failed`, says why.
+
+### Saved images
+
+These tools return the image on file for a saved receipt, book, or recipe as
+native MCP image content: one `image` block with base64 `data` and its
+`mimeType`, `image/jpeg`, `image/png`, or `image/webp`, and no JSON copy. They
+take the same string ID as `get_receipt`, `get_book`, or `get_recipe`, not an
+upload ID, and they can't upload, replace, or delete an image.
+
+- `get_receipt_image` takes a `receipt_id`, such as `{"receipt_id":"42"}`, and
+  returns the receipt's scanned image. Receipts entered by hand, such as those
+  from `create_receipt`, may have none.
+- `get_book_image` takes a `book_id`, such as `{"book_id":"12"}`, and returns
+  the book's cover: its first successful cover scan. Later scans don't replace
+  it, and books entered by hand have none until a scan of them succeeds.
+- `get_recipe_image` takes a `recipe_id`, such as `{"recipe_id":"5"}`, and
+  returns the photo found when the recipe was imported. Recipes from
+  `create_recipe` have none.
+
+The Goho API doesn't say whether the record or only its image is missing, so
+both give one message, such as `Book 12 has no cover image, or it was not
+found.` Use `get_book` to tell them apart. Seeded records have no images.
 
 ## Tool errors
 
