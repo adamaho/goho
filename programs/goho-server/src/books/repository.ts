@@ -66,11 +66,11 @@ export interface Interface {
   /** The stored file and MIME type of the book's cover; none without one or a book. */
   readonly findCover: (bookId: BookId) => Effect.Effect<Option.Option<Cover>, PersistenceError>;
   /**
-   * Deletes the book with all its uploads and returns their file IDs for the
-   * caller to remove before committing; none when the book does not exist. Its
-   * category stays. The book is locked before its uploads are collected, so a
-   * scan succeeding concurrently either finishes first and is collected or finds
-   * the book gone.
+   * Deletes the book with all its uploads and returns the IDs of their files and
+   * its cover, each once, for the caller to remove before committing; none when
+   * the book does not exist. Its category stays. The book is locked before its
+   * uploads are collected, so a scan succeeding concurrently either finishes
+   * first and is collected or finds the book gone.
    */
   readonly delete: (
     bookId: BookId,
@@ -117,7 +117,7 @@ export const layer = Layer.effect(
     const categories = yield* CategoryRepository.Service;
 
     // Each book with its category as the API object; text IDs keep their precision
-    // in JSON. A book's cover is the one upload marked as it.
+    // in JSON.
     const selectBooks = sql.literal(`
       SELECT b.id::text AS id, b.title, b.author,
         jsonb_build_object(
@@ -125,9 +125,7 @@ export const layer = Layer.effect(
           'kinds', to_jsonb(c.kinds)
         ) AS category,
         b.reading_level AS "readingLevel",
-        EXISTS (
-          SELECT 1 FROM book_uploads u WHERE u.book_id = b.id AND u.is_cover
-        ) AS "hasImage"
+        b.image_file_id IS NOT NULL AS "hasImage"
       FROM books b JOIN categories c ON c.id = b.category_id
     `);
 
@@ -272,8 +270,8 @@ export const layer = Layer.effect(
       Request: BookId,
       Result: Schema.Struct({ fileId: FileId, contentType: BookUploadContentType }),
       execute: (bookId) => sql`
-        SELECT file_id AS "fileId", content_type AS "contentType"
-        FROM book_uploads WHERE book_id = ${bookId} AND is_cover
+        SELECT image_file_id AS "fileId", image_content_type AS "contentType"
+        FROM books WHERE id = ${bookId} AND image_file_id IS NOT NULL
       `,
     });
 
@@ -289,9 +287,10 @@ export const layer = Layer.effect(
         sql`DELETE FROM book_uploads WHERE book_id = ${bookId} RETURNING file_id`,
     });
 
-    const deleteRow = SqlSchema.void({
+    const deleteRow = SqlSchema.findOne({
       Request: BookId,
-      execute: (bookId) => sql`DELETE FROM books WHERE id = ${bookId}`,
+      Result: Schema.Struct({ image_file_id: Schema.NullOr(FileId) }),
+      execute: (bookId) => sql`DELETE FROM books WHERE id = ${bookId} RETURNING image_file_id`,
     });
 
     const deleteBook = Effect.fn("@goho/BookRepository.deleteBook")(
@@ -302,8 +301,11 @@ export const layer = Layer.effect(
             // IDs until the caller's transaction commits.
             if (Option.isNone(yield* lockBook(bookId))) return Option.none();
             const uploads = yield* deleteUploads(bookId);
-            yield* deleteRow(bookId);
-            return Option.some(uploads.map((upload) => upload.file_id));
+            const book = yield* deleteRow(bookId);
+            // A cover scanned for this book is also one of its uploads' files.
+            const fileIds = new Set(uploads.map((upload) => upload.file_id));
+            if (book.image_file_id !== null) fileIds.add(book.image_file_id);
+            return Option.some([...fileIds]);
           }),
         ),
       Effect.mapError((cause) => new PersistenceError({ operation: "delete", cause })),

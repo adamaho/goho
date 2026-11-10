@@ -167,6 +167,8 @@ it.effect("upgrades saved books and covers unchanged to allow unknown authors", 
     expect((yield* migrationIds).slice(-2)).toEqual([17, 18]);
     expect(yield* snapshot).toEqual(before);
 
+    // The repository reads the current schema.
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
     const books = yield* BookRepository.Service;
     const [hobbitId, beowulfId] = (yield* sql<{ id: BookId }>`
       SELECT id::text AS id FROM books ORDER BY id
@@ -177,6 +179,67 @@ it.effect("upgrades saved books and covers unchanged to allow unknown authors", 
     expect(unknown.id).not.toBe(beowulfId);
     expect(yield* books.findOrCreate({ title: "beowulf", category: "Fiction" })).toEqual(unknown);
   }).pipe(Effect.provide(BeforeOptionalAuthorLive)),
+);
+
+const BeforeBookCoverFileLive = databaseMigratedBy(migrationsBefore("0021"));
+
+it.effect("upgrades each book's chosen cover scan to the book's own cover unchanged", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`
+      INSERT INTO books (title, author, category_id, created_at, updated_at)
+      SELECT title, 'Author', id, '2000-01-01Z', '2000-01-02Z' FROM categories,
+        (VALUES ('Scanned'), ('Entered by hand')) AS b(title)
+      WHERE name = 'fiction'
+    `;
+    // The cover is the scan chosen as it, not the earliest or latest. Unfinished scans have no book.
+    yield* sql`
+      INSERT INTO book_uploads (
+        id, file_id, file_name, content_type, status, book_id, is_cover, failure_code,
+        extraction_version, extracted_payload, created_at, updated_at
+      )
+      SELECT gen_random_uuid(), file_id, 'scan.png', content_type, status,
+        CASE WHEN status = 'succeeded' THEN b.id END, is_cover, failure_code,
+        version, payload::jsonb, u.created_at::timestamptz, u.created_at::timestamptz
+      FROM books b, (VALUES
+        ('earliest-scan', 'image/png', 'succeeded', false, NULL, 2, '{"title":"Scanned"}', '2001-01-01Z'),
+        ('chosen-scan', 'image/webp', 'succeeded', true, NULL, 1, '{"title":"Scanned"}', '2002-01-01Z'),
+        ('latest-scan', 'image/png', 'succeeded', false, NULL, 2, '{"title":"Scanned"}', '2002-06-01Z'),
+        ('queued-scan', 'image/png', 'queued', false, NULL, NULL, NULL, '2003-01-01Z'),
+        ('failed-scan', 'image/png', 'failed', false, 'processing_failed', NULL, NULL, '2004-01-01Z')
+      ) AS u(file_id, content_type, status, is_cover, failure_code, version, payload, created_at)
+      WHERE b.title = 'Scanned'
+    `;
+    const books = sql`SELECT * FROM books ORDER BY id`;
+    const uploads = sql`
+      SELECT id, file_id, file_name, content_type, status, book_id, failure_code,
+        extraction_version, extracted_payload, created_at, updated_at
+      FROM book_uploads ORDER BY created_at
+    `;
+    const [[scanned, manual], uploadsBefore] = yield* Effect.all([books, uploads]);
+
+    expect(yield* migrationsBefore("0022").pipe(Effect.provide(NodeServices.layer))).toEqual([
+      [21, "book_cover_file"],
+    ]);
+
+    expect(yield* Effect.all([books, uploads])).toEqual([
+      [
+        { ...scanned, image_file_id: "chosen-scan", image_content_type: "image/webp" },
+        { ...manual, image_file_id: null, image_content_type: null },
+      ],
+      uploadsBefore,
+    ]);
+    const repository = yield* BookRepository.Service;
+    expect(yield* repository.findCover(BookId.make(String(scanned!.id)))).toEqual(
+      Option.some({ fileId: "chosen-scan", contentType: "image/webp" }),
+    );
+    expect(
+      Option.map(
+        yield* repository.findById(BookId.make(String(manual!.id))),
+        (book) => book.hasImage,
+      ),
+    ).toEqual(Option.some(false));
+  }).pipe(Effect.provide(BeforeBookCoverFileLive)),
 );
 
 it.effect("saves one book per normalized identity and reuses it without changing anything", () =>
@@ -394,15 +457,28 @@ it.effect("rejects a correction to another book's identity and leaves everything
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("deletes a book and keeps its category", () =>
+it.effect("reads and deletes a book's own cover without an upload, and keeps its category", () =>
   Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
     const books = yield* BookRepository.Service;
     const { id: bookId } = yield* books.findOrCreate({ ...hobbit, category: "Fantasy" });
     const { id: retained } = yield* books.findOrCreate({ ...hobbit, title: "The Silmarillion" });
-    expect(yield* books.delete(bookId)).toEqual(Option.some([]));
+    // The cover is the book's own file, so it needs no upload row.
+    yield* sql`
+      UPDATE books SET image_file_id = 'own-cover', image_content_type = 'image/webp'
+      WHERE id = ${bookId}
+    `;
+    expect(Option.map(yield* books.findById(bookId), (book) => book.hasImage)).toEqual(
+      Option.some(true),
+    );
+    expect(yield* books.findCover(bookId)).toEqual(
+      Option.some({ fileId: "own-cover", contentType: "image/webp" }),
+    );
+    expect(yield* books.delete(retained)).toEqual(Option.some([]));
+    expect(yield* books.delete(bookId)).toEqual(Option.some(["own-cover"]));
     expect(yield* books.delete(bookId)).toEqual(Option.none());
     expect(yield* books.findById(bookId)).toEqual(Option.none());
-    expect((yield* books.list("")).map(({ id }) => id)).toEqual([retained]);
+    expect(yield* books.list("")).toEqual([]);
     expect(yield* categoryNamed("fantasy")).toMatchObject({ kinds: ["book"] });
   }).pipe(Effect.provide(DatabaseLive)),
 );

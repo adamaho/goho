@@ -147,7 +147,7 @@ from its items, each once in item order. Items and books are written with a
 
 `books` is one shared list of unique books with a generated `bigint` identity
 `id`, the `title` and nullable `author` as entered, a required `category_id`,
-and a nullable `reading_level` set only by hand.
+a nullable `reading_level` set only by hand, and an optional cover.
 
 - Identity is the title and author compared by `book_identity_text`: lowercase,
   whitespace runs collapsed to one space, then trimmed. What counts as whitespace
@@ -177,12 +177,20 @@ and a nullable `reading_level` set only by hand.
   the case or spacing of a book's own title or author is allowed.
 - Books are listed by `created_at` then `id`, newest first, so corrections and
   duplicate creates do not reorder them.
-- `hasImage` is whether one of the book's uploads is its cover. There is no book
-  edit history.
-- Deleting a book locks it, deletes its uploads and returns their file IDs, then
-  deletes the book; the service removes the files before committing. A direct
-  SQL delete of a book that still has uploads fails, so no stored file loses
-  its record.
+- A book's cover is its own stored file: `image_file_id` and
+  `image_content_type` (JPEG, PNG or WebP) are both set or both null, in the
+  `books_image_complete` check. `hasImage` is whether it is set, and the cover
+  is served from these columns alone, without reading uploads. A book saved by
+  hand has none until a scan fills it. There is no book edit history.
+- Deleting a book locks it, deletes its uploads, then deletes the book, and
+  returns its cover's and uploads' file IDs, each once, since a scanned cover is
+  also its upload's file; the service removes the files before committing. A
+  direct SQL delete of a book that still has uploads fails, so no stored file
+  loses its record.
+- Migration 0021 gave each book the file and type of the upload marked as its
+  cover, then dropped that flag and its one-cover-per-book index. Other books
+  got no cover. The book timestamp trigger was disabled for the backfill, so
+  every book kept its ID, values and timestamps; no upload row changed.
 
 ### Book uploads
 
@@ -206,13 +214,13 @@ and each keeps its original file.
 - Saving uses the book's `findOrCreate`, so a scan of a saved identity reuses
   the book unchanged, including its reading level and category, and a new book
   has no reading level.
-- `is_cover` marks the upload whose file is the book's cover, unique per book.
-  `markSucceeded` locks the book, then sets `is_cover` only when the book has no
-  cover. Scans completing in any order never replace a cover; a book entered by
-  hand gets the first successful scan's.
+- `markSucceeded` locks the book, marks the upload succeeded, then copies that
+  upload's file and type to the book only when it has no cover. Scans completing
+  in any order never replace a cover; a book entered by hand gets the first
+  successful scan's, and filling it updates the book's `updated_at`.
 - The book save, cover choice and success status share one transaction, so a
   status change that fails because the upload was already finished, failed or
-  deleted rolls back a new book and its category with it. File reads and AI
+  deleted rolls back a new book and its category with it, and sets no cover. File reads and AI
   calls happen before that transaction.
 - A scan that succeeds after its book was deleted fails without changes; a
   later attempt, if any, saves the book again.

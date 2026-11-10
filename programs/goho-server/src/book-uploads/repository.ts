@@ -77,11 +77,12 @@ export interface Interface {
   ) => Effect.Effect<Option.Option<BookUpload>, PersistenceError>;
   readonly markProcessing: (uploadId: BookUploadId) => Effect.Effect<BookUpload, TransitionError>;
   /**
-   * Links a processing upload to its book and records the extraction. The upload
-   * becomes the book's cover only when the book has none, so a later or slower
-   * scan never replaces it. Locks the book first, which serializes this choice
-   * with other scans and with book deletion; fails, changing nothing, when the
-   * book no longer exists. Joins the caller's transaction as a savepoint.
+   * Links a processing upload to its book and records the extraction. The
+   * upload's file becomes the book's cover only when the book has none, so a
+   * later or slower scan never replaces it. Locks the book first, which
+   * serializes this choice with other scans and with book deletion; fails,
+   * changing nothing, when the book no longer exists. Joins the caller's
+   * transaction as a savepoint.
    */
   readonly markSucceeded: (
     uploadId: BookUploadId,
@@ -204,8 +205,6 @@ export const layer = Layer.effect(
       execute: (bookId) => sql`SELECT id::text AS id FROM books WHERE id = ${bookId} FOR UPDATE`,
     });
 
-    // A separate statement after the lock sees any cover committed while waiting
-    // for it; one statement would keep the snapshot from before the wait.
     const updateToSucceeded = SqlSchema.findOneOption({
       Request: Schema.Struct({
         uploadId: BookUploadId,
@@ -217,13 +216,25 @@ export const layer = Layer.effect(
       execute: (request) => sql`
         UPDATE book_uploads
         SET status = 'succeeded', book_id = ${request.bookId},
-          is_cover = NOT EXISTS (
-            SELECT 1 FROM book_uploads WHERE book_id = ${request.bookId} AND is_cover
-          ),
           extraction_version = ${request.extractionVersion},
           extracted_payload = ${request.extractedPayload}::jsonb
         WHERE id = ${request.uploadId} AND status = 'processing'
         RETURNING ${columns}
+      `,
+    });
+
+    // Runs after the lock and the upload's own update, so it sees a cover committed
+    // while this scan waited, and a refused transition never reaches it.
+    const fillMissingCover = SqlSchema.void({
+      Request: Schema.Struct({
+        bookId: BookId,
+        fileId: FileId,
+        contentType: BookUpload.fields.contentType,
+      }),
+      execute: (request) => sql`
+        UPDATE books
+        SET image_file_id = ${request.fileId}, image_content_type = ${request.contentType}
+        WHERE id = ${request.bookId} AND image_file_id IS NULL
       `,
     });
 
@@ -317,7 +328,7 @@ export const layer = Layer.effect(
                 cause: `Book ${bookId} was deleted before the upload succeeded`,
               });
             }
-            return yield* transition(
+            const upload = yield* transition(
               "markSucceeded",
               uploadId,
               "succeeded",
@@ -328,6 +339,12 @@ export const layer = Layer.effect(
                 extractedPayload: JSON.stringify(extraction.payload),
               }),
             );
+            yield* fillMissingCover({
+              bookId,
+              fileId: upload.fileId,
+              contentType: upload.contentType,
+            }).pipe(persistenceError("markSucceeded"));
+            return upload;
           }),
         ),
       Effect.catchTag("SqlError", (cause) =>

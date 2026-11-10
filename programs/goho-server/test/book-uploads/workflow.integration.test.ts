@@ -144,35 +144,37 @@ const bookRows = Effect.gen(function* () {
 const uploadRows = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   return yield* sql`
-    SELECT id::text, file_id, status, book_id::text, is_cover, failure_code,
+    SELECT id::text, file_id, status, book_id::text, failure_code,
       extraction_version, extracted_payload, created_at, updated_at
     FROM book_uploads ORDER BY created_at, id
   `;
 });
 
-it.effect("enforces upload outcomes, one cover per book, and record timestamps", () =>
+it.effect("enforces upload outcomes, book covers, and record timestamps", () =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     yield* sql`
       INSERT INTO books (title, author, category_id)
       SELECT 'The Hobbit', 'J. R. R. Tolkien', id FROM categories WHERE name = 'fiction'
     `;
-    const succeeded = (id: string, isCover: boolean) => sql`
+    const succeeded = (id: string) => sql`
       INSERT INTO book_uploads (
-        id, file_id, file_name, content_type, status, book_id, is_cover,
+        id, file_id, file_name, content_type, status, book_id,
         extraction_version, extracted_payload
       )
-      SELECT ${id}, 'file', 'cover.png', 'image/png', 'succeeded', id, ${isCover}, 1, '{}'::jsonb
+      SELECT ${id}, 'file', 'cover.png', 'image/png', 'succeeded', id, 1, '{}'::jsonb
       FROM books
     `;
+    const cover = (fileId: string | null, contentType: string | null) =>
+      sql`UPDATE books SET image_file_id = ${fileId}, image_content_type = ${contentType}`;
     const insert = (columns: string, values: string) =>
       sql`INSERT INTO book_uploads (id, file_id, file_name, content_type, ${sql.literal(columns)})
         VALUES ('00000000-0000-4000-8000-000000000009', 'file', 'cover.png', 'image/png', ${sql.literal(values)})`;
     yield* sql.withTransaction(
       Effect.gen(function* () {
         // Several successful scans can belong to one book.
-        yield* succeeded("00000000-0000-4000-8000-000000000001", true);
-        yield* succeeded("00000000-0000-4000-8000-000000000002", false);
+        yield* succeeded("00000000-0000-4000-8000-000000000001");
+        yield* succeeded("00000000-0000-4000-8000-000000000002");
         expect(
           yield* sql`
             UPDATE book_uploads
@@ -184,9 +186,12 @@ it.effect("enforces upload outcomes, one cover per book, and record timestamps",
         ).toEqual([{ creation_preserved: true, update_recorded: true }]);
       }),
     );
+    yield* cover("file", "image/png");
     for (const [reason, statement] of [
-      ["a second cover", succeeded("00000000-0000-4000-8000-000000000003", true)],
-      ["a cover still processing", insert("status, is_cover", "'processing', true")],
+      [
+        "a scan still processing with a book",
+        insert("status, book_id", "'processing', (SELECT id FROM books)"),
+      ],
       [
         "a success without its book",
         insert("status, extraction_version, extracted_payload", "'succeeded', 1, '{}'"),
@@ -196,13 +201,17 @@ it.effect("enforces upload outcomes, one cover per book, and record timestamps",
         "a receipt failure code",
         insert("status, failure_code", "'failed', 'receipt_creation_failed'"),
       ],
+      ["a cover without its type", cover("file", null)],
+      ["a cover type without its file", cover(null, "image/png")],
+      ["a blank cover file", cover(" ", "image/png")],
+      ["an unsupported cover type", cover("file", "image/gif")],
       // Book deletion removes uploads first, so files cannot become untracked.
       ["deleting a scanned book directly", sql`DELETE FROM books`],
     ] as const) {
       expect(Result.isFailure(yield* Effect.result(statement)), reason).toBe(true);
     }
-    expect(yield* sql`SELECT count(*)::int AS count FROM book_uploads WHERE is_cover`).toEqual([
-      { count: 1 },
+    expect(yield* sql`SELECT image_file_id, image_content_type FROM books`).toEqual([
+      { image_file_id: "file", image_content_type: "image/png" },
     ]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
@@ -231,9 +240,9 @@ it.effect("saves a queued scan as a new book with its cover and extraction", () 
     });
     const cover = yield* books.getImage(bookId);
     expect([new Uint8Array(cover.bytes), cover.contentType]).toEqual([image(1), "image/png"]);
-    expect(
-      yield* sql`SELECT is_cover, extraction_version, extracted_payload FROM book_uploads`,
-    ).toEqual([{ is_cover: true, extraction_version: 2, extracted_payload: hobbit }]);
+    expect(yield* sql`SELECT extraction_version, extracted_payload FROM book_uploads`).toEqual([
+      { extraction_version: 2, extracted_payload: hobbit },
+    ]);
     expect(
       yield* sql`
         SELECT state FROM ${sql(QueueConstants.tableName)}
@@ -290,17 +299,30 @@ it.effect("reuses a saved book for duplicate scans and fills only a missing cove
       readingLevel: "Grade 4",
     });
     expect(manual.hasImage).toBe(false);
-    const before = yield* Effect.all([bookRows, catalogRows]);
+    const [[saved], catalog] = yield* Effect.all([bookRows, catalogRows]);
 
     // Case and spacing variants are the same book; the scanned category is ignored.
     yield* answer({ title: "the  HOBBIT", author: "j. r. r. tolkien ", category: "nonfiction" });
     const first = yield* upload(1);
     yield* attempt(first.id);
+    // Filling the missing cover is the book's only change, so it is an update.
+    const covered = yield* Effect.all([bookRows, catalogRows]);
+    expect(covered).toEqual([
+      [
+        {
+          ...saved,
+          image_file_id: yield* fileOf(first.id),
+          image_content_type: "image/png",
+          updated_at: expect.any(Date),
+        },
+      ],
+      catalog,
+    ]);
     const second = yield* upload(2);
     yield* attempt(second.id);
 
     expect(yield* books.get(manual.id)).toEqual({ ...manual, hasImage: true });
-    expect(yield* Effect.all([bookRows, catalogRows])).toEqual(before);
+    expect(yield* Effect.all([bookRows, catalogRows])).toEqual(covered);
     expect(new Uint8Array((yield* books.getImage(manual.id)).bytes)).toEqual(image(1));
     expect((yield* uploads.list).map(({ id, status, bookId }) => ({ id, status, bookId }))).toEqual(
       [
@@ -368,6 +390,14 @@ it.effect("serializes cover choice and book deletion on the book lock", () =>
       });
     const succeed = (uploadId: BookUploadId) =>
       repo.markSucceeded(uploadId, book.id, { version: 1, payload: hobbit });
+    // A refused success leaves the book without a cover.
+    const failed = yield* processing("failed-file");
+    yield* repo.markFailed(failed, "processing_failed");
+    expect(yield* failureTag(succeed(failed))).toBe(
+      "GohoServer.BookUploadRepository.InvalidTransition",
+    );
+    expect(yield* books.findCover(book.id)).toEqual(Option.none());
+
     const earlier = yield* processing("earlier-file");
     const later = yield* processing("later-file");
 
@@ -377,7 +407,8 @@ it.effect("serializes cover choice and book deletion on the book lock", () =>
       Option.some({ fileId: "later-file", contentType: "image/png" }),
     );
 
-    // A scan that succeeds while deletion waits is deleted with the others.
+    // A scan that succeeds while deletion waits is deleted with the others, and
+    // the cover's file, also the later scan's, is returned once.
     const last = yield* processing("last-file");
     const [, deleted] = yield* behindOpenTransaction(
       succeed(last),

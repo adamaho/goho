@@ -345,7 +345,7 @@ it.effect("upgrades saved recipes and imports unchanged to key each recipe by it
     ]);
     const [recipesBefore, uploadsBefore, urlsBefore] = yield* snapshot;
 
-    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([
+    expect(yield* migrationsBefore("0021").pipe(Effect.provide(NodeServices.layer))).toEqual([
       [20, "recipe_url_identity"],
     ]);
 
