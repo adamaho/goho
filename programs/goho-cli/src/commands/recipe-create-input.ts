@@ -315,8 +315,10 @@ export interface CreateRecipeFlags {
  * @since 0.1.0
  */
 export const makeCreateRecipeRequest = Effect.fnUntraced(function* (flags: CreateRecipeFlags) {
-  const ingredients = yield* Effect.fromResult(Result.all(flags.ingredients.map(parseIngredient)));
-  const steps = yield* Effect.fromResult(Result.all(flags.steps.map(parseStep)));
+  const ingredients = yield* Effect.forEach(flags.ingredients, (raw) =>
+    Effect.fromResult(parseIngredient(raw)),
+  );
+  const steps = yield* Effect.forEach(flags.steps, (raw) => Effect.fromResult(parseStep(raw)));
   const recipeYield = Option.isSome(flags.recipeYield)
     ? { yield: yield* Effect.fromResult(parseYield(flags.recipeYield.value)) }
     : {};

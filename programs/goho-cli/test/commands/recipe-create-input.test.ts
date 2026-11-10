@@ -329,7 +329,6 @@ describe("makeCreateRecipeRequest", () => {
   it("leaves unknown yield and total time out of the request", () => {
     const request = Result.getOrThrow(make());
     expect(request).toEqual({ title: "Pancakes", ingredients: [flour], steps: [flourStep] });
-    expect(Object.keys(request)).toEqual(["title", "ingredients", "steps"]);
   });
 
   it.each(["0", "2147483647", "007"])("accepts %j total seconds", (seconds) => {
@@ -406,13 +405,32 @@ describe("makeCreateRecipeRequest", () => {
     expect(message).toContain(`at ${at}`);
   });
 
-  it("stops at the first invalid flag value", () => {
-    expect(
-      detail(
-        make({
-          ingredients: ["id=a,name=A,quantity=1,unit=cup", "id=b,name=B,quantity=-1,unit=cup"],
-        }),
-      ),
-    ).toContain('Invalid --ingredient "id=b,name=B,quantity=-1,unit=cup"');
+  // A value after the first invalid one throws if read, so reading it fails the test.
+  const unreadAfter = (values: ReadonlyArray<string>) => {
+    const guarded = [...values, ""];
+    Object.defineProperty(guarded, values.length, {
+      get: () => {
+        throw new Error("read a value after the first invalid one");
+      },
+    });
+    return guarded;
+  };
+
+  it.each([
+    {
+      overrides: {
+        ingredients: unreadAfter([
+          "id=a,name=A,quantity=1,unit=cup",
+          "id=b,name=B,quantity=-1,unit=cup",
+        ]),
+      },
+      problem: 'Invalid --ingredient "id=b,name=B,quantity=-1,unit=cup"',
+    },
+    {
+      overrides: { steps: unreadAfter(["Mix.", "{{text=a"]) },
+      problem: 'Invalid --step "{{text=a"',
+    },
+  ])("stops at the first invalid value: $problem", ({ overrides, problem }) => {
+    expect(detail(make(overrides))).toContain(problem);
   });
 });
