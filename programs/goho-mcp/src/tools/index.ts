@@ -16,6 +16,7 @@ import * as DeleteRecipe from "./delete-recipe.ts";
 import * as GetBookImage from "./get-book-image.ts";
 import * as GetBookUpload from "./get-book-upload.ts";
 import * as GetBook from "./get-book.ts";
+import * as GetHealth from "./get-health.ts";
 import * as GetReceiptImage from "./get-receipt-image.ts";
 import * as GetReceiptUpload from "./get-receipt-upload.ts";
 import * as GetReceipt from "./get-receipt.ts";
@@ -65,6 +66,7 @@ export const toolkit = Toolkit.make(
   ListBookUploads.tool,
   GetBookUpload.tool,
   DeleteBookUpload.tool,
+  GetHealth.tool,
 );
 
 /**
@@ -100,6 +102,7 @@ export const layer = toolkit
     list_book_uploads: ListBookUploads.handle,
     get_book_upload: GetBookUpload.handle,
     delete_book_upload: DeleteBookUpload.handle,
+    get_health: GetHealth.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));
 

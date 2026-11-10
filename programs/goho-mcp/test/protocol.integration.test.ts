@@ -60,6 +60,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "list_book_uploads",
         "get_book_upload",
         "delete_book_upload",
+        "get_health",
         "get_receipt_image",
         "get_book_image",
         "get_recipe_image",
@@ -97,6 +98,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "get_receipt_upload",
         "list_book_uploads",
         "get_book_upload",
+        "get_health",
         "get_receipt_image",
         "get_book_image",
         "get_recipe_image",
@@ -153,7 +155,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools).toHaveLength(28);
+      expect(discovered.tools).toHaveLength(29);
     }),
   );
 
