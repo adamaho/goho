@@ -165,14 +165,14 @@ settings:
 catalogs:
   default:
     '@adamaho/nopeus-oxfmt-config':
-      specifier: 0.2.0
-      version: 0.2.0
+      specifier: 0.3.0
+      version: 0.3.0
     '@adamaho/nopeus-oxlint-config':
-      specifier: 0.6.0
-      version: 0.6.0
+      specifier: 0.7.0
+      version: 0.7.0
     '@adamaho/nopeus-oxlint-plugin':
-      specifier: 0.11.0
-      version: 0.11.0
+      specifier: 0.12.0
+      version: 0.12.0
     '@adamaho/nopeus-tsconfig':
       specifier: 0.3.2
       version: 0.3.2
@@ -216,15 +216,13 @@ catalogs:
       specifier: 5.1.0
       version: 5.1.0
 
-pnpmfileChecksum: sha256-JfsEDpqgOKTR2sp8TnnGhL88ogLVkrCJ7vni2sb2SMY=
-
 importers:
 
   .:
     devDependencies:
       '@adamaho/nopeus-oxfmt-config':
         specifier: 'catalog:'
-        version: 0.2.0(oxfmt@0.77.0)
+        version: 0.3.0(oxfmt@0.77.0)
       oxfmt:
         specifier: 'catalog:'
         version: 0.77.0
@@ -246,10 +244,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@goho/tool-tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -287,10 +285,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.2(effect@4.1.2)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.6(@types/node@26.6.6)))
@@ -324,10 +322,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@goho/tool-tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -364,10 +362,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@goho/tool-tsconfig':
         specifier: workspace:*
         version: link:../../tools/tsconfig
@@ -404,10 +402,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.2(effect@4.1.2)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.6(@types/node@26.6.6)))
@@ -456,10 +454,10 @@ importers:
     devDependencies:
       '@adamaho/nopeus-oxlint-config':
         specifier: 'catalog:'
-        version: 0.6.0(oxlint@1.92.0)
+        version: 0.7.0(oxlint@1.92.0)
       '@adamaho/nopeus-oxlint-plugin':
         specifier: 'catalog:'
-        version: 0.11.0(oxlint@1.92.0)
+        version: 0.12.0(oxlint@1.92.0)
       '@effect/vitest':
         specifier: 'catalog:'
         version: 4.1.2(effect@4.1.2)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.6(@types/node@26.6.6)))
@@ -505,18 +503,21 @@ importers:
 
 packages:
 
-  '@adamaho/nopeus-oxfmt-config@0.2.0':
-    resolution: {integrity: sha512-Gi1ib+VKaOZyvGRYzxnzGrO7BOyt7fBykITE6RVcj1KPjUFCJ4gCpHgJVwxEMfu01pr8AT+MvBcCTp/k3XakBQ==}
+  '@adamaho/nopeus-oxfmt-config@0.3.0':
+    resolution: {integrity: sha512-x8vI473wdv+rKRPImAIfgQQVar4Xwfso6kj8CbQHpxFcfKISsr6M69+IwOKjz2bwMUR3yorDN60kn8lNa3Rw1w==}
+    engines: {node: ^24.22.1 || ^26.12.1}
     peerDependencies:
       oxfmt: '>=0.71.0 <1'
 
-  '@adamaho/nopeus-oxlint-config@0.6.0':
-    resolution: {integrity: sha512-TlZ/mxI1229o0kANR43vBFIvsscR+hrSPsXpul/FGWJZoibq2gO/o74JMBO1ZEqH+B+uAbGogjXq4aSkJ3Sl4w==}
+  '@adamaho/nopeus-oxlint-config@0.7.0':
+    resolution: {integrity: sha512-QJKoqXXdlGmZDEHTq52ioyP71d7SZ5b4WDIV0Nw3K+JFxnvugDW9d0CQX6eey3cdN5EE0mWUZEiqPgvZG0Ahcw==}
+    engines: {node: ^24.22.1 || ^26.12.1}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
-  '@adamaho/nopeus-oxlint-plugin@0.11.0':
-    resolution: {integrity: sha512-Hs3C9sTaEImJjrwVBdRxPfXw++BuP6Q0kYeuKsfZNBftaSggOtxs33sGBsDwUtcANIuva74QyLrYsycYf+oZWg==}
+  '@adamaho/nopeus-oxlint-plugin@0.12.0':
+    resolution: {integrity: sha512-xF5doFOHBV2ZofomHXmP31TaeREMRY/3IOk3k6k+8i2XPLyN3+GfmKdUTow2cf/R3h2jtpjzTykB0tYdLGAGZg==}
+    engines: {node: ^24.22.1 || ^26.12.1}
     peerDependencies:
       oxlint: '>=1.79.0 <2'
 
@@ -970,8 +971,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxlint/plugins@1.89.0':
-    resolution: {integrity: sha512-TJBBNl4KIxbxrSk7gsqlz6iM1kxidfyTizEzfWqXvijF2Ou8/Da58GvjemBVmCmaUamwRij+JwsVc0kpBFuqfg==}
+  '@oxlint/plugins@1.92.0':
+    resolution: {integrity: sha512-+8wfampUIDYgvWX+QOd4RFk0fTLCquBnkCSdb9MiK+H0BaFQtgq445s+yJnb5/qjjyaWGfX4j7yJOdijXv79qg==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@redis/bloom@6.3.1':
@@ -1649,17 +1650,17 @@ packages:
 
 snapshots:
 
-  '@adamaho/nopeus-oxfmt-config@0.2.0(oxfmt@0.77.0)':
+  '@adamaho/nopeus-oxfmt-config@0.3.0(oxfmt@0.77.0)':
     dependencies:
       oxfmt: 0.77.0
 
-  '@adamaho/nopeus-oxlint-config@0.6.0(oxlint@1.92.0)':
+  '@adamaho/nopeus-oxlint-config@0.7.0(oxlint@1.92.0)':
     dependencies:
       oxlint: 1.92.0
 
-  '@adamaho/nopeus-oxlint-plugin@0.11.0(oxlint@1.92.0)':
+  '@adamaho/nopeus-oxlint-plugin@0.12.0(oxlint@1.92.0)':
     dependencies:
-      '@oxlint/plugins': 1.89.0
+      '@oxlint/plugins': 1.92.0
       oxc-resolver: 11.24.2
       oxlint: 1.92.0
 
@@ -1939,7 +1940,7 @@ snapshots:
   '@oxlint/binding-win32-x64-msvc@1.92.0':
     optional: true
 
-  '@oxlint/plugins@1.89.0': {}
+  '@oxlint/plugins@1.92.0': {}
 
   '@redis/bloom@6.3.1(@redis/client@6.3.1)':
     dependencies:

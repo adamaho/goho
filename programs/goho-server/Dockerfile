@@ -14,8 +14,6 @@ RUN pnpm dlx turbo@2.11.10 prune @goho/goho-server --docker
 FROM base AS installer
 # Dependency manifests only, so this layer is reused until dependencies change.
 COPY --from=pruner /app/out/json/ ./
-# turbo prune omits the pnpmfile, but the lockfile checksums its hooks.
-COPY --from=pruner /app/.pnpmfile.cjs ./
 RUN pnpm install --frozen-lockfile --prod --filter "@goho/goho-server..."
 COPY --from=pruner /app/out/full/ ./
 
