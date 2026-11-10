@@ -12,6 +12,7 @@ export const DeletedResource = Schema.Literals([
   "recipe",
   "book-upload",
   "receipt-upload",
+  "recipe-upload",
 ]);
 
 /**

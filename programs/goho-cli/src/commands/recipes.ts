@@ -6,6 +6,7 @@ import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 
 import { imageCommand } from "./recipe-image.ts";
+import { uploadsCommand } from "./recipe-uploads.ts";
 
 const listCommand = Command.make("list").pipe(
   Command.withDescription("List every saved recipe's headline details."),
@@ -59,12 +60,12 @@ const deleteCommand = Command.make("delete", {
 );
 
 /**
- * Command group for recipe retrieval, photo downloads, and deletion.
+ * Command group for recipe retrieval, photo downloads, deletion, and imports from web pages.
  *
  * @category commands
  * @since 0.1.0
  */
 export const recipesCommand = Command.make("recipes").pipe(
   Command.withDescription("Manage recipes"),
-  Command.withSubcommands([listCommand, viewCommand, imageCommand, deleteCommand]),
+  Command.withSubcommands([listCommand, viewCommand, imageCommand, deleteCommand, uploadsCommand]),
 );

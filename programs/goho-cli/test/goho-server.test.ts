@@ -30,6 +30,7 @@ describe("GOHO_SERVER_URL", () => {
     [["receipts"], "goho receipts <subcommand> [flags]"],
     [["recipes"], "goho recipes <subcommand> [flags]"],
     [["recipes", "view", "--help"], "goho recipes view [flags] <recipe-id>"],
+    [["recipes", "uploads"], "goho recipes uploads <subcommand> [flags]"],
     [["books", "uploads"], "goho books uploads <subcommand> [flags]"],
   ])("still prints %j with an invalid or empty URL", async (args, expected) => {
     for (const url of ["not a url", ""]) {

@@ -100,7 +100,7 @@ describe("recipes command structure", () => {
     expect(result.stderr).toBe("");
     const subcommands = result.stdout.split("SUBCOMMANDS\n")[1] ?? "";
     const operations = [...subcommands.matchAll(/^ {2}(\S+)\s/gm)].map((match) => match[1]);
-    expect(operations).toEqual(["list", "view", "image", "delete"]);
+    expect(operations).toEqual(["list", "view", "image", "delete", "uploads"]);
   });
 
   it.each(
