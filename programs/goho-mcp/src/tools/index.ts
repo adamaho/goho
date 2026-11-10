@@ -5,22 +5,26 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
 
 import * as CreateBook from "./create-book.ts";
 import * as CreateReceipt from "./create-receipt.ts";
+import * as CreateRecipeUpload from "./create-recipe-upload.ts";
 import * as CreateRecipe from "./create-recipe.ts";
 import * as DeleteBook from "./delete-book.ts";
 import * as DeleteReceipt from "./delete-receipt.ts";
+import * as DeleteRecipeUpload from "./delete-recipe-upload.ts";
 import * as DeleteRecipe from "./delete-recipe.ts";
 import * as GetBook from "./get-book.ts";
 import * as GetReceipt from "./get-receipt.ts";
+import * as GetRecipeUpload from "./get-recipe-upload.ts";
 import * as GetRecipe from "./get-recipe.ts";
 import * as ListBooks from "./list-books.ts";
 import * as ListReceipts from "./list-receipts.ts";
+import * as ListRecipeUploads from "./list-recipe-uploads.ts";
 import * as ListRecipes from "./list-recipes.ts";
 import * as PatchBook from "./patch-book.ts";
 import * as PatchReceiptItem from "./patch-receipt-item.ts";
 import * as PatchReceipt from "./patch-receipt.ts";
 
 /**
- * The receipt, book, and recipe tools offered over MCP.
+ * The receipt, book, recipe, and recipe upload tools offered over MCP.
  *
  * @category tools
  * @since 0.1.0
@@ -41,10 +45,14 @@ export const toolkit = Toolkit.make(
   GetRecipe.tool,
   CreateRecipe.tool,
   DeleteRecipe.tool,
+  ListRecipeUploads.tool,
+  GetRecipeUpload.tool,
+  CreateRecipeUpload.tool,
+  DeleteRecipeUpload.tool,
 );
 
 /**
- * Provides receipt, book, and recipe tool handlers and their client dependency for MCP registration.
+ * Provides receipt, book, recipe, and recipe upload tool handlers and their client dependency for MCP registration.
  *
  * @category layers
  * @since 0.1.0
@@ -66,5 +74,9 @@ export const layer = toolkit
     get_recipe: GetRecipe.handle,
     create_recipe: CreateRecipe.handle,
     delete_recipe: DeleteRecipe.handle,
+    list_recipe_uploads: ListRecipeUploads.handle,
+    get_recipe_upload: GetRecipeUpload.handle,
+    create_recipe_upload: CreateRecipeUpload.handle,
+    delete_recipe_upload: DeleteRecipeUpload.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));

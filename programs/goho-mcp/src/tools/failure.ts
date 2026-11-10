@@ -1,5 +1,6 @@
 import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
+import { RecipeUploadsUnavailable } from "@goho/goho-server-client/recipe-uploads";
 import { RecipesUnavailable } from "@goho/goho-server-client/recipes";
 import { Schema } from "effect";
 import { HttpClientError } from "effect/http";
@@ -28,7 +29,8 @@ export type ApiFailure =
   | HttpApiError.InternalServerErrorProblem
   | BooksUnavailable
   | ReceiptsUnavailable
-  | RecipesUnavailable;
+  | RecipesUnavailable
+  | RecipeUploadsUnavailable;
 
 const unreachable = "The Goho API could not be reached; check GOHO_SERVER_URL and the network.";
 const serverFailed =

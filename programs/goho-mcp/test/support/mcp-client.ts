@@ -107,6 +107,39 @@ export const DeleteRecipeResult = Schema.Struct({
 });
 
 /**
+ * Response shape for a successful recipe upload list.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const RecipeUploadListResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ uploads: Schema.Array(Schema.Unknown) }),
+});
+
+/**
+ * Response shape for a successful recipe upload lookup or creation.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const RecipeUploadResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ upload: Schema.Unknown }),
+});
+
+/**
+ * Response shape for a successful recipe upload deletion.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const DeleteRecipeUploadResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ deleted_upload_id: Schema.String }),
+});
+
+/**
  * The complete MCP result of a tool failure: one plain text message and no structured content.
  *
  * @category testing
