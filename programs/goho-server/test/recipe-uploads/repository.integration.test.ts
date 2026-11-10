@@ -11,7 +11,6 @@ import { expect } from "vitest";
 import * as Migrations from "#src/database/migrations.ts";
 import * as RecipeUploadRepository from "#src/recipe-uploads/repository.ts";
 import * as RecipeRepository from "#src/recipes/repository.ts";
-import { behindOpenTransaction } from "#test/helpers/locks.ts";
 
 const RepositoriesLive = Layer.mergeAll(RecipeRepository.layer, RecipeUploadRepository.layer);
 
@@ -67,67 +66,37 @@ const counts = Effect.gen(function* () {
   return row;
 });
 
-it.effect("saves one import per normalized URL and reuses it in any state", () =>
+it.effect("saves a new queued import for every submission, even of one page", () =>
   Effect.gen(function* () {
     const uploads = yield* RecipeUploadRepository.Service;
-    const created = yield* uploads.findOrCreateQueued(first, pancakes);
+    const created = yield* uploads.createQueued(first, pancakes);
     expect(created).toEqual({
-      created: true,
-      upload: {
-        id: first,
-        source: pancakes,
-        status: "queued",
-        recipeId: null,
-        failureCode: null,
-        createdAt: expect.any(String),
-        updatedAt: created.upload.createdAt,
-      },
+      id: first,
+      source: pancakes,
+      status: "queued",
+      recipeId: null,
+      failureCode: null,
+      createdAt: expect.any(String),
+      updatedAt: created.createdAt,
     });
-    expect(yield* uploads.findById(first)).toEqual(Option.some(created.upload));
+    expect(yield* uploads.findById(first)).toEqual(Option.some(created));
 
-    // Another fragment or host case is the same page; the first URL stays the source.
-    expect(
-      yield* uploads.findOrCreateQueued(
-        second,
-        source("https://example.com/recipes/pancakes?serves=4#bottom"),
-      ),
-    ).toEqual({ created: false, upload: created.upload });
-    expect(yield* uploads.findById(second)).toEqual(Option.none());
-
-    // The query is part of the page.
-    const other = yield* uploads.findOrCreateQueued(
-      second,
-      source("https://example.com/recipes/pancakes?serves=8"),
-    );
-    expect(other).toMatchObject({ created: true, upload: { id: second } });
-
-    // A failed import still owns its URL until it is deleted.
-    const failed = yield* uploads.markFailed(first, "page_unavailable");
-    expect(yield* uploads.findOrCreateQueued(third, pancakes)).toEqual({
-      created: false,
-      upload: failed,
+    // Another fragment or host case is the same page, but a new import with its own URL.
+    const bottom = source("https://example.com/recipes/pancakes?serves=4#bottom");
+    expect(yield* uploads.createQueued(second, bottom)).toMatchObject({
+      id: second,
+      source: bottom,
+      status: "queued",
     });
-    expect(yield* counts).toEqual({ recipes: 0, uploads: 2, urls: 2 });
-    expect((yield* uploads.list).map(({ id }) => id)).toEqual([second, first]);
-  }).pipe(Effect.provide(DatabaseLive)),
-);
 
-it.effect("returns the committed import to a concurrent import of the same page", () =>
-  Effect.gen(function* () {
-    const uploads = yield* RecipeUploadRepository.Service;
-    const sql = yield* SqlClient.SqlClient;
-    // The loser runs in a caller's transaction, as an import that enqueues its job will.
-    const [winner, loser] = yield* behindOpenTransaction(
-      uploads.findOrCreateQueued(first, pancakes),
-      sql.withTransaction(
-        uploads.findOrCreateQueued(second, source("https://example.com/recipes/pancakes?serves=4")),
-      ),
-      "INSERT INTO recipe_upload_urls",
-    );
-    expect(winner.created).toBe(true);
-    expect(loser).toEqual({ created: false, upload: winner.upload });
-    // The loser's upload rolled back with its URL.
-    expect(yield* counts).toEqual({ recipes: 0, uploads: 1, urls: 1 });
+    // A failed import does not hold its page.
+    yield* uploads.markFailed(first, "page_unavailable");
+    expect(yield* uploads.createQueued(third, pancakes)).toMatchObject({
+      id: third,
+      status: "queued",
+    });
+    expect(yield* counts).toEqual({ recipes: 0, uploads: 3, urls: 3 });
+    expect((yield* uploads.list).map(({ id }) => id)).toEqual([third, second, first]);
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
@@ -140,14 +109,14 @@ it.effect("commits an import, and a recipe it saves, only with the caller's tran
     // A job that fails to enqueue leaves no import behind.
     const enqueueFailed = yield* sql
       .withTransaction(
-        uploads.findOrCreateQueued(first, pancakes).pipe(Effect.andThen(new EnqueueFailed())),
+        uploads.createQueued(first, pancakes).pipe(Effect.andThen(new EnqueueFailed())),
       )
       .pipe(Effect.flip);
     expect(enqueueFailed).toBeInstanceOf(EnqueueFailed);
     expect(yield* counts).toEqual({ recipes: 0, uploads: 0, urls: 0 });
 
     // A status change that is refused rolls back the recipe saved with it.
-    yield* uploads.findOrCreateQueued(first, pancakes);
+    yield* uploads.createQueued(first, pancakes);
     const refused = yield* sql
       .withTransaction(
         recipes
@@ -168,7 +137,7 @@ it.effect("guards each status change so a finished import keeps its outcome", ()
   Effect.gen(function* () {
     const uploads = yield* RecipeUploadRepository.Service;
     const recipes = yield* RecipeRepository.Service;
-    yield* uploads.findOrCreateQueued(first, pancakes);
+    yield* uploads.createQueued(first, pancakes);
     expect(yield* uploads.markProcessing(first)).toMatchObject({ status: "processing" });
     // A retried job finds its import still processing.
     expect(yield* uploads.markProcessing(first)).toMatchObject({ status: "processing" });
@@ -194,7 +163,7 @@ it.effect("guards each status change so a finished import keeps its outcome", ()
     expect(yield* uploads.findById(first)).toEqual(Option.some(succeeded));
 
     // A queued import can fail before processing starts, and then stays failed.
-    yield* uploads.findOrCreateQueued(second, source("https://example.com/waffles"));
+    yield* uploads.createQueued(second, source("https://example.com/waffles"));
     expect(yield* uploads.markFailed(second, "internal_error")).toMatchObject({
       status: "failed",
       failureCode: "internal_error",
@@ -208,11 +177,11 @@ it.effect("guards each status change so a finished import keeps its outcome", ()
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
-it.effect("deletes only failed imports, freeing their URL", () =>
+it.effect("deletes only failed imports, with their URL", () =>
   Effect.gen(function* () {
     const uploads = yield* RecipeUploadRepository.Service;
     const recipes = yield* RecipeRepository.Service;
-    yield* uploads.findOrCreateQueued(first, pancakes);
+    yield* uploads.createQueued(first, pancakes);
     expect(yield* Effect.flip(uploads.deleteFailed(first))).toMatchObject({
       _tag: "GohoServer.RecipeUploadRepository.DeletionNotAllowed",
       currentStatus: "queued",
@@ -221,7 +190,7 @@ it.effect("deletes only failed imports, freeing their URL", () =>
     expect(yield* Effect.flip(uploads.deleteFailed(first))).toMatchObject({
       currentStatus: "processing",
     });
-    yield* uploads.findOrCreateQueued(second, source("https://example.com/waffles"));
+    yield* uploads.createQueued(second, source("https://example.com/waffles"));
     yield* uploads.markProcessing(second);
     yield* uploads.markSucceeded(second, (yield* recipes.create(toast)).id);
     expect(yield* Effect.flip(uploads.deleteFailed(second))).toMatchObject({
@@ -236,10 +205,6 @@ it.effect("deletes only failed imports, freeing their URL", () =>
     yield* uploads.deleteFailed(first);
     expect(yield* uploads.findById(first)).toEqual(Option.none());
     expect(yield* counts).toEqual({ recipes: 1, uploads: 1, urls: 1 });
-    expect(yield* uploads.findOrCreateQueued(third, pancakes)).toMatchObject({
-      created: true,
-      upload: { id: third, status: "queued" },
-    });
   }).pipe(Effect.provide(DatabaseLive)),
 );
 

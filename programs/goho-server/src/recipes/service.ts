@@ -32,9 +32,9 @@ export interface Interface {
   readonly list: Effect.Effect<ReadonlyArray<RecipeSummary>, RecipesUnavailable>;
   readonly get: (recipeId: RecipeId) => Effect.Effect<Recipe, RecipeNotFound | RecipesUnavailable>;
   /**
-   * Deletes the recipe, the upload that saved it, freeing its URL for a new
-   * import, and its stored photo. The photo is removed before the database
-   * commits, so a storage failure keeps the rows for a retry.
+   * Deletes the recipe, every upload that linked it, and its stored photo; a
+   * later import of the page saves a new recipe. The photo is removed before
+   * the database commits, so a storage failure keeps the rows for a retry.
    */
   readonly delete: (recipeId: RecipeId) => Effect.Effect<void, RecipeNotFound | RecipesUnavailable>;
   readonly getImage: (

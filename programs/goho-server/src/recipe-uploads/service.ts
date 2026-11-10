@@ -11,7 +11,6 @@ import { SecureRandom } from "effect/crypto";
 
 import * as Transaction from "#src/database/transaction.ts";
 
-import type { FoundOrCreated } from "./model.ts";
 import * as RecipeUploadQueue from "./queue.ts";
 import * as RecipeUploadRepository from "./repository.ts";
 
@@ -27,23 +26,18 @@ const unavailable = (message: string) => (error: unknown) =>
  */
 export interface Interface {
   /**
-   * Queues an import of the source's page, or returns the existing import of
-   * the same normalized URL in any status, with its source as first
-   * submitted. A new import and its job commit together; a reused one gets no
-   * new job.
+   * Queues a new import of the source's page, and its job, in one transaction.
+   * Every submission gets its own import, even of a page imported before; its
+   * job links an already saved recipe of the same normalized URL instead of
+   * importing the page again.
    */
-  readonly create: (
-    source: RecipeSource,
-  ) => Effect.Effect<FoundOrCreated, RecipeUploadsUnavailable>;
+  readonly create: (source: RecipeSource) => Effect.Effect<RecipeUpload, RecipeUploadsUnavailable>;
   /** Every import, newest first. */
   readonly list: Effect.Effect<ReadonlyArray<RecipeUpload>, RecipeUploadsUnavailable>;
   readonly get: (
     uploadId: RecipeUploadId,
   ) => Effect.Effect<RecipeUpload, RecipeUploadNotFound | RecipeUploadsUnavailable>;
-  /**
-   * Deletes a failed import and its URL, so the page can be imported again;
-   * other states fail with a conflict.
-   */
+  /** Deletes a failed import and its URL; other states fail with a conflict. */
   readonly delete: (
     uploadId: RecipeUploadId,
   ) => Effect.Effect<void, RecipeUploadNotFound | RecipeUploadConflict | RecipeUploadsUnavailable>;
@@ -60,7 +54,7 @@ export class Service extends Context.Service<Service, Interface>()(
 ) {}
 
 /**
- * Saves each new import and its queue job in one transaction.
+ * Saves each import and its queue job in one transaction.
  *
  * @category layers
  * @since 0.1.0
@@ -78,9 +72,9 @@ export const layer = Layer.effect(
         const uploadId = RecipeUploadId.make(yield* random.uuidV4());
         return yield* transaction.run(
           Effect.gen(function* () {
-            const found = yield* repository.findOrCreateQueued(uploadId, source);
-            if (found.created) yield* queue.offer({ uploadId: found.upload.id });
-            return found;
+            const upload = yield* repository.createQueued(uploadId, source);
+            yield* queue.offer({ uploadId: upload.id });
+            return upload;
           }),
         );
       },

@@ -221,7 +221,8 @@ and each keeps its original file.
 
 ### Recipes
 
-Migration 0019 adds the recipe tables. The recipe and recipe upload
+Migration 0019 adds the recipe tables, and migration 0020 makes the saved
+recipe, not the import, the identity of a page. The recipe and recipe upload
 repositories read and write them, behind the `recipes` and `recipe-uploads`
 services and the recipe upload worker; no endpoint uses them yet.
 
@@ -232,46 +233,62 @@ services and the recipe upload worker; no endpoint uses them yet.
   recipe needs no upload.
 - A recipe's optional photo is a stored file: `image_file_id` and
   `image_content_type` (JPEG, PNG or WebP) are both set or both null.
+- A recipe imported from a page keeps the URL its first import submitted as
+  `source_url`, and that URL's normalized form as `normalized_url`, unique in
+  `recipes_normalized_url_key`, so a page has at most one saved recipe. Both are
+  set or both null (`recipes_source_complete`); a recipe saved directly has
+  neither and never matches a page. The check does not prove the key is the
+  source's normalized form; the repository writes both from the same URL.
+  Redirects play no part: both come from the submitted URL.
 - `recipe_uploads` tracks one import with `status` and, as in `receipt_uploads`,
   only a succeeded upload has a `recipe_id` and only a failed one has a
   `failure_code` (`page_unavailable`, `no_recipe_found`, `ambiguous_recipe`,
   `incomplete_recipe`, `processing_failed`, `recipe_creation_failed`,
-  `internal_error`). `recipe_id` is unique, so a recipe has at most one upload.
+  `internal_error`). Several succeeded uploads can link one recipe.
 - An upload's source is a row in its own table. `recipe_upload_urls` keeps the
-  `url` as submitted and its `normalized_url`, which is unique, so concurrent
-  imports of the same page share one upload whatever its status. The row is
-  deleted with its upload, freeing the URL for a fresh import.
-- Each URL is limited to 2048 bytes of UTF-8, not characters. The API will check
-  the limit on both URLs, the normalized one after normalization.
+  `url` as submitted; several uploads can share a page. The row is deleted with
+  its upload.
+- Each URL is limited to 2048 bytes of UTF-8, not characters: an upload's URL
+  and a recipe's source and key. The API checks the limit on the URL as
+  submitted and after normalization.
 - The foreign key stops a direct SQL delete of a recipe that still has an upload;
-  delete the upload first. The repository's recipe deletion does this for you.
+  delete its uploads first. The repository's recipe deletion does this for you.
+- Migration 0020 gave each recipe saved by an import that import's URL and
+  normalized URL, unique under 0019's constraints, then dropped the uploads'
+  normalized URLs. Recipes saved directly got neither. The recipe timestamp
+  trigger was disabled for the backfill, so every ID, value and timestamp
+  stayed; no upload row changed.
 
 The repositories decode every stored recipe and upload with the API schemas, so
-stored JSON that no longer validates, or a linked upload missing its URL row,
-fails the read instead of being dropped or coerced.
+stored JSON that no longer validates, or an upload missing its URL row, fails
+the read instead of being dropped or coerced.
 
-- Saving a recipe always inserts a new one; titles are not unique. A missing
-  yield or total time is SQL `NULL`. Create, get and list read through one
-  selection, and a recipe's `source` is its succeeded upload's URL as submitted,
-  or null. Listing reads no ingredients, steps or yield, and sorts by title
-  ignoring case, then newest first.
-- Importing a URL finds the upload of its normalized URL in any status, or
-  inserts a queued upload and its URL in one savepoint and reports whether it
-  was created, so only a new upload needs a job. A concurrent import of the same
-  page waits on the `recipe_upload_urls_normalized_url_key` insert, rolls back
-  its own upload and returns the committed one; only that key is tolerated. The
-  reread relies on READ COMMITTED, PostgreSQL's default.
+- Saving a recipe directly always inserts a new one without a source or photo;
+  titles are not unique. A missing yield or total time is SQL `NULL`. Create,
+  get and list read through one selection of `recipes` alone, and a recipe's
+  `source` is its `source_url`, or null. Listing reads no ingredients, steps or
+  yield, and sorts by title ignoring case, then newest first.
+- Every submission inserts a queued upload and its URL in one savepoint, so the
+  service can enqueue its job atomically.
+- Saving an imported recipe inserts it with its photo, source and key in one
+  row or, when that page already has a recipe, returns that recipe unchanged,
+  with its content, photo and source. A concurrent save of the same page waits on the key's insert and
+  returns the committed recipe; only that key is tolerated. The reread relies on
+  READ COMMITTED, PostgreSQL's default, and fails if the recipe was deleted in
+  between.
 - Status changes are guarded updates. `markProcessing` accepts queued or
   processing uploads, so a redelivered job continues; `markFailed` accepts
   queued or processing; `markSucceeded` accepts only processing and locks the
   recipe first. Saving the recipe and marking its upload succeeded can share a
   caller's transaction, so a refused status change rolls back the recipe.
-- Deleting a recipe locks it, deletes its upload and URL, then the recipe, and
-  returns the photo's file ID for the caller to remove before committing. An
-  upload that links the recipe concurrently either commits first and is deleted
-  with it, or fails without changes.
-- Only a failed upload can be deleted on its own; deleting it frees the URL for
-  a new import. There is no retry: delete the failed upload and import again.
+- Deleting a recipe locks it, deletes every upload that linked it with their
+  URLs, then the recipe, and returns the photo's file ID for the caller to
+  remove before committing. Queued, processing or failed uploads of the page
+  did not link it and stay. An upload that links the recipe concurrently either
+  commits first and is deleted with it, or fails without changes. A later
+  import of the page saves a new recipe.
+- Only a failed upload can be deleted on its own. Deleting it is not needed to
+  import the page again: a new submission is a new upload.
 
 ### Recipe imports
 
@@ -321,10 +338,9 @@ redirects lead.
 
 ### Recipe upload processing
 
-- Submitting a URL saves a queued upload and offers its job in one
-  transaction, only when the upload is new. A page already imported in any
-  status returns that upload and source, with no new job; `created` tells the
-  two apart for the HTTP status.
+- Submitting a URL always saves a new queued upload and offers its job in one
+  transaction, whether or not the page was submitted, imported or failed
+  before.
 - Each worker process takes one queue job at a time, as the receipt and book
   workers do, so a process runs at most one recipe import at once. The 5 MiB
   page and 10 MiB photo caps bound the downloaded bytes, not the import's
@@ -332,12 +348,20 @@ redirects lead.
   parsed JSON-LD and the text sent to the model add to it. Receipt and book
   jobs run alongside, one of each, and every server replica runs its own
   workers.
-- The page fetch and AI run before any transaction. Then the photo is stored,
-  and the recipe is saved and the upload marked succeeded in one transaction,
-  which a redelivered job's finished upload refuses. A failed save removes the
-  stored photo again; a photo that cannot be stored is logged and the recipe
-  saved without it. A crash between storing the photo and committing can leave
-  an unreferenced file.
+- A job first looks up a saved recipe by its upload's normalized URL. When there
+  is one, the upload links it and succeeds, without fetching the page, calling
+  the AI or storing a photo; a recipe deleted before the link fails the attempt,
+  and the next imports the page.
+- Otherwise the page fetch and AI run before any transaction. Then the photo is
+  stored, and the recipe is saved, or found when a concurrent import of the page
+  saved it first, and the upload marked succeeded in one transaction, which a
+  redelivered job's finished upload refuses. Jobs of one page that both miss the
+  lookup can both fetch the page and call the AI, but save one recipe; both
+  uploads succeed, the recipe keeps the first commit's content, photo and URL,
+  and the other's photo is removed. A failed save also removes the stored photo; a photo that cannot be
+  stored is logged and the recipe saved without it. A crash between storing the
+  photo and committing, or before removing an unused one, can leave an
+  unreferenced file.
 - A temporary failure, as the import's `retryable` reports it, or a failed save,
   fails the attempt so the queue retries it; after the third attempt its
   failure code is recorded. A save that fails records `recipe_creation_failed`,
@@ -346,8 +370,8 @@ redirects lead.
   page) is recorded at once and completes the job.
 - A `CreateRecipeRequest` saved directly is saved at once, with no upload, job
   or AI. Its `source` is null.
-- Deleting a recipe deletes its upload and URL and removes its photo before
-  committing.
+- Deleting a recipe deletes every upload that linked it with their URLs and
+  removes its photo before committing.
 
 ### Uploads and transactions
 

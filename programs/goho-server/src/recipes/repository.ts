@@ -1,4 +1,11 @@
-import { CreateRecipeRequest, Recipe, RecipeId, RecipeSummary } from "@goho/goho-api/recipes";
+import {
+  CreateRecipeRequest,
+  normalizeRecipeUrl,
+  Recipe,
+  RecipeId,
+  RecipeSummary,
+  type RecipeUrl,
+} from "@goho/goho-api/recipes";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
@@ -19,25 +26,43 @@ export class PersistenceError extends Schema.TaggedError<PersistenceError>()(
 ) {}
 
 /**
- * Recipe persistence operations. A recipe's `source` is the URL of the
- * succeeded upload that saved it, or null for a recipe saved directly. Every
- * operation that returns a recipe returns the same record as `findById`.
+ * Recipe persistence operations. A recipe imported from a page is that page's
+ * only recipe: it keeps the URL its first import submitted as its `source`,
+ * and that URL's normalized form as a unique key, so later imports of the page
+ * link it however they wrote the URL. A recipe saved directly has neither, and
+ * a null source. Every operation that returns a recipe returns the same record
+ * as `findById`.
  *
  * @category models
  * @since 0.1.0
  */
 export interface Interface {
   /**
-   * Saves a validated recipe, with its stored photo when it has one, and returns
-   * it. Titles are not unique, so every call saves a new recipe. A missing yield
-   * or total time is saved as null. Inside a caller's transaction, such as an
-   * import that marks its upload succeeded, the insert joins it as a savepoint;
-   * the recipe has no source until that upload is linked.
+   * Saves a validated recipe entered directly, without a source or photo, and
+   * returns it. Titles are not unique, so every call saves a new recipe. A
+   * missing yield or total time is saved as null.
    */
-  readonly create: (
+  readonly create: (recipe: CreateRecipeRequest) => Effect.Effect<Recipe, PersistenceError>;
+  /**
+   * Saves a recipe imported from `url`, with its stored photo when it has one
+   * and `url` as its source, unless a recipe of the same normalized URL is
+   * already saved; then that recipe comes back unchanged, with its own content,
+   * photo and source, and `created` is false, so the caller can remove its
+   * unused photo. Inside a caller's transaction, such as an import that marks
+   * its upload succeeded, it joins it as a savepoint. When a concurrent import
+   * of the page saves first, this waits for it to commit and returns its
+   * recipe, which needs READ COMMITTED, PostgreSQL's default. Fails when that
+   * recipe is deleted before it can be read back.
+   */
+  readonly findOrCreateByUrl: (
+    url: RecipeUrl,
     recipe: CreateRecipeRequest,
     image?: RecipeImage,
-  ) => Effect.Effect<Recipe, PersistenceError>;
+  ) => Effect.Effect<{ readonly recipe: Recipe; readonly created: boolean }, PersistenceError>;
+  /** The ID of the recipe saved from this URL's normalized form; none when none is. */
+  readonly findIdByUrl: (
+    url: RecipeUrl,
+  ) => Effect.Effect<Option.Option<RecipeId>, PersistenceError>;
   /** The saved recipe with this ID; none when no recipe has it. */
   readonly findById: (recipeId: RecipeId) => Effect.Effect<Option.Option<Recipe>, PersistenceError>;
   /**
@@ -50,11 +75,12 @@ export interface Interface {
     recipeId: RecipeId,
   ) => Effect.Effect<Option.Option<RecipeImage>, PersistenceError>;
   /**
-   * Deletes the recipe and the upload that saved it, freeing that URL for a new
-   * import, and returns its photo's file ID for the caller to remove before
-   * committing; none when the recipe does not exist. The recipe is locked first,
-   * so an upload linking it concurrently either commits first and is deleted
-   * with it or fails to link a recipe that is gone.
+   * Deletes the recipe and every upload that linked it, with their URLs, and
+   * returns its photo's file ID for the caller to remove before committing;
+   * none when the recipe does not exist. Uploads that did not link it stay. A
+   * later import of the page saves a new recipe. The recipe is locked first, so
+   * an upload linking it concurrently either commits first and is deleted with
+   * it or fails to link a recipe that is gone.
    */
   readonly delete: (
     recipeId: RecipeId,
@@ -84,38 +110,35 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
 
-    // Text IDs keep their precision. Only a succeeded upload has a recipe ID, so
-    // its URL is the source. A linked upload without its URL row builds a null
-    // URL, which fails decoding instead of hiding the source.
+    // Text IDs keep their precision.
     const summaryColumns = `
       r.id::text AS id, r.title,
-      CASE WHEN up.id IS NOT NULL THEN jsonb_build_object('kind', 'url', 'url', src.url) END
-        AS source,
+      CASE WHEN r.source_url IS NOT NULL THEN jsonb_build_object('kind', 'url', 'url', r.source_url)
+      END AS source,
       r.total_time_seconds AS "totalTimeSeconds",
       r.image_file_id IS NOT NULL AS "hasImage",
       r.created_at::text AS "createdAt", r.updated_at::text AS "updatedAt"
     `;
 
-    const fromRecipes = `
-      FROM recipes r
-      LEFT JOIN recipe_uploads up ON up.recipe_id = r.id
-      LEFT JOIN recipe_upload_urls src ON src.upload_id = up.id
-    `;
-
     const selectRecipes = sql.literal(`
-      SELECT ${summaryColumns}, r.ingredients, r.steps, r."yield" ${fromRecipes}
+      SELECT ${summaryColumns}, r.ingredients, r.steps, r."yield" FROM recipes r
     `);
 
-    const selectSummaries = sql.literal(`SELECT ${summaryColumns} ${fromRecipes}`);
+    const selectSummaries = sql.literal(`SELECT ${summaryColumns} FROM recipes r`);
 
-    const insertRow = SqlSchema.findOne({
-      Request: Schema.Struct({ recipe: CreateRecipeRequest, image: Schema.NullOr(RecipeImage) }),
+    // A missing yield is SQL NULL, not JSON null. A direct recipe's null key
+    // never conflicts, and only the URL key is tolerated.
+    const insertRow = SqlSchema.findOneOption({
+      Request: Schema.Struct({
+        recipe: CreateRecipeRequest,
+        image: Schema.NullOr(RecipeImage),
+        source: Schema.NullOr(Schema.Struct({ url: Schema.String, normalizedUrl: Schema.String })),
+      }),
       Result: IdRow,
-      // A missing yield is SQL NULL, not JSON null.
-      execute: ({ recipe, image }) => sql`
+      execute: ({ recipe, image, source }) => sql`
         INSERT INTO recipes (
           title, ingredients, steps, "yield", total_time_seconds,
-          image_file_id, image_content_type
+          image_file_id, image_content_type, source_url, normalized_url
         ) VALUES (
           ${recipe.title},
           ${JSON.stringify(recipe.ingredients)}::jsonb,
@@ -123,8 +146,11 @@ export const layer = Layer.effect(
           ${recipe.yield == null ? null : JSON.stringify(recipe.yield)}::jsonb,
           ${recipe.totalTimeSeconds ?? null},
           ${image?.fileId ?? null},
-          ${image?.contentType ?? null}
+          ${image?.contentType ?? null},
+          ${source?.url ?? null},
+          ${source?.normalizedUrl ?? null}
         )
+        ON CONFLICT ON CONSTRAINT recipes_normalized_url_key DO NOTHING
         RETURNING id::text AS id
       `,
     });
@@ -140,6 +166,14 @@ export const layer = Layer.effect(
       Result: RecipeSummary,
       execute: () => sql`
         ${selectSummaries} ORDER BY lower(r.title), r.created_at DESC, r.id DESC
+      `,
+    });
+
+    const selectIdByUrl = SqlSchema.findOneOption({
+      Request: Schema.String,
+      Result: IdRow,
+      execute: (normalizedUrl) => sql`
+        SELECT id::text AS id FROM recipes WHERE normalized_url = ${normalizedUrl}
       `,
     });
 
@@ -160,8 +194,8 @@ export const layer = Layer.effect(
       `,
     });
 
-    // Its URL row cascades with it.
-    const deleteUpload = SqlSchema.void({
+    // Only uploads that linked the recipe have its ID; their URL rows cascade.
+    const deleteUploads = SqlSchema.void({
       Request: RecipeId,
       execute: (recipeId) => sql`DELETE FROM recipe_uploads WHERE recipe_id = ${recipeId}`,
     });
@@ -174,15 +208,48 @@ export const layer = Layer.effect(
       `,
     });
 
+    const readBack = (recipeId: RecipeId) =>
+      findRecipe(recipeId).pipe(Effect.flatMap(Effect.fromOption));
+
     const create = Effect.fn("@goho/RecipeRepository.create")(
-      (recipe: CreateRecipeRequest, image?: RecipeImage) =>
+      (recipe: CreateRecipeRequest) =>
         sql.withTransaction(
-          Effect.gen(function* () {
-            const { id } = yield* insertRow({ recipe, image: image ?? null });
-            return yield* findRecipe(id).pipe(Effect.flatMap(Effect.fromOption));
-          }),
+          insertRow({ recipe, image: null, source: null }).pipe(
+            Effect.flatMap(Effect.fromOption),
+            Effect.flatMap(({ id }) => readBack(id)),
+          ),
         ),
       Effect.mapError((cause) => new PersistenceError({ operation: "create", cause })),
+    );
+
+    const findOrCreateByUrl = Effect.fn("@goho/RecipeRepository.findOrCreateByUrl")(
+      (url: RecipeUrl, recipe: CreateRecipeRequest, image?: RecipeImage) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const normalizedUrl = normalizeRecipeUrl(url);
+            const inserted = yield* insertRow({
+              recipe,
+              image: image ?? null,
+              source: { url, normalizedUrl },
+            });
+            if (Option.isSome(inserted)) {
+              return { recipe: yield* readBack(inserted.value.id), created: true };
+            }
+            // A new statement sees the recipe that committed while the insert waited.
+            // It fails when that recipe was deleted since.
+            const existing = yield* selectIdByUrl(normalizedUrl).pipe(
+              Effect.flatMap(Effect.fromOption),
+            );
+            return { recipe: yield* readBack(existing.id), created: false };
+          }),
+        ),
+      Effect.mapError((cause) => new PersistenceError({ operation: "findOrCreateByUrl", cause })),
+    );
+
+    const findIdByUrl = Effect.fn("@goho/RecipeRepository.findIdByUrl")(
+      (url: RecipeUrl) =>
+        selectIdByUrl(normalizeRecipeUrl(url)).pipe(Effect.map(Option.map(({ id }) => id))),
+      Effect.mapError((cause) => new PersistenceError({ operation: "findIdByUrl", cause })),
     );
 
     const findById = Effect.fn("@goho/RecipeRepository.findById")(
@@ -207,13 +274,21 @@ export const layer = Layer.effect(
             // Serializes with an upload linking this recipe, and keeps the file ID
             // until the caller's transaction commits.
             if (Option.isNone(yield* lockRecipe(recipeId))) return Option.none();
-            yield* deleteUpload(recipeId);
+            yield* deleteUploads(recipeId);
             return Option.some(yield* deleteRow(recipeId));
           }),
         ),
       Effect.mapError((cause) => new PersistenceError({ operation: "delete", cause })),
     );
 
-    return Service.of({ create, delete: deleteRecipe, findById, findImage, list });
+    return Service.of({
+      create,
+      delete: deleteRecipe,
+      findById,
+      findIdByUrl,
+      findImage,
+      findOrCreateByUrl,
+      list,
+    });
   }),
 );

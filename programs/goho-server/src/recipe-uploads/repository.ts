@@ -4,13 +4,12 @@ import {
   RecipeUploadId,
   RecipeUploadStatus,
 } from "@goho/goho-api/recipe-uploads";
-import { normalizeRecipeUrl, RecipeId, type RecipeSource } from "@goho/goho-api/recipes";
+import { RecipeId, type RecipeSource } from "@goho/goho-api/recipes";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import * as QueueConstants from "#src/queues/constants.ts";
 
-import type { FoundOrCreated } from "./model.ts";
 import * as RecipeUploadQueue from "./queue.ts";
 
 /**
@@ -62,12 +61,6 @@ export class DeletionNotAllowed extends Schema.TaggedError<DeletionNotAllowed>()
   { uploadId: RecipeUploadId, currentStatus: RecipeUploadStatus },
 ) {}
 
-// Rolls back the savepoint of an upload whose URL lost the uniqueness race.
-class DuplicateUrl extends Schema.TaggedError<DuplicateUrl>()(
-  "GohoServer.RecipeUploadRepository.DuplicateUrl",
-  {},
-) {}
-
 type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
 
 /**
@@ -79,18 +72,15 @@ type TransitionError = PersistenceError | UploadNotFound | InvalidTransition;
  */
 export interface Interface {
   /**
-   * Returns the import of the source's normalized URL, whatever its status and
-   * however its URL was written, or saves a queued one with `uploadId` and the
-   * URL as submitted. The upload and its URL are saved together; inside a
-   * caller's transaction they join it as a savepoint, so the caller can enqueue
-   * its job atomically. When a concurrent import of the same page saves first,
-   * this one waits for it to commit, rolls back its own upload and returns the
-   * committed one. That read needs READ COMMITTED, PostgreSQL's default.
+   * Saves a queued import with `uploadId` and the URL as submitted. Every call
+   * saves a new import, whether or not the page was imported before; the worker
+   * reuses a saved recipe. The upload and its URL are saved together; inside a caller's transaction they join it as a
+   * savepoint, so the caller can enqueue its job atomically.
    */
-  readonly findOrCreateQueued: (
+  readonly createQueued: (
     uploadId: RecipeUploadId,
     source: RecipeSource,
-  ) => Effect.Effect<FoundOrCreated, PersistenceError>;
+  ) => Effect.Effect<RecipeUpload, PersistenceError>;
   readonly findById: (
     uploadId: RecipeUploadId,
   ) => Effect.Effect<Option.Option<RecipeUpload>, PersistenceError>;
@@ -101,10 +91,11 @@ export interface Interface {
     uploadId: RecipeUploadId,
   ) => Effect.Effect<RecipeUpload, TransitionError>;
   /**
-   * Links a processing import to the recipe it saved. Locks the recipe first,
-   * which serializes this with recipe deletion; fails, changing nothing, when
-   * the recipe no longer exists. Joins the caller's transaction as a savepoint,
-   * so saving the recipe and this status change can commit together.
+   * Links a processing import to the recipe it saved or found; several imports
+   * can link one recipe. Locks the recipe first, which serializes this with
+   * recipe deletion; fails, changing nothing, when the recipe no longer exists.
+   * Joins the caller's transaction as a savepoint, so saving the recipe and
+   * this status change can commit together.
    */
   readonly markSucceeded: (
     uploadId: RecipeUploadId,
@@ -115,10 +106,7 @@ export interface Interface {
     uploadId: RecipeUploadId,
     failureCode: RecipeUploadFailureCode,
   ) => Effect.Effect<RecipeUpload, TransitionError>;
-  /**
-   * Deletes a failed import with its URL, so the page can be imported again.
-   * An import has no stored file.
-   */
+  /** Deletes a failed import with its URL. An import has no stored file. */
   readonly deleteFailed: (
     uploadId: RecipeUploadId,
   ) => Effect.Effect<void, PersistenceError | UploadNotFound | DeletionNotAllowed>;
@@ -175,15 +163,6 @@ export const layer = Layer.effect(
       `,
     });
 
-    const selectByUrl = SqlSchema.findOneOption({
-      Request: Schema.String,
-      Result: RecipeUpload,
-      execute: (normalizedUrl) => sql`
-        SELECT ${columns} FROM recipe_uploads u ${withSource}
-        WHERE src.normalized_url = ${normalizedUrl}
-      `,
-    });
-
     const selectAll = SqlSchema.findAll({
       Request: Schema.Void,
       Result: RecipeUpload,
@@ -200,19 +179,10 @@ export const layer = Layer.effect(
       `,
     });
 
-    // Only the normalized URL key is tolerated; any other failure stays an error.
-    const insertUrl = SqlSchema.findOneOption({
-      Request: Schema.Struct({
-        uploadId: RecipeUploadId,
-        url: Schema.String,
-        normalizedUrl: Schema.String,
-      }),
-      Result: Schema.Struct({ upload_id: RecipeUploadId }),
+    const insertUrl = SqlSchema.void({
+      Request: Schema.Struct({ uploadId: RecipeUploadId, url: Schema.String }),
       execute: (row) => sql`
-        INSERT INTO recipe_upload_urls (upload_id, url, normalized_url)
-        VALUES (${row.uploadId}, ${row.url}, ${row.normalizedUrl})
-        ON CONFLICT ON CONSTRAINT recipe_upload_urls_normalized_url_key DO NOTHING
-        RETURNING upload_id
+        INSERT INTO recipe_upload_urls (upload_id, url) VALUES (${row.uploadId}, ${row.url})
       `,
     });
 
@@ -288,36 +258,16 @@ export const layer = Layer.effect(
       `,
     });
 
-    // The URL needs its upload first, so a URL that loses the race rolls back the
-    // upload inserted before it.
-    const insertNew = (uploadId: RecipeUploadId, url: string, normalizedUrl: string) =>
-      sql.withTransaction(
-        Effect.gen(function* () {
-          yield* insertUpload(uploadId);
-          const inserted = yield* insertUrl({ uploadId, url, normalizedUrl });
-          if (Option.isNone(inserted)) return yield* new DuplicateUrl();
-          return yield* selectById(uploadId).pipe(Effect.flatMap(Effect.fromOption));
-        }),
-      );
-
-    const findOrCreateQueued = Effect.fn("@goho/RecipeUploadRepository.findOrCreateQueued")(
-      function* (uploadId: RecipeUploadId, source: RecipeSource) {
-        const normalizedUrl = normalizeRecipeUrl(source.url);
-        const existing = yield* selectByUrl(normalizedUrl);
-        if (Option.isSome(existing)) return { upload: existing.value, created: false };
-        const inserted = yield* insertNew(uploadId, source.url, normalizedUrl).pipe(
-          Effect.asSome,
-          Effect.catchTag(
-            "GohoServer.RecipeUploadRepository.DuplicateUrl",
-            () => Effect.succeedNone,
-          ),
-        );
-        if (Option.isSome(inserted)) return { upload: inserted.value, created: true };
-        // A new statement sees the import that committed while the insert waited.
-        const committed = yield* selectByUrl(normalizedUrl).pipe(Effect.flatMap(Effect.fromOption));
-        return { upload: committed, created: false };
-      },
-      persistenceError("findOrCreateQueued"),
+    const createQueued = Effect.fn("@goho/RecipeUploadRepository.createQueued")(
+      (uploadId: RecipeUploadId, source: RecipeSource) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            yield* insertUpload(uploadId);
+            yield* insertUrl({ uploadId, url: source.url });
+            return yield* selectById(uploadId).pipe(Effect.flatMap(Effect.fromOption));
+          }),
+        ),
+      persistenceError("createQueued"),
     );
 
     const findById = Effect.fn("@goho/RecipeUploadRepository.findById")(
@@ -402,9 +352,9 @@ export const layer = Layer.effect(
     );
 
     return Service.of({
+      createQueued,
       deleteFailed,
       findById,
-      findOrCreateQueued,
       list,
       markAbandonedFailed,
       markFailed,

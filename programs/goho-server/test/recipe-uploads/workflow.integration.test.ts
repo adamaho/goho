@@ -3,7 +3,18 @@ import { it } from "@effect/vitest";
 import { Ai, Postgres } from "@goho/core";
 import { RecipeUploadId } from "@goho/goho-api/recipe-uploads";
 import { RecipeUrl } from "@goho/goho-api/recipes";
-import { Config, Context, Effect, FileSystem, Layer, Option, Redacted, Ref, Result } from "effect";
+import {
+  Config,
+  Context,
+  Deferred,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Redacted,
+  Ref,
+  Result,
+} from "effect";
 import { SecureRandom } from "effect/crypto";
 import { PersistedQueue } from "effect/persistence";
 import { SqlClient } from "effect/sql";
@@ -45,6 +56,8 @@ const DatabaseLive = Layer.effectContext(
 const pageUrl = "https://recipes.example/toast";
 const photoUrl = "https://recipes.example/toast.png";
 const source = { kind: "url", url: RecipeUrl.make(`${pageUrl}#top`) } as const;
+// The same page, submitted another way.
+const samePage = { kind: "url", url: RecipeUrl.make(`${pageUrl}#method`) } as const;
 
 const page = `<html><head><meta property="og:image" content="${photoUrl}"></head>
 <body><h1>Toast</h1><p>Toast two slices of bread.</p></body></html>`;
@@ -84,7 +97,7 @@ type Fetch = WebFetch.Interface["get"];
 
 // The page is fetched as submitted, fragment included.
 const served: Fetch = (request) =>
-  request.url === source.url
+  request.url === source.url || request.url === samePage.url
     ? Effect.succeed({ url: new URL(pageUrl), contentType: "text/html", body: Buffer.from(page) })
     : request.url === photoUrl
       ? Effect.succeed({ url: new URL(photoUrl), contentType: "image/png", body: png })
@@ -100,6 +113,7 @@ class Fakes extends Context.Service<
     readonly fetch: Ref.Ref<Fetch>;
     readonly answer: Ref.Ref<Effect.Effect<unknown>>;
     readonly modelCalls: Ref.Ref<number>;
+    readonly puts: Ref.Ref<number>;
     readonly failPut: Ref.Ref<boolean>;
     readonly directory: string;
   }
@@ -118,6 +132,7 @@ const FakesLive = Layer.effectContext(
         Effect.succeed({ result: { kind: "recipe", recipe: toast } }),
       ),
       modelCalls: yield* Ref.make(0),
+      puts: yield* Ref.make(0),
       failPut: yield* Ref.make(false),
       directory,
     });
@@ -137,7 +152,8 @@ const FakesLive = Layer.effectContext(
       Context.add(FileStorage.Service, {
         ...storage,
         put: (file) =>
-          Ref.get(fakes.failPut).pipe(
+          Ref.update(fakes.puts, (puts) => puts + 1).pipe(
+            Effect.andThen(Ref.get(fakes.failPut)),
             Effect.flatMap((fail) =>
               fail
                 ? Effect.fail(
@@ -169,7 +185,10 @@ const TestLive = Layer.mergeAll(RecipeUploads.layer, Recipes.layer).pipe(
 const attempt = (uploadId: RecipeUploadId, attempts = 1) =>
   Worker.process({ uploadId }, { id: uploadId, attempts });
 
-const submit = RecipeUploads.Service.use((uploads) => uploads.create(source));
+const submitSource = (submitted: typeof source | typeof samePage) =>
+  RecipeUploads.Service.use((uploads) => uploads.create(submitted));
+
+const submit = submitSource(source);
 
 // The tag an effect fails with, or "succeeded".
 const failureTag = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
@@ -195,29 +214,28 @@ const storedFiles = Fakes.use((fakes) =>
   FileSystem.FileSystem.use((fs) => fs.readDirectory(fakes.directory)),
 );
 
+const recipeIdOf = (uploadId: RecipeUploadId) =>
+  statusOf(uploadId).pipe(
+    Effect.map(({ recipeId }) => Option.getOrThrow(Option.fromNullishOr(recipeId))),
+  );
+
 const statusOf = (uploadId: RecipeUploadId) =>
   RecipeUploads.Service.use((uploads) => uploads.get(uploadId)).pipe(
     Effect.map(({ status, failureCode, recipeId }) => ({ status, failureCode, recipeId })),
   );
 
-it.effect("queues one job per new page and reuses the import of a submitted URL", () =>
+it.effect("queues a new import and job for every submission of a page", () =>
   Effect.gen(function* () {
     const first = yield* submit;
-    expect(first).toMatchObject({ created: true, upload: { source, status: "queued" } });
+    expect(first).toMatchObject({ source, status: "queued" });
 
-    // Another fragment is the same page: the first import and source come back, with no job.
-    const again = yield* RecipeUploads.Service.use((uploads) =>
-      uploads.create({ kind: "url", url: RecipeUrl.make(pageUrl) }),
+    // Another fragment is the same page, but a new import with its own source and job.
+    const again = yield* submitSource(samePage);
+    expect(again).toMatchObject({ source: samePage, status: "queued" });
+    expect(again.id).not.toBe(first.id);
+    expect(yield* jobStates).toEqual(
+      [first.id, again.id].sort().map((id) => ({ id, state: "pending" })),
     );
-    expect(again).toEqual({ created: false, upload: first.upload });
-    expect(yield* jobStates).toEqual([{ id: first.upload.id, state: "pending" }]);
-
-    // A failed import still holds its URL until it is deleted.
-    yield* RecipeUploadRepository.Service.use((repo) =>
-      repo.markFailed(first.upload.id, "no_recipe_found"),
-    );
-    expect((yield* submit).created).toBe(false);
-    expect(yield* jobStates).toHaveLength(1);
   }).pipe(Effect.provide(TestLive)),
 );
 
@@ -248,7 +266,7 @@ it.effect("imports a queued page with its photo once, whatever is redelivered", 
   Effect.gen(function* () {
     const recipes = yield* Recipes.Service;
     const queue = yield* RecipeUploadQueue.Service;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
 
     yield* queue.take(Worker.process);
 
@@ -278,7 +296,7 @@ it.effect("imports a queued page with its photo once, whatever is redelivered", 
 it.effect("retries a temporary failure and saves the recipe on a later attempt", () =>
   Effect.gen(function* () {
     const fakes = yield* Fakes;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
     yield* Ref.set(fakes.fetch, () => Effect.fail(unavailable));
 
     const first = yield* attempt(upload.id).pipe(Effect.result);
@@ -303,7 +321,7 @@ it.live(
       const fakes = yield* Fakes;
       const queue = yield* RecipeUploadQueue.Service;
       const attempts = yield* Ref.make<ReadonlyArray<number>>([]);
-      const { upload } = yield* submit;
+      const upload = yield* submit;
       yield* Ref.set(fakes.fetch, () => Effect.fail(unavailable));
       const take = queue.take((job, metadata) =>
         Ref.update(attempts, (seen) => [...seen, metadata.attempts]).pipe(
@@ -331,7 +349,7 @@ it.effect("fails an import the page rejects on the first attempt without a retry
   Effect.gen(function* () {
     const fakes = yield* Fakes;
     const queue = yield* RecipeUploadQueue.Service;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
     yield* Ref.set(fakes.answer, Effect.succeed({ result: { kind: "ambiguous_recipe" } }));
 
     yield* queue.take(Worker.process);
@@ -352,7 +370,7 @@ it.effect("saves the recipe without its photo when the photo cannot be stored", 
   Effect.gen(function* () {
     const fakes = yield* Fakes;
     const recipes = yield* Recipes.Service;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
     yield* Ref.set(fakes.failPut, true);
 
     yield* attempt(upload.id);
@@ -369,7 +387,7 @@ it.effect("removes the stored photo and the recipe when the upload stops process
   Effect.gen(function* () {
     const fakes = yield* Fakes;
     const repo = yield* RecipeUploadRepository.Service;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
     // Recovery fails the upload while the model reads the page, so the save is refused.
     yield* Ref.set(
       fakes.answer,
@@ -392,7 +410,7 @@ it.effect("fails recipe imports their queue abandoned and leaves other queues' j
     const sql = yield* SqlClient.SqlClient;
     const repo = yield* RecipeUploadRepository.Service;
     // Seeds what a crash during the final attempt leaves: the job failed, the upload did not.
-    const { upload: abandoned } = yield* submit;
+    const abandoned = yield* submit;
     yield* repo.markProcessing(abandoned.id);
     yield* sql`
       UPDATE ${sql(QueueConstants.tableName)} SET state = 'failed'
@@ -400,7 +418,7 @@ it.effect("fails recipe imports their queue abandoned and leaves other queues' j
     `;
     // Only a book job with this ID failed; the import has no failed recipe job.
     const unrelated = RecipeUploadId.make("00000000-0000-4000-8000-000000000001");
-    yield* repo.findOrCreateQueued(unrelated, {
+    yield* repo.createQueued(unrelated, {
       kind: "url",
       url: RecipeUrl.make("https://recipes.example/other"),
     });
@@ -422,6 +440,82 @@ it.effect("fails recipe imports their queue abandoned and leaves other queues' j
   }).pipe(Effect.provide(TestLive)),
 );
 
+it.effect("links a later import of a saved page without fetching it again", () =>
+  Effect.gen(function* () {
+    const fakes = yield* Fakes;
+    const recipes = yield* Recipes.Service;
+    const first = yield* submit;
+    yield* attempt(first.id);
+    const recipeId = yield* recipeIdOf(first.id);
+    const saved = yield* recipes.get(recipeId);
+    const files = yield* storedFiles;
+
+    // Neither the site, the model nor storage is used again.
+    yield* Ref.set(fakes.fetch, (request) => Effect.die(`Unexpected fetch of ${request.url}`));
+    const later = yield* submitSource(samePage);
+    yield* attempt(later.id);
+
+    expect(yield* statusOf(later.id)).toEqual({ status: "succeeded", failureCode: null, recipeId });
+    expect([yield* Ref.get(fakes.modelCalls), yield* Ref.get(fakes.puts)]).toEqual([1, 1]);
+    // The recipe, its photo and its first source stay as they were.
+    expect(yield* recipes.get(recipeId)).toEqual(saved);
+    expect(saved.source).toEqual(source);
+    expect(yield* storedFiles).toEqual(files);
+    expect((yield* recipes.list).map(({ id }) => id)).toEqual([recipeId]);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("imports a page again after an earlier import of it failed", () =>
+  Effect.gen(function* () {
+    const fakes = yield* Fakes;
+    const failed = yield* submit;
+    yield* Ref.set(fakes.answer, Effect.succeed({ result: { kind: "no_recipe_found" } }));
+    yield* attempt(failed.id);
+    expect((yield* statusOf(failed.id)).failureCode).toBe("no_recipe_found");
+
+    // The failed import need not be deleted first.
+    yield* Ref.set(fakes.answer, Effect.succeed({ result: { kind: "recipe", recipe: toast } }));
+    const retried = yield* submit;
+    yield* attempt(retried.id);
+    expect((yield* statusOf(retried.id)).status).toBe("succeeded");
+    expect((yield* statusOf(failed.id)).status).toBe("failed");
+    expect(yield* Ref.get(fakes.modelCalls)).toBe(2);
+  }).pipe(Effect.provide(TestLive)),
+);
+
+it.effect("saves one recipe when imports of one page run at once", () =>
+  Effect.gen(function* () {
+    const fakes = yield* Fakes;
+    const recipes = yield* Recipes.Service;
+    const first = yield* submit;
+    const second = yield* submitSource(samePage);
+    // Each model call waits for the other, so both jobs miss the saved-recipe lookup.
+    const bothAsked = yield* Deferred.make<void>();
+    yield* Ref.set(
+      fakes.answer,
+      Ref.get(fakes.modelCalls).pipe(
+        Effect.flatMap((calls) =>
+          calls >= 2 ? Deferred.succeed(bothAsked, undefined) : Effect.void,
+        ),
+        Effect.andThen(Deferred.await(bothAsked)),
+        Effect.as({ result: { kind: "recipe", recipe: toast } }),
+      ),
+    );
+
+    yield* Effect.all([attempt(first.id), attempt(second.id)], { concurrency: "unbounded" });
+
+    const recipeId = yield* recipeIdOf(first.id);
+    expect(yield* recipeIdOf(second.id)).toBe(recipeId);
+    expect(yield* recipeRows).toHaveLength(1);
+    expect([yield* Ref.get(fakes.modelCalls), yield* Ref.get(fakes.puts)]).toEqual([2, 2]);
+    // The losing job's photo is removed; the recipe keeps the winner's photo and URL.
+    expect(yield* storedFiles).toHaveLength(1);
+    const saved = yield* recipes.get(recipeId);
+    expect(saved.hasImage).toBe(true);
+    expect([source, samePage]).toContainEqual(saved.source);
+  }).pipe(Effect.provide(TestLive)),
+);
+
 it.effect("saves a recipe directly without an import, job or source", () =>
   Effect.gen(function* () {
     const recipes = yield* Recipes.Service;
@@ -431,7 +525,10 @@ it.effect("saves a recipe directly without an import, job or source", () =>
 
     expect(saved).toMatchObject({ title: "Toast", source: null, hasImage: false, yield: null });
     expect(yield* recipes.get(saved.id)).toEqual(saved);
-    expect((yield* recipes.list).map(({ id }) => id)).toEqual([saved.id]);
+    // Titles are not identities, so the same recipe saved again is another one.
+    const repeated = yield* recipes.create(request);
+    expect(repeated.id).not.toBe(saved.id);
+    expect((yield* recipes.list).map(({ id }) => id)).toEqual([repeated.id, saved.id]);
     expect(yield* RecipeUploadRepository.Service.use((repo) => repo.list)).toEqual([]);
     expect(yield* jobStates).toEqual([]);
     expect(yield* Fakes.use((fakes) => Ref.get(fakes.modelCalls))).toBe(0);
@@ -439,12 +536,16 @@ it.effect("saves a recipe directly without an import, job or source", () =>
   }).pipe(Effect.provide(TestLive)),
 );
 
-it.effect("deletes an imported recipe with its import and photo, freeing the URL", () =>
+it.effect("deletes an imported recipe with its imports and photo, so the page imports again", () =>
   Effect.gen(function* () {
+    const fakes = yield* Fakes;
     const recipes = yield* Recipes.Service;
-    const { upload } = yield* submit;
-    yield* attempt(upload.id);
-    const recipeId = Option.getOrThrow(Option.fromNullishOr((yield* statusOf(upload.id)).recipeId));
+    const first = yield* submit;
+    yield* attempt(first.id);
+    const later = yield* submitSource(samePage);
+    yield* attempt(later.id);
+    const recipeId = yield* recipeIdOf(first.id);
+    expect(yield* recipeIdOf(later.id)).toBe(recipeId);
     expect(yield* storedFiles).toHaveLength(1);
 
     yield* recipes.delete(recipeId);
@@ -453,16 +554,22 @@ it.effect("deletes an imported recipe with its import and photo, freeing the URL
     expect(yield* failureTag(recipes.get(recipeId))).toBe("RecipeNotFound");
     expect(yield* failureTag(recipes.getImage(recipeId))).toBe("RecipeImageNotFound");
     expect(yield* failureTag(recipes.delete(recipeId))).toBe("RecipeNotFound");
-    expect(yield* failureTag(statusOf(upload.id))).toBe("RecipeUploadNotFound");
-    expect((yield* submit).created).toBe(true);
+    expect(yield* failureTag(statusOf(first.id))).toBe("RecipeUploadNotFound");
+    expect(yield* failureTag(statusOf(later.id))).toBe("RecipeUploadNotFound");
+
+    // A new submission imports the page into a new recipe.
+    const again = yield* submit;
+    yield* attempt(again.id);
+    expect(yield* recipeIdOf(again.id)).not.toBe(recipeId);
+    expect(yield* Ref.get(fakes.modelCalls)).toBe(2);
   }).pipe(Effect.provide(TestLive)),
 );
 
-it.effect("deletes only a failed import, freeing its URL", () =>
+it.effect("deletes only a failed import", () =>
   Effect.gen(function* () {
     const uploads = yield* RecipeUploads.Service;
     const repo = yield* RecipeUploadRepository.Service;
-    const { upload } = yield* submit;
+    const upload = yield* submit;
 
     expect(yield* failureTag(uploads.delete(upload.id))).toBe("RecipeUploadConflict");
     yield* repo.markFailed(upload.id, "page_unavailable");
@@ -470,6 +577,5 @@ it.effect("deletes only a failed import, freeing its URL", () =>
 
     expect(yield* failureTag(uploads.get(upload.id))).toBe("RecipeUploadNotFound");
     expect(yield* failureTag(uploads.delete(upload.id))).toBe("RecipeUploadNotFound");
-    expect((yield* submit).created).toBe(true);
   }).pipe(Effect.provide(TestLive)),
 );

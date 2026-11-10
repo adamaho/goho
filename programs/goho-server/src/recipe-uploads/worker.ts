@@ -1,6 +1,7 @@
 import type { Ai } from "@goho/core";
 import { RecipeUploadFailureCode, type RecipeUploadId } from "@goho/goho-api/recipe-uploads";
-import { Effect, Layer, Option, Schedule, Schema } from "effect";
+import type { RecipeUrl } from "@goho/goho-api/recipes";
+import { Effect, Exit, Layer, Option, Schedule, Schema } from "effect";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as QueueConstants from "#src/queues/constants.ts";
@@ -24,13 +25,19 @@ const failAs = (failureCode: RecipeUploadFailureCode) =>
   Effect.mapError((cause: unknown) => new ProcessingError({ failureCode, retryable: true, cause }));
 
 /**
- * Stores the photo, then saves the recipe and marks the upload succeeded in one
- * transaction. A photo that cannot be stored is logged and dropped, and a stored
- * photo is removed again when the save fails. Uninterruptible, so a shutdown
- * cannot strand a stored photo between these steps; it holds no network or AI
- * work, only the file write and the transaction.
+ * Stores the photo, then saves the recipe, or finds the one a concurrent import
+ * of the page saved first, and marks the upload succeeded in one transaction. A
+ * photo that cannot be stored is logged and dropped, and a stored photo is
+ * removed again unless the committed recipe is the new one that uses it.
+ * Uninterruptible, so a shutdown cannot strand a stored photo between these
+ * steps; it holds no network or AI work, only the file writes and the
+ * transaction.
  */
-const save = Effect.fnUntraced(function* (uploadId: RecipeUploadId, imported: ImportedRecipe) {
+const save = Effect.fnUntraced(function* (
+  uploadId: RecipeUploadId,
+  url: RecipeUrl,
+  imported: ImportedRecipe,
+) {
   const uploads = yield* RecipeUploadRepository.Service;
   const recipes = yield* RecipeRepository.Service;
   const storage = yield* FileStorage.Service;
@@ -52,39 +59,45 @@ const save = Effect.fnUntraced(function* (uploadId: RecipeUploadId, imported: Im
   yield* transaction
     .run(
       Effect.gen(function* () {
-        const recipe = yield* recipes
-          .create(imported.recipe, Option.getOrUndefined(image))
+        const { recipe, created } = yield* recipes
+          .findOrCreateByUrl(url, imported.recipe, Option.getOrUndefined(image))
           .pipe(failAs("recipe_creation_failed"));
         // Refused unless the upload is still processing, which rolls the recipe back.
         yield* uploads.markSucceeded(uploadId, recipe.id).pipe(failAs("internal_error"));
+        return created;
       }),
     )
     .pipe(
       Effect.catchTag("GohoServer.Database.TransactionError", failAs("internal_error")),
-      Effect.onError(() =>
-        Option.match(image, {
-          onNone: () => Effect.void,
-          onSome: ({ fileId }) =>
-            storage
-              .delete(fileId)
-              .pipe(
-                Effect.catchTag("GohoServer.FileStorage.StorageError", (error) =>
-                  Effect.logError("Orphaned recipe photo could not be deleted", error).pipe(
-                    Effect.annotateLogs({ fileId }),
+      Effect.onExit((exit) =>
+        Exit.isSuccess(exit) && exit.value
+          ? Effect.void
+          : Option.match(image, {
+              onNone: () => Effect.void,
+              onSome: ({ fileId }) =>
+                storage
+                  .delete(fileId)
+                  .pipe(
+                    Effect.catchTag("GohoServer.FileStorage.StorageError", (error) =>
+                      Effect.logError("Orphaned recipe photo could not be deleted", error).pipe(
+                        Effect.annotateLogs({ fileId }),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-        }),
+            }),
       ),
     );
 }, Effect.uninterruptible);
 
 /**
- * Processes one persisted queue delivery. A temporary failure fails the
- * delivery so the queue retries it, and is recorded on the upload after the
- * final attempt. A rejection of the page is recorded at once and completes the
- * delivery. The recipe is saved in the transaction that marks the upload
- * succeeded, so a redelivered job finds a finished upload and changes nothing.
+ * Processes one persisted queue delivery. When a recipe of the page's
+ * normalized URL is already saved, the upload links it without fetching the
+ * page. Otherwise a temporary failure fails the delivery so the queue retries
+ * it, and is recorded on the upload after the final attempt. A rejection of the
+ * page is recorded at once and completes the delivery. The recipe is saved in
+ * the transaction that marks the upload succeeded, so a redelivered job finds a
+ * finished upload and changes nothing, and imports of one page racing to save
+ * share the recipe that commits first.
  *
  * @category workflows
  * @since 0.1.0
@@ -106,6 +119,7 @@ export const process: (
   metadata: { readonly id: string; readonly attempts: number },
 ) {
   const uploads = yield* RecipeUploadRepository.Service;
+  const recipes = yield* RecipeRepository.Service;
   return yield* Effect.gen(function* () {
     // A finished upload means another delivery already recorded its outcome.
     const upload = yield* uploads.markProcessing(job.uploadId).pipe(
@@ -124,6 +138,12 @@ export const process: (
     );
     if (upload === null) return;
 
+    // A recipe deleted before the link fails this attempt; the next one imports the page.
+    const saved = yield* recipes.findIdByUrl(upload.source.url).pipe(failAs("internal_error"));
+    if (Option.isSome(saved)) {
+      return yield* uploads.markSucceeded(upload.id, saved.value).pipe(failAs("internal_error"));
+    }
+
     // The page fetch and AI run before, and outside, any transaction.
     const imported = yield* RecipesImport.fromUrl(upload.source.url).pipe(
       Effect.mapError(
@@ -135,7 +155,7 @@ export const process: (
           }),
       ),
     );
-    yield* save(upload.id, imported);
+    yield* save(upload.id, upload.source.url, imported);
   }).pipe(
     Effect.catchTag("GohoServer.RecipeUploads.ProcessingError", (error) =>
       Effect.gen(function* () {
