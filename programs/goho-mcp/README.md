@@ -39,7 +39,7 @@ server.
 
 ## Manual setup
 
-You need Node.js 24, pnpm 12.6.0, and Docker with Compose. See the root
+You need Node.js 26, pnpm 12.18.0, and Docker with Compose. See the root
 [contributing guide](../../CONTRIBUTING.md#prerequisites) for installation links.
 From a fresh clone, run these commands at the repository root:
 

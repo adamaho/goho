@@ -1,3 +1,4 @@
+import type { Ai } from "@goho/core";
 import type { RecipeUrl } from "@goho/goho-api/recipes";
 import { Effect, Option } from "effect";
 
@@ -63,7 +64,11 @@ const fetchPhoto = (http: WebFetch.Interface, url: string) =>
  * @category workflows
  * @since 0.1.0
  */
-export const fromUrl = Effect.fn("@goho/Recipes.fromUrl")(function* (url: RecipeUrl) {
+export const fromUrl: (
+  url: RecipeUrl,
+) => Effect.Effect<ImportedRecipe, ImportError, WebFetch.Service | Ai.Service> = Effect.fn(
+  "@goho/Recipes.fromUrl",
+)(function* (url: RecipeUrl) {
   const http = yield* WebFetch.Service;
   const response = yield* http
     .get({ url, accept: "text/html, application/xhtml+xml", ...pageLimits })
