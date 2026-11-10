@@ -23,7 +23,7 @@ const ToolList = Schema.Struct({
 const routes = Effect.succeed(HttpServerResponse.empty({ status: 500 }));
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) => {
-  it.effect("registers the receipt, book, and recipe tools through MCP", () =>
+  it.effect("registers the receipt, book, recipe, and recipe upload tools through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
@@ -48,6 +48,10 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "get_recipe",
         "create_recipe",
         "delete_recipe",
+        "list_recipe_uploads",
+        "get_recipe_upload",
+        "create_recipe_upload",
+        "delete_recipe_upload",
       ]);
       for (const name of ["list_receipts", "get_receipt", "list_books", "get_book"]) {
         expect(annotationsOf(name)?.readOnlyHint).toBe(true);
@@ -73,7 +77,12 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
           destructiveHint: true,
         });
       }
-      for (const name of ["list_recipes", "get_recipe"]) {
+      for (const name of [
+        "list_recipes",
+        "get_recipe",
+        "list_recipe_uploads",
+        "get_recipe_upload",
+      ]) {
         expect(annotationsOf(name)).toEqual({
           readOnlyHint: true,
           destructiveHint: false,
@@ -87,11 +96,20 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         idempotentHint: false,
         openWorldHint: false,
       });
-      expect(annotationsOf("delete_recipe")).toEqual({
+      for (const name of ["delete_recipe", "delete_recipe_upload"]) {
+        expect(annotationsOf(name)).toEqual({
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        });
+      }
+      // Creating an upload leads the API to fetch a page outside Goho.
+      expect(annotationsOf("create_recipe_upload")).toEqual({
         readOnlyHint: false,
-        destructiveHint: true,
-        idempotentHint: true,
-        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
       });
     }),
   );
@@ -103,7 +121,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools).toHaveLength(15);
+      expect(discovered.tools).toHaveLength(19);
     }),
   );
 

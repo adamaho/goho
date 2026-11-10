@@ -2,9 +2,9 @@
 
 Goho receipts, books, and recipes are small, structured records that give an MCP
 client a useful read and write workflow. This local Streamable HTTP server exposes
-receipt and book lookup, creation, correction, and deletion, plus saved recipe
-lookup, creation, and deletion, through the existing Goho HTTP API, so it can be
-tested without hosting or an OpenAI key.
+receipt and book lookup, creation, correction, and deletion, saved recipe
+lookup, creation, and deletion, and recipe uploads from web page URLs, through
+the existing Goho HTTP API, so it can be tested without hosting or an OpenAI key.
 
 ## Agent-first setup
 
@@ -93,7 +93,8 @@ Configure it with these environment variables:
 | `GOHO_SERVER_URL` | `http://127.0.0.1:3000` | Goho API the tools call                         |
 
 The endpoint has no authentication, so anyone who can reach it can read, change,
-and delete receipts, books, and recipes. The loopback default keeps it on your
+and delete receipts, books, and recipes, and make the Goho API fetch any
+recipe page URL. The loopback default keeps it on your
 machine. Only bind another interface on a trusted network, such as a tailnet
 restricted to your devices. The server rejects requests from browser origins,
 but that is not access control: other clients can still call it.
@@ -237,9 +238,10 @@ opencode mcp list
 
 ### Recipes
 
-The recipe tools work with saved recipes only. They can't edit a recipe, import
-one from a web page, or manage its photo. Recipe IDs are strings, such as
-`"9007199254740993"`, so large IDs are never rounded.
+These tools work with saved recipes. They can't edit a recipe or manage its
+photo; to import one from a web page, see [Recipe uploads](#recipe-uploads).
+Recipe IDs are strings, such as `"9007199254740993"`, so large IDs are never
+rounded.
 
 - `list_recipes` returns recipe headlines by title A to Z, ignoring case, then
   newest first. It takes no arguments. Each headline has the ID, title, source,
@@ -291,12 +293,48 @@ one from a web page, or manage its photo. Recipe IDs are strings, such as
   recipe, every import linked to it, and its photo. Its page can then be
   imported fresh. It returns the deleted ID.
 
+### Recipe uploads
+
+A recipe upload asks the Goho API to import a recipe from a web page. The API
+fetches and extracts the page later, so an upload is a record you check on, not
+a recipe. Upload IDs are version 4 UUIDs, such as
+`"7c1e4b2a-9d3f-4a6b-8c5d-2e1f0a9b8c7d"`; they are not recipe IDs.
+
+1. `create_recipe_upload` takes a `source` with the page URL and returns the new
+   upload right away with status `queued`. For example:
+   `{"source":{"kind":"url","url":"https://example.com/recipes/pancakes"}}`.
+   The URL must be an absolute http or https URL without a username or password,
+   up to 2048 UTF-8 bytes. It is trimmed, but otherwise sent as written; the
+   API decides whether the page can be fetched. Unknown fields are rejected.
+2. `get_recipe_upload` takes a string `upload_id` and returns the upload's
+   latest `status`: `queued`, `processing`, `succeeded`, or `failed`. Nothing
+   checks on its own; call it again when you want an update.
+3. When the status is `succeeded`, call `get_recipe` with its `recipeId` to read
+   the saved recipe.
+
+A `failed` upload is a normal result, not a tool error. Its `failureCode`, such
+as `page_unavailable` or `no_recipe_found`, says why. To try the page again,
+create a new upload; there is no need to delete the failed one first.
+
+- Each `create_recipe_upload` call adds a new upload, even for the same URL. If
+  the page is already saved as a recipe, ignoring its fragment, the new upload
+  links that recipe without fetching the page again.
+- `list_recipe_uploads` returns every upload, newest first, with its status. It
+  takes no arguments. Seeding doesn't add any uploads.
+- `delete_recipe_upload` takes a string `upload_id` and removes a `failed`
+  upload. It returns the deleted ID. Queued, processing, and succeeded uploads
+  can't be deleted, and nothing changes. It never deletes a saved recipe; use
+  `delete_recipe` for that.
+
+Extracting a new page uses the Goho API's OpenAI model, so with the placeholder
+key from `.env.example`, expect uploads of new pages to fail.
+
 ## Tool errors
 
 When a tool runs and fails, it returns a tool result with `isError: true` and
 one plain text message, with no structured content. Missing records, book
-conflicts, and input the API rejects get their own message, such as
-`Book 12 was not found.`
+conflicts, recipe uploads that can't be deleted, and input the API rejects get
+their own message, such as `Book 12 was not found.`
 
 Arguments that don't match the tool's input schema are rejected before the Goho
 API is called, with a message starting `Invalid parameters for tool '<name>':`.
