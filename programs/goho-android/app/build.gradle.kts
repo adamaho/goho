@@ -63,12 +63,16 @@ openApiGenerate {
                         "ReceiptItemNotFound_status",
                         "ReceiptNotFound_status",
                         "ReceiptUploadNotFound_status",
+                        "RecipeImageNotFound_status",
+                        "RecipeNotFound_status",
+                        "RecipeUploadNotFound_status",
                     ),
                 "ProblemStatus409" to
                     listOf(
                         "BookConflict_status",
                         "BookUploadConflict_status",
                         "ReceiptUploadConflict_status",
+                        "RecipeUploadConflict_status",
                     ),
                 "ProblemStatus500" to
                     listOf(
@@ -77,6 +81,8 @@ openApiGenerate {
                         "InternalServerErrorProblemEncoded_status",
                         "ReceiptsUnavailable_status",
                         "ReceiptUploadsUnavailable_status",
+                        "RecipesUnavailable_status",
+                        "RecipeUploadsUnavailable_status",
                     ),
                 "AboutBlankProblemType" to
                     listOf(
@@ -101,6 +107,7 @@ openApiGenerate {
                         "receiptUploads_get_200_response_data_status",
                         "receiptUploads_list_200_response_data_inner_status",
                     ),
+                "TextKind" to listOf("TextMark_kind", "TextQuantity_kind", "TextSegment_kind"),
             )
             .flatMap { (name, keys) -> keys.map { it to name } }
             .toMap()
