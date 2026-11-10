@@ -23,7 +23,7 @@ const ToolList = Schema.Struct({
 const routes = Effect.succeed(HttpServerResponse.empty({ status: 500 }));
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) => {
-  it.effect("registers the receipt and book tools through MCP", () =>
+  it.effect("registers the receipt, book, and recipe tools through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
@@ -44,6 +44,10 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
         "create_book",
         "delete_book",
         "patch_book",
+        "list_recipes",
+        "get_recipe",
+        "create_recipe",
+        "delete_recipe",
       ]);
       for (const name of ["list_receipts", "get_receipt", "list_books", "get_book"]) {
         expect(annotationsOf(name)?.readOnlyHint).toBe(true);
@@ -69,6 +73,26 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
           destructiveHint: true,
         });
       }
+      for (const name of ["list_recipes", "get_recipe"]) {
+        expect(annotationsOf(name)).toEqual({
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        });
+      }
+      expect(annotationsOf("create_recipe")).toEqual({
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      });
+      expect(annotationsOf("delete_recipe")).toEqual({
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      });
     }),
   );
 
@@ -79,7 +103,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("MCP protocol", (it) =
       const discovered = yield* Schema.decodeUnknownEffect(ToolList)(
         yield* client.request(2, "tools/list", {}),
       );
-      expect(discovered.tools).toHaveLength(11);
+      expect(discovered.tools).toHaveLength(15);
     }),
   );
 

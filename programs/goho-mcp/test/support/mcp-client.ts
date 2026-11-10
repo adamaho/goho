@@ -74,6 +74,39 @@ export const DeleteBookResult = Schema.Struct({
 });
 
 /**
+ * Response shape for a successful recipe list.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const RecipeListResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ recipes: Schema.Array(Schema.Unknown) }),
+});
+
+/**
+ * Response shape for a successful recipe lookup or creation.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const RecipeResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ recipe: Schema.Unknown }),
+});
+
+/**
+ * Response shape for a successful recipe deletion.
+ *
+ * @category testing
+ * @since 0.1.0
+ */
+export const DeleteRecipeResult = Schema.Struct({
+  isError: Schema.Boolean,
+  structuredContent: Schema.Struct({ deleted_recipe_id: Schema.String }),
+});
+
+/**
  * The complete MCP result of a tool failure: one plain text message and no structured content.
  *
  * @category testing
