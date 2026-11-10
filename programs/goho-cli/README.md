@@ -426,7 +426,7 @@ A range's first amount must be below its second. Mixed numbers are not supported
 `1 1/2` as `3/2`. Anything that starts with a digit, sign, or dot, or spells `Infinity` or
 `NaN`, must be one of the number forms above and never becomes wording; `-1`, `.5`, `1e3`,
 `1/0`, `2..1`, `1..`, and `2 cups` all fail. Prefix wording that starts like a number with
-`text:`.
+`text:`; spaces before the prefix are ignored.
 
 Numeric amounts need a `unit`: `millilitre`, `litre`, `cup`, `tablespoon`, `teaspoon`, `gram`,
 `kilogram`, `count`, `clove`, `can`, `bunch`, `pinch`, `dash`, `handful`, or `knob`. Wording
@@ -463,6 +463,9 @@ comma as `\,`, a `}` as `\}`, a `{{` as `\{{`, and a backslash as `\\`:
 --step 'Add {{text=salt\, pepper}}.'
 --step 'Write \{{example}} literally.'
 ```
+
+A value that starts with `-` must be attached with `=`, such as `--step='- Stir well.'`;
+otherwise it is read as another flag.
 
 An empty step, an unclosed or nested mark, a lone `}` inside a mark, an empty mark, unknown
 or repeated keys, or a mark mixing `text` with `ingredient` or `portion` fails.

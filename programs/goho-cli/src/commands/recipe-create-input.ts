@@ -30,7 +30,12 @@ const invalid = (flag: string, raw: string, problem: string, format: string) =>
     detail: `Invalid --${flag} "${raw}": ${problem}. ${format}`,
   });
 
-const gcd = (a: bigint, b: bigint): bigint => (b === 0n ? a : gcd(b, a % b));
+// A loop, not recursion: thousands of decimal digits must not overflow the stack.
+const gcd = (a: bigint, b: bigint) => {
+  let [left, right] = [a, b];
+  while (right !== 0n) [left, right] = [right, left % right];
+  return left;
+};
 
 const toFraction = (value: string, numerator: bigint, denominator: bigint) => {
   if (denominator === 0n) return Result.fail(`"${value}" has a zero denominator`);
@@ -82,7 +87,8 @@ const looksNumeric = (value: string) =>
  * @since 0.1.0
  */
 export const parseQuantity = (value: string): Result.Result<Quantity, string> => {
-  if (value.startsWith("text:")) return Result.succeed({ kind: "text", text: value.slice(5) });
+  const start = value.trimStart();
+  if (start.startsWith("text:")) return Result.succeed({ kind: "text", text: start.slice(5) });
   const trimmed = value.trim();
   if (!looksNumeric(trimmed)) return Result.succeed({ kind: "text", text: value });
   const [min = "", max, ...rest] = trimmed.split("..");

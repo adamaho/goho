@@ -62,6 +62,8 @@ describe("parseQuantity", () => {
     ["text:2..1", "2..1"],
     ["text:Infinity", "Infinity"],
     ["text:", ""],
+    [" text:2", "2"],
+    ["  text: 1 or 2 ", " 1 or 2 "],
   ])("keeps %j as wording", (value, text) => {
     expect(Result.getOrThrow(parseQuantity(value))).toEqual({ kind: "text", text });
   });
@@ -96,6 +98,30 @@ describe("parseQuantity", () => {
     const error = failure(parseQuantity(value));
     expect(error).toContain(problem);
     expect(error).toContain("write a mixed number such as 1 1/2 as 3/2");
+  });
+});
+
+// Fixed pseudo-random digits; their gcd with a power of ten takes many steps.
+const digits = (count: number) => {
+  let state = 12_345;
+  let result = "";
+  for (let index = 0; index < count; index += 1) {
+    state = (Math.imul(state, 1_103_515_245) + 12_345) >>> 0;
+    result += String((state >>> 16) % 10);
+  }
+  return `${result}7`;
+};
+
+describe("very long decimals", () => {
+  it("rejects an over-precise quantity as invalid input", () => {
+    expect(failure(parseQuantity(`0.${digits(8000)}`))).toContain(
+      "no larger than 9007199254740991",
+    );
+  });
+
+  it("rejects an over-precise portion as invalid input", () => {
+    const raw = `{{ingredient=a,portion=0.${digits(20_000)}}}`;
+    expect(detail(parseStep(raw))).toContain("no larger than 9007199254740991");
   });
 });
 
