@@ -144,6 +144,7 @@ describe("CLI problem output", () => {
     [["books", "view", "--help"], "goho books view [flags] <book-id>"],
     [[], "goho <subcommand> [flags]"],
     [["receipts"], "goho receipts <subcommand> [flags]"],
+    [["recipes"], "goho recipes <subcommand> [flags]"],
     [["books", "uploads"], "goho books uploads <subcommand> [flags]"],
     [["--version"], "goho v0.0.0"],
     [["--completions", "bash"], "###-begin-goho-completions-###"],
@@ -165,6 +166,8 @@ describe("CLI problem output", () => {
     [["receipts", "delete", "3"]],
     [["receipts", "uploads", "view", uploadId]],
     [["books", "uploads", "list"]],
+    [["recipes", "list"]],
+    [["recipes", "image", "5"]],
   ])("reports an unreachable server for %j as connection-failed", async (args) => {
     const result = await runCommand("http://127.0.0.1:1", args);
     expect(result).toEqual({

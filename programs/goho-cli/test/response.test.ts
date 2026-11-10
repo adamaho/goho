@@ -6,13 +6,14 @@ import { DeletedResource, DeleteResult } from "#src/response.ts";
 describe("DeleteResult", () => {
   it("restricts resource names to the supported literal union", () => {
     expectTypeOf<DeletedResource>().toEqualTypeOf<
-      "book" | "receipt" | "book-upload" | "receipt-upload"
+      "book" | "receipt" | "recipe" | "book-upload" | "receipt-upload"
     >();
   });
 
   it.each([
     { resource: "book", id: "9007199254740993" },
     { resource: "receipt", id: "42" },
+    { resource: "recipe", id: "5" },
     { resource: "book-upload", id: "00000000-0000-4000-8000-000000000001" },
     { resource: "receipt-upload", id: "00000000-0000-4000-8000-000000000002" },
   ] satisfies ReadonlyArray<{ resource: DeletedResource; id: string }>)(

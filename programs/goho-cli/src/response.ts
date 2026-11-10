@@ -9,6 +9,7 @@ import { Schema } from "effect";
 export const DeletedResource = Schema.Literals([
   "book",
   "receipt",
+  "recipe",
   "book-upload",
   "receipt-upload",
 ]);

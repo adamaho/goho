@@ -1,7 +1,7 @@
 # @goho/goho-cli
 
-Calls the Goho server to check its status and to upload, inspect, list, patch, and delete receipts and
-books, and to add receipts and books by hand. OpenAI credentials belong only to the [server](../goho-server/README.md).
+Calls the Goho server to check its status; to upload, inspect, list, patch, and delete receipts and
+books; to add receipts and books by hand; and to list, view, download photos for, and delete recipes. OpenAI credentials belong only to the [server](../goho-server/README.md).
 
 ## Setup
 
@@ -30,13 +30,13 @@ The old forms are no longer supported. `goho status` still checks server health.
 
 ## Delete responses
 
-All four delete commands print a JSON confirmation instead of a text message:
+All five delete commands print a JSON confirmation instead of a text message:
 
 ```json
 { "deleted": true, "resource": "book", "id": "12" }
 ```
 
-`resource` is `book`, `receipt`, `book-upload`, or `receipt-upload`, and `id` stays a
+`resource` is `book`, `receipt`, `recipe`, `book-upload`, or `receipt-upload`, and `id` stays a
 string. Failures still exit nonzero and print an error to stderr without a success result.
 
 ## Error responses
@@ -343,5 +343,50 @@ pnpm --filter @goho/goho-cli start books delete <positive-integer-book-id>
 The command permanently removes the book, its successful cover scans, and their
 images, then prints a JSON confirmation with `resource: "book"`. There is no confirmation prompt. A missing
 book exits nonzero with the server's not-found problem.
+
+## List recipes
+
+```bash
+pnpm --filter @goho/goho-cli start recipes list
+```
+
+The command prints a JSON array of every saved recipe's headline details, by title A to Z
+ignoring case, then newest first. Each entry has its `id`, `title`, `source`,
+`totalTimeSeconds`, `hasImage`, and timestamps, but no ingredients, steps, or yield; use
+`recipes view` for those. `source` is null for a recipe saved directly. No recipes prints `[]`.
+
+## View a recipe
+
+```bash
+pnpm --filter @goho/goho-cli start recipes view <positive-integer-recipe-id>
+```
+
+The command prints the complete recipe as JSON, including its ingredients, steps, and
+yield. A malformed ID or a valid ID that does not exist exits nonzero; a missing recipe
+prints the server's not-found problem.
+
+## Download a recipe photo
+
+```bash
+pnpm --filter @goho/goho-cli start recipes image 5
+pnpm --filter @goho/goho-cli start recipes image 5 --output photos/pancakes.jpg
+```
+
+The command saves the recipe's stored photo and prints its `path`, `contentType`, and
+`sizeBytes` as JSON. Without `--output` the file is named `recipe-<id>` with the image's
+extension, in the current directory. `--output` is used exactly as given, so check
+`contentType` if its extension matters, and its folder must already exist.
+
+An existing file is overwritten. A missing recipe, or one with no photo on file, exits nonzero.
+
+## Delete a recipe
+
+```bash
+pnpm --filter @goho/goho-cli start recipes delete <positive-integer-recipe-id>
+```
+
+The command permanently removes the recipe, every import linked to it, and its photo,
+then prints a JSON confirmation with `resource: "recipe"`. There is no confirmation
+prompt. A missing recipe exits nonzero with the server's not-found problem.
 
 Run `pnpm --filter @goho/goho-cli start --help` for command help.

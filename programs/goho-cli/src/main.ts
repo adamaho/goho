@@ -6,12 +6,13 @@ import { CliOutput, Command } from "effect/cli";
 
 import { booksCommand } from "./commands/books.ts";
 import { receiptsCommand } from "./commands/receipts.ts";
+import { recipesCommand } from "./commands/recipes.ts";
 import { statusCommand } from "./commands/status.ts";
 import { getProblem } from "./errors.ts";
 
 const command = Command.make("goho").pipe(
   Command.withDescription("Command-line interface for Goho"),
-  Command.withSubcommands([receiptsCommand, booksCommand, statusCommand]),
+  Command.withSubcommands([receiptsCommand, booksCommand, recipesCommand, statusCommand]),
 );
 
 // An empty GOHO_SERVER_URL is a configuration error, not a request for the default.
