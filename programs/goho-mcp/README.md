@@ -8,6 +8,17 @@ checks and cleanup for receipt and book cover uploads made elsewhere, and saved
 receipt, book, and recipe images, through
 the existing Goho HTTP API, so it can be tested without hosting or an OpenAI key.
 
+## API health
+
+`get_health` takes no arguments and returns `{"status":"ok"}` when the configured
+Goho API responds to its health check. It makes one request through the existing
+API client, without retries or polling. An unreachable API, server error, or
+incompatible response returns an MCP tool error, not a healthy status.
+
+This checks API liveness only. It does not check the database, AI providers, or
+background jobs. It is separate from the MCP process's own `/health` endpoint,
+which does not contact the API.
+
 ## Agent-first setup
 
 From the repository root, copy this prompt into a coding agent running on your
