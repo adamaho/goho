@@ -5,18 +5,22 @@ import * as GohoServerClient from "#src/goho-server-client.ts";
 
 import * as CreateBook from "./create-book.ts";
 import * as CreateReceipt from "./create-receipt.ts";
+import * as CreateRecipe from "./create-recipe.ts";
 import * as DeleteBook from "./delete-book.ts";
 import * as DeleteReceipt from "./delete-receipt.ts";
+import * as DeleteRecipe from "./delete-recipe.ts";
 import * as GetBook from "./get-book.ts";
 import * as GetReceipt from "./get-receipt.ts";
+import * as GetRecipe from "./get-recipe.ts";
 import * as ListBooks from "./list-books.ts";
 import * as ListReceipts from "./list-receipts.ts";
+import * as ListRecipes from "./list-recipes.ts";
 import * as PatchBook from "./patch-book.ts";
 import * as PatchReceiptItem from "./patch-receipt-item.ts";
 import * as PatchReceipt from "./patch-receipt.ts";
 
 /**
- * The receipt and book tools offered over MCP.
+ * The receipt, book, and recipe tools offered over MCP.
  *
  * @category tools
  * @since 0.1.0
@@ -33,10 +37,14 @@ export const toolkit = Toolkit.make(
   CreateBook.tool,
   DeleteBook.tool,
   PatchBook.tool,
+  ListRecipes.tool,
+  GetRecipe.tool,
+  CreateRecipe.tool,
+  DeleteRecipe.tool,
 );
 
 /**
- * Provides receipt and book tool handlers and their client dependency for MCP registration.
+ * Provides receipt, book, and recipe tool handlers and their client dependency for MCP registration.
  *
  * @category layers
  * @since 0.1.0
@@ -54,5 +62,9 @@ export const layer = toolkit
     create_book: CreateBook.handle,
     delete_book: DeleteBook.handle,
     patch_book: PatchBook.handle,
+    list_recipes: ListRecipes.handle,
+    get_recipe: GetRecipe.handle,
+    create_recipe: CreateRecipe.handle,
+    delete_recipe: DeleteRecipe.handle,
   })
   .pipe(Layer.provideMerge(GohoServerClient.layer));

@@ -1,9 +1,10 @@
 # @goho/goho-mcp
 
-Goho receipts and books are small, structured records that give an MCP client a
-useful read and write workflow. This local Streamable HTTP server exposes receipt
-and book lookup, creation, correction, and deletion through the existing Goho HTTP
-API, so it can be tested without hosting or an OpenAI key.
+Goho receipts, books, and recipes are small, structured records that give an MCP
+client a useful read and write workflow. This local Streamable HTTP server exposes
+receipt and book lookup, creation, correction, and deletion, plus saved recipe
+lookup, creation, and deletion, through the existing Goho HTTP API, so it can be
+tested without hosting or an OpenAI key.
 
 ## Agent-first setup
 
@@ -61,9 +62,10 @@ a second terminal at the repository root:
 GOHO_SERVER_URL=http://127.0.0.1:3000 pnpm --filter @goho/goho-server db:seed
 ```
 
-This creates four fictional receipts and five books through the API. Receipts are
-skipped when any receipt already exists and books are matched by title and author,
-so running it again does not duplicate either.
+This creates four fictional receipts, five books, and three recipes through the
+API. Receipts are skipped when any receipt already exists, books are matched by
+title and author, and a recipe is skipped when a saved recipe has exactly its
+title, so running it again does not duplicate any of them.
 
 ## Start the MCP server
 
@@ -91,10 +93,10 @@ Configure it with these environment variables:
 | `GOHO_SERVER_URL` | `http://127.0.0.1:3000` | Goho API the tools call                         |
 
 The endpoint has no authentication, so anyone who can reach it can read, change,
-and delete receipts and books. The loopback default keeps it on your machine.
-Only bind another interface on a trusted network, such as a tailnet restricted
-to your devices. The server rejects requests from browser origins, but that is
-not access control: other clients can still call it.
+and delete receipts, books, and recipes. The loopback default keeps it on your
+machine. Only bind another interface on a trusted network, such as a tailnet
+restricted to your devices. The server rejects requests from browser origins,
+but that is not access control: other clients can still call it.
 
 ## Connect an MCP client
 
@@ -160,9 +162,9 @@ tailscale serve --https=443 --set-path /mcp off
 
 The endpoint has no authentication, so your tailnet access rules are its only
 protection. Any device or user allowed to reach this host on port 443 can read,
-change, and delete receipts and books. Check that your Tailscale grants limit
-port 443 to the clients you trust before publishing; this repository does not
-configure them. Do not expose this route with Tailscale Funnel.
+change, and delete receipts, books, and recipes. Check that your Tailscale grants
+limit port 443 to the clients you trust before publishing; this repository does
+not configure them. Do not expose this route with Tailscale Funnel.
 
 ### Connect OpenCode
 
@@ -232,6 +234,62 @@ opencode mcp list
   `{"book_id":"12","changes":{"readingLevel":"Grade 5"}}`. Omitted fields stay
   unchanged; null and blank values are rejected. It returns the complete saved book. A title and
   author matching another saved book is rejected; books are never merged.
+
+### Recipes
+
+The recipe tools work with saved recipes only. They can't edit a recipe, import
+one from a web page, or manage its photo. Recipe IDs are strings, such as
+`"9007199254740993"`, so large IDs are never rounded.
+
+- `list_recipes` returns recipe headlines by title A to Z, ignoring case, then
+  newest first. It takes no arguments. Each headline has the ID, title, source,
+  total time, photo flag, and timestamps, but no ingredients, steps, or yield.
+  After seeding a fresh database, it returns three recipes.
+- `get_recipe` takes a string `recipe_id` and returns the complete recipe with
+  its ingredients, steps, and yield.
+- `create_recipe` saves a recipe with no source or photo. Each call saves a new
+  recipe, even when one already has that title. It takes a `title`, at least one
+  ingredient, and at least one step. Leave out `yield` and `totalTimeSeconds`,
+  or send `null`, when they aren't known. Quantities are exact fractions, ranges,
+  or text; exact and range quantities need a unit, and text quantities use
+  `null`. A step mark can point at an ingredient by its `id`. For example:
+
+  ```json
+  {
+    "title": "Example Pancakes",
+    "ingredients": [
+      {
+        "id": "flour",
+        "name": "all-purpose flour",
+        "quantity": { "kind": "exact", "value": { "numerator": 3, "denominator": 2 } },
+        "unit": "cup"
+      }
+    ],
+    "steps": [
+      {
+        "segments": [
+          { "kind": "text", "text": "Whisk " },
+          {
+            "kind": "mark",
+            "content": {
+              "kind": "ingredient",
+              "ingredientId": "flour",
+              "portion": { "numerator": 1, "denominator": 1 }
+            }
+          },
+          { "kind": "text", "text": " with water." }
+        ]
+      }
+    ]
+  }
+  ```
+
+  It returns the saved recipe with its new ID. Unknown fields, such as `source`,
+  are rejected.
+
+- `delete_recipe` takes a string `recipe_id` and permanently removes that
+  recipe, every import linked to it, and its photo. Its page can then be
+  imported fresh. It returns the deleted ID.
 
 ## Tool errors
 
