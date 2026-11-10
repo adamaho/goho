@@ -5,6 +5,7 @@ import { Argument, Command } from "effect/cli";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 
+import { createCommand } from "./recipe-create.ts";
 import { imageCommand } from "./recipe-image.ts";
 import { uploadsCommand } from "./recipe-uploads.ts";
 
@@ -60,12 +61,20 @@ const deleteCommand = Command.make("delete", {
 );
 
 /**
- * Command group for recipe retrieval, photo downloads, deletion, and imports from web pages.
+ * Command group for recipe retrieval, photo downloads, direct creation, deletion, and imports
+ * from web pages.
  *
  * @category commands
  * @since 0.1.0
  */
 export const recipesCommand = Command.make("recipes").pipe(
   Command.withDescription("Manage recipes"),
-  Command.withSubcommands([listCommand, viewCommand, imageCommand, deleteCommand, uploadsCommand]),
+  Command.withSubcommands([
+    listCommand,
+    viewCommand,
+    imageCommand,
+    createCommand,
+    deleteCommand,
+    uploadsCommand,
+  ]),
 );
