@@ -2,6 +2,7 @@ package com.adamaho.goho.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -17,6 +18,9 @@ val Geist =
         Font(R.font.geist_medium, FontWeight.Medium),
         Font(R.font.geist_semibold, FontWeight.SemiBold),
     )
+
+// Geist Mono is approved only for recipe ingredient marks.
+val GeistMono = FontFamily(Font(R.font.geist_mono_medium, FontWeight.Medium))
 
 private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
 
@@ -50,6 +54,15 @@ data class GohoTypography(
     val segment: TextStyle,
     val label: TextStyle,
     val input: TextStyle,
+    val recipeTitle: TextStyle,
+    val recipeSection: TextStyle,
+    val recipeStat: TextStyle,
+    val recipeStatLabel: TextStyle,
+    val ingredient: TextStyle,
+    val step: TextStyle,
+    val stepNumber: TextStyle,
+    /** Inline in `step`; its size is relative so it follows the step text. */
+    val ingredientMark: SpanStyle,
 )
 
 val GohoType =
@@ -295,6 +308,76 @@ val GohoType =
                 lineHeight = 22.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        recipeTitle =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 28.sp,
+                lineHeight = 32.sp,
+                letterSpacing = (-0.035).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        recipeSection =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 17.sp,
+                lineHeight = 22.sp,
+                letterSpacing = (-0.02).em,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        recipeStat =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.5.sp,
+                lineHeight = 18.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        recipeStatLabel =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Normal,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        ingredient =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.5.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        step =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        stepNumber =
+            TextStyle(
+                fontFamily = Geist,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                letterSpacing = 0.sp,
+                fontFeatureSettings = PROPORTIONAL_NUMBERS,
+            ),
+        ingredientMark =
+            SpanStyle(
+                fontFamily = GeistMono,
+                fontWeight = FontWeight.Medium,
+                fontSize = 0.9.em,
+                letterSpacing = 0.sp,
             ),
     )
 

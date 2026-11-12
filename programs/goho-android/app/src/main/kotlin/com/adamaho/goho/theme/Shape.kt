@@ -18,6 +18,7 @@ object GohoShapes {
     val fab = RoundedCornerShape(24.dp)
     val tag = RoundedCornerShape(4.dp)
     val pill = RoundedCornerShape(percent = 50)
+    val recipeSheet = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 }
 
 internal val GohoMaterialShapes =

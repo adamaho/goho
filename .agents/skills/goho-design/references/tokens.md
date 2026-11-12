@@ -74,7 +74,7 @@ Ratios use the sRGB relative-luminance formula. Every base pair exceeds 4.5:1. P
 
 ## Typography
 
-Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
+Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only, plus **Geist Mono** Medium (500) for recipe ingredient marks only. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline; `assets/fonts/Geist-source.txt` records each file's source and hash. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
 
 Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, tags and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
 
@@ -93,6 +93,8 @@ Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and bi
 | `section`       | 13 / 18            | 500    | 0        | "Today", "Details", "Items" section labels                                                   |
 | `label`         | 12 / 16            | 500    | 0        | Tags, count badges                                                                           |
 | `input`         | 16 / 22            | 400    | 0        | Search field and author field text and placeholder                                           |
+
+Recipe details styles (approved November 4, 2026; see [Recipes](#recipes)) are listed with the other recipe tokens.
 
 Sheet headers reuse their list row's typography and spacing, with a 12dp thumbnail-to-text gap and 5dp line gap. Receipt headers use the 40×48dp thumbnail, merchant and amount `rowTitle` 16/22 Medium, currency code 12/16, date `meta` 13/18 Regular and upload tag `label` 12/16 Medium. Book headers use the 48×56dp cover, title `rowTitle` 16/22 Medium and author with optional reading level `meta` 13/18 Regular, with no category tag; scan headers add the upload tag `label` 12/16 Medium at the bottom end, 16dp past the text. There are no separate sheet-summary typography, thumbnail or cover tokens.
 
@@ -115,6 +117,7 @@ Currency codes follow the symbol and amount, baseline aligned in `textTertiary`:
 | `sectionMenu` | 20     | Section menu dropped from the title                                  |
 | `heldRow`     | 14     | Pressed section-menu rows and the inset receipt and Books row fill   |
 | `field`       | 14     | The Add author name field                                            |
+| `recipeSheet` | 24 top | Recipe details page sheet over the hero photo (top corners only)     |
 
 Plain `RoundedCornerShape` is fine. If the project already has a smooth-corner (squircle) shape, prefer it for `card`, `fab` and `button`.
 
@@ -229,3 +232,28 @@ Motion: native `SECTION_MENU_ENTER_MILLIS` = 160 / `SECTION_MENU_EXIT_MILLIS` = 
 ## Book overlay
 
 Approved October 22, 2026 (`screens.md` section 9). `bookCover` = photo covers fit a 260×292dp box at their own aspect ratio (never cropped); generated covers are 200×292dp (about 2:3), shape `cover` 8dp, 1dp `outline` ring, shadow 0/16/34dp with −12dp spread (black 45% in dark, `shadow` 30% in light). `bookTitle` = 26/32sp, weight 600, −0.02em, centered, unlimited lines. Author uses `bookAuthor` (16/22sp Regular) in `textSecondary`. Spacing: the cover starts 76 below the top inset (`bookOverlayCoverTop`); text 24 below the cover, author line 6 below the title, tag 14 below the author line. The fixed footer reuses the scan-preview footer spacing: `screenMargin` 16 sides, 16 above (`previewFooterTop`) and 28 above the navigation bar inset (`fabBottom`). Delete book is variant 2/Grey with an 18dp `TrashIcon` and label in `onDangerContainer`; its confirmation is variant 1/Red Delete book and variant 2/Grey Cancel with the 10dp `buttonGap`, and an unsuccessful handoff can use `body` in `onDangerContainer` 18 above the buttons (`sheetButtonsTop`). Later network failures use the app-level `FeedbackSnackbar` (components.md). The swap reuses the sheet content timing (`SHEET_CONTENT_FADE_OUT_MILLIS` 90, `SHEET_CONTENT_FADE_IN_MILLIS` 180, `SHEET_CONTENT_MILLIS` 280); accepted deletion fades the overlay over `BOOK_OVERLAY_CLOSE_MILLIS` (220) with no cover flight, and the row folds over `SHEET_CONTENT_MILLIS`. Frost: `background` at 86% with a 14dp blur (94%, no blur, as fallback). Motion: open 290ms emphasized decelerate, close 220ms, frost 170ms, Close rises 8dp; details (title, author, tag) start at 260ms, 260ms each, 70ms stagger, settling 8dp down; swipe-to-close threshold 96dp or 1,000dp/s. Book list covers are 48×56dp with the `thumb` shape. Generated cover (no image, “cloth”): cloth = category `TagColor` content (light) or dark container mixed 24% toward dark content (dark); 14dp spine in the cloth mixed 28% toward black plus a 2dp white highlight (22% light / 10% dark); text = `TagColor` container (light) or dark content mixed 40% toward white (dark), at least 5.2:1 on the cloth; `bookCoverTitle` = 22/28sp SemiBold −0.01em (max 5 lines) at 26 top / 34 start / 20 end; author `bookCoverAuthor` 16/20sp Medium (1 line), 20 from the bottom. List thumbnails use the 48×56dp version with a 3dp spine and bar marks instead of text.
+
+## Recipes
+
+Approved November 4–8, 2026 (`screens.md` section 12, including its November 11 clarifications); native tokens in `theme/Type.kt`, `Shape.kt` and `Spacing.kt`, mirrored in `assets/compose/GohoTheme.kt` and `Spacing.kt`. The Recipes screens are not built yet.
+
+| Style             | Size / line height | Weight | Tracking | Use                                                                     |
+| ----------------- | ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
+| `recipeTitle`     | 28 / 32            | 600    | −0.035em | Recipe title on details, wrapping                                       |
+| `recipeSection`   | 17 / 22            | 600    | −0.02em  | “Ingredients”, “Steps” and “Details” headings                           |
+| `recipeStat`      | 13.5 / 18          | 500    | 0        | Total time value                                                        |
+| `recipeStatLabel` | 11 / 14            | 400    | 0        | “Total” label in `textTertiary`                                         |
+| `ingredient`      | 13.5 / 20          | 400    | 0        | Ingredient lines; the amount is set in 600                              |
+| `step`            | 13 / 20            | 400    | 0        | Step paragraphs                                                         |
+| `stepNumber`      | 11 / 14            | 600    | 0        | Number in the 20dp step circle                                          |
+| `ingredientMark`  | 0.9em of `step`    | 500    | 0        | Geist Mono span for ingredient marks, inside `step`; it wraps with text |
+
+Every style except `ingredientMark` uses Geist with proportional figures. `ingredientMark` is a `SpanStyle` in the `GeistMono` family (`geist_mono_medium.ttf`, Geist Mono Medium, the one approved monospace use). Its relative size follows the step text at any font scale. The mark's `accentContainer` background, `markRadius` corners and padding are drawn per line by the step layout, since a mark can wrap.
+
+- Details: `recipeHeroHeight` = 300 (edge-to-edge photo or the no-photo `surfaceMuted` block with a `recipeHeroIcon` = 48 utensils mark in `accent`), `recipeSheetOverlap` = 24 under the `recipeSheet` shape, `recipeTitleTop` = 22 at the 16dp `screenMargin`, `recipeStatTop` = 18, `recipeStatGap` = 14 after a stat divider.
+- Headings at the 20dp `textInset`: `sectionTop` = 24 above Ingredients, `recipeSectionTop` = 28 above Steps and Details, `recipeSectionBottom` = 12 below each.
+- Ingredients: `ingredientDot` = 5 round `accent` dot, `ingredientDotGap` = 11, `ingredientGap` = 8 between lines.
+- Steps: `stepNumber` = 20 round number (`accentContainer` / `onAccentContainer`), `stepNumberGap` = 10, `stepGap` = 14.
+- Ingredient mark: `markHorizontal` = 4, `markVertical` = 1, `markRadius` = 4.
+- Source row: `sourceIcon` = 14 for `ic_external_link` in `onAccentContainer`.
+- List rows: `recipeThumb` = 40 square photo or placeholder (`thumb` shape) with the 20dp `coverIcon`: `ic_tag_meals` (utensils) for saved recipes without a photo and `ic_link` for reading or failed links.

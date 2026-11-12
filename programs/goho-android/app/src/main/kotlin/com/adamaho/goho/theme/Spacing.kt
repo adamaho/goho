@@ -200,4 +200,23 @@ object GohoSpacing {
     val segmentCountGap = 5.dp
     val badgeSize = 20.dp
     val amountMaxWidth = 148.dp
+    val recipeThumb = 40.dp // Square recipe row photo or placeholder, with coverIcon inside.
+    val recipeHeroHeight = 300.dp
+    val recipeHeroIcon = 48.dp // Utensils mark on the no-photo hero.
+    val recipeSheetOverlap = 24.dp // The page sheet covers the bottom of the hero.
+    val recipeTitleTop = 22.dp
+    val recipeStatTop = 18.dp
+    val recipeStatGap = 14.dp // After each stat divider.
+    val recipeSectionTop = 28.dp // Above Steps and Details; Ingredients uses sectionTop.
+    val recipeSectionBottom = 12.dp
+    val ingredientDot = 5.dp
+    val ingredientDotGap = 11.dp
+    val ingredientGap = 8.dp
+    val stepNumber = 20.dp
+    val stepNumberGap = 10.dp
+    val stepGap = 14.dp
+    val markHorizontal = 4.dp // Ingredient mark background padding and corners.
+    val markVertical = 1.dp
+    val markRadius = 4.dp
+    val sourceIcon = 14.dp // External-link glyph after the Source address.
 }

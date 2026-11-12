@@ -7,4 +7,14 @@ Static weights 400, 500, and 600 instantiated with fontTools 4.66.1
 using instantiateVariableFont(font, {"wght": weight}, inplace=True,
                              updateFontNames=True).
 Static fonts support the app minimum of Android API 24.
-This is the proportional Geist family, not Geist Mono.
+These three files are the proportional Geist family.
+
+Geist Mono Medium (geist_mono_medium.ttf), for recipe ingredient marks only.
+Source: https://raw.githubusercontent.com/vercel/geist-font/a6d260e6cbc07eafdfad438f33601fe3c38b1e6f/fonts/GeistMono/ttf/GeistMono-Medium.ttf
+Upstream revision: a6d260e6cbc07eafdfad438f33601fe3c38b1e6f, the vercel/geist-font
+commit that Google Fonts revision 718e1db4deb9e4d9d85a0ead1b9f5fde2761ccfd
+records for ofl/geistmono. The official static Medium (Version 1.700) is
+copied unchanged.
+SHA-256: 6fa6a795c17a11bcbef410f52a853e8503f8e25d92762d202d907c54f5c0c0fb
+License: SIL Open Font License 1.1 (OFL-Geist.txt, byte-identical to the
+Google Fonts ofl/geistmono/OFL.txt at the revision above).

@@ -11,6 +11,8 @@ Design renders from the Goho art-boards canvas (“Recipes”) at 296dp width an
 - `recipe-details-light.png`, `recipe-details-dark.png`: details with the photo hero, sheet, stat row, Ingredients, Steps with inline ingredient marks, and Details.
 - `recipe-details-no-photo-light.png`: the no-photo hero, with only the stats the page gives.
 
+Updated renders are pending for the [accepted November 11, 2026 clarifications](../../references/screens.md#12-recipes-list-add-from-a-link-details); these renders are kept unchanged and the spec wins. Where they differ: the stat row shows Total only, ingredient names keep their full wording with no tertiary prep note (“2 cloves garlic, minced”), amounts in words read “salt (to taste)”, and empty Recipes is text-only.
+
 ## Add author, Books rows and feedback snackbar (native implementation)
 
 October 31, 2026: unedited Goho Dev captures from the Pixel 9 API 36 emulator at 280dpi, using an isolated disposable real backend and database with sample books only; no production or family records. Captures are 720×1600px at standard text size unless noted. They were taken from three candidate builds of the same change; each later build left the parts shown in earlier captures unchanged, so all of them show the current behavior.

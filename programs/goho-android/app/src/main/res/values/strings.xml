@@ -142,4 +142,39 @@
     <string name="feedback_edit">Edit</string>
     <string name="feedback_try_again">Try again</string>
     <string name="feedback_dismiss">Dismiss</string>
+    <!-- Recipe amounts: %1$s is an amount such as 2½, 0.25 or 1–2. -->
+    <string name="recipe_amount_range">%1$s–%2$s</string>
+    <string name="recipe_amount_less_than">&lt;%1$s</string>
+    <string name="recipe_unit_millilitre">%1$s mL</string>
+    <string name="recipe_unit_litre">%1$s L</string>
+    <string name="recipe_unit_gram">%1$s g</string>
+    <string name="recipe_unit_kilogram">%1$s kg</string>
+    <string name="recipe_unit_tablespoon">%1$s tbsp</string>
+    <string name="recipe_unit_teaspoon">%1$s tsp</string>
+    <string name="recipe_unit_cup_one">%1$s cup</string>
+    <string name="recipe_unit_cup_other">%1$s cups</string>
+    <string name="recipe_unit_clove_one">%1$s clove</string>
+    <string name="recipe_unit_clove_other">%1$s cloves</string>
+    <string name="recipe_unit_can_one">%1$s can</string>
+    <string name="recipe_unit_can_other">%1$s cans</string>
+    <string name="recipe_unit_bunch_one">%1$s bunch</string>
+    <string name="recipe_unit_bunch_other">%1$s bunches</string>
+    <string name="recipe_unit_pinch_one">%1$s pinch</string>
+    <string name="recipe_unit_pinch_other">%1$s pinches</string>
+    <string name="recipe_unit_dash_one">%1$s dash</string>
+    <string name="recipe_unit_dash_other">%1$s dashes</string>
+    <string name="recipe_unit_handful_one">%1$s handful</string>
+    <string name="recipe_unit_handful_other">%1$s handfuls</string>
+    <string name="recipe_unit_knob_one">%1$s knob</string>
+    <string name="recipe_unit_knob_other">%1$s knobs</string>
+    <!-- %1$s is the amount with its unit, %2$s the ingredient name exactly as saved. -->
+    <string name="recipe_ingredient_amount">%1$s %2$s</string>
+    <!-- %1$s is the ingredient name, %2$s the recipe's own wording, such as “to taste”. -->
+    <string name="recipe_ingredient_text_amount">%1$s (%2$s)</string>
+    <!-- A step's share of an ingredient without a number, such as “½ of salt (to taste)”. -->
+    <string name="recipe_portion_of">%1$s of %2$s</string>
+    <string name="recipe_minutes">%1$s min</string>
+    <string name="recipe_hours">%1$s hr</string>
+    <string name="recipe_hours_minutes">%1$s hr %2$s min</string>
+    <string name="recipe_under_a_minute">&lt;1 min</string>
 </resources>
