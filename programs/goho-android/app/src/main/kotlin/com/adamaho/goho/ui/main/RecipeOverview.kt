@@ -360,9 +360,9 @@ private fun RecipeRow(entry: RecipeListEntry?, rows: RecipeRowContext, active: B
 
 /**
  * A Recipes row's content, for rows and the display-only options-sheet header: a 40dp square photo
- * or placeholder, the one-line title, then the “25 min · examplekitchen.com” meta line, or an
- * import's upload tag. Missing parts of the meta line are left out, and the line too when both are.
- * A link being sent shows as reading. A null [entry] keeps the same layout for skeleton loading.
+ * or placeholder, the one-line title, then the total time (“25 min”), left out when it's unknown,
+ * or an import's upload tag. A link being sent shows as reading. A null [entry] keeps the same
+ * layout for skeleton loading.
  */
 @Composable
 internal fun RecipeEntrySummary(
@@ -409,7 +409,7 @@ internal fun RecipeEntrySummary(
                         modifier = Modifier.widthIn(max = GohoSpacing.tagMaxWidth),
                     )
                 else ->
-                    recipeMeta(recipe)?.let {
+                    recipeTime(recipe)?.let {
                         Text(
                             it,
                             modifier = Modifier.fillMaxWidth().skeleton(fraction = 0.55f),
@@ -424,15 +424,12 @@ internal fun RecipeEntrySummary(
     }
 }
 
-/** Total time and the source's domain, either alone, or null when neither is known. */
+/** Total time, or null when it's unknown; empty while loading so the mask keeps its line. */
 @Composable
-private fun recipeMeta(recipe: RecipeSummary?): String? {
+private fun recipeTime(recipe: RecipeSummary?): String? {
     if (recipe == null) return ""
     val resources = LocalResources.current
-    val time = recipe.totalTimeSeconds?.let { recipeDuration(it, resources) }
-    val domain = recipe.source?.url?.let(::recipeDomain)
-    return if (time != null && domain != null) stringResource(R.string.recipe_meta, time, domain)
-    else time ?: domain
+    return recipe.totalTimeSeconds?.let { recipeDuration(it, resources) }
 }
 
 /**

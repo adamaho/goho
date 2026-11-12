@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -58,11 +59,13 @@ import java.time.format.FormatStyle
 /**
  * Read-only recipe details for [recipeId], loaded on entry and on Retry. The edge-to-edge hero
  * photo and the page sheet over it scroll together under a fixed Back, with the photo showing
- * through the transparent status bar. A recipe that's gone shows its own message without Retry and
- * calls [onMissing]. The Source row opens the page through [onOpenSource] only for http and https
- * addresses. Once loaded, the overflow button opens Recipe options with Delete recipe: Cancel stays
- * here, and an accepted deletion ([deleteRecipe]) hides the sheet, then calls [onDeleted] to leave
- * without waiting for the server.
+ * through the transparent status bar. The hero starts from the row's photo in [thumbnails] when the
+ * cache still holds it, without waiting for the recipe, and keeps it until the full photo decodes,
+ * so a failed full photo leaves the preview in place. A recipe that's gone shows its own message
+ * without Retry and calls [onMissing]. The Source row opens the page through [onOpenSource] only
+ * for http and https addresses. Once loaded, the overflow button opens Recipe options with Delete
+ * recipe: Cancel stays here, and an accepted deletion ([deleteRecipe]) hides the sheet, then calls
+ * [onDeleted] to leave without waiting for the server.
  */
 @Composable
 internal fun RecipeDetailScreen(
@@ -89,17 +92,22 @@ internal fun RecipeDetailScreen(
     }
     val recipe = (result as? RecipeLoad.Loaded)?.recipe
     val hasImage = recipe?.hasImage == true
-    var image by remember(recipeId) { mutableStateOf<ImageBitmap?>(null) }
+    // The list row's photo, when the cache still holds it, shows from the first frame while the
+    // recipe loads and until the full photo replaces it.
+    val preview = remember(recipeId) { thumbnails.peek(recipeId)?.asImageBitmap() }
+    var fullImage by remember(recipeId) { mutableStateOf<ImageBitmap?>(null) }
     var imageLoading by remember(recipeId) { mutableStateOf(false) }
     LaunchedEffect(recipeId, hasImage) {
-        if (!hasImage || image != null) return@LaunchedEffect
+        if (!hasImage || fullImage != null) return@LaunchedEffect
         imageLoading = true
         try {
-            image = loadRecipeImage(recipeId)?.let { decodePhoto(it) }
+            loadRecipeImage(recipeId)?.let { decodePhoto(it) }?.let { fullImage = it }
         } finally {
             imageLoading = false
         }
     }
+    // A loaded recipe without a photo drops the preview.
+    val image = if (recipe != null && !hasImage) null else fullImage ?: preview
 
     val c = GohoTheme.colors
     Box(modifier.fillMaxSize().background(c.background)) {
@@ -357,7 +365,8 @@ private fun RecipeHero(image: ImageBitmap?, showIcon: Boolean) {
             Modifier.fillMaxWidth()
                 .wrapContentHeight(Alignment.Top, unbounded = true)
                 .requiredHeight(GohoSpacing.recipeHeroHeight)
-                .skeleton(block = true)
+                // A photo already on hand shows through the loading mask.
+                .then(if (image == null) Modifier.skeleton(block = true) else Modifier)
                 .background(c.surfaceMuted),
             contentAlignment = Alignment.Center,
         ) {

@@ -194,8 +194,6 @@
     <string name="recipe_failed_no_recipe">No recipe</string>
     <string name="recipe_failed_ambiguous">Multiple recipes</string>
     <string name="recipe_failed_incomplete">Incomplete recipe</string>
-    <!-- %1$s is the total time, such as 25 min, %2$s the source site's domain. -->
-    <string name="recipe_meta">%1$s · %2$s</string>
     <string name="recipe_detail_loading">Loading recipe…</string>
     <string name="recipe_detail_load_failed">Could not load this recipe. Check your connection.</string>
     <string name="recipe_detail_missing">This recipe is no longer saved.</string>
