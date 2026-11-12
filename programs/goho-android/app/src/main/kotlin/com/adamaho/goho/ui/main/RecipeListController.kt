@@ -1,10 +1,15 @@
 package com.adamaho.goho.ui.main
 
+import android.content.ContentResolver
+import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import com.adamaho.goho.api.generated.RecipeUploadsApi
 import com.adamaho.goho.api.generated.RecipesApi
 import com.adamaho.goho.api.generated.model.CreateRecipeUploadRequest
@@ -16,6 +21,7 @@ import com.adamaho.goho.api.generated.model.RecipeUpload
 import com.adamaho.goho.api.generated.model.RecipeUploadNotFound
 import com.adamaho.goho.api.generated.model.RecipeUploadStatus
 import com.adamaho.goho.api.isNotFound
+import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -32,10 +38,10 @@ import kotlinx.serialization.SerializationException
  * keeps the cached list. A refresh that began before an accepted link or a deletion never drops the
  * import, restores the deleted recipe or failed import, or downgrades a newer import status.
  *
- * Links being sent are kept apart from the server data as [adding] rows until the server answers.
- * Requests belong to the activity's scope, so they outlive the Add recipe sheet, sheets and
- * details, and end with the activity; nothing is retried automatically or kept across process
- * death.
+ * Links being sent are kept apart from the server data as [adding] rows until the server answers,
+ * and photos being sent as [photoUploads]. Requests belong to the activity's scope, so they outlive
+ * the Add recipe sheet, sheets and details, and end with the activity; nothing is retried
+ * automatically or kept across process death.
  */
 internal class RecipeListController(
     private val scope: CoroutineScope,
@@ -44,8 +50,23 @@ internal class RecipeListController(
     private val deletions: PendingDeletions,
     private val feedback: Feedback,
     private val isOffline: () -> Boolean,
+    private val contentResolver: ContentResolver,
 ) {
     var state by mutableStateOf(RecipeListState())
+        private set
+
+    /**
+     * Recipes whose picked photo is being sent, each with that photo once decoded, for details to
+     * show in place of the Add photo button.
+     */
+    var photoUploads by mutableStateOf(emptyMap<String, ImageBitmap?>())
+        private set
+
+    /**
+     * Recipes given a photo from this device, so details already loaded without one show it. Kept
+     * for the activity's life; the server's `hasImage` never goes back to false here.
+     */
+    var photosAdded by mutableStateOf(emptySet<String>())
         private set
 
     /** A link being sent: [known] holds the uploads listed when it was sent, if any had loaded. */
@@ -114,7 +135,7 @@ internal class RecipeListController(
         }
 
     /** Keeps loaded row photos across section switches; only recipes with a photo request one. */
-    val thumbnails = ThumbnailCache(::loadImage)
+    val thumbnails = ThumbnailCache(::decodeRecipeThumbnail, ::loadImage)
 
     fun refresh(userInitiated: Boolean = false) {
         if (state.loading) {
@@ -257,12 +278,18 @@ internal class RecipeListController(
     }
 
     /** The full recipe for details. Only the API's own `RecipeNotFound` 404 counts as missing. */
-    suspend fun load(recipeId: String): RecipeLoad =
-        try {
+    suspend fun load(recipeId: String): RecipeLoad {
+        // A photo added before this request started is in its answer, which is then the authority;
+        // one added while it's waiting isn't, so it keeps its mark.
+        val added = recipeId in photosAdded
+        return try {
             val response = recipesApi.recipesGet(recipeId)
             when {
                 response.isSuccessful ->
-                    response.body()?.data?.let { RecipeLoad.Loaded(it) } ?: RecipeLoad.Failed
+                    response.body()?.data?.let {
+                        if (added) photosAdded = photosAdded - recipeId
+                        RecipeLoad.Loaded(it)
+                    } ?: RecipeLoad.Failed
                 response.isNotFound(RecipeNotFound.serializer()) -> RecipeLoad.Missing
                 else -> {
                     Log.w("GohoRecipes", "Recipe request failed: ${response.code()}")
@@ -274,6 +301,7 @@ internal class RecipeListController(
             Log.w("GohoRecipes", "Recipe failed to load", error)
             RecipeLoad.Failed
         }
+    }
 
     /**
      * A recipe's photo bytes, or null without one. A missing photo (`RecipeImageNotFound`) is
@@ -296,6 +324,86 @@ internal class RecipeListController(
             Log.w("GohoRecipes", "Recipe photo failed to load", error)
             null
         }
+
+    /**
+     * Sends [uri], picked for a recipe without a photo, as its photo, once per recipe at a time. It
+     * shows in details as soon as it decodes, and a 201 or 204 (both without a body) keeps it: the
+     * recipe lists with its photo, the row's thumbnail comes from the decoded photo rather than a
+     * fetch, and the list refreshes. Anything else drops it and reports through [feedback], unless
+     * the recipe is being deleted or is gone. Nothing is retried.
+     */
+    fun addPhoto(recipeId: String, uri: Uri) {
+        if (
+            recipeId in photoUploads ||
+                recipeId in photosAdded ||
+                deletions.contains(DeletionKey(DeletionKind.Recipe, recipeId))
+        )
+            return
+        photoUploads = photoUploads + (recipeId to null)
+        scope.launch {
+            val problem =
+                try {
+                    sendPhoto(recipeId, uri)
+                } finally {
+                    photoUploads = photoUploads - recipeId
+                }
+            if (
+                problem != null &&
+                    !deletions.contains(DeletionKey(DeletionKind.Recipe, recipeId)) &&
+                    (!state.hasLoaded || state.recipes.any { it.id == recipeId })
+            )
+                feedback.send(FeedbackMessage.RecipePhotoFailed(problem))
+        }
+    }
+
+    /** Null once the server has the photo. */
+    private suspend fun sendPhoto(recipeId: String, uri: Uri): RecipePhotoProblem? {
+        val type = contentResolver.recipePhotoType(uri) ?: return RecipePhotoProblem.Unsupported
+        val photo = contentResolver.decodeRecipePhoto(uri) ?: return RecipePhotoProblem.Unsupported
+        photoUploads = photoUploads + (recipeId to photo.asImageBitmap())
+        val response =
+            try {
+                recipesApi.recipesPutImage(recipeId, contentResolver.filePart(uri, "photo", type))
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                Log.w("GohoRecipes", "Recipe photo failed to send", error)
+                // The server may have saved it anyway; the list shows whether it did.
+                refresh()
+                return if (error is IOException && isOffline()) RecipePhotoProblem.Offline
+                else RecipePhotoProblem.Failed
+            }
+        response.errorBody()?.close()
+        return when (response.code()) {
+            201,
+            204 -> {
+                photoAdded(recipeId, photo)
+                null
+            }
+            400,
+            413 -> RecipePhotoProblem.Unsupported
+            else -> {
+                Log.w("GohoRecipes", "Recipe photo was not saved: ${response.code()}")
+                if (response.code() == 404) refresh()
+                RecipePhotoProblem.Failed
+            }
+        }
+    }
+
+    /**
+     * Lists the recipe with its photo at once; a listing that began before the upload is dropped,
+     * so it can't take the photo away again. A recipe deleted meanwhile isn't listed again.
+     */
+    private suspend fun photoAdded(recipeId: String, photo: Bitmap) {
+        thumbnails.put(recipeId, recipeThumbnail(photo))
+        changeRevision++
+        photosAdded = photosAdded + recipeId
+        state =
+            state.copy(
+                recipes =
+                    state.recipes.map { if (it.id == recipeId) it.copy(hasImage = true) else it }
+            )
+        refresh()
+    }
 
     /** Deletes a held Recipes row: a saved recipe or a failed import. Others are never accepted. */
     suspend fun delete(entry: RecipeListEntry): Boolean =

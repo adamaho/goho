@@ -31,10 +31,15 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 /**
- * A bounded receipt-photo or book-cover cache keyed by record ID. Only decoded images are kept, so
- * a missing, failed or undecodable image is requested again the next time its row needs it.
+ * A bounded receipt-photo, book-cover or recipe-photo cache keyed by record ID. Only decoded images
+ * are kept, so a missing, failed or undecodable image is requested again the next time its row
+ * needs it. [decode] turns fetched bytes into a list-sized bitmap; recipes pass their own, upright
+ * by EXIF orientation.
  */
-internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArray?) {
+internal class ThumbnailCache(
+    private val decode: (ByteArray) -> Bitmap? = ::decodeThumbnail,
+    private val loadImage: suspend (String) -> ByteArray?,
+) {
     private val cache =
         object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
             override fun sizeOf(key: String, value: Bitmap) = value.byteCount
@@ -43,6 +48,11 @@ internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArr
 
     /** An already loaded image, without waiting, so a lifted cover starts from the row's image. */
     fun peek(id: String): Bitmap? = cache.get(id)
+
+    /** Stores a photo sent from this device, so its row shows it without fetching it back. */
+    fun put(id: String, bitmap: Bitmap) {
+        cache.put(id, bitmap)
+    }
 
     suspend fun get(id: String): Bitmap? =
         withContext(Dispatchers.IO) {
@@ -55,18 +65,7 @@ internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArr
                 }
                 val bitmap =
                     try {
-                        loadImage(id)?.let { bytes ->
-                            val options =
-                                BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                            if (options.outWidth <= 0 || options.outHeight <= 0) null
-                            else {
-                                options.inJustDecodeBounds = false
-                                options.inSampleSize =
-                                    thumbnailSampleSize(options.outWidth, options.outHeight)
-                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                            }
-                        }
+                        loadImage(id)?.let(decode)
                     } catch (error: Exception) {
                         if (error is CancellationException) throw error
                         null
@@ -74,6 +73,16 @@ internal class ThumbnailCache(private val loadImage: suspend (String) -> ByteArr
                 bitmap?.also { cache.put(id, it) }
             }
         }
+}
+
+/** Decodes a receipt photo or book cover for its row, ignoring EXIF orientation as before. */
+private fun decodeThumbnail(bytes: ByteArray): Bitmap? {
+    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+    options.inJustDecodeBounds = false
+    options.inSampleSize = thumbnailSampleSize(options.outWidth, options.outHeight)
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 }
 
 /**
@@ -84,17 +93,20 @@ internal suspend fun decodePhoto(bytes: ByteArray): ImageBitmap? =
     withContext(Dispatchers.Default) {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
-        if (largestDimension <= 0) return@withContext null
-        val sampleSize =
-            generateSequence(1) { it * 2 }
-                .first {
-                    largestDimension / it <= 4096 &&
-                        bounds.outWidth.toLong() * bounds.outHeight / it / it <= 8_000_000
-                }
-        val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        if (maxOf(bounds.outWidth, bounds.outHeight) <= 0) return@withContext null
+        val options =
+            BitmapFactory.Options().apply {
+                inSampleSize = photoSampleSize(bounds.outWidth, bounds.outHeight)
+            }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
     }
+
+/** The power-of-two sampling that keeps a full-size photo within 4096px and 8MP. */
+internal fun photoSampleSize(width: Int, height: Int): Int =
+    generateSequence(1) { it * 2 }
+        .first {
+            maxOf(width, height) / it <= 4096 && width.toLong() * height / it / it <= 8_000_000
+        }
 
 /** Bound the longest decoded side, including extreme receipt and cover aspect ratios. */
 internal fun thumbnailSampleSize(width: Int, height: Int): Int {

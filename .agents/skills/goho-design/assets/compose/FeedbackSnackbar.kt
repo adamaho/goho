@@ -43,6 +43,7 @@ import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.main.DeletionKind
 import com.adamaho.goho.ui.main.Feedback
 import com.adamaho.goho.ui.main.FeedbackMessage
+import com.adamaho.goho.ui.main.RecipePhotoProblem
 import kotlin.math.abs
 import kotlin.math.sign
 import kotlinx.coroutines.flow.first
@@ -208,8 +209,8 @@ private class FeedbackCopy(
 )
 
 /**
- * Deletion failures show the red trash; author and Add recipe failures the orange warning, or no
- * Wi-Fi when the request got no answer and the device has no network.
+ * Deletion failures show the red trash; author, Add recipe and recipe photo failures the orange
+ * warning, or no Wi-Fi when the request got no answer and the device has no network.
  */
 @Composable
 private fun feedbackCopy(message: FeedbackMessage): FeedbackCopy {
@@ -260,6 +261,26 @@ private fun feedbackCopy(message: FeedbackMessage): FeedbackCopy {
                 R.string.feedback_recipe_add_failed,
                 message.offline,
                 icon(if (message.offline) offline else warning),
+            )
+        is FeedbackMessage.RecipePhotoFailed ->
+            FeedbackCopy(
+                title = stringResource(R.string.feedback_recipe_photo_failed),
+                detail =
+                    stringResource(
+                        when (message.problem) {
+                            RecipePhotoProblem.Unsupported ->
+                                R.string.feedback_recipe_photo_unsupported_detail
+                            RecipePhotoProblem.Offline ->
+                                R.string.feedback_recipe_photo_offline_detail
+                            RecipePhotoProblem.Failed ->
+                                R.string.feedback_recipe_photo_failed_detail
+                        }
+                    ),
+                action = null,
+                container = c.attentionContainer,
+                tint = c.attention,
+                icon =
+                    icon(if (message.problem == RecipePhotoProblem.Offline) offline else warning),
             )
     }
 }

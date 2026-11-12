@@ -20,6 +20,9 @@ internal sealed interface FeedbackMessage {
      */
     data class RecipeImportFailed(val attempt: Long, val url: String, val offline: Boolean) :
         FeedbackMessage
+
+    /** A picked recipe photo wasn't added; picking it again is the only retry. */
+    data class RecipePhotoFailed(val problem: RecipePhotoProblem) : FeedbackMessage
 }
 
 /**
