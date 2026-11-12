@@ -29,7 +29,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.delay
 
 data class BookListState(
     val books: List<Book> = emptyList(),
@@ -222,7 +221,7 @@ private fun BookListPage(
     modifier: Modifier = Modifier,
 ) {
     val showLoading = rememberLoadingVisible(state.loading)
-    val displayed = rememberRemovingEntries(entries, resetKey = attentionOnly)
+    val displayed = rememberRemovingEntries(entries, BookListEntry::key, resetKey = attentionOnly)
     Column(modifier.fillMaxSize()) {
         if (error || (state.hasLoaded && displayed.isEmpty())) {
             BoxWithConstraints(
@@ -292,26 +291,6 @@ private fun BookListPage(
 }
 
 /**
- * [entries] plus the rows removed since the last change, kept in place while they fold out.
- * Changing [resetKey], such as the filter or a search query, drops them at once instead.
- */
-@Composable
-internal fun rememberRemovingEntries(
-    entries: List<BookListEntry>,
-    resetKey: Any?,
-): List<BookListEntry> {
-    val reduced = rememberReducedMotion()
-    var retained by remember(resetKey) { mutableStateOf(entries) }
-    LaunchedEffect(entries) {
-        val keys = entries.mapTo(HashSet()) { it.key }
-        if (retained.any { it.key !in keys } && !reduced)
-            delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
-        retained = entries
-    }
-    return withRemovedEntries(entries, retained)
-}
-
-/**
  * One card of [displayed] rows: those no longer in [entries] fold out and can't be opened, and the
  * card itself folds away with its last row.
  */
@@ -354,20 +333,4 @@ internal fun BookListCard(
             }
         }
     }
-}
-
-/** [current] with the rows removed since [previous] kept after the row they followed. */
-private fun withRemovedEntries(
-    current: List<BookListEntry>,
-    previous: List<BookListEntry>,
-): List<BookListEntry> {
-    val keys = current.mapTo(HashSet()) { it.key }
-    if (previous.all { it.key in keys }) return current
-    val result = current.toMutableList()
-    var insertAt = 0
-    previous.forEach { entry ->
-        if (entry.key in keys) insertAt = result.indexOfFirst { it.key == entry.key } + 1
-        else result.add(insertAt++, entry)
-    }
-    return result
 }

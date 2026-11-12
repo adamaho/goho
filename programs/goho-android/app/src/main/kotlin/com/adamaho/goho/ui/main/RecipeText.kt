@@ -155,6 +155,66 @@ internal fun recipePageUrl(url: String): String? =
         ?.takeIf { it.username.isEmpty() && it.password.isEmpty() }
         ?.toString()
 
+/** What the Add recipe link field holds, checked before anything is sent. */
+internal sealed interface RecipeLink {
+    /** Nothing but whitespace: Add recipe does nothing and shows no error. */
+    data object Blank : RecipeLink
+
+    /** [url] is the link to send: the trimmed text, with `https://` before a bare address. */
+    data class Valid(val url: String) : RecipeLink
+
+    /** Not an http or https page address, or one with a username or password. */
+    data object Invalid : RecipeLink
+
+    /** Over the API's 2048 UTF-8 bytes as sent or once normalized. */
+    data object TooLong : RecipeLink
+}
+
+/**
+ * Checks pasted link text against the API's rules for a recipe page URL. The trimmed text is sent
+ * as written, so the saved source keeps its own spelling; only a bare address, such as
+ * “examplekitchen.com/lemon-orzo”, gains `https://`. A bare address needs a host with a dot, an IP
+ * address or `localhost`, so a word or a sentence isn't taken for a site; an explicit http or https
+ * address may use any host. Other schemes, such as `ftp:` or `mailto:`, are refused rather than
+ * prefixed, while a port (“example.com:8080”) isn't mistaken for one. Links aren't extracted from
+ * surrounding text. OkHttp parses as browsers do, accepting international hosts, underscores and
+ * unescaped spaces in the path; its canonical form, without the fragment, stands in for the API's
+ * normalized URL in the length check. Its percent-encoding can differ slightly from the server's
+ * WHATWG parser, so a link within a few bytes of the limit may still be refused by the API.
+ */
+internal fun recipeLink(text: String): RecipeLink {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return RecipeLink.Blank
+    val explicit = HTTP_SCHEME.containsMatchIn(trimmed)
+    if (!explicit && OTHER_SCHEME.containsMatchIn(trimmed)) return RecipeLink.Invalid
+    val sent = if (explicit) trimmed else "https://$trimmed"
+    // Check the size before parsing, so a long paste isn't parsed at all.
+    if (sent.utf8Bytes() > MAX_LINK_BYTES) return RecipeLink.TooLong
+    val url = sent.toHttpUrlOrNull() ?: return RecipeLink.Invalid
+    if (url.encodedUsername.isNotEmpty() || url.encodedPassword.isNotEmpty())
+        return RecipeLink.Invalid
+    if (!explicit && !isSiteHost(url.host)) return RecipeLink.Invalid
+    if (url.newBuilder().fragment(null).build().toString().utf8Bytes() > MAX_LINK_BYTES)
+        return RecipeLink.TooLong
+    return RecipeLink.Valid(sent)
+}
+
+/** An IP address (IPv6 hosts keep their colons), `localhost`, or a name with a dot. */
+private fun isSiteHost(host: String): Boolean {
+    if (host.contains(':') || host == "localhost") return true
+    val labels = host.removeSuffix(".").split('.')
+    return labels.size >= 2 && labels.all { it.isNotEmpty() }
+}
+
+private fun String.utf8Bytes(): Int = encodeToByteArray().size
+
+private const val MAX_LINK_BYTES = 2048
+
+private val HTTP_SCHEME = Regex("^https?://", RegexOption.IGNORE_CASE)
+
+/** A scheme such as `mailto:` or `ftp://`, but not a host followed by its port. */
+private val OTHER_SCHEME = Regex("^[a-z][a-z0-9+.-]*:(?!\\d+(?:[/?#]|$))", RegexOption.IGNORE_CASE)
+
 private val SCHEME = Regex("^[a-z][a-z0-9+.-]*://", RegexOption.IGNORE_CASE)
 
 private val Resources.locale: Locale

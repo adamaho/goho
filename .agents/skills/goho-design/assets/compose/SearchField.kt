@@ -98,9 +98,12 @@ fun SearchField(
     )
 }
 
-/** The 28dp clear face, centred in a 44dp touch target that ends at the field's edge. */
+/**
+ * The 28dp clear face, centred in a 44dp touch target that ends at the field's edge. Shared by the
+ * search field and the Add recipe link field.
+ */
 @Composable
-private fun ClearButton(label: String, onClick: () -> Unit) {
+internal fun ClearButton(label: String, onClick: () -> Unit) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)

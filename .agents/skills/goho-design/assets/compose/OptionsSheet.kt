@@ -95,16 +95,154 @@ internal fun OptionsSheet(
                 onDismiss()
             }
     }
+    Sheet(state, paneTitle, onDismissRequest = onDismiss, locked = deleting) {
+        Box(
+            Modifier.fillMaxWidth()
+                .padding(horizontal = GohoSpacing.sheetPadding)
+                .padding(top = GohoSpacing.sheetHeaderTop)
+        ) {
+            header()
+        }
+        Spacer(Modifier.height(GohoSpacing.sheetContentTop))
+        AnimatedContent(
+            targetState = pane,
+            contentAlignment = Alignment.TopStart,
+            transitionSpec = {
+                (fadeIn(
+                        tween(
+                            if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_IN_MILLIS,
+                            delayMillis =
+                                if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_OUT_MILLIS,
+                        )
+                    ) togetherWith
+                        fadeOut(
+                            tween(if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_OUT_MILLIS)
+                        ))
+                    .using(
+                        SizeTransform { _, _ ->
+                            tween(
+                                if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS,
+                                easing = FastOutSlowInEasing,
+                            )
+                        }
+                    )
+            },
+            label = "Options sheet content",
+        ) { shown ->
+            if (shown == OptionsPane.Form && form != null) form.content(::dismiss)
+            else if (shown != OptionsPane.Delete) {
+                Column(Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier.fillMaxWidth()
+                            .padding(horizontal = GohoSpacing.sheetPadding)
+                            .height(GohoSpacing.hairline)
+                            .background(c.divider)
+                    )
+                    Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
+                    val enabled = pane == OptionsPane.Menu
+                    form?.let {
+                        OptionsMenuItem(it.label, c.textPrimary, it.icon, enabled) {
+                            pane = OptionsPane.Form
+                        }
+                    }
+                    OptionsMenuItem(
+                        deleteLabel,
+                        c.onDangerContainer,
+                        { modifier, color -> TrashIcon(modifier, color) },
+                        enabled,
+                    ) {
+                        pane = OptionsPane.Delete
+                    }
+                    Spacer(Modifier.height(GohoSpacing.sheetInset))
+                }
+            } else {
+                val focus = remember { FocusRequester() }
+                LaunchedEffect(Unit) { focus.requestFocus() }
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = GohoSpacing.sheetPadding)
+                        .padding(bottom = GohoSpacing.sheetPadding)
+                ) {
+                    if (failed) {
+                        Text(
+                            deleteFailedMessage,
+                            style = GohoTheme.type.body,
+                            color = c.onDangerContainer,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                        Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
+                    }
+                    ActionButton(
+                        if (deleting) deletingLabel else deleteLabel,
+                        onClick = {
+                            if (!deleting) {
+                                deleting = true
+                                failed = false
+                                scope.launch {
+                                    val success =
+                                        try {
+                                            onDelete()
+                                        } catch (error: Exception) {
+                                            if (error is CancellationException) throw error
+                                            false
+                                        }
+                                    if (success) {
+                                        deleted = true
+                                        state.hide()
+                                        onDeleted()
+                                    } else {
+                                        deleting = false
+                                        failed = true
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !deleting,
+                        variant = 1,
+                        color = ButtonColor.Red,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    )
+                    Spacer(Modifier.height(GohoSpacing.buttonGap))
+                    ActionButton(
+                        cancelLabel,
+                        ::dismiss,
+                        variant = 2,
+                        color = ButtonColor.Grey,
+                        enabled = !deleting,
+                        modifier = Modifier.focusRequester(focus),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The floating sheet every Goho sheet uses: inset from the screen edges on the `sheet` fill, with
+ * the grabber above [content]. It pads for the navigation bar or the keyboard, whichever is taller,
+ * scrolls when short, and is announced as [paneTitle]. While [locked], as during a handoff and its
+ * exit, drag, Back and the scrim don't dismiss it. Callers hide [state] before leaving.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun Sheet(
+    state: SheetState,
+    paneTitle: String,
+    onDismissRequest: () -> Unit,
+    locked: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = GohoTheme.colors
     ModalBottomSheet(
-        onDismissRequest = { if (!deleting) onDismiss() },
+        onDismissRequest = { if (!locked) onDismissRequest() },
         sheetState = state,
         containerColor = Color.Transparent,
         scrimColor = c.scrim,
         tonalElevation = GohoSpacing.flatElevation,
         dragHandle = null,
-        sheetGesturesEnabled = !deleting,
+        sheetGesturesEnabled = !locked,
         contentWindowInsets = { WindowInsets.safeDrawing.only(WindowInsetsSides.Top) },
-        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = !deleting),
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = !locked),
     ) {
         Column(
             Modifier.fillMaxWidth()
@@ -128,125 +266,7 @@ internal fun OptionsSheet(
                     .clip(GohoShapes.pill)
                     .background(c.grabber)
             )
-            Box(
-                Modifier.fillMaxWidth()
-                    .padding(horizontal = GohoSpacing.sheetPadding)
-                    .padding(top = GohoSpacing.sheetHeaderTop)
-            ) {
-                header()
-            }
-            Spacer(Modifier.height(GohoSpacing.sheetContentTop))
-            AnimatedContent(
-                targetState = pane,
-                contentAlignment = Alignment.TopStart,
-                transitionSpec = {
-                    (fadeIn(
-                            tween(
-                                if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_IN_MILLIS,
-                                delayMillis =
-                                    if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_OUT_MILLIS,
-                            )
-                        ) togetherWith
-                            fadeOut(
-                                tween(if (reduced) 0 else GohoMotion.SHEET_CONTENT_FADE_OUT_MILLIS)
-                            ))
-                        .using(
-                            SizeTransform { _, _ ->
-                                tween(
-                                    if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS,
-                                    easing = FastOutSlowInEasing,
-                                )
-                            }
-                        )
-                },
-                label = "Options sheet content",
-            ) { shown ->
-                if (shown == OptionsPane.Form && form != null) form.content(::dismiss)
-                else if (shown != OptionsPane.Delete) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Box(
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = GohoSpacing.sheetPadding)
-                                .height(GohoSpacing.hairline)
-                                .background(c.divider)
-                        )
-                        Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
-                        val enabled = pane == OptionsPane.Menu
-                        form?.let {
-                            OptionsMenuItem(it.label, c.textPrimary, it.icon, enabled) {
-                                pane = OptionsPane.Form
-                            }
-                        }
-                        OptionsMenuItem(
-                            deleteLabel,
-                            c.onDangerContainer,
-                            { modifier, color -> TrashIcon(modifier, color) },
-                            enabled,
-                        ) {
-                            pane = OptionsPane.Delete
-                        }
-                        Spacer(Modifier.height(GohoSpacing.sheetInset))
-                    }
-                } else {
-                    val focus = remember { FocusRequester() }
-                    LaunchedEffect(Unit) { focus.requestFocus() }
-                    Column(
-                        Modifier.fillMaxWidth()
-                            .padding(horizontal = GohoSpacing.sheetPadding)
-                            .padding(bottom = GohoSpacing.sheetPadding)
-                    ) {
-                        if (failed) {
-                            Text(
-                                deleteFailedMessage,
-                                style = GohoTheme.type.body,
-                                color = c.onDangerContainer,
-                                modifier =
-                                    Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                            )
-                            Spacer(Modifier.height(GohoSpacing.sheetButtonsTop))
-                        }
-                        ActionButton(
-                            if (deleting) deletingLabel else deleteLabel,
-                            onClick = {
-                                if (!deleting) {
-                                    deleting = true
-                                    failed = false
-                                    scope.launch {
-                                        val success =
-                                            try {
-                                                onDelete()
-                                            } catch (error: Exception) {
-                                                if (error is CancellationException) throw error
-                                                false
-                                            }
-                                        if (success) {
-                                            deleted = true
-                                            state.hide()
-                                            onDeleted()
-                                        } else {
-                                            deleting = false
-                                            failed = true
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !deleting,
-                            variant = 1,
-                            color = ButtonColor.Red,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        )
-                        Spacer(Modifier.height(GohoSpacing.buttonGap))
-                        ActionButton(
-                            cancelLabel,
-                            ::dismiss,
-                            variant = 2,
-                            color = ButtonColor.Grey,
-                            enabled = !deleting,
-                            modifier = Modifier.focusRequester(focus),
-                        )
-                    }
-                }
-            }
+            content()
         }
     }
 }

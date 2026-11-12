@@ -102,6 +102,7 @@ internal fun ReceiptsPreviewScreen(state: ReceiptOverviewState, previewTime: Ins
         bookCount = null,
         recipeCount = null,
         isOpeningScanner = false,
+        onAddRecipe = {},
         onScanBook = {},
         onScanReceipt = {},
     ) { menuOpen ->

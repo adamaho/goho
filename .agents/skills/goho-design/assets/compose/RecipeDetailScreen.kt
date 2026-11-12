@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Recipe
+import com.adamaho.goho.api.generated.model.RecipeSummary
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import java.text.NumberFormat
@@ -58,18 +60,24 @@ import java.time.format.FormatStyle
  * photo and the page sheet over it scroll together under a fixed Back and a fixed status-bar strip
  * of the theme background at 80%. A recipe that's gone shows its own message without Retry and
  * calls [onMissing]. The Source row opens the page through [onOpenSource] only for http and https
- * addresses. There is no overflow menu until recipes can be deleted.
+ * addresses. Once loaded, the overflow button opens Recipe options with Delete recipe: Cancel stays
+ * here, and an accepted deletion ([deleteRecipe]) hides the sheet, then calls [onDeleted] to leave
+ * without waiting for the server.
  */
 @Composable
 internal fun RecipeDetailScreen(
     recipeId: String,
     loadRecipe: suspend (String) -> RecipeLoad,
     loadRecipeImage: suspend (String) -> ByteArray?,
+    thumbnails: ThumbnailCache,
+    deleteRecipe: suspend (String) -> Boolean,
     onBack: () -> Unit,
+    onDeleted: () -> Unit,
     onOpenSource: (String) -> Unit,
     onMissing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var optionsOpen by rememberSaveable(recipeId) { mutableStateOf(false) }
     var reloadKey by remember(recipeId) { mutableIntStateOf(0) }
     // Null while loading.
     var result by remember(recipeId) { mutableStateOf<RecipeLoad?>(null) }
@@ -142,9 +150,11 @@ internal fun RecipeDetailScreen(
                 .windowInsetsTopHeight(WindowInsets.statusBars)
                 .background(c.background.copy(alpha = GohoMotion.RECIPE_STATUS_BAR_ALPHA))
         )
-        // Back floats over the hero at the top bar position while the page scrolls under it.
-        Box(
+        // Back and overflow float over the hero at the top bar position while the page scrolls
+        // under them.
+        Row(
             Modifier.zIndex(2f)
+                .fillMaxWidth()
                 .windowInsetsPadding(
                     WindowInsets.safeDrawing.only(
                         WindowInsetsSides.Top + WindowInsetsSides.Horizontal
@@ -152,10 +162,38 @@ internal fun RecipeDetailScreen(
                 )
                 .heightIn(min = GohoSpacing.detailTopBarHeight)
                 .padding(horizontal = GohoSpacing.screenMargin),
-            contentAlignment = Alignment.CenterStart,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             ReceiptBackButton(onBack)
+            if (recipe != null) ReceiptMoreButton { optionsOpen = true }
         }
+    }
+    if (optionsOpen && recipe != null) {
+        val entry =
+            remember(recipe) {
+                RecipeListEntry.Saved(
+                    RecipeSummary(
+                        id = recipe.id,
+                        title = recipe.title,
+                        source = recipe.source,
+                        totalTimeSeconds = recipe.totalTimeSeconds,
+                        hasImage = recipe.hasImage,
+                        createdAt = recipe.createdAt,
+                        updatedAt = recipe.updatedAt,
+                    )
+                )
+            }
+        RecipeOptions(
+            entry = entry,
+            thumbnails = thumbnails,
+            onDelete = { deleteRecipe(recipe.id) },
+            onDismiss = { optionsOpen = false },
+            onDeleted = {
+                optionsOpen = false
+                onDeleted()
+            },
+        )
     }
 }
 

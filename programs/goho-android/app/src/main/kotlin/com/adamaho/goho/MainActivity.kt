@@ -58,6 +58,7 @@ import com.adamaho.goho.api.isNotFound
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import com.adamaho.goho.ui.components.FeedbackSnackbar
+import com.adamaho.goho.ui.main.AddRecipeSheet
 import com.adamaho.goho.ui.main.BookListController
 import com.adamaho.goho.ui.main.BookListEntry
 import com.adamaho.goho.ui.main.BookOptions
@@ -134,6 +135,9 @@ class MainActivity : ComponentActivity() {
     private var bookUploadToReveal by mutableStateOf<UUID?>(null)
     private var section by mutableStateOf(Section.Receipts)
     private var authorRequest by mutableStateOf<AuthorRequest?>(null)
+    private var addRecipeOpen by mutableStateOf(false)
+    /** Shows Recipes All at the top once, after a link is sent from Add recipe or Try again. */
+    private var revealRecipes by mutableStateOf(false)
     /** The open book overlay's fixed actions, which the snackbar clears while Add is hidden. */
     private var overlayActionsHeight by mutableStateOf(0.dp)
     private var pollingJob: Job? = null
@@ -156,7 +160,14 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val recipes by lazy {
-        RecipeListController(lifecycleScope, service<RecipesApi>(), service<RecipeUploadsApi>())
+        RecipeListController(
+            lifecycleScope,
+            service<RecipesApi>(),
+            service<RecipeUploadsApi>(),
+            deletions,
+            feedback,
+            ::isOffline,
+        )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
 
@@ -257,11 +268,12 @@ class MainActivity : ComponentActivity() {
                                                             bookState.books.size
                                                         else null,
                                                     recipeCount =
-                                                        recipes.state
+                                                        recipes.visibleState
                                                             .takeIf { it.hasLoaded }
                                                             ?.recipes
                                                             ?.size,
                                                     isOpeningScanner = isOpeningScanner,
+                                                    onAddRecipe = { addRecipeOpen = true },
                                                     onScanBook = { openScanner(ScanKind.Book) },
                                                     onScanReceipt = {
                                                         openScanner(ScanKind.Receipt)
@@ -323,7 +335,8 @@ class MainActivity : ComponentActivity() {
                                                             )
                                                         Section.Recipes ->
                                                             RecipeOverview(
-                                                                state = recipes.state,
+                                                                state = recipes.visibleState,
+                                                                adding = recipes.adding,
                                                                 menuOpen = menuOpen,
                                                                 thumbnails = recipes.thumbnails,
                                                                 onRetryClick = {
@@ -338,6 +351,11 @@ class MainActivity : ComponentActivity() {
                                                                     backStack.add(
                                                                         RecipeDetailRoute(it)
                                                                     )
+                                                                },
+                                                                deleteEntry = recipes::delete,
+                                                                reveal = revealRecipes,
+                                                                onRevealed = {
+                                                                    revealRecipes = false
                                                                 },
                                                             )
                                                     }
@@ -369,7 +387,14 @@ class MainActivity : ComponentActivity() {
                                                 recipeId = route.recipeId,
                                                 loadRecipe = recipes::load,
                                                 loadRecipeImage = recipes::loadImage,
+                                                thumbnails = recipes.thumbnails,
+                                                deleteRecipe = { recipes.deleteRecipe(it) },
                                                 onBack = { backStack.removeLastOrNull() },
+                                                // Leave once, even if Back already left.
+                                                onDeleted = {
+                                                    if (backStack.lastOrNull() == route)
+                                                        backStack.removeLastOrNull()
+                                                },
                                                 onOpenSource = ::openRecipePage,
                                                 // A recipe gone since it was listed leaves the
                                                 // list.
@@ -395,6 +420,8 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     authorRequest?.let { request -> key(request) { AuthorSheet(request) } }
+                    if (addRecipeOpen)
+                        AddRecipeSheet(onAdd = ::addRecipe, onDismiss = { addRecipeOpen = false })
                     FeedbackSnackbar(
                         feedback,
                         onAction = ::onFeedbackAction,
@@ -483,7 +510,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Edit reopens the form with the rejected author, and Try again resends it, but only for a book
-     * still listed without an author and not being deleted.
+     * still listed without an author and not being deleted. A recipe link's Try again sends it
+     * again as a new import.
      */
     private fun onFeedbackAction(message: FeedbackMessage) {
         when (message) {
@@ -493,8 +521,19 @@ class MainActivity : ComponentActivity() {
                 }
             is FeedbackMessage.AuthorFailed ->
                 books.addAuthor(message.bookId, message.author, retry = true)
+            is FeedbackMessage.RecipeImportFailed -> addRecipe(message.url)
             is FeedbackMessage.DeletionFailed -> Unit
         }
+    }
+
+    /**
+     * Sends a checked recipe link, then shows Recipes All at the top, where the link is already
+     * reading, without waiting for the server.
+     */
+    private fun addRecipe(url: String) {
+        recipes.add(url)
+        selectSection(Section.Recipes)
+        revealRecipes = true
     }
 
     /**

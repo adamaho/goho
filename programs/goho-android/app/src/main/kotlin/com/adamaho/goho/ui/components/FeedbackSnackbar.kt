@@ -1,5 +1,6 @@
 package com.adamaho.goho.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -207,8 +208,8 @@ private class FeedbackCopy(
 )
 
 /**
- * Deletion failures show the red trash; author failures the orange warning, or no Wi-Fi when the
- * request got no answer and the device has no network.
+ * Deletion failures show the red trash; author and Add recipe failures the orange warning, or no
+ * Wi-Fi when the request got no answer and the device has no network.
  */
 @Composable
 private fun feedbackCopy(message: FeedbackMessage): FeedbackCopy {
@@ -229,6 +230,8 @@ private fun feedbackCopy(message: FeedbackMessage): FeedbackCopy {
                             DeletionKind.Receipt -> R.string.feedback_receipt_delete_failed
                             DeletionKind.BookUpload,
                             DeletionKind.ReceiptUpload -> R.string.feedback_scan_delete_failed
+                            DeletionKind.Recipe -> R.string.feedback_recipe_delete_failed
+                            DeletionKind.RecipeUpload -> R.string.feedback_import_delete_failed
                         }
                     ),
                 detail = stringResource(R.string.feedback_delete_failed_detail),
@@ -247,17 +250,37 @@ private fun feedbackCopy(message: FeedbackMessage): FeedbackCopy {
                 icon = icon(warning),
             )
         is FeedbackMessage.AuthorFailed ->
-            FeedbackCopy(
-                title = stringResource(R.string.feedback_author_failed),
-                detail =
-                    stringResource(
-                        if (message.offline) R.string.feedback_offline_detail
-                        else R.string.feedback_hiccup_detail
-                    ),
-                action = stringResource(R.string.feedback_try_again),
-                container = c.attentionContainer,
-                tint = c.attention,
-                icon = icon(if (message.offline) offline else warning),
+            failedCopy(
+                R.string.feedback_author_failed,
+                message.offline,
+                icon(if (message.offline) offline else warning),
+            )
+        is FeedbackMessage.RecipeImportFailed ->
+            failedCopy(
+                R.string.feedback_recipe_add_failed,
+                message.offline,
+                icon(if (message.offline) offline else warning),
             )
     }
+}
+
+/** A save or send that didn't go through, with Try again. */
+@Composable
+private fun failedCopy(
+    @StringRes title: Int,
+    offline: Boolean,
+    icon: @Composable (Modifier, Color) -> Unit,
+): FeedbackCopy {
+    val c = GohoTheme.colors
+    return FeedbackCopy(
+        title = stringResource(title),
+        detail =
+            stringResource(
+                if (offline) R.string.feedback_offline_detail else R.string.feedback_hiccup_detail
+            ),
+        action = stringResource(R.string.feedback_try_again),
+        container = c.attentionContainer,
+        tint = c.attention,
+        icon = icon,
+    )
 }

@@ -16,6 +16,8 @@ internal enum class DeletionKind {
     BookUpload,
     Receipt,
     ReceiptUpload,
+    Recipe,
+    RecipeUpload,
 }
 
 internal data class DeletionKey(val kind: DeletionKind, val id: String)

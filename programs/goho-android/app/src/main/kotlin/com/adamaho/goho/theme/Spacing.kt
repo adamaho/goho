@@ -145,7 +145,9 @@ object GohoSpacing {
     val headerHeight = 44.dp
     val textActionHorizontal = 12.dp // Lavender text actions: Add author, Edit and Try again.
     val textActionIconGap = 6.dp
-    val fieldHorizontal = 16.dp // Add author's name field.
+    val fieldHorizontal = 16.dp // Add author's name field and Add recipe's link field.
+    val fieldLabelGap = 8.dp // Add recipe's visible “Link” label above its field.
+    val fieldErrorTop = 6.dp // A field's reason it can't be used, below the field.
     val snackbarStart = 12.dp
     val snackbarEnd = 4.dp // The 44dp dismiss target supplies the rest of the end inset.
     val snackbarVertical = 12.dp

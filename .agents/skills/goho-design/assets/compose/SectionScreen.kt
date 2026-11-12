@@ -47,7 +47,8 @@ enum class Section(@StringRes val title: Int, @DrawableRes val icon: Int) {
  * page and scroll positions, is kept while another section is shown. [content] receives whether a
  * menu is open, so it can pause paging and pull-to-refresh. Null counts are unknown and omitted. A
  * modal overlay that owns the screen fades Add with [addAlpha]; at 0 Add is also hidden from touch,
- * focus and accessibility.
+ * focus and accessibility. Add offers Add recipe ([onAddRecipe]), Scan book and Scan receipt, in
+ * that order on every section; choosing one closes the menu first.
  *
  * A section with a [search] shows its button at the end of the title row while [canSearch]. Open
  * search replaces the title row with Close search and the field, and Add gives way; [content] shows
@@ -61,6 +62,7 @@ fun SectionScreen(
     bookCount: Int?,
     recipeCount: Int?,
     isOpeningScanner: Boolean,
+    onAddRecipe: () -> Unit,
     onScanBook: () -> Unit,
     onScanReceipt: () -> Unit,
     modifier: Modifier = Modifier,
@@ -208,11 +210,13 @@ fun SectionScreen(
                 sections.SaveableStateProvider(section.name) { content(menuOpen) }
             }
         }
-        // One persistent action belongs to every section, outside section and page transitions.
+        // One persistent action belongs to every section, outside section and page transitions. Its
+        // actions keep the same order on every section.
         AddMenu(
             open = addMenuOpen,
             actions =
                 listOf(
+                    AddMenuAction(R.string.recipe_add, R.drawable.ic_tag_meals, onAddRecipe),
                     AddMenuAction(R.string.scan_book, R.drawable.ic_add_book, onScanBook),
                     AddMenuAction(R.string.scan_receipt, R.drawable.ic_add_receipt, onScanReceipt),
                 ),

@@ -183,11 +183,15 @@ the generated `encodeDefaults` and `ignoreUnknownKeys` settings. It also sets:
 
 ## Code organization and style
 
-Keep this app small. `MainActivity` owns the Android entry point, receipt data
-and the selected section. `ui/main` owns the screens: the shared `SectionScreen`
-root with its Receipts, Books and Recipes content, `BookListController` and
-`RecipeListController` for Books and Recipes data, receipt and recipe details and
-the scan preview. `theme` owns Compose theming. As
+Keep this app small. `MainActivity` owns the Android entry point, receipt data,
+the selected section and the sheets opened from the app root, such as Add recipe.
+`ui/main` owns the screens: the shared `SectionScreen` root with its Receipts,
+Books and Recipes content, `BookListController` and `RecipeListController` for
+Books and Recipes data, receipt and recipe details and the scan preview. The
+controllers also own their sections' background requests, such as deletions,
+Add author and Add recipe's link imports, in the activity's scope, so the requests
+outlive the sheet or screen that started them; `PendingDeletions` and `Feedback`
+are shared by every section. `theme` owns Compose theming. As
 features grow, follow the official [Guide to app architecture](https://developer.android.com/topic/architecture)
 and [architecture recommendations](https://developer.android.com/topic/architecture/recommendations):
 keep UI state and business data separate, use a screen-level `ViewModel` when

@@ -19,9 +19,20 @@ data class RecipeListState(
     val refreshError: Boolean = false,
 )
 
-/** One Recipes row: a saved recipe, or a link import that has not produced one. */
+/**
+ * One Recipes row: a saved recipe, a link import that has not produced one, or a link still being
+ * sent.
+ */
 sealed interface RecipeListEntry {
     val key: String
+
+    /**
+     * A link sent from Add recipe that the server hasn't answered yet, shown as reading. [attempt]
+     * is a local sequence number for this send, not a server ID; the row has no actions.
+     */
+    data class Adding(val attempt: Long, val url: String) : RecipeListEntry {
+        override val key = "adding:$attempt"
+    }
 
     data class Saved(val recipe: RecipeSummary) : RecipeListEntry {
         override val key = "recipe:${recipe.id}"

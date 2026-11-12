@@ -49,7 +49,7 @@ internal fun BookSearchResults(
         remember(keyed, key) {
             keyed.filter { (_, title, author) -> key in title || key in author }.map { it.first }
         }
-    val displayed = rememberRemovingEntries(matches, resetKey = key)
+    val displayed = rememberRemovingEntries(matches, BookListEntry::key, resetKey = key)
     val noMatches = key.isNotEmpty() && displayed.isEmpty()
     val listState = rememberLazyListState()
     LaunchedEffect(key) { listState.scrollToItem(0) }

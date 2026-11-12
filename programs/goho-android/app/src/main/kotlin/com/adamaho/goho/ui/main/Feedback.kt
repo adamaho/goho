@@ -13,6 +13,13 @@ internal sealed interface FeedbackMessage {
     /** [author] wasn't saved; Try again sends it again. */
     data class AuthorFailed(val bookId: String, val author: String, val offline: Boolean) :
         FeedbackMessage
+
+    /**
+     * Add recipe's link [url] wasn't accepted, or no answer arrived; Try again sends it as a new
+     * import. [attempt] identifies the failed send, so two failures of one link stay distinct.
+     */
+    data class RecipeImportFailed(val attempt: Long, val url: String, val offline: Boolean) :
+        FeedbackMessage
 }
 
 /**
