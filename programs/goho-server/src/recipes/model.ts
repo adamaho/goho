@@ -20,6 +20,29 @@ export const RecipeImageContentType = Schema.Literals(["image/jpeg", "image/png"
  */
 export type RecipeImageContentType = typeof RecipeImageContentType.Type;
 
+const startsWith = (bytes: Uint8Array, offset: number, signature: ReadonlyArray<number>) =>
+  signature.every((byte, index) => bytes[offset + index] === byte);
+
+/**
+ * A photo's type from its leading bytes, whatever its name or declared type
+ * says; null unless it starts like a JPEG, PNG or WebP image. Only the
+ * signature is checked, not the whole image.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const sniffPhotoContentType = (bytes: Uint8Array): RecipeImageContentType | null => {
+  if (startsWith(bytes, 0, [0xff, 0xd8, 0xff])) return "image/jpeg";
+  if (startsWith(bytes, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
+  if (
+    startsWith(bytes, 0, [0x52, 0x49, 0x46, 0x46]) &&
+    startsWith(bytes, 8, [0x57, 0x45, 0x42, 0x50])
+  ) {
+    return "image/webp";
+  }
+  return null;
+};
+
 /**
  * A recipe photo already in file storage: its file ID and MIME type.
  *
@@ -80,8 +103,8 @@ export interface PageContent {
 }
 
 /**
- * A downloaded recipe photo, not yet stored. Its type comes from its bytes,
- * not the server's headers.
+ * A downloaded or sent recipe photo, not yet stored. Its type comes from its
+ * bytes, not the sender's headers.
  *
  * @category models
  * @since 0.1.0

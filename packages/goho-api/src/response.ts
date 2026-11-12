@@ -2,8 +2,8 @@ import { Schema } from "effect";
 import { HttpApiError } from "effect/http-api";
 
 /**
- * An upload went over a size or part-count limit. Receipt and book uploads share
- * this one problem because they share one upload policy.
+ * An upload went over a size or part-count limit. Receipt, book cover and recipe
+ * photo uploads share this one problem because they share one upload policy.
  *
  * @category errors
  * @since 0.1.0
@@ -12,7 +12,9 @@ export class UploadLimitExceeded extends HttpApiError.Problem<UploadLimitExceede
   "UploadLimitExceeded",
   { type: "goho:problem:upload-limit-exceeded", status: 413, title: "Upload limit exceeded" },
   {},
-  { description: "The upload exceeds a size or part-count limit, bud. Nothing is queued." },
+  {
+    description: "The upload exceeds a size or part-count limit, bud. Nothing is saved or queued.",
+  },
 ) {}
 
 /**

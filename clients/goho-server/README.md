@@ -52,7 +52,7 @@ Recipe routes fail with `RecipeNotFound`, `RecipeImageNotFound`, or
 `RecipesUnavailable`; recipe import routes fail with `RecipeUploadNotFound`,
 `RecipeUploadConflict`, or `RecipeUploadsUnavailable`.
 
-Both image upload routes also fail with `UploadLimitExceeded`, exported from
+The receipt upload, book cover upload and recipe photo routes also fail with `UploadLimitExceeded`, exported from
 `@goho/goho-server-client/response`, when an upload goes over a size or part-count
 limit. Its `detail` says what to send instead.
 

@@ -1,9 +1,10 @@
 import { api } from "@goho/goho-api/api";
 import { BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
 import { ReceiptUploadsUnavailable } from "@goho/goho-api/receipt-uploads";
+import { RecipesUnavailable } from "@goho/goho-api/recipes";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
-import { HttpMiddleware, HttpRouter } from "effect/http";
+import { HttpMiddleware, HttpRouter, HttpServerResponse } from "effect/http";
 import {
   HttpApiBuilder,
   HttpApiError,
@@ -17,6 +18,7 @@ import * as Books from "#src/books/service.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
 import * as RecipeUploads from "#src/recipe-uploads/service.ts";
+import { sniffPhotoContentType } from "#src/recipes/model.ts";
 import * as Recipes from "#src/recipes/service.ts";
 
 import * as ProblemDetails from "./problem-details.ts";
@@ -150,7 +152,31 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
 const RecipesLive = HttpApiBuilder.group(api, "recipes", (handlers) =>
   Effect.gen(function* () {
     const recipes = yield* Recipes.Service;
+    const fileSystem = yield* FileSystem.FileSystem;
     return handlers
+      .handle("putImage", ({ params, payload }) =>
+        Effect.gen(function* () {
+          const bytes = yield* fileSystem
+            .readFile(payload.file.path)
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.logError("Temporary recipe photo could not be read", cause).pipe(
+                  Effect.andThen(Effect.fail(new RecipesUnavailable())),
+                ),
+              ),
+            );
+          const contentType = sniffPhotoContentType(bytes);
+          if (contentType === null) {
+            return yield* new HttpApiError.BadRequestProblem({
+              detail: "Send one JPEG, PNG, or WebP image.",
+            });
+          }
+          const outcome = yield* recipes.putImage(params.recipeId, { bytes, contentType });
+          // Both successes are empty, so the status is the only thing to choose.
+          return HttpServerResponse.empty({ status: outcome === "created" ? 201 : 204 });
+        }),
+      )
+      .handle("deleteImage", ({ params }) => recipes.deleteImage(params.recipeId))
       .handle("list", () => recipes.list.pipe(Effect.map(withData)))
       .handle("get", ({ params }) => recipes.get(params.recipeId).pipe(Effect.map(withData)))
       .handle("create", ({ payload }) => recipes.create(payload).pipe(Effect.map(withData)))

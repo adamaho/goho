@@ -75,6 +75,18 @@ export interface Interface {
     recipeId: RecipeId,
   ) => Effect.Effect<Option.Option<RecipeImage>, PersistenceError>;
   /**
+   * Locks the recipe, sets its photo, or removes it for `null`, and returns the
+   * file of the photo it had, for the caller to remove once this commits; none
+   * when the recipe does not exist. The lock serializes photo changes with each
+   * other and with deletion, so the returned file is never the current one.
+   * Removing a missing photo changes nothing, so `updatedAt` stays. Inside a
+   * caller's transaction it joins it as a savepoint.
+   */
+  readonly setImage: (
+    recipeId: RecipeId,
+    image: RecipeImage | null,
+  ) => Effect.Effect<Option.Option<{ readonly previousFileId: FileId | null }>, PersistenceError>;
+  /**
    * Deletes the recipe and every upload that linked it, with their URLs, and
    * returns its photo's file ID for the caller to remove before committing;
    * none when the recipe does not exist. Uploads that did not link it stay. A
@@ -194,6 +206,23 @@ export const layer = Layer.effect(
       `,
     });
 
+    const lockImage = SqlSchema.findOneOption({
+      Request: RecipeId,
+      Result: Schema.Struct({ previousFileId: Schema.NullOr(FileId) }),
+      execute: (recipeId) => sql`
+        SELECT image_file_id AS "previousFileId" FROM recipes WHERE id = ${recipeId} FOR UPDATE
+      `,
+    });
+
+    const updateImage = SqlSchema.void({
+      Request: Schema.Struct({ recipeId: RecipeId, image: Schema.NullOr(RecipeImage) }),
+      execute: ({ recipeId, image }) => sql`
+        UPDATE recipes
+        SET image_file_id = ${image?.fileId ?? null}, image_content_type = ${image?.contentType ?? null}
+        WHERE id = ${recipeId}
+      `,
+    });
+
     // Only uploads that linked the recipe have its ID; their URL rows cascade.
     const deleteUploads = SqlSchema.void({
       Request: RecipeId,
@@ -267,6 +296,21 @@ export const layer = Layer.effect(
       Effect.mapError((cause) => new PersistenceError({ operation: "findImage", cause })),
     );
 
+    const setImage = Effect.fn("@goho/RecipeRepository.setImage")(
+      (recipeId: RecipeId, image: RecipeImage | null) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            const locked = yield* lockImage(recipeId);
+            if (Option.isNone(locked)) return locked;
+            if (image !== null || locked.value.previousFileId !== null) {
+              yield* updateImage({ recipeId, image });
+            }
+            return locked;
+          }),
+        ),
+      Effect.mapError((cause) => new PersistenceError({ operation: "setImage", cause })),
+    );
+
     const deleteRecipe = Effect.fn("@goho/RecipeRepository.deleteRecipe")(
       (recipeId: RecipeId) =>
         sql.withTransaction(
@@ -289,6 +333,7 @@ export const layer = Layer.effect(
       findImage,
       findOrCreateByUrl,
       list,
+      setImage,
     });
   }),
 );

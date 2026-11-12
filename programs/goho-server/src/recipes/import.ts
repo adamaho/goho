@@ -5,12 +5,7 @@ import { Effect, Option } from "effect";
 import * as WebFetch from "#src/services/web-fetch.ts";
 
 import * as RecipeExtraction from "./extraction.ts";
-import {
-  type ImportedRecipe,
-  ImportError,
-  type Photo,
-  type RecipeImageContentType,
-} from "./model.ts";
+import { type ImportedRecipe, ImportError, type Photo, sniffPhotoContentType } from "./model.ts";
 import * as Page from "./page.ts";
 
 const pageLimits = { maxBytes: 5 * 1024 * 1024, timeout: "15 seconds" } as const;
@@ -18,26 +13,11 @@ const photoLimits = { maxBytes: 10 * 1024 * 1024, timeout: "15 seconds" } as con
 
 const htmlTypes: ReadonlySet<string> = new Set(["text/html", "application/xhtml+xml"]);
 
-const startsWith = (bytes: Uint8Array, offset: number, signature: ReadonlyArray<number>) =>
-  signature.every((byte, index) => bytes[offset + index] === byte);
-
-const sniffPhoto = (bytes: Uint8Array): RecipeImageContentType | null => {
-  if (startsWith(bytes, 0, [0xff, 0xd8, 0xff])) return "image/jpeg";
-  if (startsWith(bytes, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png";
-  if (
-    startsWith(bytes, 0, [0x52, 0x49, 0x46, 0x46]) &&
-    startsWith(bytes, 8, [0x57, 0x45, 0x42, 0x50])
-  ) {
-    return "image/webp";
-  }
-  return null;
-};
-
 // A recipe never waits on its photo: every failure here is logged and dropped.
 const fetchPhoto = (http: WebFetch.Interface, url: string) =>
   http.get({ url, accept: "image/jpeg, image/png, image/webp", ...photoLimits }).pipe(
     Effect.map((response) =>
-      Option.map(Option.fromNullishOr(sniffPhoto(response.body)), (contentType) => ({
+      Option.map(Option.fromNullishOr(sniffPhotoContentType(response.body)), (contentType) => ({
         bytes: response.body,
         contentType,
       })),

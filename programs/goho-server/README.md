@@ -128,8 +128,8 @@ a limit returns HTTP 413 with this `application/problem+json` body; nothing is q
 }
 ```
 
-The typed client decodes this as `UploadLimitExceeded`, shared by receipt and book
-uploads. Deploy the server and updated CLI/MCP together; the old `{"error":...}`
+The typed client decodes this as `UploadLimitExceeded`, shared by receipt, book
+cover and recipe photo uploads. Deploy the server and updated CLI/MCP together; the old `{"error":...}`
 upload-limit body is gone. Validation and receipt problems are described above.
 Storage or queue failures return HTTP 500 with `ReceiptUploadsUnavailable`.
 
@@ -342,6 +342,21 @@ in [OpenAPI](http://127.0.0.1:3000/docs) for every field.
   (`image/jpeg`, `image/png` or `image/webp`) and `Cache-Control: private,
   no-store`. A recipe without a photo, or a missing recipe, returns HTTP 404 with
   `RecipeImageNotFound`.
+- `PUT /recipes/:recipeId/image` takes a multipart upload with one `file` field
+  under the [receipt upload limits](#upload-a-receipt), and makes it the recipe's only photo,
+  replacing an imported or earlier one. It returns HTTP 201 when the recipe had
+  no photo and HTTP 204 when it replaced one, both with no body; `hasImage` and
+  `updatedAt` change with it. The image's bytes must start like a JPEG, PNG or
+  WebP image, whatever its file name or MIME type, or the request returns HTTP
+  400 and the photo stays. Upload limits return HTTP 413 with
+  `UploadLimitExceeded`, a missing recipe HTTP 404 with `RecipeNotFound`, and a
+  storage or database failure HTTP 500 with `RecipesUnavailable`; each keeps the
+  previous photo. When photo changes race, the last to commit wins. A later
+  import of the recipe's page keeps the photo.
+- `DELETE /recipes/:recipeId/image` removes the photo and returns HTTP 204, even
+  when there is none. A missing recipe returns HTTP 404 with `RecipeNotFound`.
+  The replaced or removed file is deleted after the change commits; if that
+  fails, the change stands and the file is left behind, with a server log entry.
 - `DELETE /recipes/:recipeId` removes the recipe with every import that linked
   it and its photo, and returns HTTP 204. Queued, processing or failed imports of
   the page stay. As with receipts, a storage or commit failure after the photo is

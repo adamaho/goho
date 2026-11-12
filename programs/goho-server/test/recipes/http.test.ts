@@ -31,7 +31,7 @@ import * as Http from "#src/http/routes.ts";
 import * as ReceiptUploads from "#src/receipt-uploads/service.ts";
 import * as Receipts from "#src/receipts/service.ts";
 import * as RecipeUploads from "#src/recipe-uploads/service.ts";
-import type { RecipeImageContentType } from "#src/recipes/model.ts";
+import type { Photo, RecipeImageContentType } from "#src/recipes/model.ts";
 import * as Recipes from "#src/recipes/service.ts";
 
 const whole = { numerator: 1, denominator: 1 };
@@ -113,6 +113,8 @@ const testLayer = (
               [RecipeId],
               { readonly bytes: Uint8Array; readonly contentType: RecipeImageContentType }
             >("getImage", photo),
+            putImage: record<[RecipeId, Photo], "created" | "replaced">("putImage", "created"),
+            deleteImage: record<[RecipeId], void>("deleteImage", undefined),
             ...recipes,
           }),
         ),
@@ -212,6 +214,77 @@ const captureClient = Effect.gen(function* () {
   return { client, responses };
 });
 
+const photoForm = (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+};
+
+const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]);
+const pngFile = new File([png], "photo.png", { type: "image/png" });
+
+it.effect("sets and removes recipe photos with empty 201 and 204 responses", () => {
+  const sent: Array<unknown> = [];
+  let puts = 0;
+  const { calls, layer } = testLayer({
+    putImage: (recipeId, { bytes, contentType }) =>
+      Effect.sync(() => {
+        sent.push([recipeId, [...bytes], contentType]);
+        return puts++ % 2 === 0 ? "created" : "replaced";
+      }),
+  });
+  return Effect.gen(function* () {
+    // The bytes are a JPEG, whatever the file's name and declared type say.
+    const jpeg = [0xff, 0xd8, 0xff, 0xe0, 1, 2];
+    const form = photoForm(
+      new File([new Uint8Array(jpeg)], "photo.png", { type: "application/octet-stream" }),
+    );
+    const path = `/recipes/${recipe.id}/image`;
+    for (const status of [201, 204]) {
+      const response = yield* HttpClient.put(path, { body: HttpBody.formData(form) });
+      expect([response.status, yield* response.text]).toEqual([status, ""]);
+    }
+
+    // The typed client decodes both empty successes, and the removal.
+    const { client, responses } = yield* captureClient;
+    expect(yield* client.recipes.putImage({ ...recipeParams, payload: form })).toBeUndefined();
+    expect(yield* client.recipes.putImage({ ...recipeParams, payload: form })).toBeUndefined();
+    expect(yield* client.recipes.deleteImage(recipeParams)).toBeUndefined();
+    expect(responses.map((response) => response.status)).toEqual([201, 204, 204]);
+    const removed = yield* HttpClient.del(path);
+    expect([removed.status, yield* removed.text]).toEqual([204, ""]);
+
+    expect(sent).toEqual(Array.from({ length: 4 }, () => [recipe.id, jpeg, "image/jpeg"]));
+    expect(calls).toEqual([
+      ["deleteImage", recipe.id],
+      ["deleteImage", recipe.id],
+    ]);
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("rejects photos whose bytes are not a JPEG, PNG or WebP image", () => {
+  const { calls, layer } = testLayer();
+  return Effect.gen(function* () {
+    for (const file of [
+      new File(["not an image"], "photo.png", { type: "image/png" }),
+      new File([], "photo.jpg", { type: "image/jpeg" }),
+      new File(["GIF89a"], "photo.gif", { type: "image/gif" }),
+    ]) {
+      const response = yield* HttpClient.put(`/recipes/${recipe.id}/image`, {
+        body: HttpBody.formData(photoForm(file)),
+      });
+      expect(response.status, file.name).toBe(400);
+      expect(yield* response.json).toEqual({
+        type: "about:blank",
+        status: 400,
+        title: "Bad Request",
+        detail: "Send one JPEG, PNG, or WebP image.",
+      });
+    }
+    expect(calls).toEqual([]);
+  }).pipe(Effect.provide(layer));
+});
+
 it.effect("returns 202 with the new import for every submission", () => {
   const { calls, layer } = testLayer();
   return Effect.gen(function* () {
@@ -291,6 +364,10 @@ it.effect("rejects invalid recipes, imports, and IDs before the services", () =>
       for (const request of [
         HttpClient.get(`/recipes/${id}`),
         HttpClient.get(`/recipes/${id}/image`),
+        HttpClient.put(`/recipes/${id}/image`, {
+          body: HttpBody.formData(photoForm(pngFile)),
+        }),
+        HttpClient.del(`/recipes/${id}/image`),
         HttpClient.del(`/recipes/${id}`),
       ]) {
         expect((yield* request).status, id).toBe(400);
@@ -397,6 +474,30 @@ const problemCases: ReadonlyArray<{
     fixture: testLayer({ getImage: () => Effect.fail(new RecipesUnavailable()) }),
     expected: recipesUnavailable,
     call: (client) => client.recipes.getImage(recipeParams),
+  },
+  {
+    name: "set photo: missing",
+    fixture: testLayer({ putImage: () => Effect.fail(new RecipeNotFound()) }),
+    expected: recipeNotFound,
+    call: (client) => client.recipes.putImage({ ...recipeParams, payload: photoForm(pngFile) }),
+  },
+  {
+    name: "set photo: unavailable",
+    fixture: testLayer({ putImage: () => Effect.fail(new RecipesUnavailable()) }),
+    expected: recipesUnavailable,
+    call: (client) => client.recipes.putImage({ ...recipeParams, payload: photoForm(pngFile) }),
+  },
+  {
+    name: "remove photo: missing",
+    fixture: testLayer({ deleteImage: () => Effect.fail(new RecipeNotFound()) }),
+    expected: recipeNotFound,
+    call: (client) => client.recipes.deleteImage(recipeParams),
+  },
+  {
+    name: "remove photo: unavailable",
+    fixture: testLayer({ deleteImage: () => Effect.fail(new RecipesUnavailable()) }),
+    expected: recipesUnavailable,
+    call: (client) => client.recipes.deleteImage(recipeParams),
   },
   {
     name: "import recipe: unavailable",

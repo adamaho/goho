@@ -302,6 +302,27 @@ the read instead of being dropped or coerced.
   import of the page saves a new recipe.
 - Only a failed upload can be deleted on its own. Deleting it is not needed to
   import the page again: a new submission is a new upload.
+- Setting or removing a photo locks the recipe, as deletion does, reads the file
+  it had, and updates its file and type, so concurrent changes and deletion
+  apply one at a time and the last commit wins. Removing a missing photo updates
+  nothing, so `updated_at` stays. Imports never change a saved recipe's photo.
+
+### Recipe photos
+
+`PUT` and `DELETE /recipes/:recipeId/image` change the photo directly, without
+an upload record, job or AI. The route reads the multipart file under the shared
+image upload limits and takes its type from its leading bytes, the import's
+JPEG, PNG and WebP signatures, ignoring the declared name and type.
+
+- The new file is stored before the change. If the recipe is missing or the
+  change fails, it is removed again and the previous photo stays.
+- The file a change replaced or removed is deleted after it commits, unlike
+  recipe deletion, so a failure can never leave the recipe pointing at a missing
+  file. A file that cannot be deleted is logged and left unreferenced.
+- Both operations are uninterruptible once started, so a client hanging up
+  cannot strand a stored file; they hold no network or AI work. A crash between
+  storing and committing, or before a superseded file is removed, can leave an
+  unreferenced file.
 
 ### Recipe imports
 
@@ -414,8 +435,9 @@ processing uploads whose job failed in their own queue as `failed` with
 uploads and existing failure codes stay unchanged. A failed pass is logged and
 retried at the next interval.
 
-Stored files are not part of SQL transactions. Upload deletion and book, receipt
-or recipe deletion remove files before committing: a storage failure rolls the
+Stored files are not part of SQL transactions. Recipe photo changes remove the
+old file after committing (see [recipe photos](#recipe-photos)). Upload
+deletion and book, receipt or recipe deletion remove files before committing: a storage failure rolls the
 rows back for a retry, but files already removed stay removed, and a failed
 commit can leave rows whose files are gone until deletion is retried.
 

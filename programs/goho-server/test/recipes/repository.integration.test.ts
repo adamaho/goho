@@ -398,6 +398,46 @@ it.effect("fails an import that links a recipe deleted while it waited", () =>
   }).pipe(Effect.provide(DatabaseLive)),
 );
 
+it.effect("changes a recipe's photo one writer at a time, behind its deletion", () =>
+  Effect.gen(function* () {
+    const recipes = yield* RecipeRepository.Service;
+    const saved = yield* recipes.create(pancakes);
+    const otherPhoto = { fileId: FileId.make("photo-2"), contentType: "image/png" } as const;
+    const current = recipes.findById(saved.id).pipe(Effect.map(Option.getOrThrow));
+
+    expect(yield* recipes.setImage(saved.id, photo)).toEqual(Option.some({ previousFileId: null }));
+    const withPhoto = yield* current;
+    expect(withPhoto.hasImage).toBe(true);
+    expect(withPhoto.updatedAt).not.toBe(saved.updatedAt);
+    expect(yield* recipes.findImage(saved.id)).toEqual(Option.some(photo));
+
+    // A waiting change sees the one that committed first, so it never returns the current file.
+    const [replaced, removed] = yield* behindOpenTransaction(
+      recipes.setImage(saved.id, otherPhoto),
+      recipes.setImage(saved.id, null),
+      "FROM recipes WHERE id",
+    );
+    expect(replaced).toEqual(Option.some({ previousFileId: photo.fileId }));
+    expect(removed).toEqual(Option.some({ previousFileId: otherPhoto.fileId }));
+    const withoutPhoto = yield* current;
+    expect(withoutPhoto.hasImage).toBe(false);
+    expect(yield* recipes.findImage(saved.id)).toEqual(Option.none());
+
+    // Removing a missing photo changes nothing.
+    expect(yield* recipes.setImage(saved.id, null)).toEqual(Option.some({ previousFileId: null }));
+    expect(yield* current).toEqual(withoutPhoto);
+
+    const [deleted, set] = yield* behindOpenTransaction(
+      recipes.delete(saved.id),
+      recipes.setImage(saved.id, photo),
+      "FROM recipes WHERE id",
+    );
+    expect(deleted).toEqual(Option.some({ imageFileId: null }));
+    expect(set).toEqual(Option.none());
+    expect(yield* counts).toEqual({ recipes: 0, uploads: 0, urls: 0 });
+  }).pipe(Effect.provide(DatabaseLive)),
+);
+
 it.effect("deletes the upload that linked a recipe while its deletion waited", () =>
   Effect.gen(function* () {
     const recipes = yield* RecipeRepository.Service;

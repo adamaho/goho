@@ -20,7 +20,9 @@ const isProblem = ({ body }: HttpServerResponse.HttpServerResponse) =>
   body.contentType?.split(";")[0]?.trim().toLowerCase() === ProblemDetails.contentType;
 
 const isUploadRoute = ({ route }: HttpRouter.RouteContext["Service"]) =>
-  route.method === "POST" && (route.path === "/book-uploads" || route.path === "/receipt-uploads");
+  (route.method === "POST" &&
+    (route.path === "/book-uploads" || route.path === "/receipt-uploads")) ||
+  (route.method === "PUT" && route.path === "/recipes/:recipeId/image");
 
 const problemFor = (status: number) =>
   Effect.gen(function* () {
@@ -40,8 +42,8 @@ const problemFor = (status: number) =>
  * `about:blank`, the response status and Node's status text as its title, never
  * the original body. Effect sends empty or plain-text errors for unknown routes,
  * unsupported content types, multipart and other defects, and interruptions,
- * which the Problem Details middleware never sees. Upload-limit 413s on the upload routes
- * become `UploadLimitExceeded`. Existing problems, successes and client aborts
+ * which the Problem Details middleware never sees. Upload-limit 413s on the image upload
+ * routes become `UploadLimitExceeded`. Existing problems, successes and client aborts
  * (499, which cannot be delivered) are left alone; status, headers and cookies
  * are kept.
  *

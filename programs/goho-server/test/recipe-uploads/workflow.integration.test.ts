@@ -2,7 +2,7 @@ import { NodeCrypto, NodeHttpServer, NodeServices } from "@effect/platform-node"
 import { it } from "@effect/vitest";
 import { Ai, Postgres } from "@goho/core";
 import { RecipeUpload, RecipeUploadId } from "@goho/goho-api/recipe-uploads";
-import { RecipeNotFound, RecipeUrl } from "@goho/goho-api/recipes";
+import { RecipeId, RecipeNotFound, RecipeUrl } from "@goho/goho-api/recipes";
 import * as Client from "@goho/goho-server-client/client";
 import {
   Config,
@@ -588,6 +588,41 @@ it.effect("deletes only a failed import", () =>
   }).pipe(Effect.provide(TestLive)),
 );
 
+const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 4, 5, 6]);
+
+it.effect("keeps one photo file per recipe through racing and failed photo changes", () =>
+  Effect.gen(function* () {
+    const fakes = yield* Fakes;
+    const recipes = yield* Recipes.Service;
+    const { id } = yield* recipes.create(toast);
+    const photoOf = recipes
+      .getImage(id)
+      .pipe(Effect.map(({ bytes, contentType }) => [new Uint8Array(bytes), contentType]));
+
+    // Both land; the one committed last wins and the other's file is removed.
+    const outcomes = yield* Effect.all(
+      [
+        recipes.putImage(id, { bytes: png, contentType: "image/png" }),
+        recipes.putImage(id, { bytes: jpeg, contentType: "image/jpeg" }),
+      ],
+      { concurrency: "unbounded" },
+    );
+    expect([...outcomes].sort()).toEqual(["created", "replaced"]);
+    expect(yield* photoOf).toEqual(
+      outcomes[0] === "replaced" ? [png, "image/png"] : [jpeg, "image/jpeg"],
+    );
+    expect(yield* storedFiles).toHaveLength(1);
+
+    // A photo that cannot be stored leaves the current one in place.
+    const before = yield* Effect.all([photoOf, storedFiles, recipes.get(id)]);
+    yield* Ref.set(fakes.failPut, true);
+    expect(yield* failureTag(recipes.putImage(id, { bytes: png, contentType: "image/png" }))).toBe(
+      "RecipesUnavailable",
+    );
+    expect(yield* Effect.all([photoOf, storedFiles, recipes.get(id)])).toEqual(before);
+  }).pipe(Effect.provide(TestLive)),
+);
+
 // The routes over the real recipe services, queue, and database.
 const HttpLive = HttpRouter.serve(
   Http.layer.pipe(
@@ -684,4 +719,116 @@ it.effect("imports, serves, and deletes recipes over HTTP", () =>
     }
     expect(yield* storedFiles).toEqual([]);
   }).pipe(Effect.provide(HttpLive)),
+);
+
+const photoForm = (file: File, field = "file") => {
+  const form = new FormData();
+  form.append(field, file);
+  return form;
+};
+
+// A live clock, as the oversized upload streams through a real socket.
+it.live(
+  "sets, replaces, serves, and removes recipe photos over HTTP",
+  () =>
+    Effect.gen(function* () {
+      const client = yield* Client.make("");
+      const queue = yield* RecipeUploadQueue.Service;
+      yield* submit;
+      yield* queue.take(Worker.process);
+      const {
+        data: [imported],
+      } = yield* client.recipes.list();
+      const recipeId = Option.getOrThrow(Option.fromNullishOr(imported?.id));
+      const path = `/recipes/${recipeId}/image`;
+      const put = (form: FormData, to = path) =>
+        HttpClient.put(to, { body: HttpBody.formData(form) });
+      const served = Effect.gen(function* () {
+        const response = yield* HttpClient.get(path);
+        return [response.status, response.headers["content-type"], yield* response.arrayBuffer];
+      });
+      const importedFiles = yield* storedFiles;
+
+      // A sent photo replaces the imported one, whatever its declared type.
+      const replaced = yield* put(photoForm(new File([jpeg], "photo.png", { type: "image/png" })));
+      expect([replaced.status, yield* replaced.text]).toEqual([204, ""]);
+      const before = yield* Effect.all([served, storedFiles]);
+      expect(before[0]).toEqual([200, "image/jpeg", jpeg.buffer]);
+      expect(before[1]).toHaveLength(1);
+      expect(before[1]).not.toEqual(importedFiles);
+      const { data: withPhoto } = yield* client.recipes.get({ params: { recipeId } });
+      expect(withPhoto.hasImage).toBe(true);
+      expect(withPhoto.updatedAt).not.toBe(imported?.updatedAt);
+
+      // A later import of the page links the recipe and keeps the sent photo.
+      const later = yield* submitSource(samePage);
+      yield* queue.take(Worker.process);
+      expect((yield* statusOf(later.id)).recipeId).toBe(recipeId);
+      expect(yield* Effect.all([served, storedFiles])).toEqual(before);
+
+      // Rejected uploads keep the photo and its file.
+      const twoParts = photoForm(new File([png], "a.png"));
+      twoParts.append("file", new File([png], "b.png"));
+      for (const [status, form] of [
+        [400, photoForm(new File(["not an image"], "photo.png", { type: "image/png" }))],
+        [400, photoForm(new File([png], "photo.png"), "photo")],
+        [413, twoParts],
+        [413, photoForm(new File([new Uint8Array(20 * 1024 * 1024 + 1)], "photo.png"))],
+      ] as const) {
+        const response = yield* put(form);
+        expect(response.status).toBe(status);
+        expect(response.headers["content-type"]).toContain("application/problem+json");
+        if (status === 413) {
+          expect(yield* response.json).toEqual({
+            type: "goho:problem:upload-limit-exceeded",
+            status: 413,
+            title: "Upload limit exceeded",
+            detail:
+              "Upload exceeds a multipart limit. Send one image up to 20 MB with a total request up to 21 MB.",
+          });
+        }
+      }
+      expect(yield* Effect.all([served, storedFiles])).toEqual(before);
+
+      // Removing the photo is repeatable and leaves the recipe.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const removed = yield* HttpClient.del(path);
+        expect([removed.status, yield* removed.text]).toEqual([204, ""]);
+      }
+      expect((yield* served)[0]).toBe(404);
+      expect(yield* storedFiles).toEqual([]);
+      const { data: withoutPhoto } = yield* client.recipes.get({ params: { recipeId } });
+      expect(withoutPhoto.hasImage).toBe(false);
+
+      // A recipe without a photo gets 201, and the typed client takes both empty successes.
+      const created = yield* put(photoForm(new File([png], "photo.png")));
+      expect([created.status, yield* created.text]).toEqual([201, ""]);
+      const form = photoForm(new File([jpeg], "photo.jpg"));
+      expect(
+        yield* client.recipes.putImage({ params: { recipeId }, payload: form }),
+      ).toBeUndefined();
+      expect((yield* served).slice(0, 2)).toEqual([200, "image/jpeg"]);
+      expect(yield* storedFiles).toHaveLength(1);
+
+      // A missing recipe gets 404, and its upload leaves no file.
+      const files = yield* storedFiles;
+      const missing = RecipeId.make("9223372036854775807");
+      const notFound = {
+        type: "goho:problem:recipe-not-found",
+        status: 404,
+        title: "Recipe not found",
+      };
+      for (const response of [
+        yield* put(photoForm(new File([png], "photo.png")), `/recipes/${missing}/image`),
+        yield* HttpClient.del(`/recipes/${missing}/image`),
+      ]) {
+        expect([response.status, yield* response.json]).toEqual([404, notFound]);
+      }
+      expect(yield* storedFiles).toEqual(files);
+
+      // Deleting the recipe still takes its current photo.
+      expect((yield* HttpClient.del(`/recipes/${recipeId}`)).status).toBe(204);
+      expect(yield* storedFiles).toEqual([]);
+    }).pipe(Effect.provide(HttpLive)),
+  20_000,
 );

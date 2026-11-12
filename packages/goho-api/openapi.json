@@ -152,7 +152,7 @@
             }
           },
           "413": {
-            "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
+            "description": "The upload exceeds a size or part-count limit, bud. Nothing is saved or queued.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1514,7 +1514,7 @@
             }
           },
           "413": {
-            "description": "The upload exceeds a size or part-count limit, bud. Nothing is queued.",
+            "description": "The upload exceeds a size or part-count limit, bud. Nothing is saved or queued.",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2095,8 +2095,157 @@
             }
           }
         },
-        "description": "Returns the JPEG, PNG or WebP photo on file for the recipe. Recipes entered by hand have none.",
+        "description": "Returns the JPEG, PNG or WebP photo on file for the recipe. Recipes entered by hand have none until you send one.",
         "summary": "Get a recipe photo"
+      },
+      "put": {
+        "tags": ["recipes"],
+        "operationId": "recipes.putImage",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "The recipe had no photo; now it does."
+          },
+          "204": {
+            "description": "The new photo took the old one's spot on the roster."
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNotFound"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The upload exceeds a size or part-count limit, bud. Nothing is saved or queued.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadLimitExceeded"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not save this photo; the old one stays put. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Sends one JPEG, PNG or WebP image in the `file` field as the recipe's only photo, replacing any photo it had, imported or sent. The image's own bytes have to show it's one of those types, whatever its file name or MIME type says; anything else returns 400 and the old photo stays. Returns 201 when the recipe had no photo and 204 when it replaced one, both with no body. When two photos drop at once, the last one saved wins.",
+        "summary": "Set a recipe photo",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": ["file"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "tags": ["recipes"],
+        "operationId": "recipes.deleteImage",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/RecipeId"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestProblemEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No recipe is wearing that number, bud.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The server could not remove this photo; take another shot. | Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RecipesUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InternalServerErrorProblemEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Takes the photo off the recipe for good and leaves the rest of the recipe on the roster. Returns 204 with no body, even when there was no photo to remove.",
+        "summary": "Remove a recipe photo"
       }
     },
     "/recipe-uploads": {
@@ -2683,31 +2832,6 @@
         "required": ["type"],
         "additionalProperties": false
       },
-      "RecipeImageNotFound": {
-        "type": "object",
-        "properties": {
-          "detail": {
-            "type": "string"
-          },
-          "instance": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["goho:problem:recipe-image-not-found"]
-          },
-          "status": {
-            "type": "number",
-            "enum": [404]
-          },
-          "title": {
-            "type": "string",
-            "enum": ["Recipe image not found"]
-          }
-        },
-        "required": ["type"],
-        "additionalProperties": false
-      },
       "RecipeNotFound": {
         "type": "object",
         "properties": {
@@ -2728,6 +2852,56 @@
           "title": {
             "type": "string",
             "enum": ["Recipe not found"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "UploadLimitExceeded": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:upload-limit-exceeded"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [413]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Upload limit exceeded"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
+      },
+      "RecipeImageNotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-image-not-found"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [404]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe image not found"]
           }
         },
         "required": ["type"],
@@ -3515,31 +3689,6 @@
         "pattern": "^[1-9]\\d{0,18}$",
         "description": "The book's positive number on the roster, from 1 through 9223372036854775807 without leading zeros, bud.",
         "examples": ["12"]
-      },
-      "UploadLimitExceeded": {
-        "type": "object",
-        "properties": {
-          "detail": {
-            "type": "string"
-          },
-          "instance": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["goho:problem:upload-limit-exceeded"]
-          },
-          "status": {
-            "type": "number",
-            "enum": [413]
-          },
-          "title": {
-            "type": "string",
-            "enum": ["Upload limit exceeded"]
-          }
-        },
-        "required": ["type"],
-        "additionalProperties": false
       },
       "BooksUnavailable": {
         "type": "object",

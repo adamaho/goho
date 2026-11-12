@@ -7,12 +7,12 @@ import {
   RecipesUnavailable,
   type RecipeSummary,
 } from "@goho/goho-api/recipes";
-import { Context, Effect, Layer, Option } from "effect";
+import { Context, Effect, Exit, Layer, Option } from "effect";
 
 import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 
-import type { RecipeImageContentType } from "./model.ts";
+import type { Photo, RecipeImageContentType } from "./model.ts";
 import * as RecipeRepository from "./repository.ts";
 
 // Persistence and storage details stay in the logs; callers see the domain error.
@@ -43,10 +43,25 @@ export interface Interface {
     { readonly bytes: Uint8Array; readonly contentType: RecipeImageContentType },
     RecipeImageNotFound | RecipesUnavailable
   >;
+  /**
+   * Stores the photo and makes it the recipe's only one, then removes the file
+   * it replaced. `created` when the recipe had no photo, else `replaced`.
+   * Concurrent changes apply in lock order, so the last to commit wins. Any
+   * failure keeps the previous photo and removes the new file.
+   */
+  readonly putImage: (
+    recipeId: RecipeId,
+    photo: Photo,
+  ) => Effect.Effect<"created" | "replaced", RecipeNotFound | RecipesUnavailable>;
+  /** Removes the recipe's photo and its file; succeeds when it had none. */
+  readonly deleteImage: (
+    recipeId: RecipeId,
+  ) => Effect.Effect<void, RecipeNotFound | RecipesUnavailable>;
 }
 
 /**
- * Saves, lists, retrieves and deletes recipes, and serves their photos.
+ * Saves, lists, retrieves and deletes recipes, and serves, sets and removes
+ * their photos.
  *
  * @category services
  * @since 0.1.0
@@ -129,6 +144,66 @@ export const layer = Layer.effect(
       }),
     );
 
-    return Service.of({ create, delete: deleteRecipe, get, getImage, list });
+    // A file no row references any more; failing to remove it only leaves it orphaned.
+    const removeUnused = (fileId: FileStorage.FileId) =>
+      storage
+        .delete(fileId)
+        .pipe(
+          Effect.catchTag("GohoServer.FileStorage.StorageError", (error) =>
+            Effect.logError("Orphaned recipe photo could not be deleted", error).pipe(
+              Effect.annotateLogs({ fileId }),
+            ),
+          ),
+        );
+
+    const photoChangeFailed = unavailable("Recipe photo change failed");
+
+    // Uninterruptible like the import's save: it holds only the file writes and
+    // one short transaction, and a client hanging up must not strand a file.
+    const putImage = Effect.fn("@goho/Recipes.putImage")(
+      function* (recipeId: RecipeId, { bytes, contentType }: Photo) {
+        const fileId = yield* storage.put({ name: "recipe-photo", contentType, bytes });
+        const changed = yield* repository
+          .setImage(recipeId, { fileId, contentType })
+          .pipe(
+            Effect.onExit((exit) =>
+              Exit.isSuccess(exit) && Option.isSome(exit.value)
+                ? Effect.void
+                : removeUnused(fileId),
+            ),
+          );
+        if (Option.isNone(changed)) return yield* new RecipeNotFound();
+        const { previousFileId } = changed.value;
+        if (previousFileId === null) return "created" as const;
+        yield* removeUnused(previousFileId);
+        return "replaced" as const;
+      },
+      Effect.catchTags({
+        "GohoServer.RecipeRepository.PersistenceError": photoChangeFailed,
+        "GohoServer.FileStorage.StorageError": photoChangeFailed,
+      }),
+      Effect.uninterruptible,
+    );
+
+    const deleteImage = Effect.fn("@goho/Recipes.deleteImage")(
+      function* (recipeId: RecipeId) {
+        const changed = yield* repository.setImage(recipeId, null);
+        if (Option.isNone(changed)) return yield* new RecipeNotFound();
+        const { previousFileId } = changed.value;
+        if (previousFileId !== null) yield* removeUnused(previousFileId);
+      },
+      Effect.catchTag("GohoServer.RecipeRepository.PersistenceError", photoChangeFailed),
+      Effect.uninterruptible,
+    );
+
+    return Service.of({
+      create,
+      delete: deleteRecipe,
+      deleteImage,
+      get,
+      getImage,
+      list,
+      putImage,
+    });
   }),
 );
