@@ -26,7 +26,7 @@ interface BookUploadsApi {
      * Responses:
      *  - 202: Success
      *  - 400: Bad Request
-     *  - 413: The upload exceeds a size or part-count limit, bud. Nothing is queued.
+     *  - 413: The upload exceeds a size or part-count limit, bud. Nothing is saved or queued.
      *  - 500: The server could not store or queue the cover image. | Internal Server Error
      *
      * @param file 
