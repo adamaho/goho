@@ -38,6 +38,7 @@ import java.text.NumberFormat
 enum class Section(@StringRes val title: Int, @DrawableRes val icon: Int) {
     Receipts(R.string.receipts_title, R.drawable.ic_add_receipt),
     Books(R.string.books_title, R.drawable.ic_add_book),
+    Recipes(R.string.recipes_title, R.drawable.ic_tag_meals),
 }
 
 /**
@@ -58,6 +59,7 @@ fun SectionScreen(
     onSectionChange: (Section) -> Unit,
     receiptCount: Int?,
     bookCount: Int?,
+    recipeCount: Int?,
     isOpeningScanner: Boolean,
     onScanBook: () -> Unit,
     onScanReceipt: () -> Unit,
@@ -175,6 +177,7 @@ fun SectionScreen(
                                         when (entry) {
                                             Section.Receipts -> receiptCount
                                             Section.Books -> bookCount
+                                            Section.Recipes -> recipeCount
                                         }
                                     SectionMenuEntry(
                                         entry.title,

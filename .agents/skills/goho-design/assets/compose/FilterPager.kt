@@ -45,7 +45,7 @@ internal fun rememberFilterPagerState(): FilterPagerState {
 /**
  * Filter tabs above a pull-to-refresh pager. Each page receives its filter, the error state to show
  * (outgoing during recovery), whether status content should animate in, and a modifier that hides
- * inactive pages from accessibility.
+ * inactive pages from accessibility. [attentionBadge] chooses the Needs attention count's style.
  */
 @Composable
 internal fun FilterPager(
@@ -62,6 +62,7 @@ internal fun FilterPager(
     refreshLabel: String,
     refreshProgressLabel: String,
     modifier: Modifier = Modifier,
+    attentionBadge: Boolean = true,
     page:
         @Composable
         (
@@ -99,6 +100,7 @@ internal fun FilterPager(
                         scope.launch { state.select(if (attentionOnly) 1 else 0, !reduced) }
                     },
                     locale,
+                    attentionBadge = attentionBadge,
                 )
         }
         PullToRefresh(

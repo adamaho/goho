@@ -90,6 +90,9 @@ object GohoMotion {
     const val BOOK_OVERLAY_FROST_ALPHA = 0.86f
     const val BOOK_OVERLAY_FROST_FALLBACK_ALPHA = 0.94f // where blur is unavailable (API < 31)
     const val BOOK_OVERLAY_DRAG_FROST_FADE = 0.6f // frost fades by up to 60% while dragging
+    // Recipe details: the theme background behind the status bar keeps its icons legible on a
+    // photo.
+    const val RECIPE_STATUS_BAR_ALPHA = 0.8f
     val emphasizedDecelerate: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
     val emphasizedAccelerate: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
     val standard: Easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)

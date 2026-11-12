@@ -1,5 +1,7 @@
 package com.adamaho.goho
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -42,6 +45,8 @@ import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.ReceiptUploadsApi
 import com.adamaho.goho.api.generated.ReceiptsApi
+import com.adamaho.goho.api.generated.RecipeUploadsApi
+import com.adamaho.goho.api.generated.RecipesApi
 import com.adamaho.goho.api.generated.infrastructure.ApiClient
 import com.adamaho.goho.api.generated.model.Book
 import com.adamaho.goho.api.generated.model.Receipt
@@ -68,6 +73,9 @@ import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
+import com.adamaho.goho.ui.main.RecipeDetailScreen
+import com.adamaho.goho.ui.main.RecipeListController
+import com.adamaho.goho.ui.main.RecipeOverview
 import com.adamaho.goho.ui.main.ScanKind
 import com.adamaho.goho.ui.main.ScanPreviewScreen
 import com.adamaho.goho.ui.main.Section
@@ -76,6 +84,7 @@ import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
 import com.adamaho.goho.ui.main.deleteAndConfirm
 import com.adamaho.goho.ui.main.receiptListEntries
+import com.adamaho.goho.ui.main.recipePageUrl
 import com.adamaho.goho.ui.main.rememberClock
 import com.adamaho.goho.ui.main.rememberSectionSearch
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -105,6 +114,8 @@ import okio.BufferedSink
 @Serializable private data object SectionRoute : NavKey
 
 @Serializable private data class ReceiptDetailRoute(val receiptId: String) : NavKey
+
+@Serializable private data class RecipeDetailRoute(val recipeId: String) : NavKey
 
 /** A scanned image waiting in the preview, with the kind of scan that decides its upload. */
 private data class Capture(val kind: ScanKind, val imageUri: Uri)
@@ -143,6 +154,9 @@ class MainActivity : ComponentActivity() {
             feedback,
             ::isOffline,
         )
+    }
+    private val recipes by lazy {
+        RecipeListController(lifecycleScope, service<RecipesApi>(), service<RecipeUploadsApi>())
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
 
@@ -242,6 +256,11 @@ class MainActivity : ComponentActivity() {
                                                         if (bookState.hasLoaded)
                                                             bookState.books.size
                                                         else null,
+                                                    recipeCount =
+                                                        recipes.state
+                                                            .takeIf { it.hasLoaded }
+                                                            ?.recipes
+                                                            ?.size,
                                                     isOpeningScanner = isOpeningScanner,
                                                     onScanBook = { openScanner(ScanKind.Book) },
                                                     onScanReceipt = {
@@ -302,6 +321,25 @@ class MainActivity : ComponentActivity() {
                                                                     bookUploadToReveal = null
                                                                 },
                                                             )
+                                                        Section.Recipes ->
+                                                            RecipeOverview(
+                                                                state = recipes.state,
+                                                                menuOpen = menuOpen,
+                                                                thumbnails = recipes.thumbnails,
+                                                                onRetryClick = {
+                                                                    recipes.refresh()
+                                                                },
+                                                                onRefresh = {
+                                                                    recipes.refresh(
+                                                                        userInitiated = true
+                                                                    )
+                                                                },
+                                                                onRecipeClick = {
+                                                                    backStack.add(
+                                                                        RecipeDetailRoute(it)
+                                                                    )
+                                                                },
+                                                            )
                                                     }
                                                 }
                                             }
@@ -323,6 +361,19 @@ class MainActivity : ComponentActivity() {
                                                 loadReceiptImage = ::loadReceiptImage,
                                                 onBack = { backStack.removeLastOrNull() },
                                                 deleteReceipt = ::deleteReceipt,
+                                            )
+                                        }
+                                    is RecipeDetailRoute ->
+                                        NavEntry(route) {
+                                            RecipeDetailScreen(
+                                                recipeId = route.recipeId,
+                                                loadRecipe = recipes::load,
+                                                loadRecipeImage = recipes::loadImage,
+                                                onBack = { backStack.removeLastOrNull() },
+                                                onOpenSource = ::openRecipePage,
+                                                // A recipe gone since it was listed leaves the
+                                                // list.
+                                                onMissing = { recipes.refresh() },
                                             )
                                         }
                                     else -> error("Unknown route: $route")
@@ -379,8 +430,10 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         refreshHistory()
         books.refresh()
+        recipes.refresh()
         pollingJob = lifecycleScope.launch {
             launch { books.pollPendingUploads() }
+            launch { recipes.pollPendingUploads() }
             snapshotFlow {
                 overviewState.uploads.any {
                     it.status == ReceiptUploadStatus.queued ||
@@ -452,6 +505,18 @@ class MainActivity : ComponentActivity() {
         return connectivity
             ?.getNetworkCapabilities(connectivity.activeNetwork)
             ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) != true
+    }
+
+    /** Opens a recipe's http or https source page in the browser; other addresses are ignored. */
+    private fun openRecipePage(url: String) {
+        val page = recipePageUrl(url) ?: return
+        try {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, page.toUri()).addCategory(Intent.CATEGORY_BROWSABLE)
+            )
+        } catch (error: ActivityNotFoundException) {
+            Log.w("GohoRecipes", "No app can open the recipe page", error)
+        }
     }
 
     private fun selectSection(next: Section) {

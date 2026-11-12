@@ -16,6 +16,7 @@ import java.math.RoundingMode
 import java.net.URI
 import java.text.NumberFormat
 import java.util.Locale
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * One ingredient line: [amount] is set in bold before [name] when the recipe gives a number. The
@@ -138,6 +139,21 @@ internal fun recipeDomain(url: String): String {
         }
     return trimmed.replaceFirst(SCHEME, "").split('/', '?', '#', limit = 2)[0].ifEmpty { trimmed }
 }
+
+/** The page address as saved without its scheme, such as “examplekitchen.com/lemon-orzo”. */
+internal fun recipeAddress(url: String): String = url.trim().replaceFirst(SCHEME, "")
+
+/**
+ * The browser form of an http or https [url] without credentials, or null for any other address.
+ * OkHttp parses it as browsers do, so international hosts, underscores and unescaped spaces are
+ * accepted and come back canonical (punycode host, percent-escaped path). Display keeps the saved
+ * text through [recipeAddress].
+ */
+internal fun recipePageUrl(url: String): String? =
+    url.trim()
+        .toHttpUrlOrNull()
+        ?.takeIf { it.username.isEmpty() && it.password.isEmpty() }
+        ?.toString()
 
 private val SCHEME = Regex("^[a-z][a-z0-9+.-]*://", RegexOption.IGNORE_CASE)
 

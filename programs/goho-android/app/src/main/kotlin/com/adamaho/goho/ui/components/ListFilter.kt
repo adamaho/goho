@@ -25,6 +25,10 @@ import com.adamaho.goho.theme.*
 import java.text.NumberFormat
 import java.util.Locale
 
+/**
+ * All and Needs attention tabs with their counts. Needs attention shows its count in the orange
+ * badge, or as plain text like All's when [attentionBadge] is false; a zero count is left out.
+ */
 @Composable
 fun ListFilter(
     total: Int,
@@ -33,6 +37,7 @@ fun ListFilter(
     onSelect: (Boolean) -> Unit,
     locale: Locale,
     modifier: Modifier = Modifier,
+    attentionBadge: Boolean = true,
 ) {
     val c = GohoTheme.colors
     Row(
@@ -58,7 +63,13 @@ fun ListFilter(
                 modifier = Modifier.weight(1f, fill = false),
                 style = GohoTheme.type.segment,
             )
-            if (attention > 0)
+            if (attention > 0 && !attentionBadge)
+                Text(
+                    NumberFormat.getIntegerInstance(locale).format(attention),
+                    style = GohoTheme.type.segment,
+                    color = c.textSecondary,
+                )
+            else if (attention > 0)
                 Box(
                     Modifier.sizeIn(
                             minWidth = GohoSpacing.badgeSize,

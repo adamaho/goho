@@ -10,18 +10,29 @@ import com.adamaho.goho.theme.TagColor
 
 @Composable
 fun ReceiptUploadTag(processing: Boolean, modifier: Modifier = Modifier) {
-    UploadTag(processing, R.string.receipt_reading, modifier)
+    UploadTag(processing, R.string.receipt_reading, R.string.not_processed, modifier)
 }
 
 @Composable
 fun BookUploadTag(processing: Boolean, modifier: Modifier = Modifier) {
-    UploadTag(processing, R.string.book_reading, modifier)
+    UploadTag(processing, R.string.book_reading, R.string.not_processed, modifier)
+}
+
+/** A recipe import's tag; a failed import names its reason in [failed], two words at most. */
+@Composable
+fun RecipeUploadTag(processing: Boolean, @StringRes failed: Int, modifier: Modifier = Modifier) {
+    UploadTag(processing, R.string.recipe_reading, failed, modifier)
 }
 
 @Composable
-private fun UploadTag(processing: Boolean, @StringRes reading: Int, modifier: Modifier) {
+private fun UploadTag(
+    processing: Boolean,
+    @StringRes reading: Int,
+    @StringRes failed: Int,
+    modifier: Modifier,
+) {
     Tag(
-        label = stringResource(if (processing) reading else R.string.not_processed),
+        label = stringResource(if (processing) reading else failed),
         icon =
             painterResource(
                 if (processing) R.drawable.ic_tag_processing else R.drawable.ic_tag_failed

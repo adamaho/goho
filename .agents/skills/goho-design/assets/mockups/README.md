@@ -2,7 +2,7 @@
 
 ## Recipes (November 8, 2026, approved design)
 
-Design renders from the Goho art-boards canvas (“Recipes”) at 296dp width and 2×, light unless named dark. They are design references, not native captures, and Recipes is not implemented; recipes, sites and times are sample data, and the food photo is a placeholder (the board's review photo isn't committed). The [section 12 spec](../../references/screens.md#12-recipes-list-add-from-a-link-details) wins where they differ.
+Design renders from the Goho art-boards canvas (“Recipes”) at 296dp width and 2×, light unless named dark. They are design references, not native captures (read-only Recipes is now built; Add recipe and deletion are not); recipes, sites and times are sample data, and the food photo is a placeholder (the board's review photo isn't committed). The [section 12 spec](../../references/screens.md#12-recipes-list-add-from-a-link-details) wins where they differ.
 
 - `recipes-list-light.png`: Recipes All, rows with photo placeholders, title and “time · site”, A–Z.
 - `recipes-add-menu-light.png`: the shared Add menu with Add recipe above Scan book and Scan receipt.
@@ -10,6 +10,8 @@ Design renders from the Goho art-boards canvas (“Recipes”) at 296dp width an
 - `recipes-reading-light.png`: a link reading inline at the top of All, a failed “No recipe found” row, and the plain-text Needs attention count.
 - `recipe-details-light.png`, `recipe-details-dark.png`: details with the photo hero, sheet, stat row, Ingredients, Steps with inline ingredient marks, and Details.
 - `recipe-details-no-photo-light.png`: the no-photo hero, with only the stats the page gives.
+
+Read-only Recipes (list and details) is now implemented natively; **native captures are pending**, since no device or emulator was used for that build, so these renders are not evidence of the native look. The renders' “No recipe found” tag is superseded by the two-word failure labels in [screens.md section 12](../../references/screens.md#12-recipes-list-add-from-a-link-details) (“No recipe” for a page without one), and their tinted list placeholders by the neutral utensils.
 
 Updated renders are pending for the [accepted November 11, 2026 clarifications](../../references/screens.md#12-recipes-list-add-from-a-link-details); these renders are kept unchanged and the spec wins. Where they differ: the stat row shows Total only, ingredient names keep their full wording with no tertiary prep note (“2 cloves garlic, minced”), amounts in words read “salt (to taste)”, and empty Recipes is text-only.
 

@@ -177,4 +177,31 @@
     <string name="recipe_hours">%1$s hr</string>
     <string name="recipe_hours_minutes">%1$s hr %2$s min</string>
     <string name="recipe_under_a_minute">&lt;1 min</string>
+    <string name="recipes_title">Recipes</string>
+    <string name="recipes_loading">Loading recipes…</string>
+    <string name="recipes_load_failed_body">We couldn’t load your recipes. Let’s try again.</string>
+    <string name="recipes_empty_title">No recipes yet</string>
+    <string name="recipes_empty_body">Saved recipes will appear here.</string>
+    <string name="recipes_refresh">Refresh recipes</string>
+    <string name="recipes_refreshing">Refreshing recipes…</string>
+    <string name="recipe_reading">Reading recipe…</string>
+    <!-- Failed recipe import tags: two words at most. -->
+    <string name="recipe_failed_page_unavailable">Page unavailable</string>
+    <string name="recipe_failed_no_recipe">No recipe</string>
+    <string name="recipe_failed_ambiguous">Multiple recipes</string>
+    <string name="recipe_failed_incomplete">Incomplete recipe</string>
+    <!-- %1$s is the total time, such as 25 min, %2$s the source site's domain. -->
+    <string name="recipe_meta">%1$s · %2$s</string>
+    <string name="recipe_detail_loading">Loading recipe…</string>
+    <string name="recipe_detail_load_failed">Could not load this recipe. Check your connection.</string>
+    <string name="recipe_detail_missing">This recipe is no longer saved.</string>
+    <string name="recipe_detail_retry">Retry</string>
+    <string name="recipe_total">Total</string>
+    <string name="recipe_ingredients">Ingredients</string>
+    <string name="recipe_steps">Steps</string>
+    <string name="recipe_details">Details</string>
+    <string name="recipe_source">Source</string>
+    <string name="recipe_added">Added</string>
+    <!-- %1$s is the source site's domain. -->
+    <string name="recipe_source_open">Open recipe page, %1$s</string>
 </resources>

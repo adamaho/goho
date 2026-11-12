@@ -235,7 +235,7 @@ Approved October 22, 2026 (`screens.md` section 9). `bookCover` = photo covers f
 
 ## Recipes
 
-Approved November 4–8, 2026 (`screens.md` section 12, including its November 11 clarifications); native tokens in `theme/Type.kt`, `Shape.kt` and `Spacing.kt`, mirrored in `assets/compose/GohoTheme.kt` and `Spacing.kt`. The Recipes screens are not built yet.
+Approved November 4–8, 2026 (`screens.md` section 12, including its November 11 clarifications); native tokens in `theme/Type.kt`, `Shape.kt` and `Spacing.kt`, mirrored in `assets/compose/GohoTheme.kt` and `Spacing.kt`. Read-only list and details use them (`RecipeOverview.kt`, `RecipeDetailScreen.kt`); `recipeStatGap` waits for a second stat column, since the stat row shows Total only.
 
 | Style             | Size / line height | Weight | Tracking | Use                                                                     |
 | ----------------- | ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
@@ -250,6 +250,7 @@ Approved November 4–8, 2026 (`screens.md` section 12, including its November 1
 
 Every style except `ingredientMark` uses Geist with proportional figures. `ingredientMark` is a `SpanStyle` in the `GeistMono` family (`geist_mono_medium.ttf`, Geist Mono Medium, the one approved monospace use). Its relative size follows the step text at any font scale. The mark's `accentContainer` background, `markRadius` corners and padding are drawn per line by the step layout, since a mark can wrap.
 
+- Details status bar: a fixed strip of `background` at `RECIPE_STATUS_BAR_ALPHA` = 0.8 (`GohoMotion`, with the other overlay opacities), the height of the status bar inset, over the scrolling hero and below Back.
 - Details: `recipeHeroHeight` = 300 (edge-to-edge photo or the no-photo `surfaceMuted` block with a `recipeHeroIcon` = 48 utensils mark in `accent`), `recipeSheetOverlap` = 24 under the `recipeSheet` shape, `recipeTitleTop` = 22 at the 16dp `screenMargin`, `recipeStatTop` = 18, `recipeStatGap` = 14 after a stat divider.
 - Headings at the 20dp `textInset`: `sectionTop` = 24 above Ingredients, `recipeSectionTop` = 28 above Steps and Details, `recipeSectionBottom` = 12 below each.
 - Ingredients: `ingredientDot` = 5 round `accent` dot, `ingredientDotGap` = 11, `ingredientGap` = 8 between lines.

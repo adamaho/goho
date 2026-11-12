@@ -100,6 +100,7 @@ internal fun ReceiptsPreviewScreen(state: ReceiptOverviewState, previewTime: Ins
                 receiptListEntries(state.receipts, state.uploads, ZoneId.systemDefault()).size
             else null,
         bookCount = null,
+        recipeCount = null,
         isOpeningScanner = false,
         onScanBook = {},
         onScanReceipt = {},
