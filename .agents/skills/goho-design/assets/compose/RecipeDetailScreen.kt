@@ -57,8 +57,8 @@ import java.time.format.FormatStyle
 
 /**
  * Read-only recipe details for [recipeId], loaded on entry and on Retry. The edge-to-edge hero
- * photo and the page sheet over it scroll together under a fixed Back and a fixed status-bar strip
- * of the theme background at 80%. A recipe that's gone shows its own message without Retry and
+ * photo and the page sheet over it scroll together under a fixed Back, with the photo showing
+ * through the transparent status bar. A recipe that's gone shows its own message without Retry and
  * calls [onMissing]. The Source row opens the page through [onOpenSource] only for http and https
  * addresses. Once loaded, the overflow button opens Recipe options with Delete recipe: Cancel stays
  * here, and an accepted deletion ([deleteRecipe]) hides the sheet, then calls [onDeleted] to leave
@@ -142,14 +142,6 @@ internal fun RecipeDetailScreen(
                     onOpenSource = onOpenSource,
                 )
         }
-        // A fixed strip of the theme background under the status bar keeps its icons legible over
-        // any photo, above the scrolling page and below Back.
-        Box(
-            Modifier.zIndex(1f)
-                .fillMaxWidth()
-                .windowInsetsTopHeight(WindowInsets.statusBars)
-                .background(c.background.copy(alpha = GohoMotion.RECIPE_STATUS_BAR_ALPHA))
-        )
         // Back and overflow float over the hero at the top bar position while the page scrolls
         // under them.
         Row(
