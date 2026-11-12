@@ -22,7 +22,53 @@ const expectPayload = (payload: unknown, data: unknown) =>
 
 const routes = expectPayload(createRecipePayload, recipe);
 
+const ToolDescriptions = Schema.Struct({
+  tools: Schema.Array(Schema.Struct({ name: Schema.String, description: Schema.String })),
+});
+
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) => {
+  it.effect(
+    "exposes ingredient-mark guidance and a valid example to agents through discovery",
+    () =>
+      Effect.gen(function* () {
+        const client = yield* McpFixture.openSession;
+        const discovered = yield* Schema.decodeUnknownEffect(ToolDescriptions)(
+          yield* client.request(2, "tools/list", {}),
+        );
+        const description = discovered.tools.find(
+          (tool) => tool.name === "create_recipe",
+        )?.description;
+        expect(description).toContain(
+          "Use ingredient marks for ingredient references, not just plain text",
+        );
+        expect(description).toContain("ingredientId must match that id exactly");
+        expect(description).toContain("1/1 means all and 1/2 means half");
+        expect(description).toContain("displays the computed amount and ingredient name");
+        expect(description).toContain(
+          "Do not guess an unknown portion: preserve that reference as a text mark",
+        );
+        expect(description).toContain("does not link to an ingredient");
+
+        const example = description?.match(
+          /a step using all of it is (\{"segments":.*?\})\./u,
+        )?.[1];
+        expect(example).toBeDefined();
+        const input = {
+          title: "Melted butter",
+          ingredients: [{ ...flour, id: "butter", name: "butter" }],
+          steps: [JSON.parse(example ?? "null")],
+        };
+        const saved = { ...recipe, ...input };
+        yield* McpFixture.respondWith(expectPayload(input, saved));
+        const created = yield* Schema.decodeUnknownEffect(RecipeResult)(
+          yield* client.call(3, "create_recipe", input),
+        );
+        expect(created.isError).toBe(false);
+        expect(created.structuredContent).toEqual({ recipe: saved });
+        expect(yield* McpFixture.apiRequests).toEqual(["POST /recipes"]);
+      }),
+  );
+
   it.effect("creates a recipe with exact quantities and step marks through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;

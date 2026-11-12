@@ -268,7 +268,21 @@ rounded.
   ingredient, and at least one step. Leave out `yield` and `totalTimeSeconds`,
   or send `null`, when they aren't known. Quantities are exact fractions, ranges,
   or text; exact and range quantities need a unit, and text quantities use
-  `null`. A step mark can point at an ingredient by its `id`. For example:
+  `null`. Write steps as ordered `segments`, using ingredient marks for ingredient
+  references so Goho can link and highlight them, rather than flattening the step
+  into plain text. Give each ingredient a unique recipe-local `id`, and use that
+  exact value as the mark's `ingredientId`.
+
+  A mark's `portion` is the fraction of the ingredient's recipe quantity used in
+  that step: `1/1` means all and `1/2` means half, not a literal half cup. Portions
+  must be greater than zero and at most one. An ingredient mark displays the
+  computed amount and ingredient name, replacing both in the step, so do not
+  repeat either in plain text. Keep surrounding wording, spaces, and punctuation
+  in text segments. When the portion is unknown, preserve the reference in a text
+  mark, such as `{"kind":"mark","content":{"kind":"text","text":"some of the sugar"}}`,
+  rather than guessing. A text mark highlights literal wording but does not link
+  an ingredient. Steps with no ingredient references can use text segments alone.
+  For example:
 
   ```json
   {
