@@ -136,6 +136,10 @@
     <string name="feedback_recipe_delete_failed">We couldn’t delete that recipe</string>
     <string name="feedback_import_delete_failed">We couldn’t delete that import</string>
     <string name="feedback_recipe_add_failed">We couldn’t add that recipe</string>
+    <string name="feedback_recipe_photo_failed">We couldn’t add that photo</string>
+    <string name="feedback_recipe_photo_unsupported_detail">Choose a JPEG, PNG or WebP photo under 20 MB.</string>
+    <string name="feedback_recipe_photo_offline_detail">Looks like you’re offline. Add it again once you’re back.</string>
+    <string name="feedback_recipe_photo_failed_detail">A little hiccup on our end. Give it another go.</string>
     <string name="feedback_receipt_delete_failed">We couldn’t delete that receipt</string>
     <string name="feedback_delete_failed_detail">Pull to refresh, then give it another go.</string>
     <string name="feedback_author_conflict">That book’s already here</string>
@@ -198,6 +202,8 @@
     <string name="recipe_detail_load_failed">Could not load this recipe. Check your connection.</string>
     <string name="recipe_detail_missing">This recipe is no longer saved.</string>
     <string name="recipe_detail_retry">Retry</string>
+    <string name="recipe_photo_add">Add recipe photo</string>
+    <string name="recipe_photo_adding">Adding recipe photo…</string>
     <string name="recipe_total">Total</string>
     <string name="recipe_ingredients">Ingredients</string>
     <string name="recipe_steps">Steps</string>

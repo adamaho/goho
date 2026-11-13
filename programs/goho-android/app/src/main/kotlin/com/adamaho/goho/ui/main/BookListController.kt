@@ -78,7 +78,7 @@ internal class BookListController(
     private var changeRevision = 0L
 
     /** Keeps loaded covers across section switches; only books with a cover request one. */
-    val covers = ThumbnailCache(::loadCover)
+    val covers = ThumbnailCache(loadImage = ::loadCover)
 
     fun refresh(userInitiated: Boolean = false) {
         if (state.loading) {

@@ -61,11 +61,14 @@ import java.time.format.FormatStyle
  * photo and the page sheet over it scroll together under a fixed Back, with the photo showing
  * through the transparent status bar. The hero starts from the row's photo in [thumbnails] when the
  * cache still holds it, without waiting for the recipe, and keeps it until the full photo decodes,
- * so a failed full photo leaves the preview in place. A recipe that's gone shows its own message
- * without Retry and calls [onMissing]. The Source row opens the page through [onOpenSource] only
- * for http and https addresses. Once loaded, the overflow button opens Recipe options with Delete
- * recipe: Cancel stays here, and an accepted deletion ([deleteRecipe]) hides the sheet, then calls
- * [onDeleted] to leave without waiting for the server.
+ * so a failed full photo leaves the preview in place. A loaded recipe without a photo ([photoAdded]
+ * false) offers Add recipe photo, which calls [onAddPhoto] to pick one. While it's being sent
+ * ([addingPhoto]), the hero shows [photoPreview] once decoded, with no button, and keeps it as the
+ * full photo once sent; a failure brings the button back. A recipe that's gone shows its own
+ * message without Retry and calls [onMissing]. The Source row opens the page through [onOpenSource]
+ * only for http and https addresses. Once loaded, the overflow button opens Recipe options with
+ * Delete recipe: Cancel stays here, and an accepted deletion ([deleteRecipe]) hides the sheet, then
+ * calls [onDeleted] to leave without waiting for the server.
  */
 @Composable
 internal fun RecipeDetailScreen(
@@ -73,6 +76,10 @@ internal fun RecipeDetailScreen(
     loadRecipe: suspend (String) -> RecipeLoad,
     loadRecipeImage: suspend (String) -> ByteArray?,
     thumbnails: ThumbnailCache,
+    addingPhoto: Boolean,
+    photoPreview: ImageBitmap?,
+    photoAdded: Boolean,
+    onAddPhoto: () -> Unit,
     deleteRecipe: suspend (String) -> Boolean,
     onBack: () -> Unit,
     onDeleted: () -> Unit,
@@ -91,23 +98,28 @@ internal fun RecipeDetailScreen(
         if (loaded == RecipeLoad.Missing) onMissing()
     }
     val recipe = (result as? RecipeLoad.Loaded)?.recipe
-    val hasImage = recipe?.hasImage == true
+    val hasImage = recipe?.hasImage == true || photoAdded
     // The list row's photo, when the cache still holds it, shows from the first frame while the
     // recipe loads and until the full photo replaces it.
     val preview = remember(recipeId) { thumbnails.peek(recipeId)?.asImageBitmap() }
     var fullImage by remember(recipeId) { mutableStateOf<ImageBitmap?>(null) }
     var imageLoading by remember(recipeId) { mutableStateOf(false) }
+    // A photo picked here is the full photo, so a sent one isn't fetched back; a failed one goes.
+    LaunchedEffect(photoPreview, addingPhoto, hasImage) {
+        if (photoPreview != null) fullImage = photoPreview
+        else if (!addingPhoto && !hasImage) fullImage = null
+    }
     LaunchedEffect(recipeId, hasImage) {
         if (!hasImage || fullImage != null) return@LaunchedEffect
         imageLoading = true
         try {
-            loadRecipeImage(recipeId)?.let { decodePhoto(it) }?.let { fullImage = it }
+            loadRecipeImage(recipeId)?.let { decodeRecipePhoto(it) }?.let { fullImage = it }
         } finally {
             imageLoading = false
         }
     }
-    // A loaded recipe without a photo drops the preview.
-    val image = if (recipe != null && !hasImage) null else fullImage ?: preview
+    // A loaded recipe without a photo drops the preview, unless one is being sent.
+    val image = if (recipe != null && !hasImage && !addingPhoto) null else fullImage ?: preview
 
     val c = GohoTheme.colors
     Box(modifier.fillMaxSize().background(c.background)) {
@@ -144,9 +156,11 @@ internal fun RecipeDetailScreen(
                 RecipeContent(
                     recipe = recipe,
                     image = image,
-                    // Utensils only once there's no photo to wait for.
-                    showHeroIcon =
-                        recipe != null && (!hasImage || (!imageLoading && image == null)),
+                    // Utensils only for a photo on file that failed to load.
+                    showHeroIcon = recipe != null && hasImage && !imageLoading && image == null,
+                    // Only the server's own `hasImage` false offers a photo, never a failed one.
+                    onAddPhoto = onAddPhoto.takeIf { recipe != null && !hasImage && !addingPhoto },
+                    addingPhoto = addingPhoto,
                     onOpenSource = onOpenSource,
                 )
         }
@@ -171,14 +185,15 @@ internal fun RecipeDetailScreen(
     }
     if (optionsOpen && recipe != null) {
         val entry =
-            remember(recipe) {
+            remember(recipe, hasImage) {
                 RecipeListEntry.Saved(
                     RecipeSummary(
                         id = recipe.id,
                         title = recipe.title,
                         source = recipe.source,
                         totalTimeSeconds = recipe.totalTimeSeconds,
-                        hasImage = recipe.hasImage,
+                        // A photo added here shows in the header from the row's thumbnail.
+                        hasImage = hasImage,
                         createdAt = recipe.createdAt,
                         updatedAt = recipe.updatedAt,
                     )
@@ -203,6 +218,8 @@ private fun RecipeContent(
     recipe: Recipe?,
     image: ImageBitmap?,
     showHeroIcon: Boolean,
+    onAddPhoto: (() -> Unit)?,
+    addingPhoto: Boolean,
     onOpenSource: (String) -> Unit,
 ) {
     val c = GohoTheme.colors
@@ -243,7 +260,7 @@ private fun RecipeContent(
                 .loadingSemantics(loading, stringResource(R.string.recipe_detail_loading)),
             contentPadding = PaddingValues(bottom = bottom + GohoSpacing.detailBottom),
         ) {
-            item("hero") { RecipeHero(image, showHeroIcon) }
+            item("hero") { RecipeHero(image, showHeroIcon, onAddPhoto, addingPhoto) }
             item("title") {
                 // The page sheet slides over the bottom of the hero and scrolls with it.
                 Column(
@@ -351,12 +368,21 @@ private fun Modifier.ingredientPadding(index: Int): Modifier =
         .then(if (index > 0) Modifier.padding(top = GohoSpacing.ingredientGap) else Modifier)
 
 /**
- * The edge-to-edge photo, cropped to fill, or the quiet utensils block without one. It lays out
- * [GohoSpacing.recipeSheetOverlap] shorter than it draws, so the page sheet covers its bottom.
+ * The edge-to-edge photo, cropped to fill, or the quiet block without one: the round Add recipe
+ * photo button when [onAddPhoto] is set, or the utensils mark when [showIcon] is. While
+ * [addingPhoto], the picked photo (or the plain block until it decodes) is announced as being
+ * added. It lays out [GohoSpacing.recipeSheetOverlap] shorter than it draws, so the page sheet
+ * covers its bottom.
  */
 @Composable
-private fun RecipeHero(image: ImageBitmap?, showIcon: Boolean) {
+private fun RecipeHero(
+    image: ImageBitmap?,
+    showIcon: Boolean,
+    onAddPhoto: (() -> Unit)?,
+    addingPhoto: Boolean,
+) {
     val c = GohoTheme.colors
+    val adding = stringResource(R.string.recipe_photo_adding)
     Box(
         Modifier.fillMaxWidth()
             .height(GohoSpacing.recipeHeroHeight - GohoSpacing.recipeSheetOverlap)
@@ -367,7 +393,15 @@ private fun RecipeHero(image: ImageBitmap?, showIcon: Boolean) {
                 .requiredHeight(GohoSpacing.recipeHeroHeight)
                 // A photo already on hand shows through the loading mask.
                 .then(if (image == null) Modifier.skeleton(block = true) else Modifier)
-                .background(c.surfaceMuted),
+                .background(c.surfaceMuted)
+                .then(
+                    if (addingPhoto)
+                        Modifier.semantics {
+                            contentDescription = adding
+                            liveRegion = LiveRegionMode.Polite
+                        }
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center,
         ) {
             if (image != null)
@@ -377,6 +411,10 @@ private fun RecipeHero(image: ImageBitmap?, showIcon: Boolean) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.matchParentSize(),
                 )
+            else if (onAddPhoto != null)
+                IconButton(stringResource(R.string.recipe_photo_add), onAddPhoto) {
+                    PlusIcon(Modifier.size(GohoSpacing.detailBackIcon))
+                }
             else if (showIcon)
                 Icon(
                     painterResource(R.drawable.ic_tag_meals),

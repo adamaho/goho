@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -84,6 +85,7 @@ import com.adamaho.goho.ui.main.SectionScreen
 import com.adamaho.goho.ui.main.ThumbnailCache
 import com.adamaho.goho.ui.main.UploadStatus
 import com.adamaho.goho.ui.main.deleteAndConfirm
+import com.adamaho.goho.ui.main.filePart
 import com.adamaho.goho.ui.main.receiptListEntries
 import com.adamaho.goho.ui.main.recipePageUrl
 import com.adamaho.goho.ui.main.rememberClock
@@ -93,7 +95,6 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
-import java.io.IOException
 import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -105,11 +106,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody
-import okio.BufferedSink
 
 /** The section root; the selected section is activity state, so Back does not switch sections. */
 @Serializable private data object SectionRoute : NavKey
@@ -128,6 +126,8 @@ class MainActivity : ComponentActivity() {
     private var capture by mutableStateOf<Capture?>(null)
     /** The kind of the open scanner, saved in case this activity is recreated behind it. */
     private var scannerKind: ScanKind? = null
+    /** The recipe the open photo picker is choosing for, saved like [scannerKind]. */
+    private var photoPickerRecipeId: String? = null
     private var isOpeningScanner by mutableStateOf(false)
     private var uploadStatus by mutableStateOf(UploadStatus.Ready)
     private var overviewState by mutableStateOf(ReceiptOverviewState())
@@ -167,6 +167,7 @@ class MainActivity : ComponentActivity() {
             deletions,
             feedback,
             ::isOffline,
+            contentResolver,
         )
     }
     private val preferences by lazy { getSharedPreferences("goho", MODE_PRIVATE) }
@@ -196,11 +197,20 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    /** The system photo picker, which needs no storage permission; cancelling changes nothing. */
+    private val photoPicker =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            val recipeId = photoPickerRecipeId
+            photoPickerRecipeId = null
+            if (uri != null && recipeId != null) recipes.addPhoto(recipeId, uri)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
         scannerKind = savedInstanceState?.getString(SCANNER_KIND_KEY)?.let(ScanKind::valueOf)
+        photoPickerRecipeId = savedInstanceState?.getString(PHOTO_PICKER_RECIPE_KEY)
         section =
             preferences.getString(SECTION_KEY, null)?.let { saved ->
                 Section.entries.find { it.name == saved }
@@ -388,6 +398,11 @@ class MainActivity : ComponentActivity() {
                                                 loadRecipe = recipes::load,
                                                 loadRecipeImage = recipes::loadImage,
                                                 thumbnails = recipes.thumbnails,
+                                                addingPhoto =
+                                                    route.recipeId in recipes.photoUploads,
+                                                photoPreview = recipes.photoUploads[route.recipeId],
+                                                photoAdded = route.recipeId in recipes.photosAdded,
+                                                onAddPhoto = { pickRecipePhoto(route.recipeId) },
                                                 deleteRecipe = { recipes.deleteRecipe(it) },
                                                 onBack = { backStack.removeLastOrNull() },
                                                 // Leave once, even if Back already left.
@@ -451,6 +466,7 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString(SCANNER_KIND_KEY, scannerKind?.name)
+        outState.putString(PHOTO_PICKER_RECIPE_KEY, photoPickerRecipeId)
     }
 
     override fun onStart() {
@@ -522,7 +538,8 @@ class MainActivity : ComponentActivity() {
             is FeedbackMessage.AuthorFailed ->
                 books.addAuthor(message.bookId, message.author, retry = true)
             is FeedbackMessage.RecipeImportFailed -> addRecipe(message.url)
-            is FeedbackMessage.DeletionFailed -> Unit
+            is FeedbackMessage.DeletionFailed,
+            is FeedbackMessage.RecipePhotoFailed -> Unit
         }
     }
 
@@ -556,6 +573,15 @@ class MainActivity : ComponentActivity() {
         } catch (error: ActivityNotFoundException) {
             Log.w("GohoRecipes", "No app can open the recipe page", error)
         }
+    }
+
+    /** Opens the photo picker for one recipe at a time; its result goes to that recipe only. */
+    private fun pickRecipePhoto(recipeId: String) {
+        if (photoPickerRecipeId != null) return
+        photoPickerRecipeId = recipeId
+        photoPicker.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
     }
 
     private fun selectSection(next: Section) {
@@ -793,25 +819,12 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Streams the scanned JPEG as the single multipart file part both upload endpoints expect. */
-    private fun jpegPart(imageUri: Uri, fileName: String): MultipartBody.Part {
-        val body =
-            object : RequestBody() {
-                override fun contentType() = "image/jpeg".toMediaType()
-
-                override fun isOneShot() = true
-
-                override fun writeTo(sink: BufferedSink) {
-                    val input =
-                        contentResolver.openInputStream(imageUri)
-                            ?: throw IOException("Scanned image is unavailable")
-                    input.use { it.copyTo(sink.outputStream()) }
-                }
-            }
-        return MultipartBody.Part.createFormData("file", fileName, body)
-    }
+    private fun jpegPart(imageUri: Uri, fileName: String): MultipartBody.Part =
+        contentResolver.filePart(imageUri, fileName, "image/jpeg")
 
     private companion object {
         const val SECTION_KEY = "section"
         const val SCANNER_KIND_KEY = "scannerKind"
+        const val PHOTO_PICKER_RECIPE_KEY = "photoPickerRecipeId"
     }
 }

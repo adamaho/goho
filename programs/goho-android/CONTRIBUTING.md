@@ -189,8 +189,9 @@ the selected section and the sheets opened from the app root, such as Add recipe
 Books and Recipes content, `BookListController` and `RecipeListController` for
 Books and Recipes data, receipt and recipe details and the scan preview. The
 controllers also own their sections' background requests, such as deletions,
-Add author and Add recipe's link imports, in the activity's scope, so the requests
-outlive the sheet or screen that started them; `PendingDeletions` and `Feedback`
+Add author, Add recipe's link imports and recipe photos, in the activity's
+scope, so the requests outlive the sheet or screen that started them;
+`PendingDeletions` and `Feedback`
 are shared by every section. `theme` owns Compose theming. As
 features grow, follow the official [Guide to app architecture](https://developer.android.com/topic/architecture)
 and [architecture recommendations](https://developer.android.com/topic/architecture/recommendations):
