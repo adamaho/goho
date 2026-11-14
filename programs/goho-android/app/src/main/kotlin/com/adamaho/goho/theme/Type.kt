@@ -349,8 +349,8 @@ val GohoType =
             TextStyle(
                 fontFamily = Geist,
                 fontWeight = FontWeight.Normal,
-                fontSize = 13.5.sp,
-                lineHeight = 20.sp,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
@@ -358,8 +358,8 @@ val GohoType =
             TextStyle(
                 fontFamily = Geist,
                 fontWeight = FontWeight.Normal,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
