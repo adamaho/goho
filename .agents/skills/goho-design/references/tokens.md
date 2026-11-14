@@ -243,10 +243,12 @@ Approved November 4–8, 2026 (`screens.md` section 12, including its November 1
 | `recipeSection`   | 17 / 22            | 600    | −0.02em  | “Ingredients”, “Steps” and “Details” headings                           |
 | `recipeStat`      | 13.5 / 18          | 500    | 0        | Total time value                                                        |
 | `recipeStatLabel` | 11 / 14            | 400    | 0        | “Total” label in `textTertiary`                                         |
-| `ingredient`      | 13.5 / 20          | 400    | 0        | Ingredient lines; the amount is set in 600                              |
-| `step`            | 13 / 20            | 400    | 0        | Step paragraphs                                                         |
+| `ingredient`      | 15 / 22            | 400    | 0        | Ingredient lines; the amount is set in 600                              |
+| `step`            | 15 / 22            | 400    | 0        | Step paragraphs                                                         |
 | `stepNumber`      | 11 / 14            | 600    | 0        | Number in the 20dp step circle                                          |
 | `ingredientMark`  | 0.9em of `step`    | 500    | 0        | Geist Mono span for ingredient marks, inside `step`; it wraps with text |
+
+On November 14, 2026, `ingredient` (from 13.5 / 20) and `step` (from 13 / 20) were raised to 15 / 22 for easier reading; the headings, `stepNumber` and row spacing are unchanged.
 
 Every style except `ingredientMark` uses Geist with proportional figures. `ingredientMark` is a `SpanStyle` in the `GeistMono` family (`geist_mono_medium.ttf`, Geist Mono Medium, the one approved monospace use). Its relative size follows the step text at any font scale. The mark's `accentContainer` background, `markRadius` corners and padding are drawn per line by the step layout, since a mark can wrap.
 

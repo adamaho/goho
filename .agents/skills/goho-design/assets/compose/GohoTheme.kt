@@ -297,8 +297,8 @@ val GohoType = GohoTypography(
     recipeSection = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = (-0.02).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     recipeStat = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 13.5.sp, lineHeight = 18.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     recipeStatLabel = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    ingredient = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 13.5.sp, lineHeight = 20.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    step = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 20.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    ingredient = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    step = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     stepNumber = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     ingredientMark = SpanStyle(fontFamily = GeistMono, fontWeight = FontWeight.Medium, fontSize = 0.9.em, letterSpacing = 0.sp),
 )
