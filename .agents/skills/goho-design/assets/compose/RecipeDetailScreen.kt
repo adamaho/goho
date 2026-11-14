@@ -527,7 +527,7 @@ private const val MARK_PAD_TEXT = "\u202F"
 
 /**
  * One step paragraph as a single text, so it wraps, reads and scales as one: plain wording as
- * written, and each ingredient mark in Geist Mono on a rounded `accentContainer` fill. A 4dp
+ * written, and each ingredient mark in Geist Medium on a rounded `accentContainer` fill. A 4dp
  * placeholder before and after each mark reserves its horizontal padding in the layout. The fill is
  * drawn behind each line the mark occupies, from this text's own layout; where a mark wraps, the
  * fill extends the same padding past the text at the break.

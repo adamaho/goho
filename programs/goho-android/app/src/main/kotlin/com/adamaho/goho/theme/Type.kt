@@ -19,7 +19,8 @@ val Geist =
         Font(R.font.geist_semibold, FontWeight.SemiBold),
     )
 
-// Geist Mono is approved only for recipe ingredient marks.
+// Geist Mono no longer styles any text: recipe ingredient marks use Geist since November 14,
+// 2026. The family stays declared so the bundled font remains referenced.
 val GeistMono = FontFamily(Font(R.font.geist_mono_medium, FontWeight.Medium))
 
 private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
@@ -350,7 +351,7 @@ val GohoType =
                 fontFamily = Geist,
                 fontWeight = FontWeight.Normal,
                 fontSize = 15.sp,
-                lineHeight = 22.sp,
+                lineHeight = 24.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
@@ -359,7 +360,7 @@ val GohoType =
                 fontFamily = Geist,
                 fontWeight = FontWeight.Normal,
                 fontSize = 15.sp,
-                lineHeight = 22.sp,
+                lineHeight = 24.sp,
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
@@ -374,7 +375,7 @@ val GohoType =
             ),
         ingredientMark =
             SpanStyle(
-                fontFamily = GeistMono,
+                fontFamily = Geist,
                 fontWeight = FontWeight.Medium,
                 fontSize = 0.9.em,
                 letterSpacing = 0.sp,
