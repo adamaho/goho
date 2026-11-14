@@ -74,7 +74,7 @@ Ratios use the sRGB relative-luminance formula. Every base pair exceeds 4.5:1. P
 
 ## Typography
 
-Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only, plus **Geist Mono** Medium (500) for recipe ingredient marks only. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline; `assets/fonts/Geist-source.txt` records each file's source and hash. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
+Font: **Geist** (Google Fonts, OFL), weights 400, 500 and 600 only. Geist Mono Medium (`geist_mono_medium.ttf`) stays bundled but styles no text since November 14, 2026. Bundle the TTFs in `res/font` rather than using downloadable fonts, so the first frame renders correctly offline; `assets/fonts/Geist-source.txt` records each file's source and hash. Use `fontFeatureSettings = "'tnum' 0, 'pnum' 1"` throughout the app. Amounts, dates, counts and times use proportional figures. Metadata and labels use zero tracking. This approved preference takes precedence over tabular examples in the supplied mockups.
 
 Weights: Geist gets heavy quickly, so nothing in the app uses 700. Titles and big amounts are SemiBold (600), names, prices, filters, section labels, tags and secondary buttons are Medium (500), and dates, detail labels and body text are Regular (400). Primary, Scan and danger buttons use SemiBold (600), as in the token table.
 
@@ -237,20 +237,20 @@ Approved October 22, 2026 (`screens.md` section 9). `bookCover` = photo covers f
 
 Approved November 4–8, 2026 (`screens.md` section 12, including its November 11 clarifications); native tokens in `theme/Type.kt`, `Shape.kt` and `Spacing.kt`, mirrored in `assets/compose/GohoTheme.kt` and `Spacing.kt`. The list, details and Add recipe sheet use them (`RecipeOverview.kt`, `RecipeDetailScreen.kt`, `AddRecipeForm.kt`); `recipeStatGap` waits for a second stat column, since the stat row shows Total only.
 
-| Style             | Size / line height | Weight | Tracking | Use                                                                     |
-| ----------------- | ------------------ | ------ | -------- | ----------------------------------------------------------------------- |
-| `recipeTitle`     | 28 / 32            | 600    | −0.035em | Recipe title on details, wrapping                                       |
-| `recipeSection`   | 17 / 22            | 600    | −0.02em  | “Ingredients”, “Steps” and “Details” headings                           |
-| `recipeStat`      | 13.5 / 18          | 500    | 0        | Total time value                                                        |
-| `recipeStatLabel` | 11 / 14            | 400    | 0        | “Total” label in `textTertiary`                                         |
-| `ingredient`      | 15 / 22            | 400    | 0        | Ingredient lines; the amount is set in 600                              |
-| `step`            | 15 / 22            | 400    | 0        | Step paragraphs                                                         |
-| `stepNumber`      | 11 / 14            | 600    | 0        | Number in the 20dp step circle                                          |
-| `ingredientMark`  | 0.9em of `step`    | 500    | 0        | Geist Mono span for ingredient marks, inside `step`; it wraps with text |
+| Style             | Size / line height | Weight | Tracking | Use                                                                |
+| ----------------- | ------------------ | ------ | -------- | ------------------------------------------------------------------ |
+| `recipeTitle`     | 28 / 32            | 600    | −0.035em | Recipe title on details, wrapping                                  |
+| `recipeSection`   | 17 / 22            | 600    | −0.02em  | “Ingredients”, “Steps” and “Details” headings                      |
+| `recipeStat`      | 13.5 / 18          | 500    | 0        | Total time value                                                   |
+| `recipeStatLabel` | 11 / 14            | 400    | 0        | “Total” label in `textTertiary`                                    |
+| `ingredient`      | 15 / 24            | 400    | 0        | Ingredient lines; the amount is set in 600                         |
+| `step`            | 15 / 24            | 400    | 0        | Step paragraphs                                                    |
+| `stepNumber`      | 11 / 14            | 600    | 0        | Number in the 20dp step circle                                     |
+| `ingredientMark`  | 0.9em of `step`    | 500    | 0        | Geist span for ingredient marks, inside `step`; it wraps with text |
 
-On November 14, 2026, `ingredient` (from 13.5 / 20) and `step` (from 13 / 20) were raised to 15 / 22 for easier reading; the headings, `stepNumber` and row spacing are unchanged.
+On November 14, 2026, `ingredient` (from 13.5 / 20) and `step` (from 13 / 20) were raised to 15 / 22 for easier reading; the headings, `stepNumber` and row spacing are unchanged. Later that day, at the user's request, both line heights went from 22 to 24, and `ingredientMark` moved from Geist Mono to Geist, keeping its weight, size and fill.
 
-Every style except `ingredientMark` uses Geist with proportional figures. `ingredientMark` is a `SpanStyle` in the `GeistMono` family (`geist_mono_medium.ttf`, Geist Mono Medium, the one approved monospace use). Its relative size follows the step text at any font scale. The mark's `accentContainer` background, `markRadius` corners and padding are drawn per line by the step layout, since a mark can wrap.
+Every style uses Geist with proportional figures. `ingredientMark` is a `SpanStyle` in the `Geist` family (Geist Medium); it sets no font features, so it keeps the step's proportional figures. Its relative size follows the step text at any font scale. The mark's `accentContainer` background, `markRadius` corners and padding are drawn per line by the step layout, since a mark can wrap.
 
 - Details status bar: no token; the status bar stays fully transparent over the hero (November 12, 2026, superseding `RECIPE_STATUS_BAR_ALPHA` = 0.8).
 - Details: `recipeHeroHeight` = 300 (edge-to-edge photo or the no-photo `surfaceMuted` block with a `recipeHeroIcon` = 48 utensils mark in `accent`), `recipeSheetOverlap` = 24 under the `recipeSheet` shape, `recipeTitleTop` = 22 at the 16dp `screenMargin`, `recipeStatTop` = 18, `recipeStatGap` = 14 after a stat divider.

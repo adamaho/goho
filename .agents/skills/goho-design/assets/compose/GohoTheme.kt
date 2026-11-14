@@ -242,7 +242,8 @@ val Geist = FontFamily(
     Font(R.font.geist_semibold, FontWeight.SemiBold),
 )
 
-// Geist Mono Medium (geist_mono_medium.ttf) is approved only for recipe ingredient marks.
+// Geist Mono Medium (geist_mono_medium.ttf) no longer styles any text: recipe ingredient marks use
+// Geist since November 14, 2026. The family stays declared so the bundled font remains referenced.
 val GeistMono = FontFamily(Font(R.font.geist_mono_medium, FontWeight.Medium))
 
 private const val PROPORTIONAL_NUMBERS = "'tnum' 0, 'pnum' 1"
@@ -297,10 +298,10 @@ val GohoType = GohoTypography(
     recipeSection = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, letterSpacing = (-0.02).em, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     recipeStat = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 13.5.sp, lineHeight = 18.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     recipeStatLabel = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    ingredient = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    step = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    ingredient = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
+    step = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     stepNumber = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    ingredientMark = SpanStyle(fontFamily = GeistMono, fontWeight = FontWeight.Medium, fontSize = 0.9.em, letterSpacing = 0.sp),
+    ingredientMark = SpanStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 0.9.em, letterSpacing = 0.sp),
 )
 
 // ---------- Shape ----------
