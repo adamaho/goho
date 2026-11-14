@@ -86,6 +86,17 @@ export class ImportError extends Schema.TaggedError<ImportError>()(
 ) {}
 
 /**
+ * A recipe's PDF could not be drawn. A photo that can't be used never causes
+ * it; the PDF is drawn without the photo instead.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class PdfError extends Schema.TaggedError<PdfError>()("GohoServer.Recipes.PdfError", {
+  cause: Schema.Defect(),
+}) {}
+
+/**
  * What a fetched recipe page offers the extraction: its title and description,
  * any schema.org Recipe objects from JSON-LD, its visible text, and a photo
  * URL. Every value is untrusted page content.

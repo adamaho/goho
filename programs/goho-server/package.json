@@ -29,7 +29,10 @@
     "@effect/sql-pg": "catalog:",
     "@goho/core": "workspace:*",
     "@goho/goho-api": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fontkit": "catalog:",
+    "pdfkit": "catalog:",
+    "sharp": "catalog:"
   },
   "devDependencies": {
     "@adamaho/nopeus-oxlint-config": "catalog:",
@@ -37,9 +40,12 @@
     "@effect/vitest": "catalog:",
     "@goho/goho-server-client": "workspace:*",
     "@goho/tool-tsconfig": "workspace:*",
+    "@types/fontkit": "catalog:",
     "@types/node": "catalog:",
+    "@types/pdfkit": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "pdfjs-dist": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

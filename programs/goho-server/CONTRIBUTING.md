@@ -324,6 +324,39 @@ JPEG, PNG and WebP signatures, ignoring the declared name and type.
   storing and committing, or before a superseded file is removed, can leave an
   unreferenced file.
 
+### Recipe PDFs
+
+`recipes/pdf.ts` draws a saved recipe and an optional photo as a printable PDF
+in memory, with PDFKit and Sharp. Nothing serves it yet. It reads no database,
+storage or request; its caller supplies the recipe and photo bytes.
+
+- Pages are US Letter. Long recipes run onto more pages at the same size;
+  headings stay with their first lines, and words too long for a line break
+  between characters. The source URL is never printed.
+- Amounts, ingredient lines, step marks and total time follow the Android
+  app's `RecipeText.kt` rules exactly, with en-CA numbers. The PDF also shows
+  the yield, which the app doesn't.
+- Text uses the Geist Regular and SemiBold copies in `assets/fonts`, read once
+  when the layer starts, with their licence and provenance. They cover the
+  fraction glyphs, °, en and em dashes, the no-break space and Latin accents.
+- Before layout, the PDF drops soft hyphens (U+00AD), zero-width spaces
+  (U+200B) and joiners (U+200D), emoji variation selectors (U+FE0E, U+FE0F)
+  and byte order marks (U+FEFF); draws thin (U+2009), narrow no-break
+  (U+202F), en (U+2002), em (U+2003) and figure (U+2007) spaces as plain
+  spaces; and draws U+2010 and U+2011 hyphens as “-”. Geist has none of these.
+  The saved recipe is unchanged. Any other character Geist lacks is drawn as
+  its crossed box and logged by code point.
+- The photo is a banner across the top of the first page, the full content
+  width and 216 pt tall (504 × 216 pt). Sharp turns it upright, crops it from
+  the centre to that 7:3 shape, flattens transparency onto white and makes a
+  JPEG of at most 1260 × 540 px (180 dpi); a smaller photo keeps its own
+  resolution rather than being enlarged. Metadata such as location is dropped
+  and the original bytes are untouched. A photo without a JPEG, PNG or WebP signature,
+  one Sharp can't read, or one over 100 megapixels is logged and left out, and
+  the PDF is drawn without it.
+- Sharp loads its prebuilt libvips for the platform from npm, so it needs no
+  install script, compiler or system package, in development or the image.
+
 ### Recipe imports
 
 `recipes/import.ts` reads one recipe from its page for the recipe upload

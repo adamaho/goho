@@ -1,0 +1,11 @@
+Geist by Vercel and Basement Studio, for recipe PDFs.
+Licence: SIL Open Font License 1.1 (OFL.txt).
+
+Geist-Regular.ttf and Geist-SemiBold.ttf are byte-for-byte copies of the
+Android app's geist_regular.ttf and geist_semibold.ttf, static weights 400 and
+600 instantiated from the Google Fonts variable font. Their provenance is in
+programs/goho-android/app/src/main/assets/fonts/Geist-source.txt.
+
+SHA-256:
+daaeae68faa9bd3e1a1070482f88490588a71947c2cda2e63a2bbb66ef9bd126  Geist-Regular.ttf
+d263424c0bb0f4e38eeb650f498e2834aa984dfc865c79fcffba9940f76e2fcb  Geist-SemiBold.ttf

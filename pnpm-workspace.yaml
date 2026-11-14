@@ -21,11 +21,17 @@ catalog:
   "@effect/ai-openai": 4.1.2
   "@effect/platform-node": 4.1.2
   "@effect/tsgo": 0.67.5
+  "@types/fontkit": 2.0.9
   "@types/node": 26.6.6
+  "@types/pdfkit": 0.17.7
   effect: 4.1.2
+  fontkit: 2.0.4
   oxfmt: 0.77.0
   oxlint: 1.92.0
+  pdfjs-dist: 6.5.438
+  pdfkit: 0.20.2
   rimraf: 6.1.4
+  sharp: 0.35.5
   turbo: 2.11.10
   typescript: 7.0.2
 
