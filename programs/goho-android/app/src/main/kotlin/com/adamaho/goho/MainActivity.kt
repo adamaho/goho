@@ -1,6 +1,8 @@
 package com.adamaho.goho
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -36,6 +38,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -55,6 +58,7 @@ import com.adamaho.goho.api.generated.model.ReceiptImageNotFound
 import com.adamaho.goho.api.generated.model.ReceiptNotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadNotFound
 import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
+import com.adamaho.goho.api.generated.model.Recipe
 import com.adamaho.goho.api.isNotFound
 import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
@@ -75,8 +79,10 @@ import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
+import com.adamaho.goho.ui.main.RecipeCopyProblem
 import com.adamaho.goho.ui.main.RecipeDetailScreen
 import com.adamaho.goho.ui.main.RecipeListController
+import com.adamaho.goho.ui.main.RecipeLoad
 import com.adamaho.goho.ui.main.RecipeOverview
 import com.adamaho.goho.ui.main.ScanKind
 import com.adamaho.goho.ui.main.ScanPreviewScreen
@@ -88,6 +94,7 @@ import com.adamaho.goho.ui.main.deleteAndConfirm
 import com.adamaho.goho.ui.main.filePart
 import com.adamaho.goho.ui.main.receiptListEntries
 import com.adamaho.goho.ui.main.recipePageUrl
+import com.adamaho.goho.ui.main.recipePlainText
 import com.adamaho.goho.ui.main.rememberClock
 import com.adamaho.goho.ui.main.rememberSectionSearch
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
@@ -101,7 +108,9 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -363,6 +372,9 @@ class MainActivity : ComponentActivity() {
                                                                     )
                                                                 },
                                                                 deleteEntry = recipes::delete,
+                                                                copyRecipe = {
+                                                                    copyRecipe(it, null)
+                                                                },
                                                                 reveal = revealRecipes,
                                                                 onRevealed = {
                                                                     revealRecipes = false
@@ -404,6 +416,7 @@ class MainActivity : ComponentActivity() {
                                                 photoAdded = route.recipeId in recipes.photosAdded,
                                                 onAddPhoto = { pickRecipePhoto(route.recipeId) },
                                                 deleteRecipe = { recipes.deleteRecipe(it) },
+                                                copyRecipe = { copyRecipe(it.id, it) },
                                                 onBack = { backStack.removeLastOrNull() },
                                                 // Leave once, even if Back already left.
                                                 onDeleted = {
@@ -539,7 +552,8 @@ class MainActivity : ComponentActivity() {
                 books.addAuthor(message.bookId, message.author, retry = true)
             is FeedbackMessage.RecipeImportFailed -> addRecipe(message.url)
             is FeedbackMessage.DeletionFailed,
-            is FeedbackMessage.RecipePhotoFailed -> Unit
+            is FeedbackMessage.RecipePhotoFailed,
+            is FeedbackMessage.RecipeCopyFailed -> Unit
         }
     }
 
@@ -572,6 +586,58 @@ class MainActivity : ComponentActivity() {
             )
         } catch (error: ActivityNotFoundException) {
             Log.w("GohoRecipes", "No app can open the recipe page", error)
+        }
+    }
+
+    /**
+     * Copy recipe: puts one saved recipe on the clipboard as plain text ([recipePlainText]), for
+     * the system's own copied confirmation. Details passes its [loaded] recipe; the list's summary
+     * has no ingredients or steps, so it's fetched once through [RecipeListController.load]. It
+     * runs in the options sheet's scope, so a sheet closed while it loads cancels it. The clipboard
+     * is only written while the sheet's request is still wanted, the app is in the foreground and
+     * the recipe isn't being deleted (otherwise it ends quietly, as a cancellation, not a failure),
+     * so leaving the app never copies later; a recipe that's gone, a failed load or a refused write
+     * leaves it as it was and shows the shared snackbar, and a gone recipe also refreshes the list.
+     * Neither the recipe's text nor the clipboard is read back or logged.
+     */
+    private suspend fun copyRecipe(recipeId: String, loaded: Recipe?) {
+        val recipe =
+            loaded
+                ?: when (val load = recipes.load(recipeId)) {
+                    is RecipeLoad.Loaded -> load.recipe
+                    RecipeLoad.Missing -> {
+                        recipes.refresh()
+                        feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeCopyProblem.Missing))
+                        return
+                    }
+                    RecipeLoad.Failed -> {
+                        feedback.send(
+                            FeedbackMessage.RecipeCopyFailed(
+                                if (isOffline()) RecipeCopyProblem.Offline
+                                else RecipeCopyProblem.Failed
+                            )
+                        )
+                        return
+                    }
+                }
+        currentCoroutineContext().ensureActive()
+        if (
+            !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) ||
+                deletions.contains(DeletionKey(DeletionKind.Recipe, recipeId))
+        )
+            return
+        try {
+            val clip =
+                ClipData.newPlainText(
+                    getString(R.string.recipe_copy_clip_label),
+                    recipePlainText(recipe, resources),
+                )
+            getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            // The error only, never the recipe's text.
+            Log.w("GohoRecipes", "Recipe couldn't be copied: ${error.javaClass.simpleName}")
+            feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeCopyProblem.Failed))
         }
     }
 

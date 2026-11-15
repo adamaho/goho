@@ -140,6 +140,10 @@
     <string name="feedback_recipe_photo_unsupported_detail">Choose a JPEG, PNG or WebP photo under 20 MB.</string>
     <string name="feedback_recipe_photo_offline_detail">Looks like you’re offline. Add it again once you’re back.</string>
     <string name="feedback_recipe_photo_failed_detail">A little hiccup on our end. Give it another go.</string>
+    <string name="feedback_recipe_copy_failed">We couldn’t copy that recipe</string>
+    <string name="feedback_recipe_copy_offline_detail">Looks like you’re offline. Copy it again once you’re back.</string>
+    <string name="feedback_recipe_copy_missing_detail">It’s no longer saved.</string>
+    <string name="feedback_recipe_copy_failed_detail">A little hiccup on our end. Give it another go.</string>
     <string name="feedback_receipt_delete_failed">We couldn’t delete that receipt</string>
     <string name="feedback_delete_failed_detail">Pull to refresh, then give it another go.</string>
     <string name="feedback_author_conflict">That book’s already here</string>
@@ -218,6 +222,18 @@
     <string name="recipe_import_delete_failed">Couldn’t delete this import. Try again.</string>
     <string name="recipe_deleting">Deleting…</string>
     <string name="recipe_cancel">Cancel</string>
+    <string name="recipe_copy">Copy recipe</string>
+    <string name="recipe_copying">Copying…</string>
+    <!-- The clipboard entry's label, which the system may show; never the recipe's content. -->
+    <string name="recipe_copy_clip_label">Recipe</string>
+    <!-- Copied recipe text. %1$s is the total time, such as “25 min”. -->
+    <string name="recipe_copy_total">Total: %1$s</string>
+    <!-- %1$s is one ingredient line, as details shows it. -->
+    <string name="recipe_copy_ingredient">• %1$s</string>
+    <!-- %1$s is the step number, %2$s the step's full wording. -->
+    <string name="recipe_copy_step">%1$s. %2$s</string>
+    <!-- %1$s is the source page's address as saved. -->
+    <string name="recipe_copy_source">Source: %1$s</string>
     <string name="recipe_add_title">Add a recipe</string>
     <string name="recipe_add_body">Paste a link to a recipe page. Goho reads it and saves it in your format.</string>
     <string name="recipe_link">Link</string>

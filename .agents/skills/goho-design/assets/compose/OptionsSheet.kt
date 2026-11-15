@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.*
 import com.adamaho.goho.theme.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** The sheet's one visible pane: its menu, the delete confirmation, or an [OptionsForm]. */
@@ -47,11 +49,25 @@ internal class OptionsForm(
 )
 
 /**
+ * A one-shot menu action above delete, as Copy recipe is. [run] does its work in the sheet's own
+ * scope, which is cancelled as soon as the sheet starts closing any other way (Back, drag, scrim or
+ * leaving), so its result is never applied late. While it runs, its row reads [busyLabel] and the
+ * menu takes no other input; once it returns, the sheet closes. It reports its own failures.
+ */
+internal class OptionsAction(
+    val label: String,
+    val busyLabel: String,
+    val icon: @Composable (Modifier, Color) -> Unit,
+    val run: suspend () -> Unit,
+)
+
+/**
  * One item's header stays mounted while the actions below change inside the same sheet. The caller
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
  * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
  * request and any later failure belong to the activity. The sheet only awaits its own exit. A
- * [form] adds its action above delete; [openForm] opens the sheet directly at that pane.
+ * [form] adds its action above delete; [openForm] opens the sheet directly at that pane. An
+ * [action] adds a one-shot row above them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +83,7 @@ internal fun OptionsSheet(
     onDeleted: () -> Unit = onDismiss,
     form: OptionsForm? = null,
     openForm: Boolean = false,
+    action: OptionsAction? = null,
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
@@ -82,6 +99,13 @@ internal fun OptionsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { !deleting || deleted },
         )
+    // The running action, and whether it has finished and is closing the sheet itself.
+    var acting by remember { mutableStateOf<Job?>(null) }
+    var actionDone by remember { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        snapshotFlow { state.targetValue }
+            .collect { if (it == SheetValue.Hidden && !actionDone) acting?.cancel() }
+    }
     val paneTitle =
         when (pane) {
             OptionsPane.Menu -> title
@@ -139,7 +163,40 @@ internal fun OptionsSheet(
                             .background(c.divider)
                     )
                     Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
-                    val enabled = pane == OptionsPane.Menu
+                    val enabled = pane == OptionsPane.Menu && acting == null
+                    action?.let {
+                        val busy = acting != null
+                        OptionsMenuItem(
+                            if (busy) it.busyLabel else it.label,
+                            c.textPrimary,
+                            it.icon,
+                            enabled,
+                            Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        ) {
+                            if (acting == null) {
+                                val job = scope.launch {
+                                    try {
+                                        it.run()
+                                    } catch (error: Exception) {
+                                        if (error is CancellationException) throw error
+                                    }
+                                    ensureActive()
+                                    actionDone = true
+                                    state.hide()
+                                    onDismiss()
+                                }
+                                // Cancelled by a drag that springs back, before or during its own
+                                // exit, the action can run again.
+                                job.invokeOnCompletion { cause ->
+                                    if (cause != null) {
+                                        acting = null
+                                        actionDone = false
+                                    }
+                                }
+                                acting = job
+                            }
+                        }
+                    }
                     form?.let {
                         OptionsMenuItem(it.label, c.textPrimary, it.icon, enabled) {
                             pane = OptionsPane.Form
@@ -278,13 +335,15 @@ private fun OptionsMenuItem(
     color: Color,
     icon: @Composable (Modifier, Color) -> Unit,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val c = GohoTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val progress by pressProgress(interaction)
     Row(
-        Modifier.fillMaxWidth()
+        modifier
+            .fillMaxWidth()
             .background(
                 lerp(
                     c.sheet,
