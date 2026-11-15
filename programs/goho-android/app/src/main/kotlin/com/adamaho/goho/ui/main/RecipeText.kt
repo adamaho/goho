@@ -7,6 +7,7 @@ import com.adamaho.goho.api.generated.model.Fraction
 import com.adamaho.goho.api.generated.model.Ingredient
 import com.adamaho.goho.api.generated.model.MarkContent
 import com.adamaho.goho.api.generated.model.Quantity
+import com.adamaho.goho.api.generated.model.Recipe
 import com.adamaho.goho.api.generated.model.RecipeUnit
 import com.adamaho.goho.api.generated.model.Segment
 import com.adamaho.goho.api.generated.model.Step
@@ -100,6 +101,58 @@ private fun markText(ingredient: Ingredient, portion: Fraction, resources: Resou
                     resources.getString(R.string.recipe_ingredient_amount, it, ingredient.name)
                 } ?: ingredient.name
     }
+}
+
+/**
+ * A saved recipe as plain text for Copy recipe, in the order details shows it: the title, “Total:
+ * 25 min”, bulleted Ingredients, numbered Steps, then “Source: ” with the address as saved. A time,
+ * source, ingredient list or step list the recipe doesn't have is left out with its heading, and
+ * blocks are separated by one blank line. Ingredients and steps use [ingredientLine] and
+ * [stepParts], so amounts, fractions and step portions read as on screen; step marks are flattened
+ * into the sentence, without their fills or pads.
+ */
+internal fun recipePlainText(recipe: Recipe, resources: Resources): String {
+    val number = NumberFormat.getIntegerInstance(resources.locale)
+    val title =
+        listOfNotNull(
+                recipe.title,
+                recipe.totalTimeSeconds
+                    ?.let { recipeDuration(it, resources) }
+                    ?.let { resources.getString(R.string.recipe_copy_total, it) },
+            )
+            .joinToString("\n")
+    val ingredients =
+        recipe.ingredients
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString("\n", prefix = resources.getString(R.string.recipe_ingredients) + "\n") {
+                val line = ingredientLine(it, resources)
+                resources.getString(
+                    R.string.recipe_copy_ingredient,
+                    line.amount?.let { amount ->
+                        resources.getString(R.string.recipe_ingredient_amount, amount, line.name)
+                    } ?: line.name,
+                )
+            }
+    val byId = recipe.ingredients.associateBy { it.id }
+    val steps =
+        recipe.steps
+            .takeIf { it.isNotEmpty() }
+            ?.withIndex()
+            ?.joinToString("\n", prefix = resources.getString(R.string.recipe_steps) + "\n") {
+                (index, step) ->
+                resources.getString(
+                    R.string.recipe_copy_step,
+                    number.format(index + 1),
+                    stepParts(step, byId, resources).joinToString("") { it.text },
+                )
+            }
+    val source =
+        recipe.source
+            ?.url
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { resources.getString(R.string.recipe_copy_source, it) }
+    return listOfNotNull(title, ingredients, steps, source).joinToString("\n\n")
 }
 
 /**

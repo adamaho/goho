@@ -23,6 +23,16 @@ internal sealed interface FeedbackMessage {
 
     /** A picked recipe photo wasn't added; picking it again is the only retry. */
     data class RecipePhotoFailed(val problem: RecipePhotoProblem) : FeedbackMessage
+
+    /** Copy recipe left the clipboard as it was; copying again from the menu is the only retry. */
+    data class RecipeCopyFailed(val problem: RecipeCopyProblem) : FeedbackMessage
+}
+
+/** Why Copy recipe didn't copy: the recipe is gone, the device is offline, or anything else. */
+internal enum class RecipeCopyProblem {
+    Missing,
+    Offline,
+    Failed,
 }
 
 /**
