@@ -273,7 +273,7 @@ data class GohoTypography(
     val ingredient: TextStyle,
     val step: TextStyle,
     val stepNumber: TextStyle,
-    /** Inline in `step`; its size is relative so it follows the step text. */
+    /** Inline in `step`, at its size and colour, like the amounts in `ingredient`. */
     val ingredientMark: SpanStyle,
 )
 
@@ -301,7 +301,7 @@ val GohoType = GohoTypography(
     ingredient = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     step = TextStyle(fontFamily = Geist, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
     stepNumber = TextStyle(fontFamily = Geist, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.sp, fontFeatureSettings = PROPORTIONAL_NUMBERS),
-    ingredientMark = SpanStyle(fontFamily = Geist, fontWeight = FontWeight.Medium, fontSize = 0.9.em, letterSpacing = 0.sp),
+    ingredientMark = SpanStyle(fontWeight = FontWeight.SemiBold),
 )
 
 // ---------- Shape ----------

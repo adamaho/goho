@@ -7,22 +7,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -31,19 +23,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.adamaho.goho.R
@@ -520,126 +506,30 @@ private fun StepRow(number: String, parts: List<StepPart>, modifier: Modifier) {
     }
 }
 
-private const val MARK_PAD = "markPad"
-
-/**
- * Narrow no-break space: the line breaker may break before a mark's leading pad and after its
- * trailing one, but never between a pad and the mark, so each pad stays with its mark.
- */
-private const val MARK_PAD_TEXT = "\u202F"
-
 /**
  * One step paragraph as a single text, so it wraps, reads and scales as one: plain wording as
- * written, and each ingredient mark in Geist Medium on a rounded `accentContainer` fill. A 4dp
- * placeholder before and after each mark reserves its horizontal padding in the layout. The fill is
- * drawn behind each line the mark occupies, from this text's own layout; where a mark wraps, the
- * fill extends the same padding past the text at the break.
+ * written, and each ingredient mark in SemiBold, like the amounts in Ingredients.
  */
 @Composable
 private fun StepText(parts: List<StepPart>, modifier: Modifier = Modifier) {
-    val c = GohoTheme.colors
-    val style = GohoTheme.type.step
     val mark = GohoTheme.type.ingredientMark
-    val markColor = c.onAccentContainer
-    val (text, marks) =
-        remember(parts, mark, markColor) { stepText(parts, mark.copy(color = markColor)) }
-    val pad = with(LocalDensity.current) { GohoSpacing.markHorizontal.toSp() }
-    val inlineContent =
-        remember(pad) {
-            mapOf(
-                MARK_PAD to
-                    InlineTextContent(Placeholder(pad, pad, PlaceholderVerticalAlign.TextCenter)) {}
-            )
-        }
-    // The mark font's own ascent and descent at the current size, for the fill's height.
-    val measurer = rememberTextMeasurer(cacheSize = 1)
-    val markMetrics =
-        remember(style, mark, measurer) {
-            val measured =
-                measurer.measure(
-                    "0",
-                    style.copy(
-                        fontFamily = mark.fontFamily,
-                        fontWeight = mark.fontWeight,
-                        fontSize = style.fontSize * mark.fontSize.value,
-                        lineHeight = TextUnit.Unspecified,
-                    ),
-                )
-            measured.firstBaseline to measured.size.height - measured.firstBaseline
-        }
-    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    Text(
-        text,
-        modifier =
-            modifier.drawBehind {
-                layout?.let {
-                    drawMarks(it, marks, markMetrics.first, markMetrics.second, c.accentContainer)
-                }
-            },
-        style = style,
-        color = c.textPrimary,
-        inlineContent = inlineContent,
-        onTextLayout = { layout = it },
-    )
-}
-
-/** The paragraph text and each mark's range, including its two pads. */
-private fun stepText(
-    parts: List<StepPart>,
-    mark: SpanStyle,
-): Pair<AnnotatedString, List<IntRange>> {
-    val ranges = mutableListOf<IntRange>()
-    val text = buildAnnotatedString {
-        parts.forEach { part ->
-            when (part) {
-                is StepPart.Plain -> append(part.text)
-                is StepPart.Mark -> {
-                    val start = length
-                    appendInlineContent(MARK_PAD, MARK_PAD_TEXT)
-                    withStyle(mark) { append(part.text) }
-                    appendInlineContent(MARK_PAD, MARK_PAD_TEXT)
-                    ranges += start until length
+    val text =
+        remember(parts, mark) {
+            buildAnnotatedString {
+                parts.forEach { part ->
+                    when (part) {
+                        is StepPart.Plain -> append(part.text)
+                        is StepPart.Mark -> withStyle(mark) { append(part.text) }
+                    }
                 }
             }
         }
-    }
-    return text to ranges
-}
-
-private fun DrawScope.drawMarks(
-    layout: TextLayoutResult,
-    marks: List<IntRange>,
-    ascent: Float,
-    descent: Float,
-    color: Color,
-) {
-    val padX = GohoSpacing.markHorizontal.toPx()
-    val padY = GohoSpacing.markVertical.toPx()
-    val radius = CornerRadius(GohoSpacing.markRadius.toPx())
-    marks.forEach { range ->
-        val firstLine = layout.getLineForOffset(range.first)
-        val lastLine = layout.getLineForOffset(range.last)
-        for (line in firstLine..lastLine) {
-            val start = maxOf(range.first, layout.getLineStart(line))
-            val end = minOf(range.last + 1, layout.getLineEnd(line, visibleEnd = true))
-            if (end <= start) continue
-            val first = layout.getBoundingBox(start)
-            val last = layout.getBoundingBox(end - 1)
-            var left = minOf(first.left, last.left)
-            var right = maxOf(first.right, last.right)
-            // Only the mark's own ends have a reserved pad; a wrapped edge pads past the text.
-            val rtl = layout.getParagraphDirection(start) == ResolvedTextDirection.Rtl
-            if (line > firstLine) if (rtl) right += padX else left -= padX
-            if (line < lastLine) if (rtl) left -= padX else right += padX
-            val baseline = layout.getLineBaseline(line)
-            drawRoundRect(
-                color,
-                topLeft = Offset(left, baseline - ascent - padY),
-                size = Size(right - left, ascent + descent + padY * 2),
-                cornerRadius = radius,
-            )
-        }
-    }
+    Text(
+        text,
+        modifier = modifier,
+        style = GohoTheme.type.step,
+        color = GohoTheme.colors.textPrimary,
+    )
 }
 
 /**

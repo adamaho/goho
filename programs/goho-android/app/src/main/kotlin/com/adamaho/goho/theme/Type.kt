@@ -62,7 +62,7 @@ data class GohoTypography(
     val ingredient: TextStyle,
     val step: TextStyle,
     val stepNumber: TextStyle,
-    /** Inline in `step`; its size is relative so it follows the step text. */
+    /** Inline in `step`, at its size and colour, like the amounts in `ingredient`. */
     val ingredientMark: SpanStyle,
 )
 
@@ -373,13 +373,7 @@ val GohoType =
                 letterSpacing = 0.sp,
                 fontFeatureSettings = PROPORTIONAL_NUMBERS,
             ),
-        ingredientMark =
-            SpanStyle(
-                fontFamily = Geist,
-                fontWeight = FontWeight.Medium,
-                fontSize = 0.9.em,
-                letterSpacing = 0.sp,
-            ),
+        ingredientMark = SpanStyle(fontWeight = FontWeight.SemiBold),
     )
 
 // Existing Material screens inherit Goho type while they migrate to semantic tokens.
