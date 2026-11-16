@@ -33,7 +33,7 @@ const saved = {
 
 /**
  * A saved recipe that touches every amount and mark rule the app formats, with
- * a source the PDF leaves out.
+ * a source URL the PDF ends with.
  *
  * @category models
  * @since 0.1.0
