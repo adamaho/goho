@@ -1,9 +1,10 @@
+import { randomFillSync } from "node:crypto";
 import { crc32 } from "node:zlib";
 
 import { NodeServices } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import type { Ingredient, Quantity, Recipe, RecipeUnit, RecipeYield } from "@goho/goho-api/recipes";
-import { Effect, FileSystem, Layer, Logger, Option, Path } from "effect";
+import { Effect, Fiber, FileSystem, Layer, Logger, Option, Path, Tracer } from "effect";
 import * as fontkit from "fontkit";
 // pdf.js ships a legacy build for runtimes without its newest JavaScript
 // features; Node 26 lacks Math.sumPrecise, which the default build uses.
@@ -574,6 +575,73 @@ it.effect("draws photos as a centre-cropped banner the content width", () =>
     );
     expect(Buffer.compare(sideways, original)).toBe(0);
   }),
+);
+
+it.effect("draws one PDF at a time, while later renders wait their turn", () =>
+  Effect.gen(function* () {
+    // Counts renders in flight by their span, which covers the drawing only.
+    let drawing = 0;
+    let most = 0;
+    const tracer = Tracer.make({
+      span: (options) => {
+        const span = new Tracer.NativeSpan(options);
+        if (options.name !== "@goho/RecipePdf.render") return span;
+        most = Math.max(most, ++drawing);
+        const end = span.end.bind(span);
+        span.end = (endTime, exit) => {
+          drawing--;
+          end(endTime, exit);
+        };
+        return span;
+      },
+    });
+    const pdf = yield* RecipePdf.Service;
+    // Sharp and PDFKit yield to the event loop, so unguarded renders overlap.
+    const photo = photoOf(yield* image(() => scene().jpeg().toBuffer()), "image/jpeg");
+    const pdfs = yield* Effect.all(
+      Array.from({ length: 3 }, () => pdf.render(recipe, photo)),
+      { concurrency: "unbounded" },
+    ).pipe(Effect.withTracer(tracer));
+    expect(pdfs).toHaveLength(3);
+    expect([most, drawing]).toEqual([1, 0]);
+  }).pipe(Effect.provide(RecipePdf.layer.pipe(Layer.provide(NodeServices.layer)))),
+);
+
+// Live, as Sharp's work runs on its own threads in real time.
+it.live("finishes an interrupted render before the next one starts", () =>
+  Effect.gen(function* () {
+    const pdf = yield* RecipePdf.Service;
+    // A large photo of noise keeps Sharp decoding long after the interruption.
+    const noise = randomFillSync(new Uint8Array(4000 * 3000 * 3));
+    const photo = photoOf(
+      yield* image(() =>
+        sharp(noise, { raw: { width: 4000, height: 3000, channels: 3 } })
+          .jpeg()
+          .toBuffer(),
+      ),
+      "image/jpeg",
+    );
+    // Sharp images being decoded or encoded on its threads. Its queued count
+    // moves to this one in two steps, so the two can't be summed reliably.
+    const processing = () => sharp.counters().process;
+    while (processing() > 0) yield* Effect.sleep("1 millis");
+    let most = 0;
+    const sampler = yield* Effect.forkScoped(
+      Effect.forever(
+        Effect.sync(() => {
+          most = Math.max(most, processing());
+        }).pipe(Effect.andThen(Effect.sleep("1 millis"))),
+      ),
+    );
+
+    const first = yield* Effect.forkScoped(pdf.render(recipe, photo));
+    // Interrupt while Sharp is decoding the first photo.
+    while (processing() === 0) yield* Effect.sleep("1 millis");
+    yield* Fiber.interrupt(first);
+    yield* pdf.render(recipe, photo);
+    yield* Fiber.interrupt(sampler);
+    expect(most).toBe(1);
+  }).pipe(Effect.provide(RecipePdf.layer.pipe(Layer.provide(NodeServices.layer)))),
 );
 
 it.effect("draws the recipe without a photo that can't be used, and logs why", () =>

@@ -22,6 +22,7 @@ import { HttpBody, HttpClient, HttpRouter } from "effect/http";
 import { PersistedQueue } from "effect/persistence";
 import { SqlClient } from "effect/sql";
 import { TestClock } from "effect/testing";
+import sharp from "sharp";
 import { expect } from "vitest";
 
 import * as BookUploads from "#src/book-uploads/service.ts";
@@ -36,6 +37,7 @@ import * as RecipeUploadQueue from "#src/recipe-uploads/queue.ts";
 import * as RecipeUploadRepository from "#src/recipe-uploads/repository.ts";
 import * as RecipeUploads from "#src/recipe-uploads/service.ts";
 import * as Worker from "#src/recipe-uploads/worker.ts";
+import * as RecipePdf from "#src/recipes/pdf.ts";
 import * as RecipeRepository from "#src/recipes/repository.ts";
 import * as Recipes from "#src/recipes/service.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
@@ -176,6 +178,7 @@ const FakesLive = Layer.effectContext(
 ).pipe(Layer.provide([NodeServices.layer, NodeCrypto.layer]));
 
 const InfrastructureLive = Layer.mergeAll(
+  RecipePdf.layer.pipe(Layer.provide(NodeServices.layer)),
   RecipeRepository.layer,
   RecipeUploadRepository.layer,
   RecipeUploadQueue.layer,
@@ -637,6 +640,18 @@ const HttpLive = HttpRouter.serve(
 
 const decodeUpload = Schema.decodeUnknownEffect(Schema.Struct({ data: RecipeUpload }));
 
+// The typed client decodes a recipe as JSON or a PDF; without an Accept header it is JSON.
+const getRecipe = (client: Effect.Success<ReturnType<typeof Client.make>>, recipeId: RecipeId) =>
+  client.recipes
+    .get({ params: { recipeId } })
+    .pipe(
+      Effect.flatMap((response) =>
+        response instanceof Uint8Array
+          ? Effect.die("Expected the recipe as JSON")
+          : Effect.succeed(response),
+      ),
+    );
+
 it.effect("imports, serves, and deletes recipes over HTTP", () =>
   Effect.gen(function* () {
     const fakes = yield* Fakes;
@@ -675,7 +690,7 @@ it.effect("imports, serves, and deletes recipes over HTTP", () =>
     const recipeId = Option.getOrThrow(Option.fromNullishOr(uploads[0]?.recipeId));
     expect(uploads[1]?.recipeId).toBe(recipeId);
     expect(yield* Ref.get(fakes.modelCalls)).toBe(1);
-    const { data: imported } = yield* client.recipes.get({ params: { recipeId } });
+    const { data: imported } = yield* getRecipe(client, recipeId);
     expect(imported).toMatchObject({ ...toast, id: recipeId, source, hasImage: true });
     const photo = yield* HttpClient.get(`/recipes/${recipeId}/image`);
     expect(photo.status).toBe(200);
@@ -727,6 +742,38 @@ const photoForm = (file: File, field = "file") => {
   return form;
 };
 
+it.effect("downloads a saved recipe as a PDF with its stored photo over HTTP", () =>
+  Effect.gen(function* () {
+    const client = yield* Client.make("");
+    const { data: saved } = yield* client.recipes.create({ payload: toast });
+    const photo = yield* Effect.tryPromise(() =>
+      sharp({ create: { width: 700, height: 300, channels: 3, background: "#c84" } })
+        .png()
+        .toBuffer(),
+    );
+    const put = yield* HttpClient.put(`/recipes/${saved.id}/image`, {
+      body: HttpBody.formData(photoForm(new File([photo], "toast.png"))),
+    });
+    expect(put.status).toBe(201);
+
+    const response = yield* HttpClient.get(`/recipes/${saved.id}`, {
+      headers: { accept: "application/pdf" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers).toMatchObject({
+      "content-type": "application/pdf",
+      "content-disposition": 'attachment; filename="toast.pdf"',
+      "cache-control": "private, no-store",
+      vary: "Origin, Accept",
+    });
+    // The stored photo is drawn as an image in the PDF.
+    const pdf = Buffer.from(yield* response.arrayBuffer).toString("latin1");
+    expect(pdf.startsWith("%PDF-")).toBe(true);
+    expect(pdf).toContain("/Subtype /Image");
+    expect(pdf.trimEnd().endsWith("%%EOF")).toBe(true);
+  }).pipe(Effect.provide(HttpLive)),
+);
+
 // A live clock, as the oversized upload streams through a real socket.
 it.live(
   "sets, replaces, serves, and removes recipe photos over HTTP",
@@ -756,7 +803,7 @@ it.live(
       expect(before[0]).toEqual([200, "image/jpeg", jpeg.buffer]);
       expect(before[1]).toHaveLength(1);
       expect(before[1]).not.toEqual(importedFiles);
-      const { data: withPhoto } = yield* client.recipes.get({ params: { recipeId } });
+      const { data: withPhoto } = yield* getRecipe(client, recipeId);
       expect(withPhoto.hasImage).toBe(true);
       expect(withPhoto.updatedAt).not.toBe(imported?.updatedAt);
 
@@ -797,7 +844,7 @@ it.live(
       }
       expect((yield* served)[0]).toBe(404);
       expect(yield* storedFiles).toEqual([]);
-      const { data: withoutPhoto } = yield* client.recipes.get({ params: { recipeId } });
+      const { data: withoutPhoto } = yield* getRecipe(client, recipeId);
       expect(withoutPhoto.hasImage).toBe(false);
 
       // A recipe without a photo gets 201, and the typed client takes both empty successes.

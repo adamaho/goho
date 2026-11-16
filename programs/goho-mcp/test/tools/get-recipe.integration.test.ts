@@ -1,5 +1,9 @@
 import { layer } from "@effect/vitest";
-import { RecipeNotFound, RecipesUnavailable } from "@goho/goho-server-client/recipes";
+import {
+  RecipeNotAcceptable,
+  RecipeNotFound,
+  RecipesUnavailable,
+} from "@goho/goho-server-client/recipes";
 import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
@@ -20,6 +24,15 @@ const routes = Effect.gen(function* () {
     return HttpServerResponse.jsonUnsafe({
       data: { ...recipe, id: "43", ingredients: recipe.ingredients.slice(1) },
     });
+  }
+  // The tool sends no Accept header, so a PDF or a 406 means the API disagrees.
+  if (request.url === "/recipes/44") {
+    return HttpServerResponse.uint8Array(new TextEncoder().encode("%PDF-1.3"), {
+      contentType: "application/pdf",
+    });
+  }
+  if (request.url === "/recipes/45") {
+    return yield* HttpServerRespondable.toResponse(new RecipeNotAcceptable());
   }
   if (request.url === "/recipes/999") {
     return yield* HttpServerRespondable.toResponse(new RecipeNotFound());
@@ -50,6 +63,8 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_recipe", (it) => 
           { recipe_id: "999", text: "Recipe 999 was not found." },
           { recipe_id: "500", text: `Could not get recipe. ${apiAdvice.serverFailed}` },
           { recipe_id: "43", text: `Could not get recipe. ${apiAdvice.incompatible}` },
+          { recipe_id: "44", text: `Could not get recipe. ${apiAdvice.incompatible}` },
+          { recipe_id: "45", text: `Could not get recipe. ${apiAdvice.incompatible}` },
         ];
 
         for (const [index, { recipe_id, text }] of cases.entries()) {

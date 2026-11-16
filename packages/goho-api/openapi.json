@@ -1918,6 +1918,12 @@
                   "required": ["data"],
                   "additionalProperties": false
                 }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           },
@@ -1941,8 +1947,18 @@
               }
             }
           },
+          "406": {
+            "description": "That Accept header benches both plays, bud. Ask for application/json or application/pdf.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNotAcceptable"
+                }
+              }
+            }
+          },
           "500": {
-            "description": "The server could not retrieve this recipe. | Internal Server Error",
+            "description": "The server could not retrieve or draw this recipe. | Internal Server Error",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1959,7 +1975,7 @@
             }
           }
         },
-        "description": "Brings back one saved recipe with its ingredients, steps and yield.",
+        "description": "Brings back one saved recipe with its ingredients, steps and yield. JSON takes the faceoff when the Accept header is missing, has no well-formed media range, or allows any type; send `Accept: application/pdf` and you get a printable US Letter PDF, photo up top, as an attachment named after the title. Accept is read with its wildcards and q-values: the higher q wins, a tie goes to the type named by the more specific range (`application/pdf, */*` gets the PDF) and then to JSON, and `q=0` benches a type. A header that rules out both returns 406.",
         "summary": "Get a recipe"
       },
       "delete": {
@@ -3451,6 +3467,31 @@
         "required": ["title", "ingredients", "steps"],
         "additionalProperties": false,
         "description": "A full recipe to put on the roster, bud. Leave out the yield or total time, or send null, when it isn't known."
+      },
+      "RecipeNotAcceptable": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goho:problem:recipe-not-acceptable"]
+          },
+          "status": {
+            "type": "number",
+            "enum": [406]
+          },
+          "title": {
+            "type": "string",
+            "enum": ["Recipe not acceptable"]
+          }
+        },
+        "required": ["type"],
+        "additionalProperties": false
       },
       "RecipeSummary": {
         "type": "object",

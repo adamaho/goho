@@ -59,6 +59,7 @@ import {
   Recipe,
   RecipeId,
   RecipeImageNotFound,
+  RecipeNotAcceptable,
   RecipeNotFound,
   RecipesUnavailable,
   RecipeSummary,
@@ -136,6 +137,9 @@ const BookUploadsUnavailableProblem = BookUploadsUnavailable.pipe(
 
 const RecipeNotFoundProblem = RecipeNotFound.pipe(
   Schema.annotateEncoded({ identifier: "RecipeNotFound" }),
+);
+const RecipeNotAcceptableProblem = RecipeNotAcceptable.pipe(
+  Schema.annotateEncoded({ identifier: "RecipeNotAcceptable" }),
 );
 const RecipeImageNotFoundProblem = RecipeImageNotFound.pipe(
   Schema.annotateEncoded({ identifier: "RecipeImageNotFound" }),
@@ -607,18 +611,24 @@ export const api = HttpApi.make("goho-server")
       .add(
         HttpApiEndpoint.get("get", "/recipes/:recipeId", {
           params: { recipeId: RecipeId },
-          success: DataResponse(Recipe),
+          success: [
+            DataResponse(Recipe),
+            Schema.Uint8Array.pipe(
+              HttpApiSchema.asUint8Array({ contentType: "application/pdf" }),
+            ).annotate({ httpApiStatus: 200 }),
+          ],
           error: [
             RecipeNotFoundProblem,
+            RecipeNotAcceptableProblem,
             RecipesUnavailableProblem.annotate({
-              description: "The server could not retrieve this recipe.",
+              description: "The server could not retrieve or draw this recipe.",
             }),
           ],
         })
           .annotate(OpenApi.Summary, "Get a recipe")
           .annotate(
             OpenApi.Description,
-            "Brings back one saved recipe with its ingredients, steps and yield.",
+            "Brings back one saved recipe with its ingredients, steps and yield. JSON takes the faceoff when the Accept header is missing, has no well-formed media range, or allows any type; send `Accept: application/pdf` and you get a printable US Letter PDF, photo up top, as an attachment named after the title. Accept is read with its wildcards and q-values: the higher q wins, a tie goes to the type named by the more specific range (`application/pdf, */*` gets the PDF) and then to JSON, and `q=0` benches a type. A header that rules out both returns 406.",
           ),
       )
       .add(

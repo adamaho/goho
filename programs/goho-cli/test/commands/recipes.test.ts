@@ -4,6 +4,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/http";
 import { describe, expect, it } from "vitest";
 
 import {
+  cliProblemOutput,
   runCommand,
   serverProblemOutput,
   toTestResponse,
@@ -162,6 +163,23 @@ describe("recipes view", () => {
       code: 0,
       stderr: "",
       stdout: `${JSON.stringify(recipe, null, 2)}\n`,
+    });
+  });
+
+  it("reports a PDF where it expects JSON and exits nonzero", async () => {
+    const pdf = HttpServerResponse.uint8Array(new TextEncoder().encode("%PDF-1.3"), {
+      contentType: "application/pdf",
+    });
+    const result = await withResponse(Effect.succeed(pdf), (baseUrl) =>
+      runCommand(baseUrl, ["recipes", "view", recipeId]),
+    );
+    expect(result).toEqual({
+      code: 1,
+      stdout: "",
+      stderr: cliProblemOutput(
+        "goho:cli:unexpected-response",
+        "The server sent a PDF instead of the recipe's JSON. Check the server version.",
+      ),
     });
   });
 

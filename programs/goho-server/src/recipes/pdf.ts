@@ -7,7 +7,7 @@ import type {
   RecipeYield,
   Step,
 } from "@goho/goho-api/recipes";
-import { Context, Effect, FileSystem, Layer, Option, Path } from "effect";
+import { Context, Effect, FileSystem, Layer, Option, Path, Semaphore } from "effect";
 import * as fontkit from "fontkit";
 import PDFDocument from "pdfkit";
 import sharp from "sharp";
@@ -31,7 +31,9 @@ export interface Interface {
    * formatting, such as soft hyphens and zero-width spaces, is dropped, and
    * thin and other narrow spaces and Unicode hyphens are drawn as plain ones;
    * any other character the font lacks is drawn as its missing glyph and
-   * logged. The recipe and photo are not changed.
+   * logged. The recipe and photo are not changed. Renders run one at a time
+   * per layer; a call waits for the ones before it, and once started it
+   * finishes even if interrupted.
    */
   readonly render: (
     recipe: Recipe,
@@ -762,8 +764,9 @@ const parsed = (bytes: Uint8Array): fontkit.Font => {
 };
 
 /**
- * Provides recipe PDF rendering with the bundled Geist fonts, read once.
- * Missing or unreadable font assets are a defect that stops the layer.
+ * Provides recipe PDF rendering with the bundled Geist fonts, read once, one
+ * render at a time. Missing or unreadable font assets are a defect that stops
+ * the layer.
  *
  * @category layers
  * @since 0.1.0
@@ -796,6 +799,11 @@ export const layer = Layer.effect(
             ),
           );
 
+    // Sharp's decoded pixels and PDFKit's buffered document are the biggest
+    // memory and CPU cost per request, so the process draws one PDF at a time.
+    const turn = yield* Semaphore.make(1);
+
+    // The span covers the drawing, not the wait for a turn.
     const render = Effect.fn("@goho/RecipePdf.render")(function* (
       recipe: Recipe,
       photo: Option.Option<Photo>,
@@ -815,6 +823,10 @@ export const layer = Layer.effect(
       return drawn.bytes;
     });
 
-    return Service.of({ render });
+    // Sharp can't be aborted, so an interrupted render still finishes before
+    // the next takes its turn; waiting for a turn stays interruptible.
+    return Service.of({
+      render: (recipe, photo) => turn.withPermit(Effect.uninterruptible(render(recipe, photo))),
+    });
   }).pipe(Effect.orDie),
 );

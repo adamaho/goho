@@ -1,10 +1,10 @@
 import { api } from "@goho/goho-api/api";
 import { BookUploadsUnavailable } from "@goho/goho-api/book-uploads";
 import { ReceiptUploadsUnavailable } from "@goho/goho-api/receipt-uploads";
-import { RecipesUnavailable } from "@goho/goho-api/recipes";
+import { RecipeNotAcceptable, RecipesUnavailable } from "@goho/goho-api/recipes";
 import { withData } from "@goho/goho-api/response";
 import { Effect, FileSystem, Layer, Schema } from "effect";
-import { HttpMiddleware, HttpRouter, HttpServerResponse } from "effect/http";
+import { HttpEffect, HttpMiddleware, HttpRouter, HttpServerResponse } from "effect/http";
 import {
   HttpApiBuilder,
   HttpApiError,
@@ -21,6 +21,7 @@ import * as RecipeUploads from "#src/recipe-uploads/service.ts";
 import { sniffPhotoContentType } from "#src/recipes/model.ts";
 import * as Recipes from "#src/recipes/service.ts";
 
+import { preferredMediaType } from "./accept.ts";
 import * as ProblemDetails from "./problem-details.ts";
 
 const ReceiptUploadsLive = HttpApiBuilder.group(api, "receiptUploads", (handlers) =>
@@ -149,6 +150,37 @@ const BooksLive = HttpApiBuilder.group(api, "books", (handlers) =>
   }),
 );
 
+// Every response of a negotiated route depends on Accept, errors included.
+const varyOnAccept = HttpEffect.appendPreResponseHandler((_request, response) =>
+  Effect.succeed(
+    HttpServerResponse.setHeader(
+      response,
+      "vary",
+      response.headers.vary === undefined ? "Accept" : `${response.headers.vary}, Accept`,
+    ),
+  ),
+);
+
+const filenameLength = 60;
+
+// The title as a lowercase, hyphenated file name: plain ASCII for `filename`,
+// with accents dropped, and the title's own letters for `filename*` when they
+// differ. A title with no ASCII letters or digits, such as 親子丼, is saved as
+// `recipe.pdf` by clients that only read `filename`.
+const slug = (title: string, other: RegExp) =>
+  [...title.toLowerCase().replace(other, "-").replace(/^-+/, "")]
+    .slice(0, filenameLength)
+    .join("")
+    .replace(/-+$/, "");
+
+const pdfAttachment = (title: string) => {
+  const ascii = `${slug(title.normalize("NFKD").replace(/\p{M}/gu, ""), /[^a-z0-9]+/g) || "recipe"}.pdf`;
+  const unicode = `${slug(title.normalize("NFC"), /[^\p{L}\p{M}\p{N}]+/gu) || "recipe"}.pdf`;
+  return unicode === ascii
+    ? `attachment; filename="${ascii}"`
+    : `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(unicode)}`;
+};
+
 const RecipesLive = HttpApiBuilder.group(api, "recipes", (handlers) =>
   Effect.gen(function* () {
     const recipes = yield* Recipes.Service;
@@ -178,7 +210,27 @@ const RecipesLive = HttpApiBuilder.group(api, "recipes", (handlers) =>
       )
       .handle("deleteImage", ({ params }) => recipes.deleteImage(params.recipeId))
       .handle("list", () => recipes.list.pipe(Effect.map(withData)))
-      .handle("get", ({ params }) => recipes.get(params.recipeId).pipe(Effect.map(withData)))
+      .handle("get", ({ params, request }) =>
+        Effect.gen(function* () {
+          yield* varyOnAccept;
+          const representation = preferredMediaType(request.headers.accept, [
+            "application/json",
+            "application/pdf",
+          ]);
+          if (representation === undefined) return yield* new RecipeNotAcceptable();
+          if (representation === "application/json") {
+            return withData(yield* recipes.get(params.recipeId));
+          }
+          const { title, bytes } = yield* recipes.getPdf(params.recipeId);
+          return HttpServerResponse.uint8Array(bytes, {
+            contentType: "application/pdf",
+            headers: {
+              "content-disposition": pdfAttachment(title),
+              "cache-control": "private, no-store",
+            },
+          });
+        }),
+      )
       .handle("create", ({ payload }) => recipes.create(payload).pipe(Effect.map(withData)))
       .handle("delete", ({ params }) => recipes.delete(params.recipeId))
       .handle("getImage", ({ params }) =>

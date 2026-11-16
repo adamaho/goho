@@ -11,9 +11,9 @@ import kotlinx.serialization.Serializable
 import com.adamaho.goho.api.generated.model.BadRequestProblemEncoded
 import com.adamaho.goho.api.generated.model.CreateRecipeRequest
 import com.adamaho.goho.api.generated.model.RecipeImageNotFound
+import com.adamaho.goho.api.generated.model.RecipeNotAcceptable
 import com.adamaho.goho.api.generated.model.RecipeNotFound
 import com.adamaho.goho.api.generated.model.RecipesCreate200Response
-import com.adamaho.goho.api.generated.model.RecipesGet200Response
 import com.adamaho.goho.api.generated.model.RecipesList200Response
 import com.adamaho.goho.api.generated.model.RecipesList500Response
 import com.adamaho.goho.api.generated.model.UploadLimitExceeded
@@ -71,18 +71,19 @@ interface RecipesApi {
     /**
      * GET recipes/{recipeId}
      * Get a recipe
-     * Brings back one saved recipe with its ingredients, steps and yield.
+     * Brings back one saved recipe with its ingredients, steps and yield. JSON takes the faceoff when the Accept header is missing, has no well-formed media range, or allows any type; send &#x60;Accept: application/pdf&#x60; and you get a printable US Letter PDF, photo up top, as an attachment named after the title. Accept is read with its wildcards and q-values: the higher q wins, a tie goes to the type named by the more specific range (&#x60;application/pdf, *_/_*&#x60; gets the PDF) and then to JSON, and &#x60;q&#x3D;0&#x60; benches a type. A header that rules out both returns 406.
      * Responses:
      *  - 200: Success
      *  - 400: Bad Request
      *  - 404: No recipe is wearing that number, bud.
-     *  - 500: The server could not retrieve this recipe. | Internal Server Error
+     *  - 406: That Accept header benches both plays, bud. Ask for application/json or application/pdf.
+     *  - 500: The server could not retrieve or draw this recipe. | Internal Server Error
      *
      * @param recipeId 
-     * @return [RecipesGet200Response]
+     * @return [RecipesCreate200Response]
      */
     @GET("recipes/{recipeId}")
-    suspend fun recipesGet(@Path("recipeId") recipeId: kotlin.String): Response<RecipesGet200Response>
+    suspend fun recipesGet(@Path("recipeId") recipeId: kotlin.String): Response<RecipesCreate200Response>
 
     /**
      * GET recipes/{recipeId}/image

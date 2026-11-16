@@ -13,6 +13,7 @@ import {
   Recipe,
   RecipeId,
   RecipeImageNotFound,
+  RecipeNotAcceptable,
   RecipeNotFound,
   type RecipeSource,
   RecipesUnavailable,
@@ -21,7 +22,13 @@ import {
 } from "@goho/goho-api/recipes";
 import * as Client from "@goho/goho-server-client/client";
 import { Effect, Layer } from "effect";
-import { HttpBody, HttpClient, type HttpClientResponse, HttpRouter } from "effect/http";
+import {
+  HttpBody,
+  HttpClient,
+  HttpClientRequest,
+  type HttpClientResponse,
+  HttpRouter,
+} from "effect/http";
 import { HttpApiClient } from "effect/http-api";
 import { expect } from "vitest";
 
@@ -86,6 +93,9 @@ const upload = RecipeUpload.make({
 
 const photo = { bytes: new Uint8Array([7, 8, 9]), contentType: "image/png" as const };
 
+// The service's bytes pass through untouched; the renderer has its own tests.
+const pdf = { title: "Pancakes", bytes: new TextEncoder().encode("%PDF-1.3 pancakes") };
+
 // Records what reaches the services, so boundary rejections can prove nothing did.
 const testLayer = (
   recipes: Partial<Recipes.Interface> = {},
@@ -108,6 +118,10 @@ const testLayer = (
             create: record<[CreateRecipeRequest], Recipe>("create", recipe),
             list: record<[], ReadonlyArray<RecipeSummary>>("list", [summary])(),
             get: record<[RecipeId], Recipe>("get", recipe),
+            getPdf: record<[RecipeId], { readonly title: string; readonly bytes: Uint8Array }>(
+              "getPdf",
+              pdf,
+            ),
             delete: record<[RecipeId], void>("delete", undefined),
             getImage: record<
               [RecipeId],
@@ -200,19 +214,142 @@ it.effect("serves recipe photos as bytes with their MIME type", () =>
   ),
 );
 
-// Captures the raw response next to the typed client's decoded value.
-const captureClient = Effect.gen(function* () {
-  const responses: Array<HttpClientResponse.HttpClientResponse> = [];
-  const client = yield* HttpApiClient.make(api, {
-    baseUrl: "",
-    transformClient: HttpClient.tap((response) =>
-      Effect.sync(() => {
-        responses.push(response);
-      }),
-    ),
-  });
-  return { client, responses };
+// What each Accept header gets from GET /recipes/:recipeId: the JSON recipe,
+// its PDF, or 406.
+const negotiation: ReadonlyArray<
+  readonly [accept: string | undefined, served: "json" | "pdf" | 406]
+> = [
+  [undefined, "json"],
+  ["", "json"],
+  ["*/*", "json"],
+  ["application/*", "json"],
+  ["application/json", "json"],
+  ["application/json; charset=utf-8", "json"],
+  ["application/pdf", "pdf"],
+  ["Application/PDF", "pdf"],
+  // Equal weights go to the type named by the more specific range, then JSON.
+  ["application/pdf, */*", "pdf"],
+  ["application/pdf, application/*", "pdf"],
+  ["application/pdf, application/json", "json"],
+  ["application/pdf;q=0.5, */*", "json"],
+  ["application/json;q=0.5, application/pdf", "pdf"],
+  ["*/*;q=0.1, application/pdf", "pdf"],
+  ["text/html, application/pdf;q=0.2", "pdf"],
+  // The most specific range sets a type's weight, so q=0 rules out only PDF.
+  ["application/pdf;q=0, */*", "json"],
+  ["application/*;q=0, application/pdf;q=0.001", "pdf"],
+  ["application/json;q=0, application/*", "pdf"],
+  ["text/html", 406],
+  ["image/*, text/*", 406],
+  ["*/*;q=0", 406],
+  ["application/json;q=0, application/pdf;q=0", 406],
+  // Malformed ranges and weights are ignored; a header with no well-formed
+  // range counts as no header.
+  [",", "json"],
+  ["*/*; q=.2", "json"],
+  ["application/pdf;q=1.0000", "json"],
+  ["application/pdf;q=2, json, */pdf", "json"],
+  ["application/json;q=bad, application/pdf;q=0.5", "pdf"],
+  ["json, text/html", 406],
+  // A quoted comma can't detach a refused range from its q=0.
+  ['application/pdf;x="a,b";q=0, application/json;q=0', 406],
+];
+
+it.effect.each(negotiation)("negotiates Accept %j to %s", ([accept, served]) => {
+  const { calls, layer } = testLayer();
+  return Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/recipes/${recipe.id}`, {
+      headers: accept === undefined ? {} : { accept },
+    });
+    // Every answer depends on Accept, alongside CORS's Origin.
+    expect(response.headers["vary"]).toBe("Origin, Accept");
+    if (served === "json") {
+      expect([response.status, response.headers["content-type"]]).toEqual([
+        200,
+        "application/json",
+      ]);
+      expect(yield* response.json).toEqual({ data: recipe });
+      expect(calls).toEqual([["get", recipe.id]]);
+    } else if (served === "pdf") {
+      expect([response.status, response.headers["content-type"]]).toEqual([200, "application/pdf"]);
+      expect(new Uint8Array(yield* response.arrayBuffer)).toEqual(pdf.bytes);
+      expect(calls).toEqual([["getPdf", recipe.id]]);
+    } else {
+      expect([response.status, response.headers["content-type"]]).toEqual([
+        406,
+        "application/problem+json",
+      ]);
+      expect(yield* response.json).toEqual({
+        type: "goho:problem:recipe-not-acceptable",
+        status: 406,
+        title: "Recipe not acceptable",
+      });
+      expect(calls).toEqual([]);
+    }
+  }).pipe(Effect.provide(layer));
 });
+
+it.effect.each([
+  ["Tomato Basil Soup", 'attachment; filename="tomato-basil-soup.pdf"'],
+  [
+    "  Crème Brûlée (Mom's!) ",
+    `attachment; filename="creme-brulee-mom-s.pdf"; filename*=UTF-8''cr%C3%A8me-br%C3%BBl%C3%A9e-mom-s.pdf`,
+  ],
+  ["親子丼", `attachment; filename="recipe.pdf"; filename*=UTF-8''%E8%A6%AA%E5%AD%90%E4%B8%BC.pdf`],
+  ["!!!", 'attachment; filename="recipe.pdf"'],
+  [`${"a".repeat(59)} long title`, `attachment; filename="${"a".repeat(59)}.pdf"`],
+] as const)("sends the PDF of %j as an attachment named after it", ([title, disposition]) => {
+  const { layer } = testLayer({ getPdf: () => Effect.succeed({ ...pdf, title }) });
+  return Effect.gen(function* () {
+    const response = yield* HttpClient.get(`/recipes/${recipe.id}`, {
+      headers: { accept: "application/pdf" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers).toMatchObject({
+      "content-type": "application/pdf",
+      "content-disposition": disposition,
+      "cache-control": "private, no-store",
+    });
+  }).pipe(Effect.provide(layer));
+});
+
+it.effect("downloads a recipe PDF through the typed client", () => {
+  const { layer } = testLayer();
+  return Effect.gen(function* () {
+    // A client that asks for PDFs; the method returns the JSON or PDF union.
+    const pdfClient = yield* HttpApiClient.make(api, {
+      baseUrl: "",
+      transformClient: HttpClient.mapRequest(HttpClientRequest.accept("application/pdf")),
+    });
+    const downloaded = yield* pdfClient.recipes.get(recipeParams);
+    if (!(downloaded instanceof Uint8Array)) return yield* Effect.die("Expected the recipe PDF");
+    expect(new Uint8Array(downloaded)).toEqual(pdf.bytes);
+  }).pipe(Effect.provide(layer));
+});
+
+// Captures the raw response next to the typed client's decoded value, sending
+// an Accept header when given.
+const captureClientWith = (accept?: string) =>
+  Effect.gen(function* () {
+    const responses: Array<HttpClientResponse.HttpClientResponse> = [];
+    const client = yield* HttpApiClient.make(api, {
+      baseUrl: "",
+      transformClient: (client) =>
+        client.pipe(
+          HttpClient.mapRequest((request) =>
+            accept === undefined ? request : HttpClientRequest.accept(request, accept),
+          ),
+          HttpClient.tap((response) =>
+            Effect.sync(() => {
+              responses.push(response);
+            }),
+          ),
+        ),
+    });
+    return { client, responses };
+  });
+
+const captureClient = captureClientWith();
 
 const photoForm = (file: File) => {
   const form = new FormData();
@@ -397,6 +534,12 @@ const imageNotFound = problem(
   404,
   "Recipe image not found",
 );
+const recipeNotAcceptable = problem(
+  RecipeNotAcceptable,
+  "recipe-not-acceptable",
+  406,
+  "Recipe not acceptable",
+);
 const recipesUnavailable = problem(
   RecipesUnavailable,
   "recipes-unavailable",
@@ -431,6 +574,7 @@ const problemCases: ReadonlyArray<{
   readonly name: string;
   readonly fixture: ReturnType<typeof testLayer>;
   readonly expected: ReturnType<typeof problem>;
+  readonly accept?: string;
   readonly call: (client: TestClient) => Effect.Effect<unknown, unknown>;
 }> = [
   {
@@ -449,6 +593,27 @@ const problemCases: ReadonlyArray<{
     name: "get recipe: missing",
     fixture: testLayer({ get: () => Effect.fail(new RecipeNotFound()) }),
     expected: recipeNotFound,
+    call: (client) => client.recipes.get(recipeParams),
+  },
+  {
+    name: "get recipe PDF: missing",
+    fixture: testLayer({ getPdf: () => Effect.fail(new RecipeNotFound()) }),
+    expected: recipeNotFound,
+    accept: "application/pdf",
+    call: (client) => client.recipes.get(recipeParams),
+  },
+  {
+    name: "get recipe PDF: rendering or storage failed",
+    fixture: testLayer({ getPdf: () => Effect.fail(new RecipesUnavailable()) }),
+    expected: recipesUnavailable,
+    accept: "application/pdf",
+    call: (client) => client.recipes.get(recipeParams),
+  },
+  {
+    name: "get recipe: neither JSON nor PDF acceptable",
+    fixture: testLayer(),
+    expected: recipeNotAcceptable,
+    accept: "text/html",
     call: (client) => client.recipes.get(recipeParams),
   },
   {
@@ -533,9 +698,9 @@ const problemCases: ReadonlyArray<{
 
 it.effect.each(problemCases)(
   "returns a client-decodable problem for $name",
-  ({ call, expected, fixture }) =>
+  ({ accept, call, expected, fixture }) =>
     Effect.gen(function* () {
-      const { client, responses } = yield* captureClient;
+      const { client, responses } = yield* captureClientWith(accept);
       const failure = yield* call(client).pipe(Effect.flip);
       expect(failure).toBeInstanceOf(expected.error);
       const [response] = responses;

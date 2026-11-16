@@ -337,7 +337,9 @@ in [OpenAPI](http://127.0.0.1:3000/docs) for every field.
   fields, return HTTP 400.
 - `GET /recipes` lists summaries without ingredients, steps or yield, by title
   A to Z ignoring case, then newest first.
-- `GET /recipes/:recipeId` returns one full recipe.
+- `GET /recipes/:recipeId` returns one full recipe as JSON, or as a printable
+  PDF for `Accept: application/pdf`. The [`Accept`](#recipe-pdfs) header picks
+  between them, so the response carries `Vary: Accept`.
 - `GET /recipes/:recipeId/image` returns the photo's bytes with its MIME type
   (`image/jpeg`, `image/png` or `image/webp`) and `Cache-Control: private,
   no-store`. A recipe without a photo, or a missing recipe, returns HTTP 404 with
@@ -361,6 +363,40 @@ in [OpenAPI](http://127.0.0.1:3000/docs) for every field.
   it and its photo, and returns HTTP 204. Queued, processing or failed imports of
   the page stay. As with receipts, a storage or commit failure after the photo is
   removed can leave the recipe without it until deletion is retried.
+
+### Recipe PDFs
+
+`GET /recipes/:recipeId` reads `Accept` by RFC 9110: `type/*` and `*/*`
+wildcards, the most specific matching range setting each type's `q`, and `q=0`
+ruling a type out. Malformed ranges and weights, such as `*/*; q=.2`, and
+ranges with a quoted parameter are ignored, and so are parameters other than
+`q`, such as `charset`.
+
+- JSON stays the default: with no `Accept` or one without a single well-formed
+  range (such as `,`), `*/*`, `application/*` or `application/json`, the
+  response is the usual JSON.
+- The higher `q` wins. When JSON and PDF tie, the type named by the more
+  specific range wins, so `application/pdf, */*` and `application/pdf,
+  application/*` get the PDF; ties at the same specificity, such as
+  `application/json, application/pdf`, get JSON.
+- The PDF comes back as HTTP 200 with
+  `Content-Type: application/pdf`, `Cache-Control: private, no-store` and
+  `Content-Disposition: attachment` named after the title, such as
+  `tomato-basil-soup.pdf`. `filename` drops accents and other non-ASCII letters,
+  falling back to `recipe.pdf`; `filename*` keeps the title's own letters when
+  they differ. Names stop at 60 characters.
+- A header with a well-formed range that accepts neither, such as `text/html`
+  or `*/*;q=0`, returns HTTP 406 with
+  `RecipeNotAcceptable`. A missing recipe returns HTTP 404 with `RecipeNotFound`,
+  and a database or drawing failure HTTP 500 with `RecipesUnavailable`.
+- The PDF is drawn on request and never stored; see
+  [recipe PDFs](./CONTRIBUTING.md#recipe-pdfs) for its layout. A photo whose
+  file can't be read is logged and left out. Each server process draws one PDF
+  at a time; other PDF requests wait their turn, and JSON requests don't wait.
+
+The typed client's `recipes.get` returns the JSON or PDF union, decoded by the
+response `Content-Type`. It sends no specific `Accept`, so it gets JSON; build a
+client whose `HttpClient` sets `Accept: application/pdf` to download the PDF.
 
 ### Recipe imports
 

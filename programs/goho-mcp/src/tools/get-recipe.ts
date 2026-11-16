@@ -4,7 +4,7 @@ import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
-import { apiFailure, ToolFailure } from "./failure.ts";
+import { apiFailure, incompatibleResponse, ToolFailure } from "./failure.ts";
 
 /**
  * Describes the get recipe MCP tool.
@@ -46,5 +46,9 @@ export const handle = Effect.fn("@goho/GetRecipe.handle")(function* ({
           : apiFailure("get recipe", cause),
       ),
     );
+  // Without an Accept header the server sends JSON; the client also decodes PDFs.
+  if (response instanceof Uint8Array) {
+    return yield* incompatibleResponse("get recipe");
+  }
   return { recipe: response.data };
 });

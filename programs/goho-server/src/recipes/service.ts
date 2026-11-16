@@ -13,6 +13,7 @@ import * as Transaction from "#src/database/transaction.ts";
 import * as FileStorage from "#src/services/file-storage.ts";
 
 import type { Photo, RecipeImageContentType } from "./model.ts";
+import * as RecipePdf from "./pdf.ts";
 import * as RecipeRepository from "./repository.ts";
 
 // Persistence and storage details stay in the logs; callers see the domain error.
@@ -31,6 +32,18 @@ export interface Interface {
   /** Recipe summaries by title A to Z ignoring case, then newest first. */
   readonly list: Effect.Effect<ReadonlyArray<RecipeSummary>, RecipesUnavailable>;
   readonly get: (recipeId: RecipeId) => Effect.Effect<Recipe, RecipeNotFound | RecipesUnavailable>;
+  /**
+   * Draws the saved recipe as a printable PDF, with its photo when it has one,
+   * and returns the recipe's title with it. A photo file that can't be read is
+   * logged and left out rather than failing the PDF. Renders wait their turn,
+   * one at a time per process.
+   */
+  readonly getPdf: (
+    recipeId: RecipeId,
+  ) => Effect.Effect<
+    { readonly title: string; readonly bytes: Uint8Array },
+    RecipeNotFound | RecipesUnavailable
+  >;
   /**
    * Deletes the recipe, every upload that linked it, and its stored photo; a
    * later import of the page saves a new recipe. The photo is removed before
@@ -60,8 +73,8 @@ export interface Interface {
 }
 
 /**
- * Saves, lists, retrieves and deletes recipes, and serves, sets and removes
- * their photos.
+ * Saves, lists, retrieves, draws as PDFs and deletes recipes, and serves, sets
+ * and removes their photos.
  *
  * @category services
  * @since 0.1.0
@@ -69,7 +82,8 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@goho/goho-server/Recipes") {}
 
 /**
- * Provides recipe operations over the recipe repository and file storage.
+ * Provides recipe operations over the recipe repository, file storage and PDF
+ * rendering.
  *
  * @category layers
  * @since 0.1.0
@@ -80,6 +94,7 @@ export const layer = Layer.effect(
     const repository = yield* RecipeRepository.Service;
     const storage = yield* FileStorage.Service;
     const transaction = yield* Transaction.Service;
+    const pdf = yield* RecipePdf.Service;
 
     const create = Effect.fn("@goho/Recipes.create")(
       (recipe: CreateRecipeRequest) => repository.create(recipe),
@@ -110,6 +125,41 @@ export const layer = Layer.effect(
         "GohoServer.RecipeRepository.PersistenceError",
         unavailable("Recipe retrieval failed"),
       ),
+    );
+
+    // The photo's file can go missing, such as when a photo change commits in
+    // between; the recipe is still worth printing without it.
+    const photoFor = (recipeId: RecipeId) =>
+      repository.findImage(recipeId).pipe(
+        Effect.flatMap(
+          Option.match({
+            onNone: () => Effect.succeedNone,
+            onSome: ({ fileId, contentType }) =>
+              storage.get(fileId).pipe(
+                Effect.map((bytes): Option.Option<Photo> => Option.some({ bytes, contentType })),
+                Effect.catchTag("GohoServer.FileStorage.StorageError", (error) =>
+                  Effect.logError("Recipe PDF drawn without its unreadable photo", error).pipe(
+                    Effect.annotateLogs({ recipeId, fileId }),
+                    Effect.as(Option.none()),
+                  ),
+                ),
+              ),
+          }),
+        ),
+      );
+
+    const getPdf = Effect.fn("@goho/Recipes.getPdf")(
+      function* (recipeId: RecipeId) {
+        const recipe = yield* repository.findById(recipeId);
+        if (Option.isNone(recipe)) return yield* new RecipeNotFound();
+        const photo = yield* photoFor(recipeId);
+        const bytes = yield* pdf.render(recipe.value, photo);
+        return { title: recipe.value.title, bytes };
+      },
+      Effect.catchTags({
+        "GohoServer.RecipeRepository.PersistenceError": unavailable("Recipe PDF lookup failed"),
+        "GohoServer.Recipes.PdfError": unavailable("Recipe PDF rendering failed"),
+      }),
     );
 
     const deletionFailed = unavailable("Recipe deletion failed");
@@ -202,6 +252,7 @@ export const layer = Layer.effect(
       deleteImage,
       get,
       getImage,
+      getPdf,
       list,
       putImage,
     });

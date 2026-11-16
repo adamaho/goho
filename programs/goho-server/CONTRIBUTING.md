@@ -327,8 +327,20 @@ JPEG, PNG and WebP signatures, ignoring the declared name and type.
 ### Recipe PDFs
 
 `recipes/pdf.ts` draws a saved recipe and an optional photo as a printable PDF
-in memory, with PDFKit and Sharp. Nothing serves it yet. It reads no database,
-storage or request; its caller supplies the recipe and photo bytes.
+in memory, with PDFKit and Sharp. It reads no database, storage or request; the
+recipe service loads the recipe and its photo file and calls it for
+[`GET /recipes/:recipeId`](./README.md#recipe-pdfs) with `Accept:
+application/pdf`. A photo file that can't be read is logged and the PDF is drawn
+without it.
+
+- One layer instance in `main.ts` draws one PDF at a time per process, from
+  preparing the photo to the finished bytes, behind a one-permit semaphore.
+  Later requests wait their turn, unbounded and never rejected, each holding its
+  recipe and photo bytes while it waits. Sharp can't be stopped mid-image, so a
+  render that has started finishes even when its request is interrupted, such
+  as by a client hanging up, before the next one begins; a waiting request can
+  still be interrupted. The `@goho/RecipePdf.render` span covers
+  only the drawing, not the wait.
 
 - Pages are US Letter. Long recipes run onto more pages at the same size;
   headings stay with their first lines, and words too long for a line break

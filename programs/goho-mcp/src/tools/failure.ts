@@ -3,7 +3,7 @@ import { BooksUnavailable } from "@goho/goho-server-client/books";
 import { ReceiptUploadsUnavailable } from "@goho/goho-server-client/receipt-uploads";
 import { ReceiptsUnavailable } from "@goho/goho-server-client/receipts";
 import { RecipeUploadsUnavailable } from "@goho/goho-server-client/recipe-uploads";
-import { RecipesUnavailable } from "@goho/goho-server-client/recipes";
+import { RecipeNotAcceptable, RecipesUnavailable } from "@goho/goho-server-client/recipes";
 import { Schema } from "effect";
 import { HttpClientError } from "effect/http";
 import { HttpApiError } from "effect/http-api";
@@ -33,6 +33,7 @@ export type ApiFailure =
   | BookUploadsUnavailable
   | ReceiptsUnavailable
   | ReceiptUploadsUnavailable
+  | RecipeNotAcceptable
   | RecipesUnavailable
   | RecipeUploadsUnavailable;
 
@@ -44,7 +45,9 @@ const incompatible =
 
 const adviceFor = (cause: ApiFailure) => {
   if (cause._tag !== "HttpClientError") {
-    return cause._tag === "BadRequestProblem" || cause._tag === "SchemaError"
+    return cause._tag === "BadRequestProblem" ||
+      cause._tag === "SchemaError" ||
+      cause._tag === "RecipeNotAcceptable"
       ? incompatible
       : serverFailed;
   }
@@ -71,3 +74,12 @@ const adviceFor = (cause: ApiFailure) => {
  */
 export const apiFailure = (action: string, cause: ApiFailure) =>
   new ToolFailure({ message: `Could not ${action}. ${adviceFor(cause)}` });
+
+/**
+ * A successful Goho API response this program cannot use, such as a PDF where it expects JSON.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export const incompatibleResponse = (action: string) =>
+  new ToolFailure({ message: `Could not ${action}. ${incompatible}` });

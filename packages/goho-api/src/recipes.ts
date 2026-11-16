@@ -634,6 +634,23 @@ export class RecipeImageNotFound extends HttpApiError.Problem<RecipeImageNotFoun
 ) {}
 
 /**
+ * The request's `Accept` header rules out both of a recipe's representations:
+ * JSON and PDF.
+ *
+ * @category errors
+ * @since 0.1.0
+ */
+export class RecipeNotAcceptable extends HttpApiError.Problem<RecipeNotAcceptable>()(
+  "RecipeNotAcceptable",
+  { type: "goho:problem:recipe-not-acceptable", status: 406, title: "Recipe not acceptable" },
+  {},
+  {
+    description:
+      "That Accept header benches both plays, bud. Ask for application/json or application/pdf.",
+  },
+) {}
+
+/**
  * Recipes could not be read, saved, or deleted; details stay in the server logs.
  *
  * @category errors

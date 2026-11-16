@@ -30,6 +30,7 @@ import * as RecipeUploadQueue from "./recipe-uploads/queue.ts";
 import * as RecipeUploadRepository from "./recipe-uploads/repository.ts";
 import * as RecipeUploads from "./recipe-uploads/service.ts";
 import * as RecipeUploadWorker from "./recipe-uploads/worker.ts";
+import * as RecipePdf from "./recipes/pdf.ts";
 import * as RecipeRepository from "./recipes/repository.ts";
 import * as Recipes from "./recipes/service.ts";
 import * as Ai from "./services/ai.ts";
@@ -123,8 +124,11 @@ const ReceiptUploadWorkerLive = ReceiptUploadWorker.layer.pipe(
   ]),
 );
 
+// One renderer for the process, so PDFs are drawn one at a time.
+const RecipePdfLive = RecipePdf.layer.pipe(Layer.provide([NodeFileSystem.layer, NodePath.layer]));
+
 const RecipesLive = Recipes.layer.pipe(
-  Layer.provide([FileStorageLive, RecipeRepositoryLive, TransactionLive]),
+  Layer.provide([FileStorageLive, RecipePdfLive, RecipeRepositoryLive, TransactionLive]),
 );
 
 const RecipeUploadsLive = RecipeUploads.layer.pipe(

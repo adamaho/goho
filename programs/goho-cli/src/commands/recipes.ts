@@ -2,6 +2,7 @@ import { RecipeId } from "@goho/goho-server-client/recipes";
 import { Console, Effect } from "effect";
 import { Argument, Command } from "effect/cli";
 
+import { CommandError } from "#src/errors.ts";
 import * as GohoServer from "#src/goho-server.ts";
 import { DeleteResult } from "#src/response.ts";
 
@@ -32,6 +33,13 @@ const viewCommand = Command.make("view", {
     Effect.gen(function* () {
       const client = yield* GohoServer.Service;
       const response = yield* client.recipes.get({ params: { recipeId } });
+      // Without an Accept header the server sends JSON; the client also decodes PDFs.
+      if (response instanceof Uint8Array) {
+        return yield* new CommandError({
+          type: "goho:cli:unexpected-response",
+          detail: "The server sent a PDF instead of the recipe's JSON. Check the server version.",
+        });
+      }
       yield* Console.log(JSON.stringify(response.data, null, 2));
     }),
   ),
