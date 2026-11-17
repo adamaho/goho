@@ -217,8 +217,5 @@ object GohoSpacing {
     val stepNumber = 20.dp
     val stepNumberGap = 10.dp
     val stepGap = 14.dp
-    val markHorizontal = 4.dp // Ingredient mark background padding and corners.
-    val markVertical = 1.dp
-    val markRadius = 4.dp
     val sourceIcon = 14.dp // External-link glyph after the Source address.
 }
