@@ -342,9 +342,18 @@ without it.
   still be interrupted. The `@goho/RecipePdf.render` span covers
   only the drawing, not the wait.
 
-- Pages are US Letter. Long recipes run onto more pages at the same size;
-  headings stay with their first lines, and words too long for a line break
-  between characters. The source URL is never printed.
+- Pages are US Letter. Below the title, total time and yield, ingredients run
+  down a narrow column, a third of the content width, beside the numbered
+  steps, with a 24 pt gutter. Long recipes run onto more pages at the same
+  size, each column continuing at the top of the next page; the two headings
+  share a row that stays with both columns' first two lines, and words too long
+  for a line break between characters.
+- Step marks are bold body text in the body colour, like the ingredient
+  amounts, with no fill. Ingredient bullets and step-number circles keep their
+  lavender accents.
+- A recipe with a source ends with its full URL, small and grey, below both
+  columns on the last page, as a link. A recipe without one ends with its last
+  line.
 - Amounts, ingredient lines, step marks and total time follow the Android
   app's `RecipeText.kt` rules exactly, with en-CA numbers. The PDF also shows
   the yield, which the app doesn't.
@@ -359,9 +368,10 @@ without it.
   The saved recipe is unchanged. Any other character Geist lacks is drawn as
   its crossed box and logged by code point.
 - The photo is a banner across the top of the first page, the full content
-  width and 216 pt tall (504 × 216 pt). Sharp turns it upright, crops it from
-  the centre to that 7:3 shape, flattens transparency onto white and makes a
-  JPEG of at most 1260 × 540 px (180 dpi); a smaller photo keeps its own
+  width and 2 inches tall (504 × 144 pt); without one, the title starts the
+  page. Sharp turns it upright, crops it from the centre to that 7:2 shape,
+  flattens transparency onto white and makes a JPEG of at most 1260 × 360 px
+  (180 dpi); a smaller photo keeps its own
   resolution rather than being enlarged. Metadata such as location is dropped
   and the original bytes are untouched. A photo without a JPEG, PNG or WebP signature,
   one Sharp can't read, or one over 100 megapixels is logged and left out, and

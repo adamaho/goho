@@ -24,9 +24,10 @@ export interface Interface {
   /**
    * Draws the recipe on US Letter pages for printing or sharing: its photo
    * when given, as a banner the content width that crops the photo from its
-   * centre, then its title, total time and yield when known, ingredients, and
-   * numbered steps with their ingredient marks, worded as the app shows them.
-   * The source is left out. A photo that isn't a readable JPEG, PNG or WebP
+   * centre, then its title, total time and yield when known, and two columns:
+   * ingredients in a narrow one beside numbered steps with their ingredient
+   * marks, worded as the app shows them. The source URL, when there is one,
+   * ends the last page as a link. A photo that isn't a readable JPEG, PNG or WebP
    * image within the decoding limit is logged and left out. Invisible
    * formatting, such as soft hyphens and zero-width spaces, is dropped, and
    * thin and other narrow spaces and Unicode hyphens are drawn as plain ones;
@@ -59,7 +60,7 @@ interface IngredientLine {
   readonly name: string;
 }
 
-// Step wording in reading order; marks are drawn as ingredient marks.
+// Step wording in reading order; marks are drawn in bold.
 interface StepPart {
   readonly kind: "plain" | "mark";
   readonly text: string;
@@ -278,25 +279,38 @@ const styles = {
   statLabel: { font: "regular", size: 8.5, color: colors.tertiary },
   section: { font: "semibold", size: 14, color: colors.text, tracking: -0.25 },
   body: { font: "regular", size: 11, color: colors.text },
+  // Ingredient amounts, and step marks, which read like them.
   amount: { font: "semibold", size: 11, color: colors.text },
-  mark: { font: "semibold", size: 10, color: colors.onAccentContainer },
   stepNumber: { font: "semibold", size: 8, color: colors.onAccentContainer },
   footer: { font: "regular", size: 8, color: colors.tertiary },
   brand: { font: "semibold", size: 8, color: colors.brand },
+  source: { font: "regular", size: 8.5, color: colors.tertiary },
 } as const satisfies Record<string, TextStyle>;
 
-const lineHeights = { title: 28, stat: 14, statLabel: 11, section: 18, body: 17 } as const;
+const lineHeights = {
+  title: 28,
+  stat: 14,
+  statLabel: 11,
+  section: 18,
+  body: 17,
+  source: 12,
+} as const;
 
-// The photo is a banner across the content width, cropped to fill it.
-const photoBox = { width: contentWidth, height: 216, radius: 10 } as const;
+// Ingredients take a third of the content width, beside the steps.
+const listColumns = {
+  ingredients: { x: margin, width: 168 },
+  steps: { x: margin + 168 + 24, width: contentWidth - 168 - 24 },
+} as const;
+
+// The photo is a 2-inch banner across the content width, cropped to fill it.
+const photoBox = { width: contentWidth, height: 144, radius: 10 } as const;
 // The banner at 180 dpi, enough for a sharp print.
-const photoPixels = { width: 1260, height: 540 } as const;
+const photoPixels = { width: 1260, height: 360 } as const;
 // Twice a 50-megapixel phone photo, below Sharp's default of 268 megapixels.
 // An interlaced PNG, which Sharp can't decode in strips, takes about 400 MB at
 // this size.
 const maxPhotoPixels = 100_000_000;
 
-const markPad = 2;
 const bulletSize = 4;
 const bulletIndent = 13;
 const stepNumberSize = 15;
@@ -305,7 +319,8 @@ const stepIndent = 24;
 interface Run {
   readonly text: string;
   readonly style: TextStyle;
-  readonly mark: boolean;
+  /** A URL the run's text links to. */
+  readonly link?: string;
 }
 
 interface Piece {
@@ -317,12 +332,10 @@ interface Piece {
 
 type Line = ReadonlyArray<Piece>;
 
-// Part of one run, with the padding a mark reserves where it starts and ends.
+// Part of one run.
 interface Chunk {
   readonly run: number;
   text: string;
-  readonly padBefore: number;
-  padAfter: number;
 }
 
 interface Token {
@@ -348,26 +361,18 @@ const tokenize = (runs: ReadonlyArray<Run>) => {
   const tokens: Array<Token> = [];
   runs.forEach((run, index) => {
     const text = printable(run.text).replace(/\r\n?/g, "\n").replaceAll("\t", " ");
-    const segments = [...graphemes.segment(text)].map(({ segment }) => segment);
-    segments.forEach((segment, position) => {
+    for (const { segment } of graphemes.segment(text)) {
       const kind = segment === "\n" ? "newline" : segment === " " ? "space" : "word";
-      const padAfter = run.mark && position === segments.length - 1 ? markPad : 0;
       const last = tokens.at(-1);
       const chunk = last?.chunks.at(-1);
       if (last?.kind === kind && kind !== "newline" && chunk?.run === index) {
         chunk.text += segment;
-        chunk.padAfter = padAfter;
       } else {
-        const next = {
-          run: index,
-          text: segment,
-          padBefore: run.mark && position === 0 ? markPad : 0,
-          padAfter,
-        };
+        const next = { run: index, text: segment };
         if (last?.kind === kind && kind !== "newline") last.chunks.push(next);
         else tokens.push({ kind, chunks: [next] });
       }
-    });
+    }
   });
   return tokens;
 };
@@ -388,16 +393,10 @@ const layout = (
   let x = 0;
   let wrapped = false;
 
-  const textWidth = (chunk: Chunk) => measure(chunk.text, runs[chunk.run]?.style ?? styles.body);
-  const chunkWidth = (chunk: Chunk) => chunk.padBefore + textWidth(chunk) + chunk.padAfter;
+  const chunkWidth = (chunk: Chunk) => measure(chunk.text, runs[chunk.run]?.style ?? styles.body);
   const place = (chunk: Chunk): Piece => {
-    const piece = {
-      run: chunk.run,
-      text: chunk.text,
-      x: x + chunk.padBefore,
-      width: textWidth(chunk),
-    };
-    x += chunkWidth(chunk);
+    const piece = { run: chunk.run, text: chunk.text, x, width: chunkWidth(chunk) };
+    x += piece.width;
     return piece;
   };
   const breakLine = (byWrap: boolean) => {
@@ -426,17 +425,11 @@ const layout = (
       }
       // Too long for any line: break it between graphemes.
       for (const chunk of token.chunks) {
-        const parts = [...graphemes.segment(chunk.text)];
-        parts.forEach(({ segment }, position) => {
-          const part = {
-            run: chunk.run,
-            text: segment,
-            padBefore: position === 0 ? chunk.padBefore : 0,
-            padAfter: position === parts.length - 1 ? chunk.padAfter : 0,
-          };
+        for (const { segment } of graphemes.segment(chunk.text)) {
+          const part = { run: chunk.run, text: segment };
           if (x + chunkWidth(part) > width && line.length > 0) breakLine(true);
           line.push(place(part));
-        });
+        }
       }
     }
   }
@@ -511,10 +504,22 @@ const draw = (
       });
   };
 
+  // Where drawing continues. The two columns each run down from the same
+  // place, so the second goes back to a page the first already filled.
+  let pageIndex = 0;
   let y = margin;
+  const moveTo = (to: { readonly pageIndex: number; readonly y: number }) => {
+    doc.switchToPage(to.pageIndex);
+    pageIndex = to.pageIndex;
+    y = to.y;
+  };
   const ensure = (height: number) => {
-    if (y + height > contentBottom) {
+    if (y + height <= contentBottom) return;
+    if (pageIndex + 1 < doc.bufferedPageRange().count)
+      moveTo({ pageIndex: pageIndex + 1, y: margin });
+    else {
       doc.addPage();
+      pageIndex++;
       y = margin;
     }
   };
@@ -540,21 +545,9 @@ const draw = (
       const baseline = baselineIn(y, lineHeight, size);
       for (const piece of line) {
         const run = runs[piece.run];
-        if (run?.mark !== true) continue;
-        const height = run.style.size * (ascent + descent) + 2;
-        doc
-          .roundedRect(
-            piece.x + x - markPad,
-            baseline - run.style.size * ascent - 1,
-            piece.width + markPad * 2,
-            height,
-            2.5,
-          )
-          .fill(colors.accentContainer);
-      }
-      for (const piece of line) {
-        const run = runs[piece.run];
-        if (run !== undefined) text(piece.text, x + piece.x, baseline, run.style);
+        if (run === undefined) continue;
+        text(piece.text, x + piece.x, baseline, run.style);
+        if (run.link !== undefined) doc.link(x + piece.x, y, piece.width, lineHeight, run.link);
       }
       y += lineHeight;
     });
@@ -570,7 +563,7 @@ const draw = (
   }
 
   // Title.
-  const titleRuns = [{ text: recipe.title, style: styles.title, mark: false }];
+  const titleRuns = [{ text: recipe.title, style: styles.title }];
   drawLines(
     titleRuns,
     layout(measure, titleRuns, contentWidth),
@@ -593,7 +586,7 @@ const draw = (
     const columns = stats.map((stat, index) => {
       const divider = index > 0 ? x + 14 : null;
       if (divider !== null) x = divider + 14.75;
-      const runs = [{ text: stat.value, style: styles.statValue, mark: false }];
+      const runs = [{ text: stat.value, style: styles.statValue }];
       const lines = layout(measure, runs, margin + contentWidth - x);
       const column = { label: stat.label, runs, lines, x, divider };
       x += Math.max(
@@ -640,73 +633,104 @@ const draw = (
   const ingredientRuns = recipe.ingredients.map((ingredient): ReadonlyArray<Run> => {
     const line = ingredientLine(ingredient);
     return line.amount === null
-      ? [{ text: line.name, style: styles.body, mark: false }]
+      ? [{ text: line.name, style: styles.body }]
       : [
-          { text: line.amount, style: styles.amount, mark: false },
-          { text: ` ${line.name}`, style: styles.body, mark: false },
+          { text: line.amount, style: styles.amount },
+          { text: ` ${line.name}`, style: styles.body },
         ];
   });
   const stepRuns = recipe.steps.map((step) =>
     stepParts(step, ingredients).map((part): Run => ({
       text: part.text,
-      style: part.kind === "mark" ? styles.mark : styles.body,
-      mark: part.kind === "mark",
+      style: part.kind === "mark" ? styles.amount : styles.body,
     })),
   );
+
+  type Column = (typeof listColumns)[keyof typeof listColumns];
 
   // A list item's lines, keeping its first two lines together.
   const item = (
     runs: ReadonlyArray<Run>,
+    column: Column,
     indent: number,
     gapBefore: number,
     marker: (top: number) => void,
   ) => {
-    const lines = layout(measure, runs, contentWidth - indent);
+    const lines = layout(measure, runs, column.width - indent);
     y += gapBefore;
     ensure(Math.min(lines.length, 2) * lineHeights.body);
-    drawLines(runs, lines, margin + indent, lineHeights.body, styles.body.size, marker);
+    drawLines(runs, lines, column.x + indent, lineHeights.body, styles.body.size, marker);
   };
 
-  // A section heading stays with its first item's first two lines.
-  const section = (
-    title: string,
-    gapBefore: number,
-    firstRuns: ReadonlyArray<Run>,
-    indent: number,
-  ) => {
-    const first = layout(measure, firstRuns, contentWidth - indent);
-    y += gapBefore;
-    ensure(lineHeights.section + 6 + Math.min(first.length, 2) * lineHeights.body);
-    text(title, margin, baselineIn(y, lineHeights.section, styles.section.size), styles.section);
-    y += lineHeights.section + 6;
-  };
+  // Both headings share a row, which stays with each column's first two lines.
+  const firstLines = (runs: ReadonlyArray<Run> | undefined, column: Column, indent: number) =>
+    Math.min(layout(measure, runs ?? [], column.width - indent).length, 2);
+  y += 24;
+  ensure(
+    lineHeights.section +
+      6 +
+      Math.max(
+        firstLines(ingredientRuns[0], listColumns.ingredients, bulletIndent),
+        firstLines(stepRuns[0], listColumns.steps, stepIndent),
+      ) *
+        lineHeights.body,
+  );
+  const headingBaseline = baselineIn(y, lineHeights.section, styles.section.size);
+  text("Ingredients", listColumns.ingredients.x, headingBaseline, styles.section);
+  text("Steps", listColumns.steps.x, headingBaseline, styles.section);
+  y += lineHeights.section + 6;
+  const top = { pageIndex, y };
 
-  section("Ingredients", 24, ingredientRuns[0] ?? [], bulletIndent);
   ingredientRuns.forEach((runs, index) =>
-    item(runs, bulletIndent, index === 0 ? 0 : 3, (top) => {
+    item(runs, listColumns.ingredients, bulletIndent, index === 0 ? 0 : 3, (at) => {
       doc
-        .circle(margin + bulletSize / 2, top + lineHeights.body / 2, bulletSize / 2)
+        .circle(
+          listColumns.ingredients.x + bulletSize / 2,
+          at + lineHeights.body / 2,
+          bulletSize / 2,
+        )
         .fill(colors.accent);
     }),
   );
+  const ingredientsEnd = { pageIndex, y };
 
-  section("Steps", 26, stepRuns[0] ?? [], stepIndent);
+  moveTo(top);
   stepRuns.forEach((runs, index) =>
-    item(runs, stepIndent, index === 0 ? 0 : 9, (top) => {
-      const centre = top + lineHeights.body / 2;
-      doc
-        .circle(margin + stepNumberSize / 2, centre, stepNumberSize / 2)
-        .fill(colors.accentContainer);
+    item(runs, listColumns.steps, stepIndent, index === 0 ? 0 : 9, (at) => {
+      const x = listColumns.steps.x;
+      const centre = at + lineHeights.body / 2;
+      doc.circle(x + stepNumberSize / 2, centre, stepNumberSize / 2).fill(colors.accentContainer);
       const number = new Intl.NumberFormat("en-CA").format(index + 1);
       const width = measure(number, styles.stepNumber);
       text(
         number,
-        margin + (stepNumberSize - width) / 2,
+        x + (stepNumberSize - width) / 2,
         centre + (styles.stepNumber.size * (ascent - descent)) / 2,
         styles.stepNumber,
       );
     }),
   );
+
+  // The source's full URL as a link, below whichever column ends later.
+  if (recipe.source !== null) {
+    if (
+      ingredientsEnd.pageIndex > pageIndex ||
+      (ingredientsEnd.pageIndex === pageIndex && ingredientsEnd.y > y)
+    )
+      moveTo(ingredientsEnd);
+    // The text reads as saved; the link is its ASCII form, with a punycode host
+    // and percent-encoding, as PDFKit writes any other string as UTF-16.
+    const link = new URL(recipe.source.url).href;
+    const runs = [{ text: recipe.source.url, style: styles.source, link }];
+    y += 20;
+    drawLines(
+      runs,
+      layout(measure, runs, contentWidth),
+      margin,
+      lineHeights.source,
+      styles.source.size,
+    );
+  }
 
   // Footer on every page: a quiet Goho mark, and page numbers when there are several.
   const range = doc.bufferedPageRange();
