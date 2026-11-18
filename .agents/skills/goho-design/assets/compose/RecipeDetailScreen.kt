@@ -234,7 +234,8 @@ private fun RecipeContent(
         remember(recipe, resources) {
             recipe?.let { saved ->
                 val byId = saved.ingredients.associateBy { it.id }
-                saved.steps.map { stepParts(it, byId, resources) }
+                // Sections show as one numbered list until the app gives them titles.
+                saved.sections.flatMap { it.steps }.map { stepParts(it, byId, resources) }
             }
         }
     val added =

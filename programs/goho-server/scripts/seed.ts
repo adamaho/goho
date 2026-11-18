@@ -104,9 +104,15 @@ const step = (first: Segment, ...rest: ReadonlyArray<Segment>): Step => ({
   segments: [first, ...rest],
 });
 
-// Exact, range and text amounts, split ingredient portions, marked wording, and
-// recipes with and without a yield or total time. Saved directly, so they have
-// no source or photo.
+// One untitled section, as a recipe without parts has.
+const untitled = (first: Step, ...rest: ReadonlyArray<Step>): CreateRecipeRequest["sections"] => [
+  { title: null, steps: [first, ...rest] },
+];
+
+// Exact, range and text amounts, split ingredient portions, marked wording,
+// recipes with one section and with two titled ones, and recipes with and
+// without a yield or total time. Saved directly, so they have no source or
+// photo.
 const recipes: ReadonlyArray<CreateRecipeRequest> = [
   {
     title: "Buttermilk Pancakes",
@@ -119,7 +125,7 @@ const recipes: ReadonlyArray<CreateRecipeRequest> = [
       { id: "egg", name: "large egg", quantity: exact(1), unit: "count" },
       { id: "butter", name: "unsalted butter, melted", quantity: exact(45), unit: "gram" },
     ],
-    steps: [
+    sections: untitled(
       step(
         text("Whisk "),
         use("flour"),
@@ -149,7 +155,7 @@ const recipes: ReadonlyArray<CreateRecipeRequest> = [
         marked("2 minutes"),
         text(" a side."),
       ),
-    ],
+    ),
     yield: { quantity: range(10, 12), label: "pancakes" },
     totalTimeSeconds: 1500,
   },
@@ -169,7 +175,7 @@ const recipes: ReadonlyArray<CreateRecipeRequest> = [
         unit: null,
       },
     ],
-    steps: [
+    sections: untitled(
       step(text("Warm "), use("oil"), text(" in a pot over medium heat.")),
       step(
         text("Soften "),
@@ -194,12 +200,12 @@ const recipes: ReadonlyArray<CreateRecipeRequest> = [
         use("basil", 1, 2),
         text("."),
       ),
-    ],
+    ),
     yield: { quantity: exact(4), label: "servings" },
     totalTimeSeconds: 2700,
   },
   {
-    title: "Lemon Vinaigrette",
+    title: "Chickpea Salad with Lemon Vinaigrette",
     ingredients: [
       { id: "lemon", name: "lemon juice", quantity: exact(60), unit: "millilitre" },
       { id: "mustard", name: "Dijon mustard", quantity: exact(1), unit: "teaspoon" },
@@ -210,19 +216,42 @@ const recipes: ReadonlyArray<CreateRecipeRequest> = [
         quantity: { kind: "text", text: "a good pinch" },
         unit: null,
       },
+      { id: "chickpeas", name: "chickpeas, drained (540 mL)", quantity: exact(1), unit: "can" },
+      { id: "cucumber", name: "cucumber, diced", quantity: exact(1), unit: "count" },
+      { id: "parsley", name: "fresh parsley, chopped", quantity: exact(1), unit: "handful" },
     ],
-    steps: [
-      step(
-        text("Shake "),
-        use("lemon"),
-        text(", "),
-        use("mustard"),
-        text(", "),
-        use("oil"),
-        text(" and "),
-        use("salt"),
-        text(" in a jar until creamy."),
-      ),
+    sections: [
+      {
+        title: "Vinaigrette",
+        steps: [
+          step(
+            text("Shake "),
+            use("lemon"),
+            text(", "),
+            use("mustard"),
+            text(", "),
+            use("oil"),
+            text(" and "),
+            use("salt", 1, 2),
+            text(" in a jar until creamy."),
+          ),
+        ],
+      },
+      {
+        title: "Salad",
+        steps: [
+          step(
+            text("Toss "),
+            use("chickpeas"),
+            text(", "),
+            use("cucumber"),
+            text(" and "),
+            use("parsley"),
+            text(" in a bowl."),
+          ),
+          step(text("Dress with the vinaigrette and finish with "), use("salt", 1, 2), text(".")),
+        ],
+      },
     ],
   },
 ];

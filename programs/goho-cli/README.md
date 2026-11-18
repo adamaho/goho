@@ -356,7 +356,7 @@ pnpm --filter @goho/goho-cli start recipes list
 
 The command prints a JSON array of every saved recipe's headline details, by title A to Z
 ignoring case, then newest first. Each entry has its `id`, `title`, `source`,
-`totalTimeSeconds`, `hasImage`, and timestamps, but no ingredients, steps, or yield; use
+`totalTimeSeconds`, `hasImage`, and timestamps, but no ingredients, sections, or yield; use
 `recipes view` for those. `source` is null for a recipe saved directly. No recipes prints `[]`.
 
 ## View a recipe
@@ -366,7 +366,7 @@ pnpm --filter @goho/goho-cli start recipes view <positive-integer-recipe-id>
 ```
 
 The command prints the complete recipe as JSON, including its ingredients, steps, and
-yield. A malformed ID or a valid ID that does not exist exits nonzero; a missing recipe
+yield. A recipe's sections print as one `steps` list, in order and without their titles. A malformed ID or a valid ID that does not exist exits nonzero; a missing recipe
 prints the server's not-found problem.
 
 ## Download a recipe photo
@@ -403,7 +403,8 @@ optional; leaving one out saves it as unknown rather than guessing it. There is 
 file or stdin input, no source URL, and no photo. Every successful call saves a new recipe,
 even with a title already saved, so running the command twice leaves two recipes. The
 server assigns the ID and timestamps, and the recipe has `hasImage: false` and a null
-`source`. The command prints the complete saved recipe as JSON.
+`source`. The steps are saved as one untitled section. The command prints the complete
+saved recipe as JSON, as the server returns it.
 
 ### Ingredients
 

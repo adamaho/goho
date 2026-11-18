@@ -54,6 +54,9 @@ const DatabaseLive = databaseMigratedBy(Migrations.run());
 // The schema as migration 0019 created it, for the upgrade test.
 const RecipesV0019Live = databaseMigratedBy(migrationsBefore("0020"));
 
+// The schema before recipes had sections, for the upgrade test.
+const RecipesV0021Live = databaseMigratedBy(migrationsBefore("0022"));
+
 const ConstraintCause = Schema.Struct({ constraint: Schema.String });
 
 // The constraint a failed statement violated, as PostgreSQL reported it.
@@ -75,7 +78,7 @@ const pie: CreateRecipeRequest = {
   ingredients: [
     { id: "flour", name: "flour", quantity: { kind: "text", text: "some" }, unit: null },
   ],
-  steps: [{ segments: [{ kind: "text", text: "Bake." }] }],
+  sections: [{ title: null, steps: [{ segments: [{ kind: "text", text: "Bake." }] }] }],
 };
 const fractions = [
   {
@@ -90,16 +93,17 @@ const fractions = [
   },
 ];
 const steps = [{ segments: [{ kind: "text", text: "Bake." }] }];
+const sections = [{ title: null, steps }];
 
-const insertRecipe = (fields: { title?: string; ingredients?: unknown; steps?: unknown } = {}) =>
+const insertRecipe = (fields: { title?: string; ingredients?: unknown; sections?: unknown } = {}) =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
     const [row] = yield* sql<{ id: string }>`
-      INSERT INTO recipes (title, ingredients, steps)
+      INSERT INTO recipes (title, ingredients, sections)
       VALUES (
         ${fields.title ?? "Bread"},
         ${JSON.stringify(fields.ingredients ?? ingredients)}::jsonb,
-        ${JSON.stringify(fields.steps ?? steps)}::jsonb
+        ${JSON.stringify(fields.sections ?? sections)}::jsonb
       )
       RETURNING id::text AS id
     `;
@@ -156,7 +160,8 @@ it.effect("saves recipes without an upload and checks their top-level fields", (
       ["recipes_title_check", insertRecipe({ title: "  " })],
       ["recipes_ingredients_check", insertRecipe({ ingredients: [] })],
       ["recipes_ingredients_check", insertRecipe({ ingredients: { flour: 1 } })],
-      ["recipes_steps_check", insertRecipe({ steps: [] })],
+      ["recipes_sections_check", insertRecipe({ sections: [] })],
+      ["recipes_sections_check", insertRecipe({ sections: { title: null } })],
       ["recipes_yield_check", sql`UPDATE recipes SET "yield" = 'null' WHERE id = ${id}`],
       ["recipes_yield_check", sql`UPDATE recipes SET "yield" = '[]' WHERE id = ${id}`],
       [
@@ -366,7 +371,8 @@ it.effect("upgrades saved recipes and imports unchanged to key each recipe by it
       ),
     );
 
-    // The repositories read the upgraded rows exactly.
+    // The repositories read the upgraded rows exactly, once every later migration has run.
+    yield* Migrations.run().pipe(Effect.provide(NodeServices.layer));
     const recipes = yield* RecipeRepository.Service;
     const uploads = yield* RecipeUploadRepository.Service;
     const source = { kind: "url", url: "https://Example.com/bread#top" };
@@ -415,4 +421,133 @@ it.effect("upgrades saved recipes and imports unchanged to key each recipe by it
       ),
     );
   }).pipe(Effect.provide(RecipesV0019Live)),
+);
+
+it.effect("upgrades every saved recipe to one untitled section holding its steps unchanged", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const [latest] = yield* sql<{
+      id: number;
+    }>`SELECT max(migration_id) AS id FROM goho_migrations`;
+    expect(latest?.id).toBe(21);
+
+    // Step text keeps its spaces, and marks point at the recipe's ingredients.
+    const marked = [
+      {
+        segments: [
+          { kind: "text", text: "Fold in " },
+          {
+            kind: "mark",
+            content: {
+              kind: "ingredient",
+              ingredientId: "flour",
+              portion: { numerator: 1, denominator: 3 },
+            },
+          },
+          { kind: "text", text: "  gently, " },
+          { kind: "mark", content: { kind: "text", text: "a pinch" } },
+          { kind: "text", text: "." },
+        ],
+      },
+      { segments: [{ kind: "text", text: "Bake until golden. " }] },
+    ];
+    // A direct recipe with a photo and no yield, an imported one with a photo,
+    // source, yield and time, and a direct one with nothing optional.
+    const [direct, imported, plain] = yield* sql<{ id: string }>`
+      INSERT INTO recipes (
+        title, ingredients, steps, "yield", total_time_seconds,
+        image_file_id, image_content_type, source_url, normalized_url
+      ) VALUES
+        ('Toast', ${JSON.stringify(ingredients)}::jsonb, ${JSON.stringify(steps)}::jsonb,
+          NULL, 300, 'toast-photo', 'image/png', NULL, NULL),
+        ('Bread', ${JSON.stringify(fractions)}::jsonb, ${JSON.stringify(marked)}::jsonb,
+          '{"quantity":{"kind":"exact","value":{"numerator":2,"denominator":1}},"label":"loaves"}',
+          5400, 'bread-photo', 'image/webp',
+          'https://Example.com/bread#top', 'https://example.com/bread'),
+        ('Pie', ${JSON.stringify(ingredients)}::jsonb, ${JSON.stringify(steps)}::jsonb,
+          NULL, NULL, NULL, NULL, NULL, NULL)
+      RETURNING id::text AS id
+    `.pipe(
+      Effect.map((rows) => {
+        const id = (index: number) => RecipeId.make(rows[index]?.id ?? "");
+        return [id(0), id(1), id(2)] as const;
+      }),
+    );
+    const upload = RecipeUploadId.make("00000000-0000-4000-8000-00000000000a");
+    yield* sql`
+      INSERT INTO recipe_uploads (id, status, recipe_id) VALUES (${upload}, 'succeeded', ${imported})
+    `;
+    yield* sql`
+      INSERT INTO recipe_upload_urls (upload_id, url) VALUES (${upload}, 'https://Example.com/bread#top')
+    `;
+    // Old rows keep their times, which differ from the migration's.
+    yield* sql`ALTER TABLE recipes DISABLE TRIGGER maintain_record_timestamps`;
+    yield* sql`UPDATE recipes SET created_at = '2026-01-02T03:04:05Z', updated_at = '2026-02-03Z'`;
+    yield* sql`ALTER TABLE recipes ENABLE TRIGGER maintain_record_timestamps`;
+
+    const snapshot = Effect.all([
+      sql`SELECT * FROM recipes ORDER BY id`,
+      sql`SELECT * FROM recipe_uploads ORDER BY id`,
+      sql`SELECT * FROM recipe_upload_urls ORDER BY upload_id`,
+    ]);
+    const [recipesBefore, uploadsBefore, urlsBefore] = yield* snapshot;
+
+    expect(yield* Migrations.run().pipe(Effect.provide(NodeServices.layer))).toEqual([
+      [22, "recipe_sections"],
+    ]);
+
+    // Only the steps moved, into one untitled section; IDs, values and times stay.
+    const [recipesAfter, uploadsAfter, urlsAfter] = yield* snapshot;
+    expect(recipesAfter).toEqual(
+      recipesBefore.map(({ steps, ...row }) => ({ ...row, sections: [{ title: null, steps }] })),
+    );
+    expect(uploadsAfter).toEqual(uploadsBefore);
+    expect(urlsAfter).toEqual(urlsBefore);
+
+    // The repository reads each upgraded recipe whole, photo and source included.
+    const recipes = yield* RecipeRepository.Service;
+    expect(yield* recipes.findById(imported)).toEqual(
+      Option.some({
+        id: imported,
+        title: "Bread",
+        source: { kind: "url", url: "https://Example.com/bread#top" },
+        totalTimeSeconds: 5400,
+        hasImage: true,
+        createdAt: expect.stringMatching(/^2026-01-02 /u),
+        updatedAt: expect.stringMatching(/^2026-02-03 /u),
+        ingredients: fractions,
+        sections: [{ title: null, steps: marked }],
+        yield: {
+          quantity: { kind: "exact", value: { numerator: 2, denominator: 1 } },
+          label: "loaves",
+        },
+      }),
+    );
+    for (const id of [direct, plain]) {
+      expect(yield* recipes.findById(id)).toEqual(
+        Option.some(expect.objectContaining({ sections: [{ title: null, steps }] })),
+      );
+    }
+    expect(yield* recipes.findImage(direct)).toEqual(
+      Option.some({ fileId: FileId.make("toast-photo"), contentType: "image/png" }),
+    );
+    expect(yield* recipes.findIdByUrl(RecipeUrl.make("https://example.com/bread"))).toEqual(
+      Option.some(imported),
+    );
+
+    // The new column is required and checked like the old one.
+    for (const [constraint, statement] of [
+      ["recipes_sections_check", sql`UPDATE recipes SET sections = '[]' WHERE id = ${plain}`],
+      ["recipes_sections_check", sql`UPDATE recipes SET sections = '{}' WHERE id = ${plain}`],
+    ] as const) {
+      expect(yield* violated(statement), constraint).toBe(constraint);
+    }
+    expect(
+      yield* sql`
+        SELECT column_name AS name, is_nullable AS nullable FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'recipes'
+          AND column_name IN ('steps', 'sections')
+      `,
+    ).toEqual([{ name: "sections", nullable: "NO" }]);
+  }).pipe(Effect.provide(RecipesV0021Live)),
 );

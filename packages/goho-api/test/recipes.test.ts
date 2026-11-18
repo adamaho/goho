@@ -1,4 +1,4 @@
-import { Option, Schema } from "effect";
+import { Option, Result, Schema } from "effect";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
@@ -40,7 +40,9 @@ const melt = {
   ],
 };
 
-const direct = { title: "Pancakes", ingredients: [butter], steps: [melt] };
+const untitled = (...steps: ReadonlyArray<unknown>) => [{ title: null, steps }];
+
+const direct = { title: "Pancakes", ingredients: [butter], sections: untitled(melt) };
 
 const saved = {
   id: "5",
@@ -51,7 +53,7 @@ const saved = {
   createdAt: "2026-11-08 14:03:11.52+00",
   updatedAt: "2026-11-08 14:03:11.52+00",
   ingredients: [butter],
-  steps: [melt],
+  sections: untitled(melt),
   yield: {
     quantity: { kind: "exact", value: { numerator: 4, denominator: 1 } },
     label: "servings",
@@ -165,7 +167,7 @@ describe("Ingredient", () => {
 describe("CreateRecipeRequest", () => {
   it("keeps step text exactly, spaces included", () => {
     const decoded = Schema.decodeUnknownSync(CreateRecipeRequest)(direct);
-    expect(decoded.steps[0].segments).toEqual(melt.segments);
+    expect(decoded.sections[0].steps[0].segments).toEqual(melt.segments);
   });
 
   it("accepts a recipe without yield or total time and ignores server fields", () => {
@@ -202,7 +204,7 @@ describe("CreateRecipeRequest", () => {
         },
       ],
     };
-    expect(decodes(CreateRecipeRequest, { ...direct, steps: [step] })).toBe(false);
+    expect(decodes(CreateRecipeRequest, { ...direct, sections: untitled(step) })).toBe(false);
   });
 
   it.each([
@@ -214,15 +216,93 @@ describe("CreateRecipeRequest", () => {
         { kind: "mark", content: { kind: "ingredient", ingredientId: "butter", portion } },
       ],
     };
-    expect(decodes(CreateRecipeRequest, { ...direct, steps: [step] })).toBe(false);
+    expect(decodes(CreateRecipeRequest, { ...direct, sections: untitled(step) })).toBe(false);
   });
 
   it.each([{ segments: [] }, { segments: [{ kind: "text", text: "" }] }])(
     "rejects an empty step: %j",
     (step) => {
-      expect(decodes(CreateRecipeRequest, { ...direct, steps: [step] })).toBe(false);
+      expect(decodes(CreateRecipeRequest, { ...direct, sections: untitled(step) })).toBe(false);
     },
   );
+});
+
+describe("sections", () => {
+  // Every issue's message, with the path it points at.
+  const failurePaths = (value: unknown) =>
+    Result.match(Schema.decodeUnknownResult(CreateRecipeRequest)(value, { errors: "all" }), {
+      onFailure: (error) => error.message,
+      onSuccess: () => "",
+    });
+  const stir = { segments: [{ kind: "text", text: "Stir." }] };
+  const cake = { title: "Cake", steps: [stir] };
+  const frosting = { title: "For the frosting", steps: [melt] };
+
+  it("accepts one section with or without a title", () => {
+    expect(decodes(CreateRecipeRequest, direct)).toBe(true);
+    expect(
+      Schema.decodeUnknownSync(CreateRecipeRequest)({
+        ...direct,
+        sections: [{ title: " Pancakes ", steps: [melt] }],
+      }).sections[0].title,
+    ).toBe("Pancakes");
+  });
+
+  it("accepts several sections when each has a title, keeping their order", () => {
+    const decoded = Schema.decodeUnknownSync(CreateRecipeRequest)({
+      ...direct,
+      sections: [cake, { ...frosting, title: "  For the frosting " }],
+    });
+    expect(decoded.sections.map(({ title }) => title)).toEqual(["Cake", "For the frosting"]);
+  });
+
+  it("points at each untitled section when there are several", () => {
+    const message = failurePaths({
+      ...direct,
+      sections: [{ ...cake, title: null }, frosting, { ...cake, title: null }],
+    });
+    expect(message).toContain('at ["sections"][0]["title"]');
+    expect(message).toContain('at ["sections"][2]["title"]');
+    expect(message).not.toContain('["sections"][1]');
+    expect(message).toContain("every section needs a title when the recipe has more than one");
+  });
+
+  it.each([
+    ["no sections", []],
+    ["a section without steps", [{ title: null, steps: [] }]],
+    ["a missing title", [{ steps: [stir] }]],
+    ["a blank title", [{ ...cake, title: "   " }, frosting]],
+    ["a blank lone title", [{ title: " ", steps: [stir] }]],
+  ])("rejects %s", (_, sections) => {
+    expect(decodes(CreateRecipeRequest, { ...direct, sections })).toBe(false);
+  });
+
+  it("checks ingredient marks in every section against the one ingredient list", () => {
+    const sugar = {
+      segments: [
+        {
+          kind: "mark",
+          content: {
+            kind: "ingredient",
+            ingredientId: "sugar",
+            portion: { numerator: 1, denominator: 1 },
+          },
+        },
+      ],
+    };
+    // Butter, listed once, can be marked from any section.
+    expect(decodes(CreateRecipeRequest, { ...direct, sections: [cake, frosting] })).toBe(true);
+    expect(
+      failurePaths({ ...direct, sections: [cake, { ...frosting, steps: [melt, sugar] }] }),
+    ).toContain('at ["sections"][1]["steps"][1]["segments"][0]["content"]["ingredientId"]');
+  });
+
+  it("checks saved recipes the same way", () => {
+    expect(decodes(Recipe, { ...saved, sections: [cake, frosting] })).toBe(true);
+    expect(decodes(Recipe, { ...saved, sections: [cake, { ...frosting, title: null }] })).toBe(
+      false,
+    );
+  });
 });
 
 describe("Step", () => {

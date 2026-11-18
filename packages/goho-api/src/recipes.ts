@@ -417,6 +417,71 @@ export const Step = Schema.Struct({
 export interface Step extends Schema.Schema.Type<typeof Step> {}
 
 /**
+ * A run of a recipe's steps, such as the frosting of a cake. The title is null
+ * or trimmed nonblank text; a recipe with more than one section needs every
+ * title, while a lone section's title is optional and never shown.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const RecipeSection = Schema.Struct({
+  title: Schema.NullOr(
+    Text.pipe(
+      Schema.annotateEncoded({
+        description: "Section title, trimmed.",
+        examples: ["For the frosting"],
+      }),
+    ),
+  ).annotate({
+    description:
+      "The section's title. Every section needs one when the recipe has more than one, bud; a lone section can send null and shows no title.",
+  }),
+  steps: Schema.NonEmptyArray(Step).annotate({
+    description: "This section's steps in order, numbered from 1 within the section.",
+  }),
+}).annotate({
+  identifier: "RecipeSection",
+  description: "One shift of steps, bud: a part of the recipe, like the frosting.",
+  examples: [
+    {
+      title: null,
+      steps: [{ segments: [{ kind: "text", text: "Melt the butter." }] }],
+    },
+  ],
+});
+
+/**
+ * A run of a recipe's steps.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export interface RecipeSection extends Schema.Schema.Type<typeof RecipeSection> {}
+
+/**
+ * How to write a recipe's sections and steps, shared word for word by every
+ * writer of recipes, such as the page import and agents creating a recipe, so
+ * they all follow one set of rules. Plain text, without wording specific to a
+ * source or tool.
+ *
+ * @category guidance
+ * @since 0.1.0
+ */
+export const recipeWritingGuidance = `Sections:
+- Group the steps into sections, in order. Use the recipe's own sections or headings when it has them, such as "For the frosting".
+- Without them, start a new section only where the steps clearly begin a separate component, such as making the dressing or the frosting. When unsure, keep one section.
+- Take each section title from the recipe's own wording. A lone section's title is null; with two or more sections, every section needs a title.
+- Never reorder steps or move a step from one section to another.
+
+Steps:
+- Tighten each step's wording: remove filler, chatter and repetition.
+- Split a step that holds several separate actions into one step per action.
+- Never drop an action, time, temperature, visual cue (such as "until golden"), warning (such as "don't overmix") or ingredient amount.
+- Name every ingredient a step adds, each as its own ingredient mark. Never write "the remaining ingredients", "the dry ingredients", "the spices" or "everything else" for ingredients going in for the first time.
+- A step may refer to a mixture made in an earlier step, such as "the dry mixture", without marking its ingredients again.
+- Each step's ingredient marks carry the portion that step actually uses. Portions are judged per step and need not add up across steps.`;
+
+/**
  * How much a recipe makes, as the source states it.
  *
  * @category models
@@ -443,11 +508,12 @@ export const RecipeYield = Schema.Struct({
  */
 export interface RecipeYield extends Schema.Schema.Type<typeof RecipeYield> {}
 
-// Ingredient IDs are unique within a recipe and every step mark names one of them.
+// Ingredient IDs are unique within a recipe and every step mark, in any
+// section, names one of them.
 const ingredientReferences = Schema.makeFilter(
   (recipe: {
     readonly ingredients: ReadonlyArray<Ingredient>;
-    readonly steps: ReadonlyArray<Step>;
+    readonly sections: ReadonlyArray<RecipeSection>;
   }) => {
     const issues: Array<Schema.FilterIssue> = [];
     const ids = new Set<string>();
@@ -457,22 +523,51 @@ const ingredientReferences = Schema.makeFilter(
       }
       ids.add(ingredient.id);
     });
-    recipe.steps.forEach((step, stepIndex) => {
-      step.segments.forEach((segment, segmentIndex) => {
-        if (
-          segment.kind === "mark" &&
-          segment.content.kind === "ingredient" &&
-          !ids.has(segment.content.ingredientId)
-        ) {
-          issues.push({
-            path: ["steps", stepIndex, "segments", segmentIndex, "content", "ingredientId"],
-            issue: "no ingredient in this recipe has this ID",
-          });
-        }
+    recipe.sections.forEach((section, sectionIndex) => {
+      section.steps.forEach((step, stepIndex) => {
+        step.segments.forEach((segment, segmentIndex) => {
+          if (
+            segment.kind === "mark" &&
+            segment.content.kind === "ingredient" &&
+            !ids.has(segment.content.ingredientId)
+          ) {
+            issues.push({
+              path: [
+                "sections",
+                sectionIndex,
+                "steps",
+                stepIndex,
+                "segments",
+                segmentIndex,
+                "content",
+                "ingredientId",
+              ],
+              issue: "no ingredient in this recipe has this ID",
+            });
+          }
+        });
       });
     });
     return issues;
   },
+  { toJsonSchema: () => [{}, true] },
+);
+
+// A lone section may go untitled; once there are several, each needs a title.
+const sectionTitles = Schema.makeFilter(
+  (recipe: { readonly sections: ReadonlyArray<RecipeSection> }) =>
+    recipe.sections.length === 1
+      ? []
+      : recipe.sections.flatMap((section, index): Array<Schema.FilterIssue> =>
+          section.title === null
+            ? [
+                {
+                  path: ["sections", index, "title"],
+                  issue: "every section needs a title when the recipe has more than one",
+                },
+              ]
+            : [],
+        ),
   { toJsonSchema: () => [{}, true] },
 );
 
@@ -483,8 +578,9 @@ const RecipeFields = {
   ingredients: Schema.NonEmptyArray(Ingredient).annotate({
     description: "Ingredients in recipe order, each with an ID unique within the recipe.",
   }),
-  steps: Schema.NonEmptyArray(Step).annotate({
-    description: "Steps in order; ingredient marks point at this recipe's ingredients.",
+  sections: Schema.NonEmptyArray(RecipeSection).annotate({
+    description:
+      "Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one.",
   }),
   yield: Schema.NullOr(RecipeYield).annotate({
     description: "How much the recipe makes, or null when the source doesn't say.",
@@ -510,11 +606,11 @@ const RecipeFields = {
 export const CreateRecipeRequest = Schema.Struct({
   title: RecipeFields.title,
   ingredients: RecipeFields.ingredients,
-  steps: RecipeFields.steps,
+  sections: RecipeFields.sections,
   yield: Schema.optionalKey(RecipeFields.yield),
   totalTimeSeconds: Schema.optionalKey(RecipeFields.totalTimeSeconds),
 })
-  .check(ingredientReferences)
+  .check(ingredientReferences, sectionTitles)
   .annotate({
     identifier: "CreateRecipeRequest",
     description:
@@ -551,7 +647,7 @@ export const RecipeId = BigintId.annotate({
 export type RecipeId = typeof RecipeId.Type;
 
 /**
- * Saved recipe without its ingredients, steps, or yield, for listings.
+ * Saved recipe without its ingredients, sections, or yield, for listings.
  *
  * @category models
  * @since 0.1.0
@@ -574,7 +670,7 @@ export const RecipeSummary = Schema.Struct({
 });
 
 /**
- * Saved recipe without its ingredients, steps, or yield.
+ * Saved recipe without its ingredients, sections, or yield.
  *
  * @category models
  * @since 0.1.0
@@ -590,13 +686,13 @@ export interface RecipeSummary extends Schema.Schema.Type<typeof RecipeSummary> 
 export const Recipe = Schema.Struct({
   ...RecipeSummary.fields,
   ingredients: RecipeFields.ingredients,
-  steps: RecipeFields.steps,
+  sections: RecipeFields.sections,
   yield: RecipeFields.yield,
 })
-  .check(ingredientReferences)
+  .check(ingredientReferences, sectionTitles)
   .annotate({
     identifier: "Recipe",
-    description: "A saved recipe with its ingredients and steps.",
+    description: "A saved recipe with its ingredients and sections of steps.",
   });
 
 /**

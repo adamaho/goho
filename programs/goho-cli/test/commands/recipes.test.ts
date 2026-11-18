@@ -154,15 +154,24 @@ describe("recipes list", () => {
 });
 
 describe("recipes view", () => {
-  it("prints the full unwrapped recipe as sent", async () => {
+  it("prints the full unwrapped recipe, its sections' steps in one list", async () => {
+    const { steps, ...rest } = recipe;
+    const serve = { segments: [{ kind: "text", text: "Serve warm." }] };
+    const saved = {
+      ...rest,
+      sections: [
+        { title: "Butter", steps },
+        { title: "To serve", steps: [serve] },
+      ],
+    };
     const result = await withResponse(
-      expectRequest("GET", `/recipes/${recipeId}`, 200, { data: recipe }),
+      expectRequest("GET", `/recipes/${recipeId}`, 200, { data: saved }),
       (baseUrl) => runCommand(baseUrl, ["recipes", "view", recipeId]),
     );
     expect(result).toEqual({
       code: 0,
       stderr: "",
-      stdout: `${JSON.stringify(recipe, null, 2)}\n`,
+      stdout: `${JSON.stringify({ ...recipe, steps: [...steps, serve] }, null, 2)}\n`,
     });
   });
 

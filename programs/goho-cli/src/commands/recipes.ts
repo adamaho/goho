@@ -40,7 +40,10 @@ const viewCommand = Command.make("view", {
           detail: "The server sent a PDF instead of the recipe's JSON. Check the server version.",
         });
       }
-      yield* Console.log(JSON.stringify(response.data, null, 2));
+      // Sections' steps print as one flat list, in order and without titles.
+      const { sections, yield: makes, ...recipe } = response.data;
+      const view = { ...recipe, steps: sections.flatMap((section) => section.steps), yield: makes };
+      yield* Console.log(JSON.stringify(view, null, 2));
     }),
   ),
   Command.provide(GohoServer.layer),

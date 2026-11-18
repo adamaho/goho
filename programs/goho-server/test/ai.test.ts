@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Ai as CoreAi } from "@goho/core";
-import { ConfigProvider, Effect, Layer, Logger, Result, Schema } from "effect";
+import { ConfigProvider, Effect, Layer, Logger, Predicate, Result, Schema } from "effect";
 import { FetchHttpClient } from "effect/http";
 import { expect } from "vitest";
 
@@ -41,6 +41,38 @@ const SentRequest = Schema.fromJsonString(
     }),
   }),
 );
+
+// The deepest nesting of object schemas along any path through `schema`,
+// following `$ref`s into `$defs`. The root object counts as 1 and each object
+// nested in a property, array item or union branch adds 1; arrays and unions
+// add nothing themselves. A strict nonempty array is an object (`"0"` and
+// `"__rest__"`), so it counts. This is the nesting OpenAI's strict structured
+// output limits.
+const objectDepth = (root: unknown): number => {
+  const defs = new Map(
+    Predicate.hasProperty(root, "$defs") && Predicate.isObject(root.$defs)
+      ? Object.entries(root.$defs)
+      : [],
+  );
+  const branches = new Set(["anyOf", "oneOf", "allOf", "items", "prefixItems"]);
+  const visit = (node: unknown, seen: ReadonlySet<string>): number => {
+    if (Array.isArray(node)) return Math.max(0, ...node.map((item) => visit(item, seen)));
+    if (!Predicate.isObject(node)) return 0;
+    if (Predicate.hasProperty(node, "$ref") && Predicate.isString(node.$ref)) {
+      const name = node.$ref.replace("#/$defs/", "");
+      return seen.has(name) ? 0 : visit(defs.get(name), new Set([...seen, name]));
+    }
+    const nested = Object.entries(node).flatMap(([key, value]) =>
+      branches.has(key) ? [visit(value, seen)] : [],
+    );
+    const properties = Predicate.hasProperty(node, "properties") ? node.properties : undefined;
+    const own = Predicate.isObject(properties)
+      ? 1 + Math.max(0, ...Object.values(properties).map((child) => visit(child, seen)))
+      : 0;
+    return Math.max(own, ...nested);
+  };
+  return visit(root, new Set());
+};
 
 // A reference with no other keywords.
 const decodeBareReference = (schema: unknown) =>
@@ -102,7 +134,14 @@ it.effect("sends the recipe extraction schema without keywords beside a $ref", (
     // Each ingredient mark's portion still points at a positive fraction.
     const definitions = format.schema.$defs;
     const marks = Object.keys(definitions).filter((name) => name.startsWith("IngredientMark"));
-    expect(marks).toHaveLength(4);
+    expect(marks).toHaveLength(1);
+
+    // Sections must not push the request past OpenAI's nesting limit of about
+    // 10 levels. Counting the root, before sections it was 9, the deepest path being
+    // result › recipe › steps › "0" › segments › "0" › content › portion; plain
+    // arrays make it result › recipe › sections[] › steps[] › segments[] ›
+    // content › portion, 8 levels.
+    expect(objectDepth(JSON.parse(body).text.format.schema)).toBe(8);
     for (const mark of marks) {
       const { $ref } = yield* decodeBareReference(definitions[mark]?.properties?.portion);
       const positive = { type: "integer", exclusiveMinimum: 0, maximum: Number.MAX_SAFE_INTEGER };

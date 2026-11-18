@@ -2991,18 +2991,18 @@
             },
             "description": "Ingredients in recipe order, each with an ID unique within the recipe."
           },
-          "steps": {
+          "sections": {
             "type": "array",
             "prefixItems": [
               {
-                "$ref": "#/components/schemas/Step"
+                "$ref": "#/components/schemas/RecipeSection"
               }
             ],
             "minItems": 1,
             "items": {
-              "$ref": "#/components/schemas/Step"
+              "$ref": "#/components/schemas/RecipeSection"
             },
-            "description": "Steps in order; ingredient marks point at this recipe's ingredients."
+            "description": "Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one."
           },
           "yield": {
             "anyOf": [
@@ -3025,11 +3025,11 @@
           "createdAt",
           "updatedAt",
           "ingredients",
-          "steps",
+          "sections",
           "yield"
         ],
         "additionalProperties": false,
-        "description": "A saved recipe with its ingredients and steps."
+        "description": "A saved recipe with its ingredients and sections of steps."
       },
       "RecipeYield": {
         "type": "object",
@@ -3176,6 +3176,55 @@
         "required": ["kind", "value"],
         "additionalProperties": false,
         "description": "An exact amount."
+      },
+      "RecipeSection": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Section title, trimmed.",
+                "examples": ["For the frosting"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The section's title. Every section needs one when the recipe has more than one, bud; a lone section can send null and shows no title."
+          },
+          "steps": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/components/schemas/Step"
+              }
+            ],
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "description": "This section's steps in order, numbered from 1 within the section."
+          }
+        },
+        "required": ["title", "steps"],
+        "additionalProperties": false,
+        "description": "One shift of steps, bud: a part of the recipe, like the frosting.",
+        "examples": [
+          {
+            "title": null,
+            "steps": [
+              {
+                "segments": [
+                  {
+                    "kind": "text",
+                    "text": "Melt the butter."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "Step": {
         "type": "object",
@@ -3425,18 +3474,18 @@
             },
             "description": "Ingredients in recipe order, each with an ID unique within the recipe."
           },
-          "steps": {
+          "sections": {
             "type": "array",
             "prefixItems": [
               {
-                "$ref": "#/components/schemas/Step"
+                "$ref": "#/components/schemas/RecipeSection"
               }
             ],
             "minItems": 1,
             "items": {
-              "$ref": "#/components/schemas/Step"
+              "$ref": "#/components/schemas/RecipeSection"
             },
-            "description": "Steps in order; ingredient marks point at this recipe's ingredients."
+            "description": "Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one."
           },
           "yield": {
             "anyOf": [
@@ -3464,7 +3513,7 @@
             "examples": [1800, null]
           }
         },
-        "required": ["title", "ingredients", "steps"],
+        "required": ["title", "ingredients", "sections"],
         "additionalProperties": false,
         "description": "A full recipe to put on the roster, bud. Leave out the yield or total time, or send null, when it isn't known."
       },

@@ -21,6 +21,7 @@ import optionalBookAuthor from "./migrations/0018-optional-book-author.ts";
 import recipes from "./migrations/0019-recipes.ts";
 import recipeUrlIdentity from "./migrations/0020-recipe-url-identity.ts";
 import bookCoverFile from "./migrations/0021-book-cover-file.ts";
+import recipeSections from "./migrations/0022-recipe-sections.ts";
 
 /**
  * Every migration by ID. Upgrade tests run a prefix of it.
@@ -49,6 +50,7 @@ export const all = {
   "0019_recipes": recipes,
   "0020_recipe_url_identity": recipeUrlIdentity,
   "0021_book_cover_file": bookCoverFile,
+  "0022_recipe_sections": recipeSections,
 };
 
 /**

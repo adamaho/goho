@@ -4,7 +4,10 @@ import {
   type Fraction,
   Ingredient,
   Recipe,
+  RecipeSection,
   RecipeUnit,
+  recipeWritingGuidance,
+  Segment,
 } from "@goho/goho-api/recipes";
 import { Effect, Schema } from "effect";
 
@@ -31,10 +34,20 @@ const ExtractedIngredient = Schema.Struct({
 
 type ExtractedIngredient = typeof ExtractedIngredient.Type;
 
+// Plain arrays, not the API's nonempty ones: OpenAI's strict output writes a
+// nonempty array as an object, and the nested sections, steps and segments
+// would then pass its nesting limit. Decoding the result as a
+// `CreateRecipeRequest` still requires every list to be nonempty and several
+// sections to be titled.
+const ExtractedSection = Schema.Struct({
+  title: RecipeSection.fields.title,
+  steps: Schema.Array(Schema.Struct({ segments: Schema.Array(Segment) })),
+});
+
 const ExtractedRecipe = Schema.Struct({
   title: Recipe.fields.title,
-  ingredients: Schema.NonEmptyArray(ExtractedIngredient),
-  steps: Recipe.fields.steps,
+  ingredients: Schema.Array(ExtractedIngredient),
+  sections: Schema.Array(ExtractedSection),
   yield: Recipe.fields.yield,
   totalTimeSeconds: Recipe.fields.totalTimeSeconds,
 });
@@ -109,12 +122,17 @@ Ingredients, one per ingredient line, in page order:
 - Report ounces, pounds and fluid ounces in their source unit without converting them: ounce (weight), pound, us_fluid_ounce or imperial_fluid_ounce. A bare oz is ounce (weight) unless the page says fluid. Fluid ounces are US unless the page explicitly says imperial.
 - For any other unit, such as a sprig, stick or slice, use a text quantity with the amount and unit as written, such as "2 sprigs", and a null unit.
 
-Steps, one per instruction, in page order:
-- Lightly clean up the wording, such as dropping step numbers, headings and filler or fixing spacing, without changing its cooking meaning: keep every quantity, time, temperature, technique and condition. This is a light cleanup, not a rewrite.
+Write the steps by these rules, shared with every other recipe Goho saves:
+${recipeWritingGuidance}
+
+On this page:
+- The page's own sections are its schema.org HowToSection objects or headings in the visible text, such as "For the frosting". A heading or HowToSection name that names a group of steps becomes that section's title, not a step.
+- Drop step numbers and fix spacing. Keep each step's cooking meaning: every quantity, time, temperature, technique and condition.
 - Write temperatures in Fahrenheit only. Keep the page's Fahrenheit value and drop any Celsius equivalent. When the page gives only Celsius, convert it with F = C × 9/5 + 32 and round to the nearest 5 °F, so 180 °C is 355 °F. Only temperatures are rounded; quantities stay exact.
-- Split each step into segments. Text segments keep their wording exactly, including spaces, so joining the segments in order reads as the sentence with single spaces between words.
+- Split each step into segments. Text segments hold the step's final wording with its spaces, so joining the segments in order reads as the step, with single spaces between words.
 - Replace each mention of an ingredient, with any amount the step gives for it, by an ingredient mark whose portion is the share of that ingredient's quantity this step uses: 1/1 when it uses all of it, and a smaller fraction only when the page gives evidence for it, such as "half the butter" (1/2) or "2 tablespoons of the 6 tablespoons of sugar" (1/3). Work out each mark's portion on its own; portions across steps need not add up.
 - When the page does not give enough to work out a step's share, such as "some of the sugar", use a text mark with the step's wording instead.
+- Ingredients stay one list for the whole recipe, whatever section uses them.
 
 yield: how much the recipe makes as the page states it, such as 4 servings or 12 muffins, or null when it does not say.
 totalTimeSeconds: the total time the page states, in seconds, or null when it states none. Never add up prep and cook times or estimate a time.`;
@@ -164,7 +182,7 @@ export const extract = Effect.fn("@goho/Recipes.extract")(function* (page: PageC
           content: [
             {
               type: "text",
-              text: `Extract the main recipe from this page content, given as JSON. structuredData holds the page's schema.org Recipe objects, if any.\n${JSON.stringify(content)}`,
+              text: `Extract the main recipe from this page content, given as JSON. structuredData holds the page's schema.org Recipe objects, if any, with any HowToSection groups in their recipeInstructions.\n${JSON.stringify(content)}`,
             },
           ],
         },

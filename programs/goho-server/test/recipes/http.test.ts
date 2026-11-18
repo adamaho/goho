@@ -53,13 +53,26 @@ const pancakes = {
       unit: "cup",
     },
   ],
-  steps: [
+  // Both sections mark the one ingredient list.
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Whisk " },
-        { kind: "mark", content: { kind: "ingredient", ingredientId: "flour", portion: whole } },
-        { kind: "text", text: "  well." },
+      title: "Batter",
+      steps: [
+        {
+          segments: [
+            { kind: "text", text: "Whisk " },
+            {
+              kind: "mark",
+              content: { kind: "ingredient", ingredientId: "flour", portion: whole },
+            },
+            { kind: "text", text: "  well." },
+          ],
+        },
       ],
+    },
+    {
+      title: "To cook",
+      steps: [{ segments: [{ kind: "text", text: "Cook until golden." }] }],
     },
   ],
 } satisfies CreateRecipeRequest;
@@ -164,8 +177,14 @@ it.effect("creates, lists, gets, and deletes recipes through the typed client", 
   return Effect.gen(function* () {
     const client = yield* Client.make("");
     // Titles are trimmed, while step text keeps its spaces.
+    const [batter, toCook] = pancakes.sections;
     const created = yield* HttpClient.post("/recipes", {
-      body: yield* HttpBody.json({ ...pancakes, title: " Pancakes ", yield: null }),
+      body: yield* HttpBody.json({
+        ...pancakes,
+        title: " Pancakes ",
+        sections: [{ ...batter, title: " Batter " }, toCook],
+        yield: null,
+      }),
     });
     expect(created.status).toBe(200);
     expect(yield* created.json).toEqual({ data: recipe });
@@ -464,12 +483,25 @@ it.effect("rejects invalid recipes, imports, and IDs before the services", () =>
   return Effect.gen(function* () {
     const mark = (ingredientId: string) => [
       {
-        segments: [{ kind: "mark", content: { kind: "ingredient", ingredientId, portion: whole } }],
+        title: null,
+        steps: [
+          {
+            segments: [
+              { kind: "mark", content: { kind: "ingredient", ingredientId, portion: whole } },
+            ],
+          },
+        ],
       },
     ];
+    const [batter, toCook] = pancakes.sections;
     for (const payload of [
       {},
-      { ...pancakes, steps: mark("sugar") },
+      { ...pancakes, sections: mark("sugar") },
+      { ...pancakes, sections: [batter, { ...toCook, title: null }] },
+      { ...pancakes, sections: [] },
+      { ...pancakes, sections: [{ ...batter, steps: [] }] },
+      { ...pancakes, sections: [{ ...batter, note: "first" }, toCook] },
+      { ...pancakes, steps: batter.steps },
       { ...pancakes, source: null },
       { ...pancakes, hasImage: false },
       { ...pancakes, ingredients: [{ ...pancakes.ingredients[0], note: "sifted" }] },

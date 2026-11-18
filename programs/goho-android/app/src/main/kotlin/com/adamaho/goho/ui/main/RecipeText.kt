@@ -135,7 +135,8 @@ internal fun recipePlainText(recipe: Recipe, resources: Resources): String {
             }
     val byId = recipe.ingredients.associateBy { it.id }
     val steps =
-        recipe.steps
+        recipe.sections
+            .flatMap { it.steps }
             .takeIf { it.isNotEmpty() }
             ?.withIndex()
             ?.joinToString("\n", prefix = resources.getString(R.string.recipe_steps) + "\n") {

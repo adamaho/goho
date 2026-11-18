@@ -262,9 +262,11 @@ rounded.
   total time, photo flag, and timestamps, but no ingredients, steps, or yield.
   After seeding a fresh database, it returns three recipes.
 - `get_recipe` takes a string `recipe_id` and returns the complete recipe with
-  its ingredients, steps, and yield.
-- `create_recipe` saves a recipe with no source or photo. Each call saves a new
-  recipe, even when one already has that title. It takes a `title`, at least one
+  its ingredients, steps, and yield. A recipe saved in several sections returns
+  their steps as one `steps` list, in order and without the section titles.
+- `create_recipe` saves a recipe with no source or photo, its steps as one
+  untitled section. Each call saves a new recipe, even when one already has that
+  title. It takes a `title`, at least one
   ingredient, and at least one step. Leave out `yield` and `totalTimeSeconds`,
   or send `null`, when they aren't known. Quantities are exact fractions, ranges,
   or text; exact and range quantities need a unit, and text quantities use
