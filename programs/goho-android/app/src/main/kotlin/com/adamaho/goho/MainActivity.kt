@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
@@ -74,16 +75,19 @@ import com.adamaho.goho.ui.main.DeletionKind
 import com.adamaho.goho.ui.main.Feedback
 import com.adamaho.goho.ui.main.FeedbackMessage
 import com.adamaho.goho.ui.main.PendingDeletions
+import com.adamaho.goho.ui.main.RECIPE_PDF_DIRECTORY
 import com.adamaho.goho.ui.main.ReceiptDetailScreen
 import com.adamaho.goho.ui.main.ReceiptListEntry
 import com.adamaho.goho.ui.main.ReceiptListStatus
 import com.adamaho.goho.ui.main.ReceiptOverview
 import com.adamaho.goho.ui.main.ReceiptOverviewState
-import com.adamaho.goho.ui.main.RecipeCopyProblem
+import com.adamaho.goho.ui.main.RecipeActionProblem
 import com.adamaho.goho.ui.main.RecipeDetailScreen
 import com.adamaho.goho.ui.main.RecipeListController
 import com.adamaho.goho.ui.main.RecipeLoad
 import com.adamaho.goho.ui.main.RecipeOverview
+import com.adamaho.goho.ui.main.RecipePdfApi
+import com.adamaho.goho.ui.main.RecipePdfLoad
 import com.adamaho.goho.ui.main.ScanKind
 import com.adamaho.goho.ui.main.ScanPreviewScreen
 import com.adamaho.goho.ui.main.Section
@@ -102,6 +106,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.RESULT_
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions.SCANNER_MODE_FULL
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import java.io.File
 import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -172,6 +177,8 @@ class MainActivity : ComponentActivity() {
         RecipeListController(
             lifecycleScope,
             service<RecipesApi>(),
+            service<RecipePdfApi>(),
+            File(cacheDir, RECIPE_PDF_DIRECTORY),
             service<RecipeUploadsApi>(),
             deletions,
             feedback,
@@ -372,6 +379,7 @@ class MainActivity : ComponentActivity() {
                                                                     )
                                                                 },
                                                                 deleteEntry = recipes::delete,
+                                                                shareRecipe = ::shareRecipe,
                                                                 copyRecipe = {
                                                                     copyRecipe(it, null)
                                                                 },
@@ -416,6 +424,7 @@ class MainActivity : ComponentActivity() {
                                                 photoAdded = route.recipeId in recipes.photosAdded,
                                                 onAddPhoto = { pickRecipePhoto(route.recipeId) },
                                                 deleteRecipe = { recipes.deleteRecipe(it) },
+                                                shareRecipe = ::shareRecipe,
                                                 copyRecipe = { copyRecipe(it.id, it) },
                                                 onBack = { backStack.removeLastOrNull() },
                                                 // Leave once, even if Back already left.
@@ -553,7 +562,8 @@ class MainActivity : ComponentActivity() {
             is FeedbackMessage.RecipeImportFailed -> addRecipe(message.url)
             is FeedbackMessage.DeletionFailed,
             is FeedbackMessage.RecipePhotoFailed,
-            is FeedbackMessage.RecipeCopyFailed -> Unit
+            is FeedbackMessage.RecipeCopyFailed,
+            is FeedbackMessage.RecipeShareFailed -> Unit
         }
     }
 
@@ -607,14 +617,14 @@ class MainActivity : ComponentActivity() {
                     is RecipeLoad.Loaded -> load.recipe
                     RecipeLoad.Missing -> {
                         recipes.refresh()
-                        feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeCopyProblem.Missing))
+                        feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeActionProblem.Missing))
                         return
                     }
                     RecipeLoad.Failed -> {
                         feedback.send(
                             FeedbackMessage.RecipeCopyFailed(
-                                if (isOffline()) RecipeCopyProblem.Offline
-                                else RecipeCopyProblem.Failed
+                                if (isOffline()) RecipeActionProblem.Offline
+                                else RecipeActionProblem.Failed
                             )
                         )
                         return
@@ -637,7 +647,62 @@ class MainActivity : ComponentActivity() {
             if (error is CancellationException) throw error
             // The error only, never the recipe's text.
             Log.w("GohoRecipes", "Recipe couldn't be copied: ${error.javaClass.simpleName}")
-            feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeCopyProblem.Failed))
+            feedback.send(FeedbackMessage.RecipeCopyFailed(RecipeActionProblem.Failed))
+        }
+    }
+
+    /**
+     * Share recipe: downloads one saved recipe's PDF ([RecipeListController.loadPdf]) and opens
+     * Android's share sheet with it, through this app's [FileProvider] and a one-off read grant.
+     * Details and the list both download it, so it always needs the network. It runs in the options
+     * sheet's scope, so a sheet closed while it downloads cancels it. The share sheet only opens
+     * while that request is still wanted, the app is in the foreground and the recipe isn't being
+     * deleted (otherwise it ends quietly), so leaving the app never shares later; a recipe that's
+     * gone, a failed download or a share sheet that can't open shows the shared snackbar, and a
+     * gone recipe also refreshes the list. Nothing from the recipe is logged.
+     */
+    private suspend fun shareRecipe(recipeId: String, title: String) {
+        val file =
+            when (val load = recipes.loadPdf(recipeId, title)) {
+                is RecipePdfLoad.Loaded -> load.file
+                RecipePdfLoad.Missing -> {
+                    recipes.refresh()
+                    feedback.send(FeedbackMessage.RecipeShareFailed(RecipeActionProblem.Missing))
+                    return
+                }
+                RecipePdfLoad.Failed -> {
+                    feedback.send(
+                        FeedbackMessage.RecipeShareFailed(
+                            if (isOffline()) RecipeActionProblem.Offline
+                            else RecipeActionProblem.Failed
+                        )
+                    )
+                    return
+                }
+            }
+        currentCoroutineContext().ensureActive()
+        if (
+            !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) ||
+                deletions.contains(DeletionKey(DeletionKind.Recipe, recipeId))
+        )
+            return
+        try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+            val send =
+                Intent(Intent.ACTION_SEND)
+                    .setType("application/pdf")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .putExtra(Intent.EXTRA_SUBJECT, title)
+                    .putExtra(Intent.EXTRA_TITLE, title)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Lets the chooser itself read the file for its preview.
+            send.clipData = ClipData.newRawUri(null, uri)
+            startActivity(Intent.createChooser(send, null))
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            // The error only, never the recipe's title.
+            Log.w("GohoRecipes", "Recipe couldn't be shared: ${error.javaClass.simpleName}")
+            feedback.send(FeedbackMessage.RecipeShareFailed(RecipeActionProblem.Failed))
         }
     }
 

@@ -21,16 +21,19 @@ import com.adamaho.goho.api.generated.model.RecipeUpload
 import com.adamaho.goho.api.generated.model.RecipeUploadNotFound
 import com.adamaho.goho.api.generated.model.RecipeUploadStatus
 import com.adamaho.goho.api.isNotFound
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import okhttp3.ResponseBody
 
 /**
  * Recipes data owned by the activity, independent of receipts and books. Recipes and their link
@@ -46,6 +49,9 @@ import kotlinx.serialization.SerializationException
 internal class RecipeListController(
     private val scope: CoroutineScope,
     private val recipesApi: RecipesApi,
+    private val pdfApi: RecipePdfApi,
+    /** Holds only the PDF being shared; cleared before each new one. */
+    private val pdfDirectory: File,
     private val uploadsApi: RecipeUploadsApi,
     private val deletions: PendingDeletions,
     private val feedback: Feedback,
@@ -302,6 +308,68 @@ internal class RecipeListController(
             RecipeLoad.Failed
         }
     }
+
+    /**
+     * Downloads a saved recipe's PDF for Share recipe into its own folder in [pdfDirectory],
+     * emptied first so no earlier PDF is kept, under the server's file name or [title]. The body is
+     * streamed to disk off the main thread; a cancelled or failed download leaves no partial file.
+     * Only the API's own `RecipeNotFound` 404 counts as missing, and a body that isn't a PDF as a
+     * failure. Nothing from the recipe is logged.
+     */
+    suspend fun loadPdf(recipeId: String, title: String): RecipePdfLoad =
+        try {
+            val response = pdfApi.recipesGetPdf(recipeId)
+            val body = response.body()
+            when {
+                response.isSuccessful && body != null ->
+                    body.use {
+                        if (it.contentType()?.subtype != "pdf") {
+                            Log.w("GohoRecipes", "Recipe PDF had another content type")
+                            RecipePdfLoad.Failed
+                        } else {
+                            val name =
+                                recipePdfFileName(response.headers()["Content-Disposition"], title)
+                            RecipePdfLoad.Loaded(writePdf(it, name))
+                        }
+                    }
+                response.isNotFound(RecipeNotFound.serializer()) -> RecipePdfLoad.Missing
+                else -> {
+                    Log.w("GohoRecipes", "Recipe PDF request failed: ${response.code()}")
+                    RecipePdfLoad.Failed
+                }
+            }
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            Log.w("GohoRecipes", "Recipe PDF failed to download: ${error.javaClass.simpleName}")
+            RecipePdfLoad.Failed
+        }
+
+    private suspend fun writePdf(body: ResponseBody, name: String): File =
+        withContext(Dispatchers.IO) {
+            pdfDirectory.listFiles()?.forEach { it.deleteRecursively() }
+            // Its own folder, so a cancelled download that stalls can't remove a later share's
+            // file.
+            val folder = File(pdfDirectory, UUID.randomUUID().toString())
+            folder.mkdirs()
+            val file = File(folder, name)
+            try {
+                body.byteStream().use { input ->
+                    file.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        while (true) {
+                            ensureActive()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                        }
+                    }
+                }
+                file
+            } catch (error: Throwable) {
+                folder.deleteRecursively()
+                throw error
+            }
+        }
 
     /**
      * A recipe's photo bytes, or null without one. A missing photo (`RecipeImageNotFound`) is

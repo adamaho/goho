@@ -25,11 +25,17 @@ internal sealed interface FeedbackMessage {
     data class RecipePhotoFailed(val problem: RecipePhotoProblem) : FeedbackMessage
 
     /** Copy recipe left the clipboard as it was; copying again from the menu is the only retry. */
-    data class RecipeCopyFailed(val problem: RecipeCopyProblem) : FeedbackMessage
+    data class RecipeCopyFailed(val problem: RecipeActionProblem) : FeedbackMessage
+
+    /** Share recipe opened no share sheet; sharing again from the menu is the only retry. */
+    data class RecipeShareFailed(val problem: RecipeActionProblem) : FeedbackMessage
 }
 
-/** Why Copy recipe didn't copy: the recipe is gone, the device is offline, or anything else. */
-internal enum class RecipeCopyProblem {
+/**
+ * Why Share recipe or Copy recipe didn't finish: the recipe is gone, the device is offline, or
+ * anything else.
+ */
+internal enum class RecipeActionProblem {
     Missing,
     Offline,
     Failed,
