@@ -469,7 +469,7 @@ export interface RecipeSection extends Schema.Schema.Type<typeof RecipeSection> 
  */
 export const recipeWritingGuidance = `Sections:
 - Group the steps into sections, in order. Use the recipe's own sections or headings when it has them, such as "For the frosting".
-- Without one, start a new section only where the steps clearly begin a separate component, such as making the dressing or the frosting. When unsure, keep one section.
+- Without them, start a new section only where the steps clearly begin a separate component, such as making the dressing or the frosting. When unsure, keep one section.
 - Take each section title from the recipe's own wording. A lone section's title is null; with two or more sections, every section needs a title.
 - Never reorder steps or move a step from one section to another.
 
@@ -477,6 +477,8 @@ Steps:
 - Tighten each step's wording: remove filler, chatter and repetition.
 - Split a step that holds several separate actions into one step per action.
 - Never drop an action, time, temperature, visual cue (such as "until golden"), warning (such as "don't overmix") or ingredient amount.
+- Name every ingredient a step adds, each as its own ingredient mark. Never write "the remaining ingredients", "the dry ingredients", "the spices" or "everything else" for ingredients going in for the first time.
+- A step may refer to a mixture made in an earlier step, such as "the dry mixture", without marking its ingredients again.
 - Each step's ingredient marks carry the portion that step actually uses. Portions are judged per step and need not add up across steps.`;
 
 /**
