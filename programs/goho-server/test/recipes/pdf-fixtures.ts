@@ -23,6 +23,8 @@ const mark = (ingredientId: string, numerator = 1, denominator = 1) => ({
 
 const textMark = (value: string) => ({ kind: "mark", content: { kind: "text", text: value } });
 
+const untitled = (...steps: ReadonlyArray<unknown>) => [{ title: null, steps }];
+
 const saved = {
   id: "7",
   source: { kind: "url", url: "https://examplekitchen.com/lemon-orzo?ref=goho" },
@@ -60,7 +62,7 @@ export const recipe: Recipe = decode({
     { id: "jalapeno", name: "jalapeño, minced", quantity: exact(1, 2), unit: "count" },
     { id: "salt", name: "salt", quantity: text("to taste"), unit: null },
   ],
-  steps: [
+  sections: untitled(
     {
       segments: [
         { kind: "text", text: "Heat the oven to 350°F (175°C). Bring " },
@@ -94,7 +96,7 @@ export const recipe: Recipe = decode({
         { kind: "text", text: "." },
       ],
     },
-  ],
+  ),
 });
 
 const longWord = "Supercalifragilisticexpialidocious".repeat(4);
@@ -121,23 +123,68 @@ export const longRecipe: Recipe = decode({
     quantity: exact(index + 1, 4),
     unit: index % 2 === 0 ? "cup" : "gram",
   })),
-  steps: Array.from({ length: 24 }, (_, index) => ({
-    segments: [
-      {
-        kind: "text",
-        text:
-          index === 3
-            ? `Line one of step ${index + 1}.\nLine two after a break, then ${longWord} ends here. `
-            : `Step ${index + 1}: stir gently and keep the heat low while the pot simmers, scraping the bottom now and then so nothing catches. `,
-      },
-      mark(`ingredient-${index + 1}`, 1, 2),
-      {
-        kind: "text",
-        text:
-          index % 3 === 0
-            ? " goes in last, with care, and rests for about 2 minutes before serving."
-            : ".",
-      },
-    ],
+  sections: untitled(
+    ...Array.from({ length: 24 }, (_, index) => ({
+      segments: [
+        {
+          kind: "text",
+          text:
+            index === 3
+              ? `Line one of step ${index + 1}.\nLine two after a break, then ${longWord} ends here. `
+              : `Step ${index + 1}: stir gently and keep the heat low while the pot simmers, scraping the bottom now and then so nothing catches. `,
+        },
+        mark(`ingredient-${index + 1}`, 1, 2),
+        {
+          kind: "text",
+          text:
+            index % 3 === 0
+              ? " goes in last, with care, and rests for about 2 minutes before serving."
+              : ".",
+        },
+      ],
+    })),
+  ),
+});
+
+const wordy = (index: number) =>
+  `Step ${index + 1}: work slowly and keep an eye on the texture, scraping down the bowl now and then so everything comes together evenly.`;
+
+/**
+ * Cupcakes in titled sections, with steps marking the one ingredient list from
+ * every section, long enough that section titles fall near page breaks.
+ *
+ * @category models
+ * @since 0.1.0
+ */
+export const sectionedRecipe: Recipe = decode({
+  ...saved,
+  source: null,
+  title: "Vanilla Cupcakes",
+  totalTimeSeconds: 3600,
+  yield: { quantity: exact(12), label: "cupcakes" },
+  ingredients: [
+    { id: "butter", name: "unsalted butter, softened", quantity: exact(1), unit: "cup" },
+    { id: "sugar", name: "sugar", quantity: exact(3, 4), unit: "cup" },
+    { id: "icing", name: "icing sugar", quantity: exact(2), unit: "cup" },
+  ],
+  sections: [
+    "For the cupcakes",
+    "For the frosting",
+    "For the filling",
+    "For the glaze",
+    "For the sprinkles",
+    "To finish",
+  ].map((title, section) => ({
+    title,
+    steps: Array.from({ length: 5 }, (_, index) => ({
+      segments:
+        index === 0
+          ? [
+              { kind: "text", text: "Beat " },
+              mark(["butter", "sugar", "icing"][section % 3] ?? "butter", 1, 6),
+              { kind: "text", text: ` for section ${section + 1}.` },
+            ]
+          : [{ kind: "text", text: wordy(index) }],
+    })),
   })),
 });

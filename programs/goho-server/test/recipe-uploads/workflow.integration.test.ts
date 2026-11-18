@@ -83,19 +83,24 @@ const toast = {
       unit: "count",
     },
   ],
-  steps: [
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Toast " },
+      title: null,
+      steps: [
         {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "bread",
-            portion: { numerator: 1, denominator: 1 },
-          },
+          segments: [
+            { kind: "text", text: "Toast " },
+            {
+              kind: "mark",
+              content: {
+                kind: "ingredient",
+                ingredientId: "bread",
+                portion: { numerator: 1, denominator: 1 },
+              },
+            },
+            { kind: "text", text: "." },
+          ],
         },
-        { kind: "text", text: "." },
       ],
     },
   ],

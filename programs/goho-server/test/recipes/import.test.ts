@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest";
 import { Ai } from "@goho/core";
-import { RecipeUrl } from "@goho/goho-api/recipes";
+import { RecipeUrl, recipeWritingGuidance } from "@goho/goho-api/recipes";
 import { Effect, Option, Predicate, Result, Schema } from "effect";
 import { AiError, OpenAiStructuredOutput } from "effect/ai";
 import { HttpServerResponse } from "effect/http";
@@ -31,6 +31,20 @@ ${/* WordPress prints JSON-LD in the footer. */ ""}<script type="application/ld+
    "recipeIngredient":["4 oz butter","1½ cups milk"],"recipeInstructions":[{"@type":"HowToStep","text":"Melt the butter."}]}]}</script>
 Privacy</footer><p>Comments</p></body></html>`;
 
+// Cupcakes and their frosting, grouped by the page's headings and JSON-LD HowToSections.
+const sectionedPage = `<!doctype html><html><head><title>Vanilla Cupcakes</title>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Recipe","name":"Vanilla Cupcakes",
+"recipeIngredient":["4 oz butter","1 cup sugar","2 cups icing sugar"],
+"recipeInstructions":[
+  {"@type":"HowToSection","name":"For the cupcakes","itemListElement":[
+    {"@type":"HowToStep","text":"Cream half the butter with the sugar, then bake at 350°F until golden, about 20 minutes."}]},
+  {"@type":"HowToSection","name":"For the frosting","itemListElement":[
+    {"@type":"HowToStep","text":"Beat the rest of the butter with the icing sugar. Don't overmix."}]}]}</script>
+</head><body><h1>Vanilla Cupcakes</h1>
+<h2>For the cupcakes</h2><ol><li>Cream half the butter with the sugar, then bake at 350°F until golden, about 20 minutes.</li></ol>
+<h2>For the frosting</h2><ol><li>Beat the rest of the butter with the icing sugar. Don't overmix.</li></ol>
+</body></html>`;
+
 // Latin-1 bytes for "Crème fraîche".
 const latin1Page = new Uint8Array([
   ...new TextEncoder().encode(
@@ -49,6 +63,7 @@ const responses: ReadonlyMap<string, HttpServerResponse.HttpServerResponse> = ne
   Object.entries({
     "/r/pancakes": HttpServerResponse.redirect("/recipes/pancakes", { status: 301 }),
     "/recipes/pancakes": html(structuredPage),
+    "/recipes/cupcakes": html(sectionedPage),
     // The server mislabels the PNG; the photo's type comes from its bytes.
     "/recipes/photos/pancakes.png": HttpServerResponse.uint8Array(png, {
       contentType: "image/jpeg",
@@ -67,7 +82,7 @@ const handler = (path: string) =>
 
 // The page content the model was sent, after the instruction line.
 const SentPrompt = Schema.Tuple([
-  Schema.Struct({ role: Schema.Literal("system") }),
+  Schema.Struct({ role: Schema.Literal("system"), content: Schema.String }),
   Schema.Struct({
     role: Schema.Literal("user"),
     content: Schema.Tuple([Schema.Struct({ text: Schema.String })]),
@@ -123,21 +138,26 @@ const recipeOutput = {
     },
     { id: "thyme", name: "thyme", quantity: { kind: "text", text: "2 sprigs" }, unit: null },
   ],
-  steps: [
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Melt " },
+      title: null,
+      steps: [
         {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "butter",
-            portion: { numerator: 1, denominator: 2 },
-          },
+          segments: [
+            { kind: "text", text: "Melt " },
+            {
+              kind: "mark",
+              content: {
+                kind: "ingredient",
+                ingredientId: "butter",
+                portion: { numerator: 1, denominator: 2 },
+              },
+            },
+            { kind: "text", text: " until golden, then add " },
+            { kind: "mark", content: { kind: "text", text: "some of the milk" } },
+            { kind: "text", text: ". " },
+          ],
         },
-        { kind: "text", text: " until golden, then add " },
-        { kind: "mark", content: { kind: "text", text: "some of the milk" } },
-        { kind: "text", text: ". " },
       ],
     },
   ],
@@ -156,13 +176,15 @@ const importPage = (path: string, model: Ai.Interface["generateObject"]) =>
     const server = yield* serve({ handler });
     const http = yield* loopbackClient(hosts({ "recipes.test": [loopback] }));
     const prompts: Array<typeof SentContent.Type> = [];
+    const instructions: Array<string> = [];
     const result = yield* Import.fromUrl(
       RecipeUrl.make(`http://recipes.test:${server.port}${path}`),
     ).pipe(
       Effect.provideService(WebFetch.Service, http),
       Effect.provideService(Ai.Service, {
         generateObject: (options) => {
-          const [, user] = Schema.decodeUnknownSync(SentPrompt)(options.prompt);
+          const [system, user] = Schema.decodeUnknownSync(SentPrompt)(options.prompt);
+          instructions.push(system.content);
           const text = user.content[0].text;
           prompts.push(Schema.decodeSync(SentContent)(text.slice(text.indexOf("\n") + 1)));
           return model(options);
@@ -170,7 +192,7 @@ const importPage = (path: string, model: Ai.Interface["generateObject"]) =>
       }),
       Effect.result,
     );
-    return { result, prompts, paths: server.paths };
+    return { result, prompts, instructions, paths: server.paths };
   });
 
 const failureOf = <A>(result: Result.Result<A, { failureCode: string; retryable: boolean }>) =>
@@ -234,7 +256,7 @@ it.live("imports the main JSON-LD recipe with exact metric conversions and its p
       { id: "thyme", unit: null, quantity: { kind: "text", text: "2 sprigs" } },
     ]);
     // Step wording, spaces and portions come through untouched.
-    expect(imported.recipe.steps).toEqual(recipeOutput.steps);
+    expect(imported.recipe.sections).toEqual(recipeOutput.sections);
     expect(imported.recipe.yield).toEqual(recipeOutput.yield);
     expect(imported.recipe.totalTimeSeconds).toBe(1500);
 
@@ -243,6 +265,100 @@ it.live("imports the main JSON-LD recipe with exact metric conversions and its p
     expect(Option.map(imported.photo, (photo) => photo.contentType)).toEqual(
       Option.some("image/png"),
     );
+  }),
+);
+
+const portion = (ingredientId: string, numerator: number, denominator: number) => ({
+  kind: "mark",
+  content: { kind: "ingredient", ingredientId, portion: { numerator, denominator } },
+});
+
+// What a model following the shared guidance returns for the cupcake page: the
+// page's two sections under their own titles, its combined steps split one per
+// action, and one ingredient list both sections mark.
+const cupcakesOutput = {
+  title: "Vanilla Cupcakes",
+  ingredients: [
+    butter,
+    {
+      id: "sugar",
+      name: "sugar",
+      quantity: { kind: "exact", value: { numerator: 1, denominator: 1 } },
+      unit: "cup",
+    },
+    {
+      id: "icing-sugar",
+      name: "icing sugar",
+      quantity: { kind: "exact", value: { numerator: 2, denominator: 1 } },
+      unit: "cup",
+    },
+  ],
+  sections: [
+    {
+      title: "For the cupcakes",
+      steps: [
+        {
+          segments: [
+            { kind: "text", text: "Cream " },
+            portion("butter", 1, 2),
+            { kind: "text", text: " with " },
+            portion("sugar", 1, 1),
+            { kind: "text", text: "." },
+          ],
+        },
+        { segments: [{ kind: "text", text: "Bake at 350°F until golden, about 20 minutes." }] },
+      ],
+    },
+    {
+      title: "For the frosting",
+      steps: [
+        {
+          segments: [
+            { kind: "text", text: "Beat " },
+            portion("butter", 1, 2),
+            { kind: "text", text: " with " },
+            portion("icing-sugar", 1, 1),
+            { kind: "text", text: "." },
+          ],
+        },
+        { segments: [{ kind: "text", text: "Don't overmix." }] },
+      ],
+    },
+  ],
+  yield: null,
+  totalTimeSeconds: null,
+};
+
+it.live("imports a sectioned recipe, sending its HowToSections and the shared guidance", () =>
+  Effect.gen(function* () {
+    const { result, prompts, instructions } = yield* importPage(
+      "/recipes/cupcakes",
+      generateObject({ result: { kind: "recipe", recipe: cupcakesOutput } }),
+    );
+
+    // The model writes sections by the rules every recipe writer shares.
+    expect(instructions[0]).toContain(recipeWritingGuidance);
+    // It sees the page's own grouping, in the JSON-LD and in the visible headings.
+    expect(JSON.parse(prompts[0]?.structuredData ?? "[]")).toMatchObject([
+      {
+        recipeInstructions: [
+          { "@type": "HowToSection", name: "For the cupcakes" },
+          { "@type": "HowToSection", name: "For the frosting" },
+        ],
+      },
+    ]);
+    expect(prompts[0]?.visibleText).toMatch(
+      /For the cupcakes\n- Cream[^]*For the frosting\n- Beat/,
+    );
+
+    // Sections keep their titles, order and steps; their marks share one list.
+    const imported = Result.getOrThrow(result);
+    expect(imported.recipe.sections).toEqual(cupcakesOutput.sections);
+    expect(imported.recipe.ingredients.map(({ id, unit }) => ({ id, unit }))).toEqual([
+      { id: "butter", unit: "gram" },
+      { id: "sugar", unit: "cup" },
+      { id: "icing-sugar", unit: "cup" },
+    ]);
   }),
 );
 
@@ -284,21 +400,35 @@ it.live("fails processing on model output that is not a valid recipe", () =>
     const cases = [
       // A mark pointing at no ingredient fails the API's own recipe check.
       withRecipe({
-        steps: [
+        sections: [
           {
-            segments: [
+            title: null,
+            steps: [
               {
-                kind: "mark",
-                content: {
-                  kind: "ingredient",
-                  ingredientId: "eggs",
-                  portion: { numerator: 1, denominator: 1 },
-                },
+                segments: [
+                  {
+                    kind: "mark",
+                    content: {
+                      kind: "ingredient",
+                      ingredientId: "eggs",
+                      portion: { numerator: 1, denominator: 1 },
+                    },
+                  },
+                ],
               },
             ],
           },
         ],
       }),
+      // Two sections need two titles.
+      withRecipe({
+        sections: [...recipeOutput.sections, ...recipeOutput.sections],
+      }),
+      // The model's plain lists can come back empty; the API's recipe can't.
+      withRecipe({ sections: [] }),
+      withRecipe({ sections: [{ title: null, steps: [] }] }),
+      withRecipe({ sections: [{ title: null, steps: [{ segments: [] }] }] }),
+      withRecipe({ ingredients: [] }),
       // A text quantity cannot carry a unit.
       generateObject({
         result: {

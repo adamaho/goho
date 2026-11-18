@@ -317,9 +317,14 @@ describe("makeCreateRecipeRequest", () => {
         flour,
         { id: "salt", name: "Salt", quantity: { kind: "text", text: "to taste" }, unit: null },
       ],
-      steps: [
-        { segments: [text("Mix "), ingredientMark("flour"), text(" flour with salt.")] },
-        { segments: [text("Rest.")] },
+      sections: [
+        {
+          title: null,
+          steps: [
+            { segments: [text("Mix "), ingredientMark("flour"), text(" flour with salt.")] },
+            { segments: [text("Rest.")] },
+          ],
+        },
       ],
       yield: { quantity: exact(4, 1), label: "servings" },
       totalTimeSeconds: 1800,
@@ -328,7 +333,11 @@ describe("makeCreateRecipeRequest", () => {
 
   it("leaves unknown yield and total time out of the request", () => {
     const request = Result.getOrThrow(make());
-    expect(request).toEqual({ title: "Pancakes", ingredients: [flour], steps: [flourStep] });
+    expect(request).toEqual({
+      title: "Pancakes",
+      ingredients: [flour],
+      sections: [{ title: null, steps: [flourStep] }],
+    });
   });
 
   it.each(["0", "2147483647", "007"])("accepts %j total seconds", (seconds) => {
@@ -362,7 +371,7 @@ describe("makeCreateRecipeRequest", () => {
     {
       why: "an unknown mark reference",
       overrides: { steps: ["Mix {{ingredient=sugar}}."] },
-      at: '["steps"][0]["segments"][1]["content"]["ingredientId"]',
+      at: '["sections"][0]["steps"][0]["segments"][1]["content"]["ingredientId"]',
     },
     {
       why: "an untrimmed ingredient ID",
@@ -392,12 +401,12 @@ describe("makeCreateRecipeRequest", () => {
     {
       why: "a portion above 1",
       overrides: { steps: ["Mix {{ingredient=flour,portion=3/2}}."] },
-      at: '["steps"][0]["segments"][1]["content"]',
+      at: '["sections"][0]["steps"][0]["segments"][1]["content"]',
     },
     {
       why: "a blank text mark",
       overrides: { steps: ["Mix {{text= }}."] },
-      at: '["steps"][0]["segments"][1]["content"]',
+      at: '["sections"][0]["steps"][0]["segments"][1]["content"]',
     },
   ])("rejects $why with the shared schema", ({ overrides, at }) => {
     const message = detail(make(overrides));

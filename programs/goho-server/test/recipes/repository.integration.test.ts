@@ -61,33 +61,42 @@ const pancakes = {
     },
     { id: "salt", name: "salt", quantity: { kind: "text", text: "to taste" }, unit: null },
   ],
-  steps: [
+  // Two titled sections, whose marks share the one ingredient list.
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Whisk " },
+      title: "Batter",
+      steps: [
         {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "flour",
-            portion: { numerator: 1, denominator: 2 },
-          },
+          segments: [
+            { kind: "text", text: "Whisk " },
+            {
+              kind: "mark",
+              content: {
+                kind: "ingredient",
+                ingredientId: "flour",
+                portion: { numerator: 1, denominator: 2 },
+              },
+            },
+            { kind: "text", text: " with " },
+            {
+              kind: "mark",
+              content: {
+                kind: "ingredient",
+                ingredientId: "milk",
+                portion: { numerator: 1, denominator: 1 },
+              },
+            },
+            { kind: "text", text: ",  then add " },
+            { kind: "mark", content: { kind: "text", text: " a pinch " } },
+            { kind: "text", text: "." },
+          ],
         },
-        { kind: "text", text: " with " },
-        {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "milk",
-            portion: { numerator: 1, denominator: 1 },
-          },
-        },
-        { kind: "text", text: ",  then add " },
-        { kind: "mark", content: { kind: "text", text: " a pinch " } },
-        { kind: "text", text: "." },
       ],
     },
-    { segments: [{ kind: "text", text: "Cook until golden. " }] },
+    {
+      title: "To cook",
+      steps: [{ segments: [{ kind: "text", text: "Cook until golden. " }] }],
+    },
   ],
   yield: {
     quantity: { kind: "exact", value: { numerator: 4, denominator: 1 } },
@@ -99,7 +108,7 @@ const pancakes = {
 const recipeTitled = (title: string): CreateRecipeRequest => ({
   title,
   ingredients: [pancakes.ingredients[2]],
-  steps: [{ segments: [{ kind: "text", text: "Mix." }] }],
+  sections: [{ title: null, steps: [{ segments: [{ kind: "text", text: "Mix." }] }] }],
 });
 
 const photo = { fileId: FileId.make("photo-1"), contentType: "image/webp" } as const;
@@ -182,13 +191,13 @@ it.effect("saves a direct recipe and reads it back exactly", () =>
     expect(plain.id).not.toBe(saved.id);
     expect(
       yield* sql`
-        SELECT jsonb_typeof(ingredients) AS ingredients, jsonb_typeof(steps) AS steps,
+        SELECT jsonb_typeof(ingredients) AS ingredients, jsonb_typeof(sections) AS sections,
           "yield" IS NULL AS "noYield"
         FROM recipes ORDER BY id
       `,
     ).toEqual([
-      { ingredients: "array", steps: "array", noYield: false },
-      { ingredients: "array", steps: "array", noYield: true },
+      { ingredients: "array", sections: "array", noYield: false },
+      { ingredients: "array", sections: "array", noYield: true },
     ]);
 
     const missing = RecipeId.make("9223372036854775807");

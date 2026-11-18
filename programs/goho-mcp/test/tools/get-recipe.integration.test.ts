@@ -8,7 +8,7 @@ import { Effect, Schema } from "effect";
 import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "effect/http";
 import { expect } from "vitest";
 
-import { recipe } from "#test/fixtures/recipe.ts";
+import { recipe, savedRecipe } from "#test/fixtures/recipe.ts";
 import { apiAdvice, ErrorResult, RecipeResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
@@ -17,12 +17,12 @@ const routes = Effect.gen(function* () {
   expect(request.method).toBe("GET");
 
   if (request.url === `/recipes/${recipe.id}`) {
-    return HttpServerResponse.jsonUnsafe({ data: recipe });
+    return HttpServerResponse.jsonUnsafe({ data: savedRecipe });
   }
   if (request.url === "/recipes/43") {
     // A step mark naming no ingredient breaks the recipe, so it must not reach the client.
     return HttpServerResponse.jsonUnsafe({
-      data: { ...recipe, id: "43", ingredients: recipe.ingredients.slice(1) },
+      data: { ...savedRecipe, id: "43", ingredients: recipe.ingredients.slice(1) },
     });
   }
   // The tool sends no Accept header, so a PDF or a 406 means the API disagrees.
@@ -41,7 +41,7 @@ const routes = Effect.gen(function* () {
 });
 
 layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_recipe", (it) => {
-  it.effect("gets a complete saved recipe by ID through MCP", () =>
+  it.effect("gets a complete saved recipe by ID, its sections' steps flat, through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
 
@@ -51,6 +51,27 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("get_recipe", (it) => 
       expect(found.isError).toBe(false);
       expect(found.structuredContent).toEqual({ recipe });
       expect(yield* McpFixture.apiRequests).toEqual([`GET /recipes/${recipe.id}`]);
+
+      // Several sections read back as their steps in order, without titles.
+      const [step] = recipe.steps;
+      const salt = { segments: [{ kind: "text", text: "Salt to taste." }] };
+      yield* McpFixture.respondWith(
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe({
+            data: {
+              ...savedRecipe,
+              sections: [
+                { title: "Batter", steps: [step] },
+                { title: "To serve", steps: [salt] },
+              ],
+            },
+          }),
+        ),
+      );
+      const sectioned = yield* Schema.decodeUnknownEffect(RecipeResult)(
+        yield* client.call(3, "get_recipe", { recipe_id: recipe.id }),
+      );
+      expect(sectioned.structuredContent).toEqual({ recipe: { ...recipe, steps: [step, salt] } });
     }),
   );
 

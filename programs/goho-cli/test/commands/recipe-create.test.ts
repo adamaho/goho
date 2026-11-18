@@ -53,7 +53,7 @@ const payload = {
     flour,
     { id: "salt", name: "Salt", quantity: { kind: "text", text: "to taste" }, unit: null },
   ],
-  steps: [step],
+  sections: [{ title: null, steps: [step] }],
   yield: {
     quantity: { kind: "exact", value: { numerator: 4, denominator: 1 } },
     label: "servings",
@@ -70,7 +70,7 @@ const recipe = {
   createdAt: "2026-11-10 08:00:00+00",
   updatedAt: "2026-11-10 08:00:00+00",
   ingredients: payload.ingredients,
-  steps: payload.steps,
+  sections: payload.sections,
   yield: payload.yield,
 };
 
@@ -108,7 +108,7 @@ describe("recipes create", () => {
         "--step",
         "Mix {{ingredient=flour}} flour with salt.",
       ],
-      { title: "Pancakes", ingredients: [flour], steps: [step] },
+      { title: "Pancakes", ingredients: [flour], sections: [{ title: null, steps: [step] }] },
       200,
       { data: saved },
     );
@@ -146,7 +146,7 @@ describe("recipe create validation", () => {
       why: "an unknown mark reference",
       args: [...consumerExample, "--step", "Add {{ingredient=sugar}}."],
       detail:
-        'Recipe is not valid: no ingredient in this recipe has this ID\n  at ["steps"][1]["segments"][1]["content"]["ingredientId"]',
+        'Recipe is not valid: no ingredient in this recipe has this ID\n  at ["sections"][0]["steps"][1]["segments"][1]["content"]["ingredientId"]',
     },
     {
       why: "an unclosed mark",

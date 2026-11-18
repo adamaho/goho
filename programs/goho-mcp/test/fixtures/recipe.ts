@@ -1,6 +1,6 @@
 /**
- * A saved recipe used by MCP tests. Its ID is above 2^53, so rounding it through a number would
- * change it.
+ * A saved recipe used by MCP tests, as the tools show it, with one flat list of steps. Its ID is
+ * above 2^53, so rounding it through a number would change it.
  *
  * @category fixtures
  * @since 0.1.0
@@ -57,6 +57,17 @@ export const recipe = {
 };
 
 /**
+ * The saved recipe fixture as the Goho API returns it, its steps in one untitled section.
+ *
+ * @category fixtures
+ * @since 0.1.0
+ */
+export const savedRecipe = (() => {
+  const { steps, ...rest } = recipe;
+  return { ...rest, sections: [{ title: null, steps }] };
+})();
+
+/**
  * The saved recipe fixture's headline, as recipe listings return it.
  *
  * @category fixtures
@@ -73,7 +84,21 @@ export const recipeSummary = {
 };
 
 /**
- * Input that saves the recipe fixture, as the Goho API receives it.
+ * `create_recipe` input that saves the recipe fixture.
+ *
+ * @category fixtures
+ * @since 0.1.0
+ */
+export const createRecipeInput = {
+  title: recipe.title,
+  ingredients: recipe.ingredients,
+  steps: recipe.steps,
+  yield: recipe.yield,
+  totalTimeSeconds: recipe.totalTimeSeconds,
+};
+
+/**
+ * The request that saves the recipe fixture, as the Goho API receives it.
  *
  * @category fixtures
  * @since 0.1.0
@@ -81,7 +106,7 @@ export const recipeSummary = {
 export const createRecipePayload = {
   title: recipe.title,
   ingredients: recipe.ingredients,
-  steps: recipe.steps,
+  sections: savedRecipe.sections,
   yield: recipe.yield,
   totalTimeSeconds: recipe.totalTimeSeconds,
 };

@@ -325,10 +325,11 @@ export const makeCreateRecipeRequest = Effect.fnUntraced(function* (flags: Creat
   const totalTime = Option.isSome(flags.totalTimeSeconds)
     ? { totalTimeSeconds: yield* Effect.fromResult(parseTotalTime(flags.totalTimeSeconds.value)) }
     : {};
+  // The steps are one untitled section.
   return yield* Schema.decodeUnknownEffect(CreateRecipeRequest)({
     title: flags.title,
     ingredients,
-    steps,
+    sections: [{ title: null, steps }],
     ...recipeYield,
     ...totalTime,
   }).pipe(

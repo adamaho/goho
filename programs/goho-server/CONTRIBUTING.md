@@ -44,8 +44,9 @@ pnpm --filter @goho/goho-server db:seed
 - Seeding creates four fictional receipts, five books and three recipes through
   the receipt, book and recipe creation APIs. The books cover several categories,
   with and without reading levels, and one long title. The recipes cover exact,
-  range and text amounts, split ingredient portions, marked wording, and recipes
-  with and without a yield or total time.
+  range and text amounts, split ingredient portions, marked wording, one
+  untitled section and two titled ones (a salad and its vinaigrette), and
+  recipes with and without a yield or total time.
 - It targets `http://127.0.0.1:3000`; set `GOHO_SERVER_URL` for another local server.
 - Receipts, books and recipes seed independently. Receipts are skipped when any
   receipt already exists. Each book is created by title and author, which returns
@@ -240,7 +241,7 @@ repositories read and write them, behind the `recipes` and `recipe-uploads`
 services, their [endpoints](./README.md#recipes) and the recipe upload worker.
 
 - `recipes` stands alone, with a generated `bigint` identity `id`, a nonblank
-  `title`, nonempty JSON arrays of `ingredients` and `steps`, an optional JSON
+  `title`, nonempty JSON arrays of `ingredients` and `sections`, an optional JSON
   object `yield` and an optional nonnegative `total_time_seconds`. The database
   checks only these top-level shapes; the API schemas validate the rest. A
   recipe needs no upload.
@@ -271,6 +272,11 @@ services, their [endpoints](./README.md#recipes) and the recipe upload worker.
   normalized URLs. Recipes saved directly got neither. The recipe timestamp
   trigger was disabled for the backfill, so every ID, value and timestamp
   stayed; no upload row changed.
+- Migration 0022 replaced `steps` with `sections`, the same nonempty-array check
+  under `recipes_sections_check`. Each recipe got one untitled section holding
+  its stored steps unchanged. The recipe timestamp trigger was disabled for the
+  backfill, so every ID, value, photo, source and timestamp stayed. Uploads
+  store no extraction, so none changed.
 
 The repositories decode every stored recipe and upload with the API schemas, so
 stored JSON that no longer validates, or an upload missing its URL row, fails
@@ -279,7 +285,7 @@ the read instead of being dropped or coerced.
 - Saving a recipe directly always inserts a new one without a source or photo;
   titles are not unique. A missing yield or total time is SQL `NULL`. Create,
   get and list read through one selection of `recipes` alone, and a recipe's
-  `source` is its `source_url`, or null. Listing reads no ingredients, steps or
+  `source` is its `source_url`, or null. Listing reads no ingredients, sections or
   yield, and sorts by title ignoring case, then newest first.
 - Every submission inserts a queued upload and its URL in one savepoint, so the
   service can enqueue its job atomically.
@@ -348,6 +354,15 @@ without it.
   size, each column continuing at the top of the next page; the two headings
   share a row that stays with both columns' first two lines, and words too long
   for a line break between characters.
+- A recipe with one section draws its steps without a title, even when the
+  section has one. With several, each section's title is a SemiBold subheading
+  in the steps column, kept with its first step's first two lines, and its
+  steps are numbered from 1.
+- Every page's footer has the Goho family, 16 pt tall, at the left margin
+  beside the Goho mark, with page numbers on the right when there are several.
+  The family is the launcher's `family-foreground.svg` silhouettes drawn as
+  vector paths in `pdf.ts`, without the ivory background. The thin gaps that
+  part the characters are painted white, the page's colour.
 - Step marks are bold body text in the body colour, like the ingredient
   amounts, with no fill. Ingredient bullets and step-number circles keep their
   lavender accents.
@@ -407,8 +422,13 @@ redirects lead.
   navigation or footers go to the model as untrusted data. Each is capped at
   40,000 characters, and the title and description at 1,000.
 - The model either returns one main recipe or reports `no_recipe_found`,
-  `ambiguous_recipe` or `incomplete_recipe`. Steps get a light cleanup that
-  keeps their cooking meaning. Temperatures are written in Fahrenheit only: a
+  `ambiguous_recipe` or `incomplete_recipe`. Its prompt includes the shared
+  `recipeWritingGuidance` from `@goho/goho-api/recipes`: steps keep the page's
+  sections, such as JSON-LD `HowToSection`s or headings like “For the
+  frosting”, under the page's own titles, and are tightened and split one
+  action per step without dropping any action, time, temperature, cue,
+  warning or amount. A heading that names a group of steps becomes its
+  section's title. Ingredients stay one list. Temperatures are written in Fahrenheit only: a
   page's Fahrenheit value is kept, and a Celsius-only one is converted and
   rounded to the nearest 5 °F (180 °C is 355 °F). Cup and spoon measures keep their unit. The
   server converts ounces and pounds to grams, and US or imperial fluid ounces

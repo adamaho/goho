@@ -26,7 +26,9 @@ export interface Interface {
    * when given, as a banner the content width that crops the photo from its
    * centre, then its title, total time and yield when known, and two columns:
    * ingredients in a narrow one beside numbered steps with their ingredient
-   * marks, worded as the app shows them. The source URL, when there is one,
+   * marks, worded as the app shows them. A recipe with several sections titles
+   * each one's steps and numbers them from 1; a lone section's title is never
+   * shown. The source URL, when there is one,
    * ends the last page as a link. A photo that isn't a readable JPEG, PNG or WebP
    * image within the decoding limit is logged and left out. Invisible
    * formatting, such as soft hyphens and zero-width spaces, is dropped, and
@@ -278,6 +280,8 @@ const styles = {
   statValue: { font: "semibold", size: 11, color: colors.text },
   statLabel: { font: "regular", size: 8.5, color: colors.tertiary },
   section: { font: "semibold", size: 14, color: colors.text, tracking: -0.25 },
+  // A titled part of the steps, such as the frosting.
+  subsection: { font: "semibold", size: 12, color: colors.text, tracking: -0.15 },
   body: { font: "regular", size: 11, color: colors.text },
   // Ingredient amounts, and step marks, which read like them.
   amount: { font: "semibold", size: 11, color: colors.text },
@@ -292,6 +296,7 @@ const lineHeights = {
   stat: 14,
   statLabel: 11,
   section: 18,
+  subsection: 17,
   body: 17,
   source: 12,
 } as const;
@@ -310,6 +315,36 @@ const photoPixels = { width: 1260, height: 360 } as const;
 // An interlaced PNG, which Sharp can't decode in strips, takes about 400 MB at
 // this size.
 const maxPhotoPixels = 100_000_000;
+
+// The family from Goho's launcher icon (the design skill's
+// family-foreground.svg), without its ivory background: Bram, Mira and their
+// child as flat silhouettes in the launcher's own colours and 108-unit space,
+// each later one parted from those behind it by a thin gap. The SVG scales the
+// whole group, gaps included, by 0.97; the bounds size the icon here instead.
+const family = {
+  members: [
+    {
+      color: "#6964BA",
+      path: "M28.1 42.8C26.7 40.8 27 35.6 28.6 35.6C30.3 35.6 32.4 37.2 33.7 38.5C39 36.2 47.1 36.2 51.2 38.2C52.7 36.8 54.8 35.4 56.1 35.8C57.5 36.2 57.6 40.9 56.5 42.5C60.9 46.5 64.1 53.3 64.4 59.8C64.8 65.7 62.5 69 58.4 69.2C58.7 72.9 56.3 74.6 52.3 74.6C48.9 74.6 47 73.6 46.7 71.2C43.4 71.6 39.8 71.5 36.7 71.2C36.5 73.7 34.1 74.7 30.4 74.4C27.2 74.2 25.7 72.7 26.1 69.6C21.4 68.2 21.5 62.7 22.9 56.7C24.1 51.3 25.8 46.4 28.1 42.8Z",
+    },
+    {
+      color: "#D65B63",
+      path: "M55.4 47.1C58.4 41.1 63 37.4 69.4 36.8C72.2 34.6 75.8 34.4 77.4 36.3C79.4 38.5 78.6 41.1 76.8 41.1C82.1 45.2 85 51.3 85.7 57.7C86.6 64.3 84.8 68.4 81.4 69.4C82 72.6 80.4 74.6 76.7 74.7C73.3 74.8 70.9 73.6 70.7 71.6C67.5 72 64 72 61.1 71.5C60.4 73.8 58.2 74.8 54.7 74.4C51.5 74.1 50.2 72.5 50.8 69.5C47.8 67.5 47.3 63.4 48.5 58.4C49.9 53.3 52.1 49.6 55.4 47.1Z",
+    },
+    {
+      color: "#EABB35",
+      path: "M46.4 57.8C45.9 56.5 46.2 54 47.2 53.9C48.2 53.8 49.8 54.9 50.5 55.8C52.3 54.9 53.5 54.3 55.4 54.3C56.7 52.6 59 52.1 60.2 53.3C61.3 54.4 61 55.8 60 56.1C61.2 56.4 62.1 56.8 62.9 57.4C64.1 56.3 65.6 55.8 66.2 56.5C66.8 57.2 66.7 59.3 66.2 60.1C69.8 64.2 71.7 69.1 70.9 73.1C70.5 75 69 76.4 67.1 76.9C67.4 78.6 65.9 79.6 63.3 79.6C60.8 79.7 59.5 78.9 59.2 77.8C56.8 78.1 54.3 78 51.9 77.6C51.5 79.1 49.9 79.8 47.7 79.4C45.4 79.1 44.2 78.1 44.8 76.6C42.2 75.5 40.8 73.3 41.2 69.9C41.7 65.3 43.7 60.9 46.4 57.8Z",
+    },
+  ],
+  // The silhouettes' bounds, which the footer sizes the icon by.
+  bounds: { x: 21.4, y: 34.4, width: 65.2, height: 45.4 },
+  // How far each gap reaches outside its member's outline: half the SVG's
+  // 2-unit knockout stroke.
+  gap: 1,
+} as const;
+
+// The footer's family icon, centred on the wordmark's capitals.
+const footerIcon = { height: 16, gap: 4 } as const;
 
 const bulletSize = 4;
 const bulletIndent = 13;
@@ -639,12 +674,19 @@ const draw = (
           { text: ` ${line.name}`, style: styles.body },
         ];
   });
-  const stepRuns = recipe.steps.map((step) =>
+  const stepRuns = (step: Step) =>
     stepParts(step, ingredients).map((part): Run => ({
       text: part.text,
       style: part.kind === "mark" ? styles.amount : styles.body,
-    })),
-  );
+    }));
+  // A lone section's title is never shown; several are always titled.
+  const sections = recipe.sections.map((section) => ({
+    title:
+      recipe.sections.length > 1 && section.title !== null
+        ? [{ text: section.title, style: styles.subsection }]
+        : null,
+    steps: section.steps.map(stepRuns),
+  }));
 
   type Column = (typeof listColumns)[keyof typeof listColumns];
 
@@ -662,18 +704,28 @@ const draw = (
     drawLines(runs, lines, column.x + indent, lineHeights.body, styles.body.size, marker);
   };
 
-  // Both headings share a row, which stays with each column's first two lines.
+  // The height of a list item's first two lines.
   const firstLines = (runs: ReadonlyArray<Run> | undefined, column: Column, indent: number) =>
-    Math.min(layout(measure, runs ?? [], column.width - indent).length, 2);
+    Math.min(layout(measure, runs ?? [], column.width - indent).length, 2) * lineHeights.body;
+  const subsectionGap = 4;
+  // A section title's lines and the height that stays together with them: the
+  // title and its first step's first two lines.
+  const sectionLead = (section: (typeof sections)[number]) => {
+    const lines =
+      section.title === null ? [] : layout(measure, section.title, listColumns.steps.width);
+    const height = lines.length === 0 ? 0 : lines.length * lineHeights.subsection + subsectionGap;
+    return { lines, height: height + firstLines(section.steps[0], listColumns.steps, stepIndent) };
+  };
+
+  // Both headings share a row, which stays with each column's first lines.
   y += 24;
   ensure(
     lineHeights.section +
       6 +
       Math.max(
         firstLines(ingredientRuns[0], listColumns.ingredients, bulletIndent),
-        firstLines(stepRuns[0], listColumns.steps, stepIndent),
-      ) *
-        lineHeights.body,
+        sections[0] === undefined ? 0 : sectionLead(sections[0]).height,
+      ),
   );
   const headingBaseline = baselineIn(y, lineHeights.section, styles.section.size);
   text("Ingredients", listColumns.ingredients.x, headingBaseline, styles.section);
@@ -695,21 +747,37 @@ const draw = (
   const ingredientsEnd = { pageIndex, y };
 
   moveTo(top);
-  stepRuns.forEach((runs, index) =>
-    item(runs, listColumns.steps, stepIndent, index === 0 ? 0 : 9, (at) => {
-      const x = listColumns.steps.x;
-      const centre = at + lineHeights.body / 2;
-      doc.circle(x + stepNumberSize / 2, centre, stepNumberSize / 2).fill(colors.accentContainer);
-      const number = new Intl.NumberFormat("en-CA").format(index + 1);
-      const width = measure(number, styles.stepNumber);
-      text(
-        number,
-        x + (stepNumberSize - width) / 2,
-        centre + (styles.stepNumber.size * (ascent - descent)) / 2,
-        styles.stepNumber,
+  sections.forEach((section, sectionIndex) => {
+    if (section.title !== null) {
+      const lead = sectionLead(section);
+      y += sectionIndex === 0 ? 0 : 16;
+      ensure(lead.height);
+      drawLines(
+        section.title,
+        lead.lines,
+        listColumns.steps.x,
+        lineHeights.subsection,
+        styles.subsection.size,
       );
-    }),
-  );
+      y += subsectionGap;
+    }
+    // Numbering starts again in each section.
+    section.steps.forEach((runs, index) =>
+      item(runs, listColumns.steps, stepIndent, index === 0 ? 0 : 9, (at) => {
+        const x = listColumns.steps.x;
+        const centre = at + lineHeights.body / 2;
+        doc.circle(x + stepNumberSize / 2, centre, stepNumberSize / 2).fill(colors.accentContainer);
+        const number = new Intl.NumberFormat("en-CA").format(index + 1);
+        const width = measure(number, styles.stepNumber);
+        text(
+          number,
+          x + (stepNumberSize - width) / 2,
+          centre + (styles.stepNumber.size * (ascent - descent)) / 2,
+          styles.stepNumber,
+        );
+      }),
+    );
+  });
 
   // The source's full URL as a link, below whichever column ends later.
   if (recipe.source !== null) {
@@ -732,11 +800,48 @@ const draw = (
     );
   }
 
-  // Footer on every page: a quiet Goho mark, and page numbers when there are several.
+  // The family as vectors, `height` points tall from (x, top). Each later
+  // member's gap is painted in white, the page's colour, just outside its
+  // outline, as the launcher's mask cuts it; everything stays inside the
+  // silhouettes.
+  const drawFamily = (x: number, top: number, height: number) => {
+    const { bounds, gap, members } = family;
+    doc.save();
+    doc
+      .translate(x, top)
+      .scale(height / bounds.height)
+      .translate(-bounds.x, -bounds.y);
+    for (const member of members) doc.path(member.path);
+    doc.clip();
+    members.forEach((member, index) => {
+      if (index > 0) {
+        doc.save();
+        doc.rect(0, 0, 108, 108).path(member.path).clip("even-odd");
+        doc
+          .path(member.path)
+          .lineWidth(gap * 2)
+          .lineJoin("round")
+          .stroke("#FFFFFF");
+        doc.restore();
+      }
+      doc.path(member.path).fill(member.color);
+    });
+    doc.restore();
+  };
+
+  // Footer on every page: the family and a quiet Goho mark, and page numbers
+  // when there are several.
+  const capHeight = coverage.semibold.capHeight / coverage.semibold.unitsPerEm;
+  const iconWidth = (footerIcon.height / family.bounds.height) * family.bounds.width;
   const range = doc.bufferedPageRange();
   for (let index = range.start; index < range.start + range.count; index++) {
     doc.switchToPage(index);
-    text("Goho", margin, footerBaseline, styles.brand);
+    drawFamily(
+      margin,
+      footerBaseline - (styles.brand.size * capHeight) / 2 - footerIcon.height / 2,
+      footerIcon.height,
+    );
+    text("Goho", margin + iconWidth + footerIcon.gap, footerBaseline, styles.brand);
     if (range.count > 1) {
       const label = `Page ${index + 1} of ${range.count}`;
       text(

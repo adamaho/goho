@@ -24,16 +24,16 @@
 package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Ingredient
+import com.adamaho.goho.api.generated.model.RecipeSection
 import com.adamaho.goho.api.generated.model.RecipeSource
 import com.adamaho.goho.api.generated.model.RecipeYield
-import com.adamaho.goho.api.generated.model.Step
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * A saved recipe with its ingredients and steps.
+ * A saved recipe with its ingredients and sections of steps.
  *
  * @param id The recipe's roster number; use it to target this recipe.
  * @param title Recipe title, trimmed.
@@ -43,7 +43,7 @@ import kotlinx.serialization.Contextual
  * @param createdAt When the recipe hit the roster.
  * @param updatedAt When the recipe last changed.
  * @param ingredients Ingredients in recipe order, each with an ID unique within the recipe.
- * @param steps Steps in order; ingredient marks point at this recipe's ingredients.
+ * @param sections Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one.
  * @param yield How much the recipe makes, or null when the source doesn't say.
  */
 @Serializable
@@ -82,9 +82,9 @@ data class Recipe (
     @SerialName(value = "ingredients")
     val ingredients: kotlin.collections.List<Ingredient>,
 
-    /* Steps in order; ingredient marks point at this recipe's ingredients. */
-    @SerialName(value = "steps")
-    val steps: kotlin.collections.List<Step>,
+    /* Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one. */
+    @SerialName(value = "sections")
+    val sections: kotlin.collections.List<RecipeSection>,
 
     /* How much the recipe makes, or null when the source doesn't say. */
     @SerialName(value = "yield")

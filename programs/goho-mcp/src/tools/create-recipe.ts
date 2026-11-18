@@ -1,10 +1,11 @@
-import { CreateRecipeRequest, Recipe } from "@goho/goho-server-client/recipes";
+import type { CreateRecipeRequest } from "@goho/goho-server-client/recipes";
 import { Effect, Schema } from "effect";
 import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
 import { apiFailure, ToolFailure } from "./failure.ts";
+import { FlatCreateRecipeRequest, FlatRecipe } from "./recipe-steps.ts";
 
 /**
  * Describes the create recipe MCP tool.
@@ -20,8 +21,8 @@ export const tool = Tool.make("create_recipe", {
     "The portion is the fraction of that ingredient's recipe quantity used in this step, not the quantity itself: 1/1 means all and 1/2 means half. It must be greater than zero and no greater than one. An ingredient mark displays the computed amount and ingredient name, replacing both in the step; do not repeat either as plain text. Keep surrounding wording, spaces, and punctuation in text segments.",
     'Do not guess an unknown portion: preserve that reference as a text mark, for example {"kind":"mark","content":{"kind":"text","text":"some of the sugar"}}. A text mark highlights literal wording but does not link to an ingredient; use content.kind "ingredient" when the portion is known. Steps with no ingredient references may remain plain text segments.',
   ].join(" "),
-  parameters: CreateRecipeRequest,
-  success: Schema.Struct({ recipe: Recipe }),
+  parameters: FlatCreateRecipeRequest,
+  success: Schema.Struct({ recipe: FlatRecipe }),
   failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })

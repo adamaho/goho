@@ -5,7 +5,12 @@ import { HttpServerRequest, HttpServerRespondable, HttpServerResponse } from "ef
 import { HttpApiError } from "effect/http-api";
 import { expect } from "vitest";
 
-import { createRecipePayload, recipe } from "#test/fixtures/recipe.ts";
+import {
+  createRecipeInput,
+  createRecipePayload,
+  recipe,
+  savedRecipe,
+} from "#test/fixtures/recipe.ts";
 import { apiAdvice, ErrorResult, RecipeResult, toolError } from "#test/support/mcp-client.ts";
 import * as McpFixture from "#test/support/mcp-fixture.ts";
 
@@ -20,7 +25,7 @@ const expectPayload = (payload: unknown, data: unknown) =>
     return HttpServerResponse.jsonUnsafe({ data });
   });
 
-const routes = expectPayload(createRecipePayload, recipe);
+const routes = expectPayload(createRecipePayload, savedRecipe);
 
 const ToolDescriptions = Schema.Struct({
   tools: Schema.Array(Schema.Struct({ name: Schema.String, description: Schema.String })),
@@ -53,18 +58,18 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
           /a step using all of it is (\{"segments":.*?\})\./u,
         )?.[1];
         expect(example).toBeDefined();
-        const input = {
+        const { steps, ...input } = {
           title: "Melted butter",
           ingredients: [{ ...flour, id: "butter", name: "butter" }],
           steps: [JSON.parse(example ?? "null")],
         };
-        const saved = { ...recipe, ...input };
-        yield* McpFixture.respondWith(expectPayload(input, saved));
+        const payload = { ...input, sections: [{ title: null, steps }] };
+        yield* McpFixture.respondWith(expectPayload(payload, { ...savedRecipe, ...payload }));
         const created = yield* Schema.decodeUnknownEffect(RecipeResult)(
-          yield* client.call(3, "create_recipe", input),
+          yield* client.call(3, "create_recipe", { ...input, steps }),
         );
         expect(created.isError).toBe(false);
-        expect(created.structuredContent).toEqual({ recipe: saved });
+        expect(created.structuredContent).toEqual({ recipe: { ...recipe, ...input, steps } });
         expect(yield* McpFixture.apiRequests).toEqual(["POST /recipes"]);
       }),
   );
@@ -72,9 +77,10 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
   it.effect("creates a recipe with exact quantities and step marks through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
-      // Titles and names are trimmed; step wording keeps its spaces.
+      // Titles and names are trimmed; step wording keeps its spaces. The steps
+      // are saved as one untitled section.
       const input = {
-        ...createRecipePayload,
+        ...createRecipeInput,
         title: "  Pancakes ",
         ingredients: [{ ...flour, name: " all-purpose flour  " }, milk, salt],
       };
@@ -94,20 +100,21 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
   it.effect("creates a recipe without a known yield or total time through MCP", () =>
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
-      const input = {
-        title: "Toast",
-        ingredients: [salt],
-        steps: [{ segments: [{ kind: "text", text: "Toast the bread." }] }],
-        totalTimeSeconds: null,
-      };
-      const saved = { ...recipe, ...input, id: "9007199254740995", yield: null };
-      yield* McpFixture.respondWith(expectPayload(input, saved));
+      const steps = [{ segments: [{ kind: "text", text: "Toast the bread." }] }];
+      const input = { title: "Toast", ingredients: [salt], totalTimeSeconds: null };
+      const payload = { ...input, sections: [{ title: null, steps }] };
+      const saved = { id: "9007199254740995", yield: null };
+      yield* McpFixture.respondWith(
+        expectPayload(payload, { ...savedRecipe, ...payload, ...saved }),
+      );
 
       const created = yield* Schema.decodeUnknownEffect(RecipeResult)(
-        yield* client.call(2, "create_recipe", input),
+        yield* client.call(2, "create_recipe", { ...input, steps }),
       );
       expect(created.isError).toBe(false);
-      expect(created.structuredContent).toEqual({ recipe: saved });
+      expect(created.structuredContent).toEqual({
+        recipe: { ...recipe, ...input, steps, ...saved },
+      });
     }),
   );
 
@@ -115,12 +122,12 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
     Effect.gen(function* () {
       const client = yield* McpFixture.openSession;
       const withFlour = (replacement: unknown) => ({
-        ...createRecipePayload,
+        ...createRecipeInput,
         ingredients: [replacement, milk, salt],
       });
       const invalidInputs = [
-        { ...createRecipePayload, title: "  " },
-        { ...createRecipePayload, ingredients: [] },
+        { ...createRecipeInput, title: "  " },
+        { ...createRecipeInput, ingredients: [] },
         { title: recipe.title, ingredients: recipe.ingredients },
         withFlour({
           ...flour,
@@ -140,17 +147,20 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
         }),
         // Exact amounts need a unit, and text amounts have none.
         withFlour({ ...flour, unit: null }),
-        { ...createRecipePayload, ingredients: [flour, milk, { ...salt, unit: "pinch" }] },
-        { ...createRecipePayload, ingredients: [flour, milk, { ...salt, id: "flour" }] },
+        { ...createRecipeInput, ingredients: [flour, milk, { ...salt, unit: "pinch" }] },
+        { ...createRecipeInput, ingredients: [flour, milk, { ...salt, id: "flour" }] },
         // The step marks flour, which this recipe no longer has.
-        { ...createRecipePayload, ingredients: [milk, salt] },
-        { ...createRecipePayload, totalTimeSeconds: 90.5 },
+        { ...createRecipeInput, ingredients: [milk, salt] },
+        { ...createRecipeInput, totalTimeSeconds: 90.5 },
         // Saved directly, a recipe has no source or photo.
         {
-          ...createRecipePayload,
+          ...createRecipeInput,
           source: { kind: "url", url: "https://example.com/recipes/pancakes" },
         },
-        { ...createRecipePayload, hasImage: true },
+        { ...createRecipeInput, hasImage: true },
+        // The tool takes flat steps, not sections.
+        createRecipePayload,
+        { ...createRecipeInput, steps: [] },
         // Unknown nested fields are rejected rather than silently dropped.
         withFlour({ ...flour, notes: "sifted" }),
       ];
@@ -187,7 +197,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
         {
           // A saved recipe whose fraction has a zero denominator is not a recipe.
           routes: expectPayload(createRecipePayload, {
-            ...recipe,
+            ...savedRecipe,
             yield: {
               ...recipe.yield,
               quantity: { kind: "exact", value: { numerator: 4, denominator: 0 } },
@@ -199,7 +209,7 @@ layer(McpFixture.layer(routes), McpFixture.moduleOptions)("create_recipe", (it) 
 
       for (const [index, testCase] of cases.entries()) {
         yield* McpFixture.respondWith(testCase.routes);
-        expect(yield* client.call(index + 2, "create_recipe", createRecipePayload)).toEqual(
+        expect(yield* client.call(index + 2, "create_recipe", createRecipeInput)).toEqual(
           toolError(testCase.text),
         );
       }

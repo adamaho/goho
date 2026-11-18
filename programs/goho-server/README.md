@@ -325,17 +325,27 @@ database failures return HTTP 500 with `BookUploadsUnavailable`.
 
 A recipe has `id` (a decimal string like receipt IDs), `title`, `source`,
 `totalTimeSeconds`, `hasImage`, `createdAt` and `updatedAt`; the full recipe adds
-`ingredients`, `steps` and `yield`. Amounts are exact fractions of safe integers
+`ingredients`, `sections` and `yield`. Amounts are exact fractions of safe integers
 (`{"numerator":3,"denominator":2}`), ranges, or source wording, and step text is
 kept exactly, spaces included. See the `CreateRecipeRequest` and `Recipe` schemas
 in [OpenAPI](http://127.0.0.1:3000/docs) for every field.
 
+`sections` groups the steps, in order, such as a cake and its frosting:
+`[{ "title": "For the frosting", "steps": [...] }]`. Every recipe has at least
+one section and every section at least one step. A lone section's `title` can
+be null and is never shown; with two or more, each needs a nonblank title.
+Ingredients stay one list for the whole recipe, and a step mark in any section
+names one of them. Steps are numbered from 1 within each section.
+`recipeWritingGuidance` in `@goho/goho-api/recipes`, also exported by
+`@goho/goho-server-client/recipes`, is the shared guidance for writing sections
+and steps, which the page import follows.
+
 - `POST /recipes` saves a complete `CreateRecipeRequest` at once, with no import,
   job or AI, and returns HTTP 200 with the recipe under `data`. Its `source` is
   null and it has no photo. Titles are not unique: every call saves a new recipe.
-  Invalid recipes, such as a step mark naming no ingredient or unsupported
-  fields, return HTTP 400.
-- `GET /recipes` lists summaries without ingredients, steps or yield, by title
+  Invalid recipes, such as a step mark naming no ingredient, two sections
+  without titles, or unsupported fields, return HTTP 400.
+- `GET /recipes` lists summaries without ingredients, sections or yield, by title
   A to Z ignoring case, then newest first.
 - `GET /recipes/:recipeId` returns one full recipe as JSON, or as a printable
   PDF for `Accept: application/pdf`. The [`Accept`](#recipe-pdfs) header picks

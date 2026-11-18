@@ -66,7 +66,7 @@ export interface Interface {
   /** The saved recipe with this ID; none when no recipe has it. */
   readonly findById: (recipeId: RecipeId) => Effect.Effect<Option.Option<Recipe>, PersistenceError>;
   /**
-   * Every recipe without its ingredients, steps or yield, by title A to Z
+   * Every recipe without its ingredients, sections or yield, by title A to Z
    * ignoring case, then newest first.
    */
   readonly list: Effect.Effect<ReadonlyArray<RecipeSummary>, PersistenceError>;
@@ -133,7 +133,7 @@ export const layer = Layer.effect(
     `;
 
     const selectRecipes = sql.literal(`
-      SELECT ${summaryColumns}, r.ingredients, r.steps, r."yield" FROM recipes r
+      SELECT ${summaryColumns}, r.ingredients, r.sections, r."yield" FROM recipes r
     `);
 
     const selectSummaries = sql.literal(`SELECT ${summaryColumns} FROM recipes r`);
@@ -149,12 +149,12 @@ export const layer = Layer.effect(
       Result: IdRow,
       execute: ({ recipe, image, source }) => sql`
         INSERT INTO recipes (
-          title, ingredients, steps, "yield", total_time_seconds,
+          title, ingredients, sections, "yield", total_time_seconds,
           image_file_id, image_content_type, source_url, normalized_url
         ) VALUES (
           ${recipe.title},
           ${JSON.stringify(recipe.ingredients)}::jsonb,
-          ${JSON.stringify(recipe.steps)}::jsonb,
+          ${JSON.stringify(recipe.sections)}::jsonb,
           ${recipe.yield == null ? null : JSON.stringify(recipe.yield)}::jsonb,
           ${recipe.totalTimeSeconds ?? null},
           ${image?.fileId ?? null},

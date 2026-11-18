@@ -13,7 +13,7 @@ import { expect } from "vitest";
 
 import type { Photo } from "#src/recipes/model.ts";
 import * as RecipePdf from "#src/recipes/pdf.ts";
-import { longRecipe, recipe } from "#test/recipes/pdf-fixtures.ts";
+import { longRecipe, recipe, sectionedRecipe } from "#test/recipes/pdf-fixtures.ts";
 
 interface Item {
   readonly text: string;
@@ -27,6 +27,8 @@ interface Page {
   /** Each drawn image's pixel size, and its drawn width and height in points. */
   readonly images: ReadonlyArray<readonly [width: number, height: number, drawn: [number, number]]>;
   readonly links: ReadonlyArray<string>;
+  /** Fill colours in drawing order, as lowercase hex. */
+  readonly fills: ReadonlyArray<string>;
 }
 
 // Wider than a step number's gap to its text, narrower than any column gap.
@@ -68,6 +70,9 @@ const parse = (bytes: Uint8Array) =>
         }),
         links: annotations.flatMap(({ subtype, url }) =>
           subtype === "Link" && url !== undefined ? [url] : [],
+        ),
+        fills: operators.fnArray.flatMap((operator, index) =>
+          operator === OPS.setFillRGBColor ? [String(operators.argsArray[index]?.[0])] : [],
         ),
       });
     }
@@ -146,7 +151,7 @@ const image = (build: () => Promise<Buffer>) => Effect.tryPromise(build);
 it.effect("words amounts, marks, total time and yield as the app does", () =>
   Effect.gen(function* () {
     const { pages, warnings } = yield* render({ ...recipe, source: null });
-    const [page = { items: [], images: [], links: [] }] = pages;
+    const [page = { items: [], images: [], links: [], fills: [] }] = pages;
 
     expect(warnings).toEqual([]);
     expect(lines(page.items).slice(0, 3)).toEqual([
@@ -210,9 +215,65 @@ it.effect("runs a long recipe over numbered pages, ingredients beside the steps"
     );
     expect(
       steps.flat().flatMap((line) => /^(\d+) (?:Step \1:|Line one)/.exec(line)?.[1] ?? []),
-    ).toEqual(longRecipe.steps.map((_, index) => `${index + 1}`));
+    ).toEqual(longRecipe.sections[0].steps.map((_, index) => `${index + 1}`));
     expect(ingredients[1]?.[0]).toMatch(/ingredient \d+$/);
     expect(steps[1]?.length).toBeGreaterThan(0);
+  }),
+);
+
+it.effect("titles each of several sections and numbers its steps from 1", () =>
+  Effect.gen(function* () {
+    const { pages, warnings } = yield* render(sectionedRecipe);
+    const steps = pages.map((page) => column(page, "steps"));
+    const titles = sectionedRecipe.sections.map(({ title }) => title);
+
+    expect(warnings).toEqual([]);
+    expect(pages.length).toBeGreaterThanOrEqual(2);
+    // Each title leads its own steps, numbered again from 1, with marks from
+    // the one ingredient list.
+    const lines = steps.flat();
+    expect(lines.filter((line) => titles.includes(line))).toEqual(titles);
+    expect(
+      lines.flatMap((line) =>
+        titles.includes(line) ? [line] : (/^(\d+) (?:Beat|Step \1:)/.exec(line)?.[1] ?? []),
+      ),
+    ).toEqual(titles.flatMap((title) => [title, "1", "2", "3", "4", "5"]));
+    expect(lines).toContain("1 Beat ⅛ cup sugar for section 2.");
+    // A title never ends a page: it stays with its first step.
+    for (const page of steps) expect(titles).not.toContain(page.at(-1));
+  }),
+);
+
+it.effect("leaves a lone section untitled, drawing it as before", () =>
+  Effect.gen(function* () {
+    const [{ steps }] = recipe.sections;
+    const untitled = yield* render(recipe);
+    const titled = yield* render({ ...recipe, sections: [{ title: "Orzo", steps }] });
+    expect(titled.pages.map((page) => page.items)).toEqual(
+      untitled.pages.map((page) => page.items),
+    );
+  }),
+);
+
+it.effect("signs every page with the family beside the Goho mark, clear of the text", () =>
+  Effect.gen(function* () {
+    const family = ["#6964ba", "#d65b63", "#eabb35"];
+    for (const input of [recipe, longRecipe]) {
+      const { pages } = yield* render(input);
+      for (const page of pages) {
+        // Bram, Mira and their child, once each and in that order, as vectors.
+        expect(page.fills.filter((fill) => family.includes(fill))).toEqual(family);
+        expect(page.images).toEqual([]);
+        // The 23 × 16 pt family sits at the left margin; the mark follows it on
+        // the footer's baseline, and nothing else is drawn beside it.
+        const footer = page.items.filter((item) => item.y < 54);
+        expect(footer[0]).toMatchObject({ text: "Goho", y: 36 });
+        expect(footer[0]?.x).toBeCloseTo(54 + (16 / 45.4) * 65.2 + 4, 1);
+        expect(page.items.filter((item) => item.x < 78 && item.y < 66)).toEqual([]);
+        // Page numbers stay against the right margin.
+        for (const item of footer.slice(1)) expect(item.x + item.width).toBeCloseTo(558, 0);
+      }
+    }
   }),
 );
 

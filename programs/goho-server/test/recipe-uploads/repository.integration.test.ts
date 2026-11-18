@@ -53,7 +53,7 @@ const toast: CreateRecipeRequest = {
   ingredients: [
     { id: "bread", name: "bread", quantity: { kind: "text", text: "a slice" }, unit: null },
   ],
-  steps: [{ segments: [{ kind: "text", text: "Toast it." }] }],
+  sections: [{ title: null, steps: [{ segments: [{ kind: "text", text: "Toast it." }] }] }],
 };
 
 const counts = Effect.gen(function* () {

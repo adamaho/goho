@@ -24,8 +24,8 @@
 package com.adamaho.goho.api.generated.model
 
 import com.adamaho.goho.api.generated.model.Ingredient
+import com.adamaho.goho.api.generated.model.RecipeSection
 import com.adamaho.goho.api.generated.model.RecipeYield
-import com.adamaho.goho.api.generated.model.Step
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -36,7 +36,7 @@ import kotlinx.serialization.Contextual
  *
  * @param title Recipe title, trimmed.
  * @param ingredients Ingredients in recipe order, each with an ID unique within the recipe.
- * @param steps Steps in order; ingredient marks point at this recipe's ingredients.
+ * @param sections Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one.
  * @param yield How much the recipe makes, or null when the source doesn't say.
  * @param totalTimeSeconds Total time in seconds, or null when the source doesn't state one.
  */
@@ -52,9 +52,9 @@ data class CreateRecipeRequest (
     @SerialName(value = "ingredients")
     val ingredients: kotlin.collections.List<Ingredient>,
 
-    /* Steps in order; ingredient marks point at this recipe's ingredients. */
-    @SerialName(value = "steps")
-    val steps: kotlin.collections.List<Step>,
+    /* Steps in order, grouped into sections; ingredient marks in any section point at this recipe's ingredients. Give every section a title when there's more than one. */
+    @SerialName(value = "sections")
+    val sections: kotlin.collections.List<RecipeSection>,
 
     /* How much the recipe makes, or null when the source doesn't say. */
     @SerialName(value = "yield")
