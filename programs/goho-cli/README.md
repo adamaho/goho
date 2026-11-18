@@ -365,8 +365,10 @@ ignoring case, then newest first. Each entry has its `id`, `title`, `source`,
 pnpm --filter @goho/goho-cli start recipes view <positive-integer-recipe-id>
 ```
 
-The command prints the complete recipe as JSON, including its ingredients, steps, and
-yield. A recipe's sections print as one `steps` list, in order and without their titles. A malformed ID or a valid ID that does not exist exits nonzero; a missing recipe
+The command prints the complete recipe as JSON, as the server returns it, including its
+ingredients, `sections`, and yield. Each section has a `title` and its ordered `steps`; a
+recipe with one section may have a null `title`, and with two or more every section is
+titled. A malformed ID or a valid ID that does not exist exits nonzero; a missing recipe
 prints the server's not-found problem.
 
 ## Download a recipe photo

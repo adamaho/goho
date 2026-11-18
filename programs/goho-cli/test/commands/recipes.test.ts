@@ -35,19 +35,24 @@ const recipe = {
     },
     { id: "salt", name: "salt", quantity: { kind: "text", text: "to taste" }, unit: null },
   ],
-  steps: [
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Melt " },
+      title: null,
+      steps: [
         {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "butter",
-            portion: { numerator: 1, denominator: 2 },
-          },
+          segments: [
+            { kind: "text", text: "Melt " },
+            {
+              kind: "mark",
+              content: {
+                kind: "ingredient",
+                ingredientId: "butter",
+                portion: { numerator: 1, denominator: 2 },
+              },
+            },
+            { kind: "text", text: " in a pan." },
+          ],
         },
-        { kind: "text", text: " in a pan." },
       ],
     },
   ],
@@ -154,25 +159,44 @@ describe("recipes list", () => {
 });
 
 describe("recipes view", () => {
-  it("prints the full unwrapped recipe, its sections' steps in one list", async () => {
-    const { steps, ...rest } = recipe;
-    const serve = { segments: [{ kind: "text", text: "Serve warm." }] };
-    const saved = {
-      ...rest,
-      sections: [
-        { title: "Butter", steps },
-        { title: "To serve", steps: [serve] },
-      ],
-    };
-    const result = await withResponse(
-      expectRequest("GET", `/recipes/${recipeId}`, 200, { data: saved }),
-      (baseUrl) => runCommand(baseUrl, ["recipes", "view", recipeId]),
+  const runView = (body: unknown) =>
+    withResponse(expectRequest("GET", `/recipes/${recipeId}`, 200, body), (baseUrl) =>
+      runCommand(baseUrl, ["recipes", "view", recipeId]),
     );
+
+  it("prints the full unwrapped recipe with its one untitled section", async () => {
+    const result = await runView({ data: recipe });
     expect(result).toEqual({
       code: 0,
       stderr: "",
-      stdout: `${JSON.stringify({ ...recipe, steps: [...steps, serve] }, null, 2)}\n`,
+      stdout: `${JSON.stringify(recipe, null, 2)}\n`,
     });
+  });
+
+  it("prints titled sections as sent, without flattening their steps", async () => {
+    const [melt] = recipe.sections;
+    const serve = { segments: [{ kind: "text", text: "Serve warm." }] };
+    const saved = {
+      ...recipe,
+      sections: [
+        { title: "Butter", steps: melt?.steps },
+        { title: "To serve", steps: [serve] },
+      ],
+    };
+    const result = await runView({ data: saved });
+    expect(result).toEqual({
+      code: 0,
+      stderr: "",
+      stdout: `${JSON.stringify(saved, null, 2)}\n`,
+    });
+  });
+
+  it("describes the step sections in its help", async () => {
+    const result = await runWithoutRequest(["view", "--help"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(
+      "View one persisted recipe with its ingredients and step sections.",
+    );
   });
 
   it("reports a PDF where it expects JSON and exits nonzero", async () => {
