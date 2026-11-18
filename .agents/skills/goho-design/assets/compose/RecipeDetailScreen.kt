@@ -53,9 +53,11 @@ import java.time.format.FormatStyle
  * full photo once sent; a failure brings the button back. A recipe that's gone shows its own
  * message without Retry and calls [onMissing]. The Source row opens the page through [onOpenSource]
  * only for http and https addresses. Once loaded, the overflow button opens Recipe options with
- * Copy recipe and Delete recipe. Copy recipe hands the recipe already loaded here to [copyRecipe],
- * without fetching it again. Cancel stays here, and an accepted deletion ([deleteRecipe]) hides the
- * sheet, then calls [onDeleted] to leave without waiting for the server.
+ * Share recipe, Copy recipe and Delete recipe. Share recipe calls [shareRecipe] with the recipe's
+ * ID and title, which still needs the network for its PDF; Copy recipe hands the recipe already
+ * loaded here to [copyRecipe], without fetching it again. Cancel stays here, and an accepted
+ * deletion ([deleteRecipe]) hides the sheet, then calls [onDeleted] to leave without waiting for
+ * the server.
  */
 @Composable
 internal fun RecipeDetailScreen(
@@ -68,6 +70,7 @@ internal fun RecipeDetailScreen(
     photoAdded: Boolean,
     onAddPhoto: () -> Unit,
     deleteRecipe: suspend (String) -> Boolean,
+    shareRecipe: suspend (recipeId: String, title: String) -> Unit,
     copyRecipe: suspend (Recipe) -> Unit,
     onBack: () -> Unit,
     onDeleted: () -> Unit,
@@ -192,6 +195,7 @@ internal fun RecipeDetailScreen(
             thumbnails = thumbnails,
             onDelete = { deleteRecipe(recipe.id) },
             onDismiss = { optionsOpen = false },
+            onShare = { shareRecipe(recipe.id, recipe.title) },
             onCopy = { copyRecipe(recipe) },
             onDeleted = {
                 optionsOpen = false

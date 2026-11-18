@@ -49,10 +49,11 @@ internal class OptionsForm(
 )
 
 /**
- * A one-shot menu action above delete, as Copy recipe is. [run] does its work in the sheet's own
- * scope, which is cancelled as soon as the sheet starts closing any other way (Back, drag, scrim or
- * leaving), so its result is never applied late. While it runs, its row reads [busyLabel] and the
- * menu takes no other input; once it returns, the sheet closes. It reports its own failures.
+ * A one-shot menu action above delete, as Share recipe and Copy recipe are. [run] does its work in
+ * the sheet's own scope, which is cancelled as soon as the sheet starts closing any other way
+ * (Back, drag, scrim or leaving), so its result is never applied late. While it runs, its row reads
+ * [busyLabel] and the menu, other actions included, takes no other input; once it returns, the
+ * sheet closes. It reports its own failures.
  */
 internal class OptionsAction(
     val label: String,
@@ -66,8 +67,8 @@ internal class OptionsAction(
  * supplies the header and the item's copy: [title] names the menu pane, and [deleteLabel] names the
  * menu action, the confirmation pane and its button. [onDelete] accepts a deletion immediately; its
  * request and any later failure belong to the activity. The sheet only awaits its own exit. A
- * [form] adds its action above delete; [openForm] opens the sheet directly at that pane. An
- * [action] adds a one-shot row above them.
+ * [form] adds its action above delete; [openForm] opens the sheet directly at that pane. The
+ * one-shot [actions] are listed above them, in order, and only one runs at a time.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +84,7 @@ internal fun OptionsSheet(
     onDeleted: () -> Unit = onDismiss,
     form: OptionsForm? = null,
     openForm: Boolean = false,
-    action: OptionsAction? = null,
+    actions: List<OptionsAction> = emptyList(),
 ) {
     val c = GohoTheme.colors
     val reduced = rememberReducedMotion()
@@ -99,8 +100,9 @@ internal fun OptionsSheet(
             skipPartiallyExpanded = true,
             confirmValueChange = { !deleting || deleted },
         )
-    // The running action, and whether it has finished and is closing the sheet itself.
+    // The running action and its row, and whether it has finished and is closing the sheet itself.
     var acting by remember { mutableStateOf<Job?>(null) }
+    var actingIndex by remember { mutableIntStateOf(-1) }
     var actionDone by remember { mutableStateOf(false) }
     LaunchedEffect(state) {
         snapshotFlow { state.targetValue }
@@ -164,8 +166,8 @@ internal fun OptionsSheet(
                     )
                     Spacer(Modifier.height(GohoSpacing.sheetMenuTop))
                     val enabled = pane == OptionsPane.Menu && acting == null
-                    action?.let {
-                        val busy = acting != null
+                    actions.forEachIndexed { index, it ->
+                        val busy = acting != null && actingIndex == index
                         OptionsMenuItem(
                             if (busy) it.busyLabel else it.label,
                             c.textPrimary,
@@ -193,6 +195,7 @@ internal fun OptionsSheet(
                                         actionDone = false
                                     }
                                 }
+                                actingIndex = index
                                 acting = job
                             }
                         }

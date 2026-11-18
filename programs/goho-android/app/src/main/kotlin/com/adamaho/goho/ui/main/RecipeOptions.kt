@@ -1,5 +1,7 @@
 package com.adamaho.goho.ui.main
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.painterResource
@@ -10,10 +12,11 @@ import com.adamaho.goho.ui.components.OptionsSheet
 
 /**
  * A saved recipe's or failed import's options sheet, headed by its display-only Recipes row
- * summary: Copy recipe for a saved recipe when [onCopy] is set, then Delete recipe or Delete import
- * and the shared confirmation. [onDelete] returns whether the deletion was accepted; its request
- * belongs to the activity. [onCopy] runs in the sheet's scope, so closing the sheet cancels it; the
- * sheet closes once it returns.
+ * summary: Share recipe and Copy recipe for a saved recipe when [onShare] and [onCopy] are set,
+ * then Delete recipe or Delete import and the shared confirmation. [onDelete] returns whether the
+ * deletion was accepted; its request belongs to the activity. [onShare] and [onCopy] run in the
+ * sheet's scope, one at a time, so closing the sheet cancels them; the sheet closes once one
+ * returns.
  */
 @Composable
 internal fun RecipeOptions(
@@ -22,23 +25,31 @@ internal fun RecipeOptions(
     onDelete: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onDeleted: () -> Unit = onDismiss,
+    onShare: (suspend () -> Unit)? = null,
     onCopy: (suspend () -> Unit)? = null,
 ) {
     val import = entry !is RecipeListEntry.Saved
-    val copy =
-        onCopy
-            ?.takeIf { !import }
-            ?.let { run ->
-                val icon = painterResource(R.drawable.ic_copy)
-                OptionsAction(
-                    label = stringResource(R.string.recipe_copy),
-                    busyLabel = stringResource(R.string.recipe_copying),
-                    icon = { modifier, color ->
-                        Icon(icon, contentDescription = null, tint = color, modifier = modifier)
-                    },
-                    run = run,
-                )
-            }
+    val actions =
+        if (import) emptyList()
+        else
+            listOfNotNull(
+                onShare?.let {
+                    recipeAction(
+                        R.drawable.ic_share,
+                        R.string.recipe_share,
+                        R.string.recipe_sharing,
+                        it,
+                    )
+                },
+                onCopy?.let {
+                    recipeAction(
+                        R.drawable.ic_copy,
+                        R.string.recipe_copy,
+                        R.string.recipe_copying,
+                        it,
+                    )
+                },
+            )
     OptionsSheet(
         title =
             stringResource(if (import) R.string.recipe_import_options else R.string.recipe_options),
@@ -54,6 +65,25 @@ internal fun RecipeOptions(
         onDelete = onDelete,
         onDismiss = onDismiss,
         onDeleted = onDeleted,
-        action = copy,
+        actions = actions,
+    )
+}
+
+/** One saved-recipe sheet action with its 22dp icon, in the row's colour. */
+@Composable
+private fun recipeAction(
+    @DrawableRes icon: Int,
+    @StringRes label: Int,
+    @StringRes busyLabel: Int,
+    run: suspend () -> Unit,
+): OptionsAction {
+    val painter = painterResource(icon)
+    return OptionsAction(
+        label = stringResource(label),
+        busyLabel = stringResource(busyLabel),
+        icon = { modifier, color ->
+            Icon(painter, contentDescription = null, tint = color, modifier = modifier)
+        },
+        run = run,
     )
 }

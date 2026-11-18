@@ -46,11 +46,12 @@ import kotlinx.coroutines.delay
  * Recipes content below the section title. Saved rows open their details through [onRecipeClick] on
  * a tap and their options sheet on a hold; failed imports open theirs on a tap or hold.
  * [deleteEntry] returns whether the held recipe's or import's deletion was accepted. A saved
- * recipe's sheet offers Copy recipe, which calls [copyRecipe] with its ID in the sheet's scope, as
- * the row's summary has no ingredients or steps to copy. Links still being sent ([adding]) lead
- * All, and they and unfinished imports are display-only. Needs attention lists failed imports and
- * shows its count as plain text, not the badge. [reveal] shows All at the top once, as after Add
- * recipe, then calls [onRevealed].
+ * recipe's sheet offers Share recipe, which calls [shareRecipe] with its ID and title, and Copy
+ * recipe, which calls [copyRecipe] with its ID, as the row's summary has no ingredients or steps to
+ * copy; both run in the sheet's scope. Links still being sent ([adding]) lead All, and they and
+ * unfinished imports are display-only. Needs attention lists failed imports and shows its count as
+ * plain text, not the badge. [reveal] shows All at the top once, as after Add recipe, then calls
+ * [onRevealed].
  */
 @Composable
 internal fun RecipeOverview(
@@ -61,6 +62,7 @@ internal fun RecipeOverview(
     onRefresh: () -> Unit,
     onRecipeClick: (String) -> Unit,
     deleteEntry: suspend (RecipeListEntry) -> Boolean,
+    shareRecipe: suspend (recipeId: String, title: String) -> Unit,
     copyRecipe: suspend (recipeId: String) -> Unit,
     modifier: Modifier = Modifier,
     menuOpen: Boolean = false,
@@ -138,6 +140,10 @@ internal fun RecipeOverview(
                 thumbnails = thumbnails,
                 onDelete = { deleteEntry(entry) },
                 onDismiss = { optionsEntry = null },
+                onShare =
+                    (entry as? RecipeListEntry.Saved)?.let { saved ->
+                        { shareRecipe(saved.recipe.id, saved.recipe.title) }
+                    },
                 onCopy =
                     (entry as? RecipeListEntry.Saved)?.let { saved ->
                         { copyRecipe(saved.recipe.id) }

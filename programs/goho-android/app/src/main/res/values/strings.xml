@@ -144,6 +144,10 @@
     <string name="feedback_recipe_copy_offline_detail">Looks like you’re offline. Copy it again once you’re back.</string>
     <string name="feedback_recipe_copy_missing_detail">It’s no longer saved.</string>
     <string name="feedback_recipe_copy_failed_detail">A little hiccup on our end. Give it another go.</string>
+    <string name="feedback_recipe_share_failed">We couldn’t share that recipe</string>
+    <string name="feedback_recipe_share_offline_detail">Looks like you’re offline. Share it again once you’re back.</string>
+    <string name="feedback_recipe_share_missing_detail">It’s no longer saved.</string>
+    <string name="feedback_recipe_share_failed_detail">A little hiccup on our end. Give it another go.</string>
     <string name="feedback_receipt_delete_failed">We couldn’t delete that receipt</string>
     <string name="feedback_delete_failed_detail">Pull to refresh, then give it another go.</string>
     <string name="feedback_author_conflict">That book’s already here</string>
@@ -222,6 +226,8 @@
     <string name="recipe_import_delete_failed">Couldn’t delete this import. Try again.</string>
     <string name="recipe_deleting">Deleting…</string>
     <string name="recipe_cancel">Cancel</string>
+    <string name="recipe_share">Share recipe</string>
+    <string name="recipe_sharing">Preparing…</string>
     <string name="recipe_copy">Copy recipe</string>
     <string name="recipe_copying">Copying…</string>
     <!-- The clipboard entry's label, which the system may show; never the recipe's content. -->

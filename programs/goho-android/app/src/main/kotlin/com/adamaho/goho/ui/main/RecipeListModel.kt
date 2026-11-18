@@ -7,6 +7,7 @@ import com.adamaho.goho.api.generated.model.RecipeSummary
 import com.adamaho.goho.api.generated.model.RecipeUpload
 import com.adamaho.goho.api.generated.model.RecipeUploadFailureCode
 import com.adamaho.goho.api.generated.model.RecipeUploadStatus
+import java.io.File
 import java.util.UUID
 
 data class RecipeListState(
@@ -93,4 +94,14 @@ sealed interface RecipeLoad {
     data object Missing : RecipeLoad
 
     data object Failed : RecipeLoad
+}
+
+/** A recipe PDF request's outcome; [Missing] is only the API's own `RecipeNotFound`. */
+sealed interface RecipePdfLoad {
+    /** The PDF, written to the share directory under its file name. */
+    data class Loaded(val file: File) : RecipePdfLoad
+
+    data object Missing : RecipePdfLoad
+
+    data object Failed : RecipePdfLoad
 }
