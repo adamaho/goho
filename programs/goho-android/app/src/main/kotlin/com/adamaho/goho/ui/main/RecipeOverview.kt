@@ -1,11 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import android.graphics.Bitmap
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +9,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -163,8 +158,10 @@ private data class RecipeRowContext(
 
 /**
  * One page. Links being sent show at once, even before the first listing arrives or after it fails:
- * their card leads, above the loading rows or the load error, which then sits in the list rather
- * than centred.
+ * their rows lead, above the loading rows or the load error, which then sits in the list rather
+ * than centred. Only the visible rows compose, each its own lazy item drawn as a [ListCardSegment]
+ * of the one card; a removed row fades out and can't be opened while the rows below slide up, as on
+ * Books.
  */
 @Composable
 private fun RecipeListPage(
@@ -179,14 +176,10 @@ private fun RecipeListPage(
     modifier: Modifier = Modifier,
 ) {
     val showLoading = rememberLoadingVisible(state.loading)
-    val displayed =
-        rememberRemovingEntries(
-            entries,
-            RecipeListEntry::key,
-            resetKey = attentionOnly,
-            // A link's import replaces its row in place, and a refused link has its snackbar.
-            fold = { it !is RecipeListEntry.Adding },
-        )
+    val reduced = rememberReducedMotion()
+    val empty = rememberEmptyShown(entries.isEmpty())
+    // Rows check the current entries, so a row fading out can't be opened again.
+    val current by rememberUpdatedState(entries)
     val loadError: @Composable () -> Unit = {
         LoadErrorState(
             description = stringResource(R.string.recipes_load_failed_body),
@@ -196,7 +189,7 @@ private fun RecipeListPage(
         )
     }
     Column(modifier.fillMaxSize()) {
-        if (displayed.isEmpty() && (error || state.hasLoaded)) {
+        if (empty && (error || state.hasLoaded)) {
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth().padding(bottom = GohoSpacing.listBottom)
             ) {
@@ -221,24 +214,47 @@ private fun RecipeListPage(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().headerFade(GohoTheme.colors.background),
-                // Recipes has no section labels, so start the card below the header fade.
                 contentPadding =
                     PaddingValues(
                         start = GohoSpacing.screenMargin,
-                        top = GohoSpacing.headerFadeHeight,
                         end = GohoSpacing.screenMargin,
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
-                if (displayed.isNotEmpty())
-                    item("recipes") { RecipeListCard(entries, displayed, rows) }
+                // Recipes has no section labels, so the card starts below the header fade. The gap
+                // is an item, so a row arriving first while the list is at the top shows rather
+                // than lands above it.
+                item("top", contentType = "top") {
+                    Spacer(Modifier.height(GohoSpacing.headerFadeHeight))
+                }
+                itemsIndexed(
+                    entries,
+                    key = { _, entry -> entry.key },
+                    contentType = { _, _ -> "recipe" },
+                ) { index, entry ->
+                    ListCardSegment(
+                        first = index == 0,
+                        last = index == entries.lastIndex,
+                        // A link's import replaces its row in place, and a refused link has its
+                        // snackbar, so a link being sent doesn't fade.
+                        modifier =
+                            Modifier.listRowMotion(
+                                this,
+                                reduced,
+                                fade = entry !is RecipeListEntry.Adding,
+                            ),
+                    ) {
+                        if (index > 0) ListDivider()
+                        RecipeRow(entry, rows, leaving = { current.none { it.key == entry.key } })
+                    }
+                }
                 if (!state.hasLoaded && state.loading && !error)
-                    item("loading") {
+                    item("loading", contentType = "loading") {
                         SkeletonScope(loading = true) {
                             // The card and its dividers wait for the masks, so no empty card shows.
                             ListCard(
                                 Modifier.then(
-                                        if (displayed.isNotEmpty())
+                                        if (entries.isNotEmpty())
                                             Modifier.padding(top = GohoSpacing.contentGap)
                                         else Modifier
                                     )
@@ -256,7 +272,7 @@ private fun RecipeListPage(
                         }
                     }
                 if (error)
-                    item("error") {
+                    item("error", contentType = "error") {
                         Box(Modifier.padding(vertical = GohoSpacing.screenMargin)) { loadError() }
                     }
             }
@@ -264,52 +280,18 @@ private fun RecipeListPage(
 }
 
 /**
- * One card of [displayed] rows: those no longer in [entries] fold out and can't be opened, and the
- * card itself folds away with its last row, as on Books.
- */
-@Composable
-private fun RecipeListCard(
-    entries: List<RecipeListEntry>,
-    displayed: List<RecipeListEntry>,
-    rows: RecipeRowContext,
-) {
-    val reduced = rememberReducedMotion()
-    val removalDuration = if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS
-    val removal =
-        fadeOut(tween(removalDuration)) +
-            shrinkVertically(tween(removalDuration), shrinkTowards = Alignment.Top)
-    val visibleKeys = entries.mapTo(HashSet()) { it.key }
-    AnimatedVisibility(entries.isNotEmpty(), enter = EnterTransition.None, exit = removal) {
-        ListCard {
-            displayed.forEachIndexed { index, entry ->
-                key(entry.key) {
-                    val visible = entry.key in visibleKeys
-                    AnimatedVisibility(visible, enter = EnterTransition.None, exit = removal) {
-                        Column {
-                            RecipeRow(
-                                entry,
-                                rows,
-                                // A row folding away can't be opened again.
-                                active = visible,
-                            )
-                            if (displayed.drop(index + 1).any { it.key in visibleKeys })
-                                ListDivider()
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
  * Recipes row around [RecipeEntrySummary]. Saved recipes open their details on a tap and, on a
  * hold, their options sheet; failed imports open theirs on a tap or hold, with the shared row press
- * and hold feedback. Unfinished imports, links being sent and skeleton rows take no input. Focus
- * returns to the row when its options sheet closes, unless the row is leaving.
+ * and hold feedback. Unfinished imports, links being sent and skeleton rows take no input. A row
+ * [leaving] the list, such as one fading out, can't open anything, and focus returns to the row
+ * when its options sheet closes unless it's leaving.
  */
 @Composable
-private fun RecipeRow(entry: RecipeListEntry?, rows: RecipeRowContext, active: Boolean = false) {
+private fun RecipeRow(
+    entry: RecipeListEntry?,
+    rows: RecipeRowContext,
+    leaving: () -> Boolean = { false },
+) {
     val recipe = (entry as? RecipeListEntry.Saved)?.recipe
     val failedImport = entry?.needsAttention == true
     val interaction = remember { MutableInteractionSource() }
@@ -326,17 +308,17 @@ private fun RecipeRow(entry: RecipeListEntry?, rows: RecipeRowContext, active: B
     val optionsOpen = entry != null && entry.key == rows.optionsKey
     var wasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(optionsOpen) {
-        if (wasOpen && !optionsOpen && active) focus.requestFocus()
+        if (wasOpen && !optionsOpen && !leaving()) focus.requestFocus()
         wasOpen = optionsOpen
     }
     val open: (() -> Unit)? =
         when {
-            !active || entry == null -> null
+            entry == null -> null
             recipe != null -> { ->
-                rows.onRecipeClick(recipe.id)
+                if (!leaving()) rows.onRecipeClick(recipe.id)
             }
             failedImport -> { ->
-                rows.onOptions(entry)
+                if (!leaving()) rows.onOptions(entry)
             }
             else -> null
         }
@@ -356,7 +338,7 @@ private fun RecipeRow(entry: RecipeListEntry?, rows: RecipeRowContext, active: B
                     // combinedClickable supplies exactly one platform long-press haptic.
                     onLongClick = {
                         held = false
-                        rows.onOptions(entry)
+                        if (!leaving()) rows.onOptions(entry)
                     },
                 )
                 .listRowPressFeedback(interaction, held)
@@ -459,17 +441,29 @@ private fun RecipeThumbnail(entry: RecipeListEntry?, thumbnails: ThumbnailCache)
     val import = entry as? RecipeListEntry.Import
     val link = import != null || entry is RecipeListEntry.Adding
     var visible by remember { mutableStateOf(false) }
-    // A photo still loading keeps the plain fill rather than flashing the utensils.
-    var loading by remember(recipeId) { mutableStateOf(recipeId != null) }
+    // A photo already loaded shows at once, so a row composed as it scrolls in doesn't flash the
+    // placeholder. One still loading keeps the plain fill rather than flashing the utensils.
+    val cached = remember(recipeId, thumbnails) { recipeId?.let(thumbnails::peek) }
+    var loading by remember(recipeId) { mutableStateOf(recipeId != null && cached == null) }
     val bitmap by
-        produceState<Bitmap?>(null, recipeId, visible, thumbnails) {
+        produceState(cached, recipeId, visible, thumbnails) {
             // Keep a loaded photo while off screen so it doesn't flash the placeholder on return.
-            if (recipeId == null) value = null
-            else if (visible) value = thumbnails.get(recipeId).also { loading = false }
+            value =
+                when {
+                    recipeId == null -> null
+                    cached != null -> cached
+                    visible -> thumbnails.get(recipeId).also { loading = false }
+                    else -> value
+                }
         }
     val image = bitmap
     Box(
-        Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
+        // Only a photo still to load watches whether the row is on screen.
+        Modifier.then(
+                if (recipeId != null && image == null)
+                    Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
+                else Modifier
+            )
             .size(GohoSpacing.recipeThumb)
             .clip(shape)
             .skeleton(block = true)

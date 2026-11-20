@@ -1,48 +1,43 @@
 package com.adamaho.goho.ui.main
 
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 import kotlinx.coroutines.delay
 
 /**
- * [entries] plus the rows removed since the last change, kept in place while they fold out, for the
- * Books and Recipes cards. Changing [resetKey], such as the filter or a search query, drops them at
- * once instead, as does a removed row that doesn't [fold], such as a link being added that its
- * import replaces.
+ * A lazy list [item]'s motion, for the Books, Recipes and Receipts lists and book search: a removed
+ * row fades out while the rows below slide up, and moved rows slide, over
+ * [GohoMotion.SHEET_CONTENT_MILLIS]. New rows appear in place. A row that doesn't [fade], such as a
+ * link its import replaces, leaves at once; [reduced] motion snaps everything.
+ */
+internal fun Modifier.listRowMotion(
+    item: LazyItemScope,
+    reduced: Boolean,
+    fade: Boolean = true,
+): Modifier =
+    with(item) {
+        this@listRowMotion.animateItem(
+            fadeInSpec = null,
+            placementSpec = if (reduced) null else tween(GohoMotion.SHEET_CONTENT_MILLIS),
+            fadeOutSpec = if (reduced || !fade) null else tween(GohoMotion.SHEET_CONTENT_MILLIS),
+        )
+    }
+
+/**
+ * Whether a list's empty state can replace it: at once when it starts [empty] or after [resetKey]
+ * changes, otherwise once its last rows have faded out ([listRowMotion]).
  */
 @Composable
-internal fun <T> rememberRemovingEntries(
-    entries: List<T>,
-    key: (T) -> String,
-    resetKey: Any?,
-    fold: (T) -> Boolean = { true },
-): List<T> {
+internal fun rememberEmptyShown(empty: Boolean, resetKey: Any? = Unit): Boolean {
     val reduced = rememberReducedMotion()
-    var retained by remember(resetKey) { mutableStateOf(entries) }
-    LaunchedEffect(entries) {
-        val keys = entries.mapTo(HashSet(), key)
-        if (retained.any { key(it) !in keys && fold(it) } && !reduced)
-            delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
-        retained = entries
+    var shown by remember(resetKey) { mutableStateOf(empty) }
+    LaunchedEffect(resetKey, empty) {
+        if (empty && !shown && !reduced) delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
+        shown = empty
     }
-    return withRemovedEntries(entries, retained, key, fold)
-}
-
-/** [current] with the folding rows removed since [previous] kept after the row they followed. */
-private fun <T> withRemovedEntries(
-    current: List<T>,
-    previous: List<T>,
-    key: (T) -> String,
-    fold: (T) -> Boolean,
-): List<T> {
-    val keys = current.mapTo(HashSet(), key)
-    if (previous.all { key(it) in keys || !fold(it) }) return current
-    val result = current.toMutableList()
-    var insertAt = 0
-    previous.forEach { entry ->
-        if (key(entry) in keys) insertAt = result.indexOfFirst { key(it) == key(entry) } + 1
-        else if (fold(entry)) result.add(insertAt++, entry)
-    }
-    return result
+    return empty && shown
 }

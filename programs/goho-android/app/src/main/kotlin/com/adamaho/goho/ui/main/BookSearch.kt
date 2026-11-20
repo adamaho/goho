@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.*
@@ -29,7 +28,7 @@ import kotlinx.coroutines.delay
  * Saved books whose title or author contains the open [search] query, in list order (A–Z), with
  * their count, or the no-matches state. Typing filters the loaded [saved] books without a request
  * and returns to the top; refreshes and deletions keep the scroll position, and only deleted rows
- * fade out. Only the visible rows compose, each as a [ListCardSlice] of the one card. Dragging
+ * fade out. Only the visible rows compose, each as a [ListCardSegment] of the one card. Dragging
  * hides the keyboard and returns the field to rest, keeping the query.
  */
 @Composable
@@ -55,14 +54,8 @@ internal fun BookSearchResults(
     val reduced = rememberReducedMotion()
     // Deleting the last match fades its row out before the no-matches state replaces the list;
     // typing swaps at once.
-    val empty = matches.isEmpty()
-    var emptyShown by remember(key) { mutableStateOf(empty) }
-    LaunchedEffect(key, empty) {
-        if (empty && !emptyShown && !reduced) delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
-        emptyShown = empty
-    }
-    val noMatches = key.isNotEmpty() && empty && emptyShown
-    // Clicks check the current matches, so a row fading out can't reopen its book.
+    val noMatches = key.isNotEmpty() && rememberEmptyShown(matches.isEmpty(), resetKey = key)
+    // Rows check the current matches, so a row fading out can't reopen its book.
     val current by rememberUpdatedState(matches)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -153,22 +146,10 @@ internal fun BookSearchResults(
                         key = { _, entry -> entry.key },
                         contentType = { _, _ -> "book" },
                     ) { index, entry ->
-                        val live = { current.any { it.key == entry.key } }
-                        ListCardSlice(
+                        ListCardSegment(
                             first = index == 0,
                             last = index == matches.lastIndex,
-                            // A removed row fades while the rows below close up; new rows appear
-                            // in place.
-                            modifier =
-                                Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    placementSpec =
-                                        if (reduced) null
-                                        else tween(GohoMotion.SHEET_CONTENT_MILLIS),
-                                    fadeOutSpec =
-                                        if (reduced) null
-                                        else tween(GohoMotion.SHEET_CONTENT_MILLIS),
-                                ),
+                            modifier = Modifier.listRowMotion(this, reduced),
                         ) {
                             if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
                             BookRow(
@@ -178,9 +159,10 @@ internal fun BookSearchResults(
                                 resultRows.locale,
                                 resultRows.expanded,
                                 resultRows.covers,
-                                onClick = { if (live()) resultRows.onBookClick(it) },
-                                onOptions = { if (live()) resultRows.onBookOptions(it) },
+                                onClick = resultRows.onBookClick,
+                                onOptions = resultRows.onBookOptions,
                                 optionsOpen = entry.key == resultRows.optionsKey,
+                                leaving = { current.none { it.key == entry.key } },
                             )
                         }
                     }

@@ -24,7 +24,8 @@ import kotlinx.coroutines.delay
  * hold, their options sheet through [onOptions]; failed scans open their options on a tap or hold,
  * and queued or processing scans are display-only. Rows show a saved book's author, or a dash
  * without one, and no reading level or category. A null [entry] keeps the same layout for skeleton
- * loading. [optionsOpen] marks the row whose options sheet is open.
+ * loading. [optionsOpen] marks the row whose options sheet is open. A row [leaving] the list, such
+ * as one fading out, can't open anything or take back focus.
  */
 @Composable
 internal fun BookRow(
@@ -37,6 +38,7 @@ internal fun BookRow(
     onClick: ((Book) -> Unit)? = null,
     onOptions: ((BookListEntry) -> Unit)? = null,
     optionsOpen: Boolean = false,
+    leaving: () -> Boolean = { false },
 ) {
     val book = (entry as? BookListEntry.Saved)?.book
     val failedScan = entry?.needsAttention == true
@@ -56,15 +58,16 @@ internal fun BookRow(
         optionsOpen || (book != null && LocalBookOverlay.current?.isLifted(book.id) == true)
     var wasSelected by remember { mutableStateOf(false) }
     LaunchedEffect(selected) {
-        if (wasSelected && !selected && (onClick != null || onOptions != null)) focus.requestFocus()
+        if (wasSelected && !selected && (onClick != null || onOptions != null) && !leaving())
+            focus.requestFocus()
         wasSelected = selected
     }
     val optionsLabel =
         stringResource(if (failedScan) R.string.scan_options else R.string.book_options)
     val open: (() -> Unit)? =
         when {
-            book != null -> onClick?.let { { it(book) } }
-            entry != null && failedScan -> onOptions?.let { { it(entry) } }
+            book != null -> onClick?.let { { if (!leaving()) it(book) } }
+            entry != null && failedScan -> onOptions?.let { { if (!leaving()) it(entry) } }
             else -> null
         }
     val clickable =
@@ -81,7 +84,7 @@ internal fun BookRow(
                         onOptions?.let { options ->
                             {
                                 held = false
-                                options(entry)
+                                if (!leaving()) options(entry)
                             }
                         },
                 )
