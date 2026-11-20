@@ -1,6 +1,31 @@
 /**
- * A saved recipe used by MCP tests, as the tools show it, with one flat list of steps. Its ID is
- * above 2^53, so rounding it through a number would change it.
+ * The recipe fixture's steps.
+ *
+ * @category fixtures
+ * @since 0.1.0
+ */
+export const recipeSteps = [
+  {
+    segments: [
+      { kind: "text", text: "Whisk " },
+      {
+        kind: "mark",
+        content: {
+          kind: "ingredient",
+          ingredientId: "flour",
+          portion: { numerator: 1, denominator: 2 },
+        },
+      },
+      { kind: "text", text: " with " },
+      { kind: "mark", content: { kind: "text", text: "a pinch" } },
+      { kind: "text", text: " of salt." },
+    ],
+  },
+];
+
+/**
+ * A saved recipe used by MCP tests, its steps in one untitled section. Its ID is above 2^53, so
+ * rounding it through a number would change it.
  *
  * @category fixtures
  * @since 0.1.0
@@ -32,22 +57,10 @@ export const recipe = {
     },
     { id: "salt", name: "salt", quantity: { kind: "text", text: "to taste" }, unit: null },
   ],
-  steps: [
+  sections: [
     {
-      segments: [
-        { kind: "text", text: "Whisk " },
-        {
-          kind: "mark",
-          content: {
-            kind: "ingredient",
-            ingredientId: "flour",
-            portion: { numerator: 1, denominator: 2 },
-          },
-        },
-        { kind: "text", text: " with " },
-        { kind: "mark", content: { kind: "text", text: "a pinch" } },
-        { kind: "text", text: " of salt." },
-      ],
+      title: null,
+      steps: recipeSteps,
     },
   ],
   yield: {
@@ -55,17 +68,6 @@ export const recipe = {
     label: "servings",
   },
 };
-
-/**
- * The saved recipe fixture as the Goho API returns it, its steps in one untitled section.
- *
- * @category fixtures
- * @since 0.1.0
- */
-export const savedRecipe = (() => {
-  const { steps, ...rest } = recipe;
-  return { ...rest, sections: [{ title: null, steps }] };
-})();
 
 /**
  * The saved recipe fixture's headline, as recipe listings return it.
@@ -84,21 +86,7 @@ export const recipeSummary = {
 };
 
 /**
- * `create_recipe` input that saves the recipe fixture.
- *
- * @category fixtures
- * @since 0.1.0
- */
-export const createRecipeInput = {
-  title: recipe.title,
-  ingredients: recipe.ingredients,
-  steps: recipe.steps,
-  yield: recipe.yield,
-  totalTimeSeconds: recipe.totalTimeSeconds,
-};
-
-/**
- * The request that saves the recipe fixture, as the Goho API receives it.
+ * `create_recipe` input that saves the recipe fixture, exactly as the Goho API receives it.
  *
  * @category fixtures
  * @since 0.1.0
@@ -106,7 +94,7 @@ export const createRecipeInput = {
 export const createRecipePayload = {
   title: recipe.title,
   ingredients: recipe.ingredients,
-  sections: savedRecipe.sections,
+  sections: recipe.sections,
   yield: recipe.yield,
   totalTimeSeconds: recipe.totalTimeSeconds,
 };

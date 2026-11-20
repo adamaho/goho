@@ -259,32 +259,42 @@ rounded.
 
 - `list_recipes` returns recipe headlines by title A to Z, ignoring case, then
   newest first. It takes no arguments. Each headline has the ID, title, source,
-  total time, photo flag, and timestamps, but no ingredients, steps, or yield.
+  total time, photo flag, and timestamps, but no ingredients, sections, or yield.
   After seeding a fresh database, it returns three recipes.
 - `get_recipe` takes a string `recipe_id` and returns the complete recipe with
-  its ingredients, steps, and yield. A recipe saved in several sections returns
-  their steps as one `steps` list, in order and without the section titles.
-- `create_recipe` saves a recipe with no source or photo, its steps as one
-  untitled section. Each call saves a new recipe, even when one already has that
-  title. It takes a `title`, at least one
-  ingredient, and at least one step. Leave out `yield` and `totalTimeSeconds`,
-  or send `null`, when they aren't known. Quantities are exact fractions, ranges,
-  or text; exact and range quantities need a unit, and text quantities use
-  `null`. Write steps as ordered `segments`, using ingredient marks for ingredient
-  references so Goho can link and highlight them, rather than flattening the step
-  into plain text. Give each ingredient a unique recipe-local `id`, and use that
-  exact value as the mark's `ingredientId`.
+  its ingredients, yield, and `sections`: each a `title` and its `steps` in
+  order. A lone section's title may be `null`; with two or more sections, each
+  has a title.
+- `create_recipe` saves a recipe with no source or photo. Each call saves a new
+  recipe, even when one already has that title. It takes a `title`, at least one
+  ingredient, and at least one section with at least one step. Leave out `yield`
+  and `totalTimeSeconds`, or send `null`, when they aren't known. Quantities are
+  exact fractions, ranges, or text; exact and range quantities need a unit, and
+  text quantities use `null`.
+
+  The tool description includes the shared recipe writing guidance, the same text
+  the page import uses: when to split steps into sections and how to title them,
+  tightening step wording and splitting multi-action steps without dropping any
+  instruction, and naming every ingredient a step adds. Sending two or more
+  sections with any `null` title is rejected before the Goho API is called.
+
+  Ingredients are one list for the whole recipe; marks in any section point at
+  it. Write steps as ordered `segments`, using ingredient marks for ingredients
+  so Goho can link and highlight them, rather than flattening the step into plain
+  text. Give each ingredient a unique recipe-local `id`, and use that exact value
+  as the mark's `ingredientId`.
 
   A mark's `portion` is the fraction of the ingredient's recipe quantity used in
   that step: `1/1` means all and `1/2` means half, not a literal half cup. Portions
   must be greater than zero and at most one. An ingredient mark displays the
   computed amount and ingredient name, replacing both in the step, so do not
-  repeat either in plain text. Keep surrounding wording, spaces, and punctuation
-  in text segments. When the portion is unknown, preserve the reference in a text
-  mark, such as `{"kind":"mark","content":{"kind":"text","text":"some of the sugar"}}`,
-  rather than guessing. A text mark highlights literal wording but does not link
-  an ingredient. Steps with no ingredient references can use text segments alone.
-  For example:
+  repeat either in plain text. Put the spaces and punctuation around a mark in the
+  text segments beside it. When the recipe gives no way to work out a portion,
+  write the reference as a text mark, such as
+  `{"kind":"mark","content":{"kind":"text","text":"some of the sugar"}}`, rather
+  than guessing. A text mark highlights literal wording but does not link an
+  ingredient. Steps that add no ingredient can use text segments alone. For
+  example:
 
   ```json
   {
@@ -295,21 +305,51 @@ rounded.
         "name": "all-purpose flour",
         "quantity": { "kind": "exact", "value": { "numerator": 3, "denominator": 2 } },
         "unit": "cup"
+      },
+      {
+        "id": "icing-sugar",
+        "name": "icing sugar",
+        "quantity": { "kind": "text", "text": "to dust" },
+        "unit": null
       }
     ],
-    "steps": [
+    "sections": [
       {
-        "segments": [
-          { "kind": "text", "text": "Whisk " },
+        "title": "Batter",
+        "steps": [
           {
-            "kind": "mark",
-            "content": {
-              "kind": "ingredient",
-              "ingredientId": "flour",
-              "portion": { "numerator": 1, "denominator": 1 }
-            }
-          },
-          { "kind": "text", "text": " with water." }
+            "segments": [
+              { "kind": "text", "text": "Whisk " },
+              {
+                "kind": "mark",
+                "content": {
+                  "kind": "ingredient",
+                  "ingredientId": "flour",
+                  "portion": { "numerator": 1, "denominator": 1 }
+                }
+              },
+              { "kind": "text", "text": " with water." }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "To serve",
+        "steps": [
+          {
+            "segments": [
+              { "kind": "text", "text": "Dust with " },
+              {
+                "kind": "mark",
+                "content": {
+                  "kind": "ingredient",
+                  "ingredientId": "icing-sugar",
+                  "portion": { "numerator": 1, "denominator": 1 }
+                }
+              },
+              { "kind": "text", "text": "." }
+            ]
+          }
         ]
       }
     ]

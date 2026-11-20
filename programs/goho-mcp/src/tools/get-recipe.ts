@@ -1,11 +1,10 @@
-import { RecipeId } from "@goho/goho-server-client/recipes";
+import { Recipe, RecipeId } from "@goho/goho-server-client/recipes";
 import { Effect, Schema } from "effect";
 import { Tool } from "effect/ai";
 
 import * as GohoServerClient from "#src/goho-server-client.ts";
 
 import { apiFailure, incompatibleResponse, ToolFailure } from "./failure.ts";
-import { FlatRecipe } from "./recipe-steps.ts";
 
 /**
  * Describes the get recipe MCP tool.
@@ -15,9 +14,9 @@ import { FlatRecipe } from "./recipe-steps.ts";
  */
 export const tool = Tool.make("get_recipe", {
   description:
-    "Get one saved Goho recipe by recipe ID, with its ingredients, steps, yield, total time, and source.",
+    "Get one saved Goho recipe by recipe ID, with its ingredients, steps grouped into sections, yield, total time, and source.",
   parameters: Schema.Struct({ recipe_id: RecipeId }),
-  success: Schema.Struct({ recipe: FlatRecipe }),
+  success: Schema.Struct({ recipe: Recipe }),
   failure: ToolFailure,
   dependencies: [GohoServerClient.Service],
 })
