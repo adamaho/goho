@@ -23,6 +23,9 @@ const ingredientFormat = `Expected id=<id>,name=<text>,quantity=<amount>,unit=<u
 const yieldFormat = `Expected quantity=<amount>,label=<text>. ${escapeHint}`;
 const stepFormat =
   "Expected step text with optional marks {{ingredient=<id>}}, {{ingredient=<id>,portion=<amount>}}, or {{text=<wording>}}. Write a literal {{ as \\{{; inside a mark, write } as \\}, commas as \\, and backslashes as \\\\.";
+const sectionFormat = `Expected id=<id>,title=<text>, with a nonblank id and no spaces around it. ${escapeHint}`;
+const sectionStepFormat =
+  "With --section, expected section=<id>,text=<step>, naming a --section id; everything after text= is the step, commas included. In the id, write commas as \\, and backslashes as \\\\.";
 
 const invalid = (flag: string, raw: string, problem: string, format: string) =>
   new CommandError({
@@ -105,24 +108,31 @@ export const parseQuantity = (value: string): Result.Result<Quantity, string> =>
   return Result.mapError(quantity, (problem) => `${problem}; ${amountHint}`);
 };
 
-const splitFields = (value: string) => {
-  const fields: Array<string> = [];
-  let current = "";
-  for (let index = 0; index < value.length; index += 1) {
-    const character = value.charAt(index);
+// Reads one field from `start` up to the next unescaped comma, returning it
+// unescaped with the index of that comma, or the length when there is none.
+const readField = (value: string, start: number) => {
+  let field = "";
+  let index = start;
+  for (; index < value.length && value.charAt(index) !== ","; index += 1) {
     const next = value.charAt(index + 1);
-    if (character === "\\" && (next === "," || next === "\\")) {
-      current += next;
+    if (value.charAt(index) === "\\" && (next === "," || next === "\\")) {
+      field += next;
       index += 1;
-    } else if (character === ",") {
-      fields.push(current);
-      current = "";
     } else {
-      current += character;
+      field += value.charAt(index);
     }
   }
-  fields.push(current);
-  return fields;
+  return { field, end: index };
+};
+
+const splitFields = (value: string) => {
+  const fields: Array<string> = [];
+  for (let start = 0; ;) {
+    const { field, end } = readField(value, start);
+    fields.push(field);
+    if (end === value.length) return fields;
+    start = end + 1;
+  }
 };
 
 // Strict on purpose: an unescaped comma fails here instead of saving a truncated value.
@@ -243,16 +253,11 @@ const readMark = (raw: string, start: number) => {
   return Result.fail(unclosed);
 };
 
-/**
- * Reads one `--step` value into segments. Plain wording is kept exactly,
- * spaces included, and empty wording between marks is left out.
- *
- * @category parsing
- * @since 0.1.0
- */
-export const parseStep = (
-  raw: string,
-): Result.Result<{ readonly segments: ReadonlyArray<Segment> }, CommandError> =>
+interface Step {
+  readonly segments: ReadonlyArray<Segment>;
+}
+
+const readSegments = (raw: string): Result.Result<Step, string> =>
   Result.gen(function* () {
     const segments: Array<Segment> = [];
     let text = "";
@@ -279,7 +284,102 @@ export const parseStep = (
     if (text !== "") segments.push({ kind: "text", text });
     if (segments.length === 0) return yield* Result.fail("a step needs wording or a mark");
     return { segments };
-  }).pipe(Result.mapError((problem) => invalid("step", raw, problem, stepFormat)));
+  });
+
+/**
+ * Reads one `--step` value into segments. Plain wording is kept exactly,
+ * spaces included, and empty wording between marks is left out.
+ *
+ * @category parsing
+ * @since 0.1.0
+ */
+export const parseStep = (raw: string): Result.Result<Step, CommandError> =>
+  readSegments(raw).pipe(Result.mapError((problem) => invalid("step", raw, problem, stepFormat)));
+
+/**
+ * Reads one `--section` value: a local ID that steps name, and the title to save.
+ * The ID is never sent; the title is checked when the whole recipe is decoded.
+ *
+ * @category parsing
+ * @since 0.1.0
+ */
+export const parseSection = (
+  raw: string,
+): Result.Result<{ readonly id: string; readonly title: string }, CommandError> =>
+  Result.gen(function* () {
+    const fields = yield* readFields(splitFields(raw), ["id", "title"], ["id", "title"]);
+    const id = fields.get("id") ?? "";
+    if (id === "") return yield* Result.fail("the id is blank");
+    if (id.trim() !== id) return yield* Result.fail("the id has surrounding spaces");
+    return { id, title: fields.get("title") ?? "" };
+  }).pipe(Result.mapError((problem) => invalid("section", raw, problem, sectionFormat)));
+
+/**
+ * Reads one `--step` value given with `--section`: `section=<id>` first, then
+ * `text=` and the step. Only the ID takes `\,` and `\\` escapes; everything
+ * after `text=`, commas included, is the step as {@link parseStep} reads it.
+ *
+ * @category parsing
+ * @since 0.1.0
+ */
+export const parseSectionStep = (
+  raw: string,
+): Result.Result<{ readonly section: string; readonly step: Step }, CommandError> => {
+  const { field, end } = readField(raw, 0);
+  const rest = raw.slice(end + 1);
+  const problem = !field.startsWith("section=")
+    ? "it must start with section=<id>"
+    : rest.startsWith("section=")
+      ? '"section" appears more than once'
+      : rest.startsWith("text=")
+        ? undefined
+        : "text= must follow section=<id>";
+  if (problem !== undefined) return Result.fail(invalid("step", raw, problem, sectionStepFormat));
+  return readSegments(rest.slice(5)).pipe(
+    Result.map((step) => ({ section: field.slice(8), step })),
+    Result.mapError((cause) => invalid("step", raw, cause, stepFormat)),
+  );
+};
+
+// Groups steps under their declared sections, in declaration order; each
+// section keeps its steps in flag order.
+const groupSteps = Effect.fnUntraced(function* (
+  sectionValues: ReadonlyArray<string>,
+  stepValues: ReadonlyArray<string>,
+) {
+  const sections = new Map<string, { readonly title: string; readonly steps: Array<Step> }>();
+  yield* Effect.forEach(
+    sectionValues,
+    (raw) =>
+      Effect.gen(function* () {
+        const { id, title } = yield* Effect.fromResult(parseSection(raw));
+        if (sections.has(id)) {
+          return yield* invalid("section", raw, `"${id}" is already a section id`, sectionFormat);
+        }
+        sections.set(id, { title, steps: [] });
+      }),
+    { discard: true },
+  );
+  yield* Effect.forEach(
+    stepValues,
+    (raw) =>
+      Effect.gen(function* () {
+        const { section, step } = yield* Effect.fromResult(parseSectionStep(raw));
+        const target = sections.get(section);
+        if (target === undefined) {
+          return yield* invalid(
+            "step",
+            raw,
+            `"${section}" is not a --section id`,
+            sectionStepFormat,
+          );
+        }
+        target.steps.push(step);
+      }),
+    { discard: true },
+  );
+  return Array.from(sections.values());
+});
 
 const parseTotalTime = (raw: string) =>
   /^\d+$/u.test(raw)
@@ -300,6 +400,7 @@ const parseTotalTime = (raw: string) =>
 export interface CreateRecipeFlags {
   readonly title: string;
   readonly ingredients: ReadonlyArray<string>;
+  readonly sections: ReadonlyArray<string>;
   readonly steps: ReadonlyArray<string>;
   readonly recipeYield: Option.Option<string>;
   readonly totalTimeSeconds: Option.Option<string>;
@@ -307,9 +408,10 @@ export interface CreateRecipeFlags {
 
 /**
  * Builds the direct recipe request from flag values and decodes it with the
- * shared schema, so ID uniqueness, mark references, ranges, portions, and
- * bounds fail before any request. Omitted yield and total time stay out of the
- * payload, meaning unknown.
+ * shared schema, so ID uniqueness, mark references, section titles, ranges,
+ * portions, and bounds fail before any request. Without `--section` the steps
+ * are one untitled section; with it, each step names its section. Omitted
+ * yield and total time stay out of the payload, meaning unknown.
  *
  * @category parsing
  * @since 0.1.0
@@ -318,18 +420,25 @@ export const makeCreateRecipeRequest = Effect.fnUntraced(function* (flags: Creat
   const ingredients = yield* Effect.forEach(flags.ingredients, (raw) =>
     Effect.fromResult(parseIngredient(raw)),
   );
-  const steps = yield* Effect.forEach(flags.steps, (raw) => Effect.fromResult(parseStep(raw)));
+  const sections =
+    flags.sections.length === 0
+      ? [
+          {
+            title: null,
+            steps: yield* Effect.forEach(flags.steps, (raw) => Effect.fromResult(parseStep(raw))),
+          },
+        ]
+      : yield* groupSteps(flags.sections, flags.steps);
   const recipeYield = Option.isSome(flags.recipeYield)
     ? { yield: yield* Effect.fromResult(parseYield(flags.recipeYield.value)) }
     : {};
   const totalTime = Option.isSome(flags.totalTimeSeconds)
     ? { totalTimeSeconds: yield* Effect.fromResult(parseTotalTime(flags.totalTimeSeconds.value)) }
     : {};
-  // The steps are one untitled section.
   return yield* Schema.decodeUnknownEffect(CreateRecipeRequest)({
     title: flags.title,
     ingredients,
-    sections: [{ title: null, steps }],
+    sections,
     ...recipeYield,
     ...totalTime,
   }).pipe(

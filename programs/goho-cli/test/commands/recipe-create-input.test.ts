@@ -5,6 +5,8 @@ import {
   makeCreateRecipeRequest,
   parseIngredient,
   parseQuantity,
+  parseSection,
+  parseSectionStep,
   parseStep,
   parseYield,
 } from "#src/commands/recipe-create-input.ts";
@@ -284,9 +286,82 @@ describe("parseStep", () => {
   });
 });
 
+describe("parseSection", () => {
+  it.each([
+    ["id=batter,title=Batter", { id: "batter", title: "Batter" }],
+    ["title=Batter,id=batter", { id: "batter", title: "Batter" }],
+    ["id=a\\,b\\\\c,title=Mix\\, then rest", { id: "a,b\\c", title: "Mix, then rest" }],
+    ["id=x,title= For the frosting ", { id: "x", title: " For the frosting " }],
+    ["id=x,title=", { id: "x", title: "" }],
+  ])("reads %j", (raw, section) => {
+    expect(Result.getOrThrow(parseSection(raw))).toEqual(section);
+  });
+
+  it.each([
+    ["id=batter", "missing title"],
+    ["title=Batter", "missing id"],
+    ["id=batter,title=Batter,id=b", '"id" appears more than once'],
+    ["id=batter,title=Batter,steps=2", '"steps" is not a known key'],
+    ["id=batter,title=Batter, mixed", '" mixed" is not a key=value pair'],
+    ["id=,title=Batter", "the id is blank"],
+    ["id= batter,title=Batter", "the id has surrounding spaces"],
+    ["id=batter\u00a0,title=Batter", "the id has surrounding spaces"],
+  ])("rejects %j", (raw, problem) => {
+    expect(detail(parseSection(raw))).toContain(`Invalid --section "${raw}": ${problem}`);
+  });
+});
+
+describe("parseSectionStep", () => {
+  it.each([
+    ["section=batter,text=Mix.", "batter", [text("Mix.")]],
+    [
+      "section=batter,text=Mix flour, salt, and {{ingredient=butter,portion=1/2}} butter.",
+      "batter",
+      [text("Mix flour, salt, and "), ingredientMark("butter", fraction(1, 2)), text(" butter.")],
+    ],
+    ["section=a\\,b\\\\c,text=Stir.", "a,b\\c", [text("Stir.")]],
+    [
+      "section=x,text=Keep text=this, section=y as wording",
+      "x",
+      [text("Keep text=this, section=y as wording")],
+    ],
+    ["section=x,text=a,title=b", "x", [text("a,title=b")]],
+    ["section=x,text=C:\\\\temp \\{{x}} \\, kept", "x", [text("C:\\temp {{x}} \\, kept")]],
+    ["section=x,text={{text=salt\\, pepper}}", "x", [textMark("salt, pepper")]],
+  ])("reads %j", (raw, section, segments) => {
+    expect(Result.getOrThrow(parseSectionStep(raw))).toEqual({ section, step: { segments } });
+  });
+
+  it.each([
+    ["Mix.", "it must start with section=<id>"],
+    ["text=Mix.,section=batter", "it must start with section=<id>"],
+    ["note=x,section=batter,text=Mix.", "it must start with section=<id>"],
+    ["section=batter", "text= must follow section=<id>"],
+    ["section=batter,Mix.", "text= must follow section=<id>"],
+    ["section=batter,note=x,text=Mix.", "text= must follow section=<id>"],
+    ["section=a,section=b,text=Mix.", '"section" appears more than once'],
+  ])("rejects %j", (raw, problem) => {
+    const message = detail(parseSectionStep(raw));
+    expect(message).toContain(`Invalid --step "${raw}": ${problem}`);
+    expect(message).toContain("expected section=<id>,text=<step>");
+  });
+
+  it.each([
+    ["section=x,text=", "a step needs wording or a mark"],
+    ["section=x,text=Add {{text=salt", "a mark opened with {{ is never closed with }}"],
+    ["section=x,text={{text={{x}}}}", "marks cannot be nested"],
+    ["section=x,text={{text=a, b}}", '" b" is not a key=value pair'],
+  ])("rejects step text in %j as a step", (raw, problem) => {
+    const message = detail(parseSectionStep(raw));
+    expect(message).toContain(`Invalid --step "${raw}": ${problem}`);
+    expect(message).toContain("Expected step text with optional marks");
+  });
+});
+
 const flags = (overrides: Partial<Parameters<typeof makeCreateRecipeRequest>[0]> = {}) => ({
   title: "Pancakes",
   ingredients: ["id=flour,name=Flour,quantity=2,unit=cup"],
+  sections: [],
   steps: ["Mix {{ingredient=flour}}."],
   recipeYield: Option.none(),
   totalTimeSeconds: Option.none(),
@@ -338,6 +413,123 @@ describe("makeCreateRecipeRequest", () => {
       ingredients: [flour],
       sections: [{ title: null, steps: [flourStep] }],
     });
+  });
+
+  it.each([
+    ["section=x,text=y", [text("section=x,text=y")]],
+    [" section=x,text=y", [text(" section=x,text=y")]],
+    ["section=x,text={{ingredient=flour}}", [text("section=x,text="), ingredientMark("flour")]],
+  ])("keeps %j as a plain step without --section", (raw, segments) => {
+    const request = Result.getOrThrow(make({ steps: [raw] }));
+    expect(request.sections).toEqual([{ title: null, steps: [{ segments }] }]);
+  });
+
+  it("groups steps into sections in declaration order, whatever order the steps name them", () => {
+    const request = make({
+      ingredients: [
+        "id=flour,name=Flour,quantity=2,unit=cup",
+        "id=butter,name=Butter,quantity=1/2,unit=cup",
+      ],
+      sections: ["id=batter,title= Batter ", "id=baking,title=Baking\\, then cooling"],
+      steps: [
+        "section=baking,text=Bake with {{ingredient=butter,portion=1/2}} butter.",
+        "section=batter,text=Mix {{ingredient=flour}}.",
+        "section=baking,text=Cool.",
+        "section=batter,text=Pour, then {{ingredient=butter,portion=1/2}} on top.",
+      ],
+    });
+    expect(Result.getOrThrow(request).sections).toEqual([
+      {
+        title: "Batter",
+        steps: [
+          flourStep,
+          {
+            segments: [
+              text("Pour, then "),
+              ingredientMark("butter", fraction(1, 2)),
+              text(" on top."),
+            ],
+          },
+        ],
+      },
+      {
+        title: "Baking, then cooling",
+        steps: [
+          {
+            segments: [
+              text("Bake with "),
+              ingredientMark("butter", fraction(1, 2)),
+              text(" butter."),
+            ],
+          },
+          { segments: [text("Cool.")] },
+        ],
+      },
+    ]);
+  });
+
+  it("keeps the title of a lone declared section and sends no section ids", () => {
+    const request = Result.getOrThrow(
+      make({
+        sections: ["id=only,title=Pancakes"],
+        steps: ["section=only,text=Mix {{ingredient=flour}}."],
+      }),
+    );
+    expect(request).toEqual({
+      title: "Pancakes",
+      ingredients: [flour],
+      sections: [{ title: "Pancakes", steps: [flourStep] }],
+    });
+  });
+
+  it.each([
+    {
+      why: "a duplicate section id",
+      overrides: { sections: ["id=a,title=A", "id=a,title=B"], steps: ["section=a,text=Mix."] },
+      problem: 'Invalid --section "id=a,title=B": "a" is already a section id',
+    },
+    {
+      why: "a step naming no declared section",
+      overrides: { sections: ["id=a,title=A"], steps: ["section=b,text=Mix."] },
+      problem: 'Invalid --step "section=b,text=Mix.": "b" is not a --section id',
+    },
+    {
+      why: "a plain step alongside sections",
+      overrides: { sections: ["id=a,title=A"], steps: ["section=a,text=Mix.", "Rest."] },
+      problem: 'Invalid --step "Rest.": it must start with section=<id>',
+    },
+    {
+      why: "an invalid section",
+      overrides: { sections: ["id=a"], steps: ["section=a,text=Mix."] },
+      problem: 'Invalid --section "id=a": missing title',
+    },
+  ])("rejects $why", ({ overrides, problem }) => {
+    expect(detail(make(overrides))).toContain(problem);
+  });
+
+  it.each([
+    {
+      why: "a declared section without steps",
+      overrides: { sections: ["id=a,title=A", "id=b,title=B"], steps: ["section=a,text=Mix."] },
+      at: '["sections"][1]["steps"]',
+    },
+    {
+      why: "a blank section title",
+      overrides: { sections: ["id=a,title= "], steps: ["section=a,text=Mix."] },
+      at: '["sections"][0]["title"]',
+    },
+    {
+      why: "an unknown mark reference in a later section",
+      overrides: {
+        sections: ["id=a,title=A", "id=b,title=B"],
+        steps: ["section=a,text=Mix.", "section=b,text=Add {{ingredient=sugar}}."],
+      },
+      at: '["sections"][1]["steps"][0]["segments"][1]["content"]["ingredientId"]',
+    },
+  ])("rejects $why with the shared schema", ({ overrides, at }) => {
+    const message = detail(make(overrides));
+    expect(message).toMatch(/^Recipe is not valid: /u);
+    expect(message).toContain(`at ${at}`);
   });
 
   it.each(["0", "2147483647", "007"])("accepts %j total seconds", (seconds) => {
@@ -438,6 +630,20 @@ describe("makeCreateRecipeRequest", () => {
     {
       overrides: { steps: unreadAfter(["Mix.", "{{text=a"]) },
       problem: 'Invalid --step "{{text=a"',
+    },
+    {
+      overrides: {
+        sections: unreadAfter(["id=a,title=A", "id=a,title=B"]),
+        steps: ["section=a,text=Mix."],
+      },
+      problem: 'Invalid --section "id=a,title=B"',
+    },
+    {
+      overrides: {
+        sections: ["id=a,title=A"],
+        steps: unreadAfter(["section=a,text=Mix.", "section=b,text=Rest."]),
+      },
+      problem: 'Invalid --step "section=b,text=Rest."',
     },
   ])("stops at the first invalid value: $problem", ({ overrides, problem }) => {
     expect(detail(make(overrides))).toContain(problem);

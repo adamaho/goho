@@ -115,6 +115,47 @@ describe("recipes create", () => {
     expect(result).toEqual({ code: 0, stderr: "", stdout: `${JSON.stringify(saved, null, 2)}\n` });
   });
 
+  it("sends titled sections in declaration order without their local ids", async () => {
+    const mix = { segments: [{ kind: "text", text: "Mix, then rest." }] };
+    const sections = [
+      { title: "Batter", steps: [step, mix] },
+      {
+        title: "Baking",
+        steps: [{ segments: [{ kind: "text", text: "Bake, text=until done." }] }],
+      },
+    ];
+    const saved = { ...recipe, sections };
+    // Steps come before and between the sections they name; flag order does not matter.
+    const result = await runCreate(
+      [
+        "--step",
+        "section=baking,text=Bake, text=until done.",
+        "--title",
+        "Pancakes",
+        "--step",
+        "section=batter,text=Mix {{ingredient=flour}} flour with salt.",
+        "--section",
+        "id=batter,title=Batter",
+        "--ingredient",
+        "id=flour,name=Flour,quantity=2,unit=cup",
+        "--step",
+        "section=batter,text=Mix, then rest.",
+        "--section",
+        "id=baking,title=Baking",
+        "--ingredient",
+        "id=salt,name=Salt,quantity=to taste",
+        "--yield",
+        "quantity=4,label=servings",
+        "--total-time-seconds",
+        "1800",
+      ],
+      { ...payload, sections },
+      200,
+      { data: saved },
+    );
+    expect(result).toEqual({ code: 0, stderr: "", stdout: `${JSON.stringify(saved, null, 2)}\n` });
+  });
+
   it.each([
     { status: 400, problem: validationProblem },
     { status: 500, problem: new RecipesUnavailable() },
@@ -153,6 +194,23 @@ describe("recipe create validation", () => {
       args: [...consumerExample, "--step", "Add {{text=salt"],
       detail: 'Invalid --step "Add {{text=salt": a mark opened with {{ is never closed with }}',
     },
+    {
+      why: "a step without a section when sections are declared",
+      args: [...consumerExample, "--section", "id=batter,title=Batter"],
+      detail:
+        'Invalid --step "Mix {{ingredient=flour}} flour with salt.": it must start with section=<id>',
+    },
+    {
+      why: "a step naming an undeclared section",
+      args: [
+        ...withoutFlag("--step"),
+        "--section",
+        "id=batter,title=Batter",
+        "--step",
+        "section=baking,text=Bake.",
+      ],
+      detail: 'Invalid --step "section=baking,text=Bake.": "baking" is not a --section id',
+    },
   ])("rejects $why before sending a request", async ({ args, detail }) => {
     let requests = 0;
     const result = await withResponse(
@@ -170,5 +228,13 @@ describe("recipe create validation", () => {
       title: "Invalid command input",
       detail: expect.stringContaining(detail),
     });
+  });
+
+  it("documents sections and section steps in its help, even with a bad server URL", async () => {
+    const result = await runCommand("not a url", ["recipes", "create", "--help"]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("--section string");
+    expect(result.stdout).toContain("id=<id>,title=<text>");
+    expect(result.stdout).toContain("With --section, write every step as section=<id>,text=<step>");
   });
 });
