@@ -70,6 +70,20 @@ connection. Development uses `adb reverse tcp:3000 tcp:3000` for the local
 server; run it again after reconnecting. The loopback HTTP exception applies
 only to `developmentDebug`; production uses HTTPS.
 
+For everyday use, build the faster production release variant instead:
+
+```bash
+./gradlew :app:assembleProductionRelease -PgohoProductionServerUrl=https://your-server
+adb install -r app/build/outputs/apk/production/release/app-production-release.apk
+```
+
+Release builds aren't debuggable and aren't minified. They're signed with your
+local debug key (`~/.android/debug.keystore`), so the release APK installs over
+a production debug build from the same machine as an update and keeps its data.
+The manifest marks the app profileable from the shell, so frame and trace tools
+still work. A development release build blocks HTTP, so pass an HTTPS
+`gohoServerUrl` to use it.
+
 ## Launcher artwork
 
 Goho and Goho Dev show Bram, Mira, and their child together; development adds a

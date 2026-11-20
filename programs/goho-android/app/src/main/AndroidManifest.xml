@@ -12,6 +12,8 @@
         android:supportsRtl="true"
         android:windowSoftInputMode="adjustResize"
         android:theme="@style/Theme.Goho">
+        <!-- Lets adb shell tools profile frames and traces in non-debuggable builds. -->
+        <profileable android:shell="true" />
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"

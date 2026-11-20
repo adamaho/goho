@@ -142,6 +142,16 @@ android {
         versionName = "1.0"
     }
 
+    buildTypes {
+        release {
+            // Uses the local debug key so release installs over an existing debug build.
+            signingConfig = signingConfigs.getByName("debug")
+            // TODO: enable R8 once Retrofit, kotlinx.serialization, and generated client rules
+            // are in place.
+            isMinifyEnabled = false
+        }
+    }
+
     flavorDimensions += "environment"
     productFlavors {
         create("development") {
