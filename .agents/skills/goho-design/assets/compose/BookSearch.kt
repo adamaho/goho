@@ -1,9 +1,11 @@
 package com.adamaho.goho.ui.main
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,7 +29,8 @@ import kotlinx.coroutines.delay
  * Saved books whose title or author contains the open [search] query, in list order (A–Z), with
  * their count, or the no-matches state. Typing filters the loaded [saved] books without a request
  * and returns to the top; refreshes and deletions keep the scroll position, and only deleted rows
- * fold out. Dragging hides the keyboard and returns the field to rest, keeping the query.
+ * fade out. Only the visible rows compose, each as a [ListCardSlice] of the one card. Dragging
+ * hides the keyboard and returns the field to rest, keeping the query.
  */
 @Composable
 internal fun BookSearchResults(
@@ -49,10 +52,18 @@ internal fun BookSearchResults(
         remember(keyed, key) {
             keyed.filter { (_, title, author) -> key in title || key in author }.map { it.first }
         }
-    val displayed = rememberRemovingEntries(matches, BookListEntry::key, resetKey = key)
-    val noMatches = key.isNotEmpty() && displayed.isEmpty()
-    val listState = rememberLazyListState()
-    LaunchedEffect(key) { listState.scrollToItem(0) }
+    val reduced = rememberReducedMotion()
+    // Deleting the last match fades its row out before the no-matches state replaces the list;
+    // typing swaps at once.
+    val empty = matches.isEmpty()
+    var emptyShown by remember(key) { mutableStateOf(empty) }
+    LaunchedEffect(key, empty) {
+        if (empty && !emptyShown && !reduced) delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
+        emptyShown = empty
+    }
+    val noMatches = key.isNotEmpty() && empty && emptyShown
+    // Clicks check the current matches, so a row fading out can't reopen its book.
+    val current by rememberUpdatedState(matches)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     // The keyboard goes away before a book's overlay or options sheet opens over the results.
@@ -69,7 +80,6 @@ internal fun BookSearchResults(
                 },
             )
         }
-    DismissKeyboardOnDrag(listState.interactionSource)
     val count =
         pluralStringResource(
             R.plurals.books_count,
@@ -109,32 +119,72 @@ internal fun BookSearchResults(
                 }
             }
         } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().headerFade(c.background),
-                contentPadding =
-                    PaddingValues(
-                        start = GohoSpacing.screenMargin,
-                        end = GohoSpacing.screenMargin,
-                        bottom = GohoSpacing.screenMargin,
-                    ),
-            ) {
-                item("count") {
-                    Text(
-                        count,
-                        style = GohoTheme.type.section,
-                        color = c.textTertiary,
-                        modifier =
-                            Modifier.padding(
-                                    start = GohoSpacing.textInsetFromMargin,
-                                    top = GohoSpacing.searchCountTop,
-                                    bottom = GohoSpacing.searchCountBottom,
-                                )
-                                .clearAndSetSemantics {},
-                    )
+            // A new query key starts a new list at the top, so rows don't fade or slide as it
+            // filters; refreshes and deletions keep the list and its scroll position.
+            key(key) {
+                val listState = rememberLazyListState()
+                DismissKeyboardOnDrag(listState.interactionSource)
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().headerFade(c.background),
+                    contentPadding =
+                        PaddingValues(
+                            start = GohoSpacing.screenMargin,
+                            end = GohoSpacing.screenMargin,
+                            bottom = GohoSpacing.screenMargin,
+                        ),
+                ) {
+                    item("count", contentType = "count") {
+                        Text(
+                            count,
+                            style = GohoTheme.type.section,
+                            color = c.textTertiary,
+                            modifier =
+                                Modifier.padding(
+                                        start = GohoSpacing.textInsetFromMargin,
+                                        top = GohoSpacing.searchCountTop,
+                                        bottom = GohoSpacing.searchCountBottom,
+                                    )
+                                    .clearAndSetSemantics {},
+                        )
+                    }
+                    itemsIndexed(
+                        matches,
+                        key = { _, entry -> entry.key },
+                        contentType = { _, _ -> "book" },
+                    ) { index, entry ->
+                        val live = { current.any { it.key == entry.key } }
+                        ListCardSlice(
+                            first = index == 0,
+                            last = index == matches.lastIndex,
+                            // A removed row fades while the rows below close up; new rows appear
+                            // in place.
+                            modifier =
+                                Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    placementSpec =
+                                        if (reduced) null
+                                        else tween(GohoMotion.SHEET_CONTENT_MILLIS),
+                                    fadeOutSpec =
+                                        if (reduced) null
+                                        else tween(GohoMotion.SHEET_CONTENT_MILLIS),
+                                ),
+                        ) {
+                            if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
+                            BookRow(
+                                entry,
+                                resultRows.now,
+                                resultRows.zone,
+                                resultRows.locale,
+                                resultRows.expanded,
+                                resultRows.covers,
+                                onClick = { if (live()) resultRows.onBookClick(it) },
+                                onOptions = { if (live()) resultRows.onBookOptions(it) },
+                                optionsOpen = entry.key == resultRows.optionsKey,
+                            )
+                        }
+                    }
                 }
-                if (displayed.isNotEmpty())
-                    item("books") { BookListCard(matches, displayed, resultRows) }
             }
         }
         // The polite announcement, over the count line's place. It's drawn transparent rather than

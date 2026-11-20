@@ -1,6 +1,5 @@
 package com.adamaho.goho.ui.main
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -194,10 +193,12 @@ private fun BookCover(entry: BookListEntry?, covers: ThumbnailCache, lift: Boole
     val book = (entry as? BookListEntry.Saved)?.book
     val bookId = book?.takeIf { it.hasImage }?.id
     var visible by remember { mutableStateOf(false) }
-    // A cover still loading keeps the neutral placeholder rather than flashing the generated one.
-    var loading by remember(bookId) { mutableStateOf(bookId != null) }
+    // A cover already loaded shows at once, so a row composed as it scrolls in doesn't flash the
+    // placeholder. One still loading keeps the neutral placeholder rather than the generated one.
+    val cached = remember(bookId, covers) { bookId?.let(covers::peek) }
+    var loading by remember(bookId) { mutableStateOf(bookId != null && cached == null) }
     val bitmap by
-        produceState<Bitmap?>(null, bookId, visible, covers) {
+        produceState(cached, bookId, visible, covers) {
             // Keep a loaded cover while off screen so it doesn't flash the generated one on return.
             if (bookId == null) value = null
             else if (visible) value = covers.get(bookId).also { loading = false }
