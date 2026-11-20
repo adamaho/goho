@@ -97,7 +97,7 @@ internal class BookOverlayState(val shared: SharedTransitionScope) {
 
     /**
      * The book deleted from the overlay: the overlay fades out without the cover flying home, and
-     * its row keeps the empty cover slot while it folds away.
+     * its row keeps the empty cover slot while it fades out.
      */
     var deletedId by mutableStateOf<String?>(null)
         private set

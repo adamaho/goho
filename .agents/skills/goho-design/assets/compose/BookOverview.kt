@@ -2,19 +2,14 @@ package com.adamaho.goho.ui.main
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -208,6 +203,11 @@ internal data class BookRowContext(
     val optionsKey: String?,
 )
 
+/**
+ * One page. Only the visible rows compose, each its own lazy item drawn as a [ListCardSegment] of
+ * the one card; a removed row fades out and can't be opened while the rows below slide up, and the
+ * empty state waits for the last row to fade.
+ */
 @Composable
 private fun BookListPage(
     state: BookListState,
@@ -221,9 +221,12 @@ private fun BookListPage(
     modifier: Modifier = Modifier,
 ) {
     val showLoading = rememberLoadingVisible(state.loading)
-    val displayed = rememberRemovingEntries(entries, BookListEntry::key, resetKey = attentionOnly)
+    val reduced = rememberReducedMotion()
+    val empty = rememberEmptyShown(entries.isEmpty())
+    // Rows check the current entries, so a row fading out can't reopen its book.
+    val current by rememberUpdatedState(entries)
     Column(modifier.fillMaxSize()) {
-        if (error || (state.hasLoaded && displayed.isEmpty())) {
+        if (error || (state.hasLoaded && empty)) {
             BoxWithConstraints(
                 Modifier.weight(1f).fillMaxWidth().padding(bottom = GohoSpacing.listBottom)
             ) {
@@ -254,17 +257,21 @@ private fun BookListPage(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().headerFade(GohoTheme.colors.background),
-                // Books has no section labels, so start the card below the header fade.
                 contentPadding =
                     PaddingValues(
                         start = GohoSpacing.screenMargin,
-                        top = GohoSpacing.headerFadeHeight,
                         end = GohoSpacing.screenMargin,
                         bottom = GohoSpacing.listBottom,
                     ),
             ) {
+                // Books has no section labels, so the card starts below the header fade. The gap
+                // is an item, so a row arriving first while the list is at the top shows rather
+                // than lands above it.
+                item("top", contentType = "top") {
+                    Spacer(Modifier.height(GohoSpacing.headerFadeHeight))
+                }
                 if (!state.hasLoaded && state.loading)
-                    item("loading") {
+                    item("loading", contentType = "loading") {
                         SkeletonScope(loading = true) {
                             // The card and its dividers wait for the masks, so no empty card shows.
                             ListCard(
@@ -285,52 +292,31 @@ private fun BookListPage(
                             }
                         }
                     }
-                if (displayed.isNotEmpty()) item("books") { BookListCard(entries, displayed, rows) }
-            }
-    }
-}
-
-/**
- * One card of [displayed] rows: those no longer in [entries] fold out and can't be opened, and the
- * card itself folds away with its last row.
- */
-@Composable
-internal fun BookListCard(
-    entries: List<BookListEntry>,
-    displayed: List<BookListEntry>,
-    rows: BookRowContext,
-) {
-    val reduced = rememberReducedMotion()
-    val removalDuration = if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS
-    val removal =
-        fadeOut(tween(removalDuration)) +
-            shrinkVertically(tween(removalDuration), shrinkTowards = Alignment.Top)
-    val visibleKeys = entries.mapTo(HashSet()) { it.key }
-    AnimatedVisibility(entries.isNotEmpty(), enter = EnterTransition.None, exit = removal) {
-        ListCard {
-            displayed.forEachIndexed { index, entry ->
-                key(entry.key) {
-                    val visible = entry.key in visibleKeys
-                    AnimatedVisibility(visible, enter = EnterTransition.None, exit = removal) {
-                        Column {
-                            BookRow(
-                                entry,
-                                rows.now,
-                                rows.zone,
-                                rows.locale,
-                                rows.expanded,
-                                rows.covers,
-                                // A row folding away can't reopen its book.
-                                onClick = if (visible) rows.onBookClick else null,
-                                onOptions = if (visible) rows.onBookOptions else null,
-                                optionsOpen = entry.key == rows.optionsKey,
-                            )
-                            if (displayed.drop(index + 1).any { it.key in visibleKeys })
-                                ListDivider(GohoSpacing.bookDividerStart)
-                        }
+                itemsIndexed(
+                    entries,
+                    key = { _, entry -> entry.key },
+                    contentType = { _, _ -> "book" },
+                ) { index, entry ->
+                    ListCardSegment(
+                        first = index == 0,
+                        last = index == entries.lastIndex,
+                        modifier = Modifier.listRowMotion(this, reduced),
+                    ) {
+                        if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
+                        BookRow(
+                            entry,
+                            rows.now,
+                            rows.zone,
+                            rows.locale,
+                            rows.expanded,
+                            rows.covers,
+                            onClick = rows.onBookClick,
+                            onOptions = rows.onBookOptions,
+                            optionsOpen = entry.key == rows.optionsKey,
+                            leaving = { current.none { it.key == entry.key } },
+                        )
                     }
                 }
             }
-        }
     }
 }

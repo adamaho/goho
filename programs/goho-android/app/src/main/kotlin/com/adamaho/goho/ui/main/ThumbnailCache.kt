@@ -122,14 +122,29 @@ internal fun ReceiptThumbnail(
     thumbnails: ThumbnailCache,
 ) {
     var visible by remember { mutableStateOf(false) }
+    // A photo already loaded shows at once, so a row composed as it scrolls in doesn't flash the
+    // placeholder.
+    val cached = remember(receiptId, thumbnails) { receiptId?.let(thumbnails::peek) }
     val bitmap by
-        produceState<Bitmap?>(null, receiptId, visible, thumbnails) {
-            value = if (visible && receiptId != null) thumbnails.get(receiptId) else null
+        produceState(cached, receiptId, visible, thumbnails) {
+            // Keep a loaded photo while off screen so it doesn't flash the placeholder on return.
+            value =
+                when {
+                    receiptId == null -> null
+                    cached != null -> cached
+                    visible -> thumbnails.get(receiptId)
+                    else -> value
+                }
         }
+    val image = bitmap
     ReceiptThumbnail(
-        image = bitmap?.asImageBitmap(),
+        image = remember(image) { image?.asImageBitmap() },
         status = status,
-        modifier = Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty },
+        // Only a photo still to load watches whether the row is on screen.
+        modifier =
+            if (receiptId != null && image == null)
+                Modifier.onGloballyPositioned { visible = !it.boundsInWindow().isEmpty }
+            else Modifier,
     )
 }
 

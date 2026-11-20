@@ -1,23 +1,18 @@
 package com.adamaho.goho.ui.main
 
 import android.text.format.DateFormat
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -136,6 +131,12 @@ internal fun ReceiptOverview(
     }
 }
 
+/**
+ * One page of day groups, each a heading and its own card. Only the visible headings and rows
+ * compose, each row its own lazy item drawn as a [ListCardSegment] of its group's card; a removed
+ * row fades out and can't be opened while the rows below slide up, and a group's heading fades with
+ * its last row.
+ */
 @Composable
 private fun ReceiptListPage(
     state: ReceiptOverviewState,
@@ -155,29 +156,17 @@ private fun ReceiptListPage(
     modifier: Modifier = Modifier,
 ) {
     val config = LocalConfiguration.current
+    val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val today = clock.atZone(zone).toLocalDate()
     val filtered = remember(entries, attentionOnly) { filterReceiptEntries(entries, attentionOnly) }
+    val sections =
+        remember(filtered, today, locale) { receiptListSections(filtered, today, locale) }
     val reduced = rememberReducedMotion()
-    val removalDuration = if (reduced) 0 else GohoMotion.SHEET_CONTENT_MILLIS
-    val removal =
-        fadeOut(tween(removalDuration)) +
-            shrinkVertically(tween(removalDuration), shrinkTowards = Alignment.Top)
-    // Keep removed rows mounted for their exit within this page.
-    var retained by remember(attentionOnly) { mutableStateOf(filtered) }
-    val visibleKeys = filtered.map { it.key }.toSet()
-    val displayed =
-        (filtered + retained.filter { it.key !in visibleKeys }).sortedWith(
-            compareByDescending<ReceiptListEntry> { it.date }.thenByDescending { it.uploadedAt }
-        )
-    LaunchedEffect(filtered) {
-        if (retained.any { it.key !in visibleKeys } && !reduced)
-            delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
-        retained = filtered
-    }
-    val sections = receiptListSections(displayed, today, locale)
+    // Rows check the current entries, so a row fading out can't be opened again.
+    val current by rememberUpdatedState(filtered)
     val c = GohoTheme.colors
     val showLoading = rememberLoadingVisible(state.loading)
-    val showStatus = error || (state.hasLoaded && filtered.isEmpty() && displayed.isEmpty())
+    val showStatus = error || (state.hasLoaded && rememberEmptyShown(filtered.isEmpty()))
     Column(modifier.fillMaxSize()) {
         if (showStatus) {
             BoxWithConstraints(
@@ -218,7 +207,7 @@ private fun ReceiptListPage(
                     ),
             ) {
                 if (!state.hasLoaded && state.loading)
-                    item("loading") {
+                    item("loading", contentType = "loading") {
                         SkeletonScope(loading = true) {
                             Column(
                                 Modifier.loadingSemantics(
@@ -235,9 +224,7 @@ private fun ReceiptListPage(
                                             clock,
                                             locale,
                                             zone,
-                                            config.fontScale >= 1.3f ||
-                                                config.screenWidthDp <
-                                                    GohoSpacing.compactWidth.value,
+                                            expanded,
                                             onReceiptClick,
                                             onOptions,
                                             thumbnails,
@@ -248,49 +235,34 @@ private fun ReceiptListPage(
                         }
                     }
                 sections.forEach { section ->
-                    item("section:${section.group}") {
-                        AnimatedVisibility(
-                            section.entries.any { it.key in visibleKeys },
-                            enter = EnterTransition.None,
-                            exit = removal,
+                    item("section:${section.group}", contentType = "heading") {
+                        ReceiptSectionHeading(
+                            sectionTitle(section.group, locale, today.year),
+                            Modifier.listRowMotion(this, reduced),
+                        )
+                    }
+                    itemsIndexed(
+                        section.entries,
+                        key = { _, entry -> entry.key },
+                        contentType = { _, _ -> "receipt" },
+                    ) { index, entry ->
+                        ListCardSegment(
+                            first = index == 0,
+                            last = index == section.entries.lastIndex,
+                            modifier = Modifier.listRowMotion(this, reduced),
                         ) {
-                            Column {
-                                ReceiptSectionHeading(
-                                    sectionTitle(section.group, locale, today.year)
-                                )
-                                ListCard {
-                                    section.entries.forEachIndexed { index, entry ->
-                                        key(entry.key) {
-                                            AnimatedVisibility(
-                                                entry.key in visibleKeys,
-                                                enter = EnterTransition.None,
-                                                exit = removal,
-                                            ) {
-                                                Column {
-                                                    ReceiptRow(
-                                                        entry,
-                                                        clock,
-                                                        locale,
-                                                        zone,
-                                                        config.fontScale >= 1.3f ||
-                                                            config.screenWidthDp <
-                                                                GohoSpacing.compactWidth.value,
-                                                        onReceiptClick,
-                                                        onOptions,
-                                                        thumbnails,
-                                                    )
-                                                    if (
-                                                        section.entries.drop(index + 1).any {
-                                                            it.key in visibleKeys
-                                                        }
-                                                    )
-                                                        ListDivider()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            if (index > 0) ListDivider()
+                            ReceiptRow(
+                                entry,
+                                clock,
+                                locale,
+                                zone,
+                                expanded,
+                                onReceiptClick,
+                                onOptions,
+                                thumbnails,
+                                leaving = { current.none { it.key == entry.key } },
+                            )
                         }
                     }
                 }
@@ -299,13 +271,14 @@ private fun ReceiptListPage(
 }
 
 @Composable
-private fun ReceiptSectionHeading(title: String) {
+private fun ReceiptSectionHeading(title: String, modifier: Modifier = Modifier) {
     Text(
         title,
         style = GohoTheme.type.section,
         color = GohoTheme.colors.textTertiary,
         modifier =
-            Modifier.padding(
+            modifier
+                .padding(
                     start = GohoSpacing.textInsetFromMargin,
                     top = GohoSpacing.sectionTop,
                     bottom = GohoSpacing.sectionLabelBottom,
@@ -345,6 +318,7 @@ private fun ReceiptRow(
     onReceiptClick: (String) -> Unit,
     onReceiptOptions: (ReceiptListEntry) -> Unit,
     thumbnails: ThumbnailCache,
+    leaving: () -> Boolean = { false },
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -366,12 +340,14 @@ private fun ReceiptRow(
                 interactionSource = interaction,
                 indication = null,
                 role = Role.Button,
-                onClick = { entry.receiptId?.let(onReceiptClick) ?: onReceiptOptions(entry) },
+                onClick = {
+                    if (!leaving()) entry.receiptId?.let(onReceiptClick) ?: onReceiptOptions(entry)
+                },
                 onLongClickLabel = optionsLabel,
                 // combinedClickable supplies exactly one platform long-press haptic.
                 onLongClick = {
                     held = false
-                    onReceiptOptions(entry)
+                    if (!leaving()) onReceiptOptions(entry)
                 },
             )
         else Modifier

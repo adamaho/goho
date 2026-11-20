@@ -60,13 +60,13 @@ fun ListCard(
 }
 
 /**
- * One row's slice of a [ListCard], so a lazy list composes only its visible rows: the [first] slice
- * has the card's top corners, top padding and dark-mode highlight, and the [last] its bottom
- * corners and padding. In light mode each slice draws only its part of the card's shadow and ring,
- * so stacked slices read as one card without seams or doubled hairlines.
+ * One row's segment of a [ListCard], so a lazy list composes only its visible rows: the [first]
+ * segment has the card's top corners, top padding and dark-mode highlight, and the [last] its
+ * bottom corners and padding. In light mode each segment draws only its part of the card's shadow
+ * and ring, so stacked segments read as one card without seams or doubled hairlines.
  */
 @Composable
-fun ListCardSlice(
+fun ListCardSegment(
     first: Boolean,
     last: Boolean,
     modifier: Modifier = Modifier,
@@ -96,7 +96,7 @@ fun ListCardSlice(
             val whole = remember(first, last) { WholeCard(first, last) }
             val shadow = c.shadow.copy(alpha = 0.4f)
             val ring = c.shadow.copy(alpha = 0.05f)
-            // The shadow is cast by the whole card and cut to the slice's outer edges.
+            // The shadow is cast by the whole card and cut to the segment's outer edges.
             Modifier.graphicsLayer {
                     this.shape = whole.shadowRoom
                     clip = true
@@ -133,8 +133,8 @@ fun ListCardSlice(
 }
 
 /**
- * The whole card around one [ListCardSlice]: it reaches past the slice's inner edges, so they have
- * no corners, shadow or ring of their own.
+ * The whole card around one [ListCardSegment]: it reaches past the segment's inner edges, so they
+ * have no corners, shadow or ring of their own.
  */
 private class WholeCard(private val first: Boolean, private val last: Boolean) : Shape {
     private fun radius(size: Size, density: Density) = GohoShapes.card.topStart.toPx(size, density)
@@ -161,7 +161,7 @@ private class WholeCard(private val first: Boolean, private val last: Boolean) :
         )
     }
 
-    /** Room for the shadow beyond the slice's outer edges only. */
+    /** Room for the shadow beyond the segment's outer edges only. */
     val shadowRoom =
         object : Shape {
             override fun createOutline(
