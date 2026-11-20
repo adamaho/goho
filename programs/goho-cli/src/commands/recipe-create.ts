@@ -20,9 +20,15 @@ export const createCommand = Command.make("create", {
     ),
     Flag.atLeast(1),
   ),
+  sections: Flag.String("section").pipe(
+    Flag.withDescription(
+      "Titled step section as id=<id>,title=<text>; repeat in recipe order. The id is only for --step to name and is not saved. Leave out for one untitled section. Write commas in values as \\,.",
+    ),
+    Flag.atLeast(0),
+  ),
   steps: Flag.String("step").pipe(
     Flag.withDescription(
-      "Step text with optional marks {{ingredient=<id>}}, {{ingredient=<id>,portion=1/2}}, or {{text=<wording>}}; repeat in order. Write a literal {{ as \\{{.",
+      "Step text with optional marks {{ingredient=<id>}}, {{ingredient=<id>,portion=1/2}}, or {{text=<wording>}}; repeat in order. Write a literal {{ as \\{{. With --section, write every step as section=<id>,text=<step>; everything after text= is the step, commas included.",
     ),
     Flag.atLeast(1),
   ),
@@ -35,7 +41,7 @@ export const createCommand = Command.make("create", {
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Save one new recipe with its ingredients and steps."),
+  Command.withDescription("Save one new recipe with its ingredients and step sections."),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
       const payload = yield* makeCreateRecipeRequest(flags);

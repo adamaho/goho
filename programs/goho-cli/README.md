@@ -400,13 +400,48 @@ pnpm --filter @goho/goho-cli start recipes create \
 ```
 
 `--title`, at least one `--ingredient`, and at least one `--step` are required. Repeat
-`--ingredient` and `--step` in recipe order. `--yield` and `--total-time-seconds` are
+`--ingredient` and `--step` in recipe order; `--section` is optional and repeatable. `--yield` and `--total-time-seconds` are
 optional; leaving one out saves it as unknown rather than guessing it. There is no JSON
 file or stdin input, no source URL, and no photo. Every successful call saves a new recipe,
 even with a title already saved, so running the command twice leaves two recipes. The
 server assigns the ID and timestamps, and the recipe has `hasImage: false` and a null
-`source`. The steps are saved as one untitled section. The command prints the complete
-saved recipe as JSON, as the server returns it.
+`source`. Without `--section`, the steps are saved as one untitled section. The command
+prints the complete saved recipe as JSON, as the server returns it.
+
+### Sections
+
+To split the steps into titled sections, declare each with `--section` and name it from
+every `--step`:
+
+```bash
+pnpm --filter @goho/goho-cli start recipes create \
+  --title 'Banana bread' \
+  --ingredient 'id=flour,name=Flour,quantity=2,unit=cup' \
+  --ingredient 'id=butter,name=Butter,quantity=1/2,unit=cup' \
+  --section 'id=batter,title=Batter' \
+  --section 'id=baking,title=Baking' \
+  --step 'section=batter,text=Mix flour, salt, and {{ingredient=butter,portion=1/2}} butter.' \
+  --step 'section=batter,text=Fold in {{ingredient=flour}} and pour into the tin.' \
+  --step 'section=baking,text=Bake until done, then brush with {{ingredient=butter,portion=1/2}}.'
+```
+
+`--section` takes `id` and `title`, with the same `\,` and `\\` escapes as `--ingredient`.
+The `id` only links steps to their section within this command and is never saved; it must
+be nonblank with no surrounding spaces, and unique among the sections. Titles are trimmed
+and must be nonblank, and are saved even when there is only one section. Sections are saved
+in the order they are declared, and each keeps its steps in the order its `--step` values
+are given, however steps for different sections are interleaved. Ingredients stay one list
+for the whole recipe, and a mark in any section can name any ingredient.
+
+With `--section`, every `--step` must be `section=<id>,text=<step>`: `section` first, then
+`text`. In the id, write a comma as `\,` and a backslash as `\\`. Everything after `text=`
+is the step, read exactly as in [Steps](#steps): commas there are plain text, `text=` or
+`section=` later in it is just wording, and marks and their escapes work as usual. A step
+in another form, naming an undeclared id, or repeating `section` fails, as does a declared
+section with no steps.
+
+Without `--section`, `--step` values are plain step text as before, so a step such as
+`section=x,text=y` is saved word for word.
 
 ### Ingredients
 
