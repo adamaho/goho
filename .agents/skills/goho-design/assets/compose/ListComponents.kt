@@ -6,14 +6,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.adamaho.goho.theme.*
 
 fun Modifier.topHighlight(color: Color): Modifier = drawWithContent {
@@ -49,6 +57,129 @@ fun ListCard(
         modifier.fillMaxWidth().then(edge).padding(vertical = verticalPadding),
         content = content,
     )
+}
+
+/**
+ * One row's slice of a [ListCard], so a lazy list composes only its visible rows: the [first] slice
+ * has the card's top corners, top padding and dark-mode highlight, and the [last] its bottom
+ * corners and padding. In light mode each slice draws only its part of the card's shadow and ring,
+ * so stacked slices read as one card without seams or doubled hairlines.
+ */
+@Composable
+fun ListCardSlice(
+    first: Boolean,
+    last: Boolean,
+    modifier: Modifier = Modifier,
+    verticalPadding: Dp = GohoSpacing.cardVerticalPadding,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val c = GohoTheme.colors
+    val shape =
+        remember(first, last) {
+            val card = GohoShapes.card
+            val square = CornerSize(0)
+            card.copy(
+                topStart = if (first) card.topStart else square,
+                topEnd = if (first) card.topEnd else square,
+                bottomEnd = if (last) card.bottomEnd else square,
+                bottomStart = if (last) card.bottomStart else square,
+            )
+        }
+    val edge =
+        if (c.isDark)
+            Modifier.clip(shape)
+                .background(c.surface)
+                .then(
+                    if (first) Modifier.topHighlight(Color.White.copy(alpha = 0.03f)) else Modifier
+                )
+        else {
+            val whole = remember(first, last) { WholeCard(first, last) }
+            val shadow = c.shadow.copy(alpha = 0.4f)
+            val ring = c.shadow.copy(alpha = 0.05f)
+            // The shadow is cast by the whole card and cut to the slice's outer edges.
+            Modifier.graphicsLayer {
+                    this.shape = whole.shadowRoom
+                    clip = true
+                }
+                .shadow(
+                    GohoSpacing.hairline,
+                    whole,
+                    clip = false,
+                    ambientColor = shadow,
+                    spotColor = shadow,
+                )
+                .clip(shape)
+                .background(c.surface)
+                .drawWithCache {
+                    val stroke = GohoSpacing.hairline.toPx()
+                    val path =
+                        Path().apply { addRoundRect(whole.ring(size, this@drawWithCache, stroke)) }
+                    onDrawWithContent {
+                        drawContent()
+                        drawPath(path, ring, style = Stroke(stroke))
+                    }
+                }
+        }
+    Column(
+        modifier
+            .fillMaxWidth()
+            .then(edge)
+            .padding(
+                top = if (first) verticalPadding else 0.dp,
+                bottom = if (last) verticalPadding else 0.dp,
+            ),
+        content = content,
+    )
+}
+
+/**
+ * The whole card around one [ListCardSlice]: it reaches past the slice's inner edges, so they have
+ * no corners, shadow or ring of their own.
+ */
+private class WholeCard(private val first: Boolean, private val last: Boolean) : Shape {
+    private fun radius(size: Size, density: Density) = GohoShapes.card.topStart.toPx(size, density)
+
+    private fun bounds(size: Size, reach: Float) =
+        Rect(
+            0f,
+            if (first) 0f else -reach,
+            size.width,
+            if (last) size.height else size.height + reach,
+        )
+
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) =
+        radius(size, density).let {
+            Outline.Rounded(RoundRect(bounds(size, 2 * it), CornerRadius(it)))
+        }
+
+    /** The card's ring, a [stroke] inside its edge as `Modifier.border` draws it. */
+    fun ring(size: Size, density: Density, stroke: Float): RoundRect {
+        val radius = radius(size, density)
+        return RoundRect(
+            bounds(size, 2 * radius).deflate(stroke / 2),
+            CornerRadius(radius - stroke / 2),
+        )
+    }
+
+    /** Room for the shadow beyond the slice's outer edges only. */
+    val shadowRoom =
+        object : Shape {
+            override fun createOutline(
+                size: Size,
+                layoutDirection: LayoutDirection,
+                density: Density,
+            ): Outline {
+                val reach = 2 * radius(size, density)
+                return Outline.Rectangle(
+                    Rect(
+                        -reach,
+                        if (first) -reach else 0f,
+                        size.width + reach,
+                        if (last) size.height + reach else size.height,
+                    )
+                )
+            }
+        }
 }
 
 @Composable

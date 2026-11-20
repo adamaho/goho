@@ -215,6 +215,7 @@ Shared by receipt lists, receipt details cards and the Books list.
 
 - Section label above: `section` style, `textTertiary`, inset 4dp inside the screen margin (20dp from the edge), 8dp below.
 - Card: `surface`, shape `card` 20, 4dp vertical padding. Edge treatment per theme (see Elevation in `tokens.md`). Rows separated by `divider` lines starting at 68dp; `ListDivider(start)` defaults to that, and Books passes `bookDividerStart` (76dp) to match its wider covers.
+- `ListCardSlice(first, last)` is one row's slice of the same card for lazy lists (book search results), so only visible rows compose: the first slice has the top corners, top padding and dark-mode top highlight, the last the bottom corners and padding, and each later row puts its `ListDivider` at its top. In light mode each slice casts the whole card's shadow and ring, cut to its own outer edges, so stacked slices show no seams or doubled hairlines.
 - `Modifier.listRowPressFeedback(interaction, held)` is the shared tap/hold feedback for tappable receipt and saved book rows. Pair it with `combinedClickable(interactionSource = interaction, indication = null, …)` and apply it after the clickable and before the row padding. It draws the inset `surfacePressed` fill (none under Remove animations, like other Goho presses) and eases to `HOLD_SCALE` while `held`, snapping when animations are disabled. Each row keeps its own actions, the 150ms hold timer and the reset when the long press fires.
 
 ## Category tags
