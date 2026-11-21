@@ -11,17 +11,19 @@ import kotlinx.coroutines.delay
 /**
  * A lazy list [item]'s motion, for the Books, Recipes and Receipts lists and book search: a removed
  * row fades out while the rows below slide up, and moved rows slide, over
- * [GohoMotion.SHEET_CONTENT_MILLIS]. New rows appear in place. A row that doesn't [fade], such as a
- * link its import replaces, leaves at once; [reduced] motion snaps everything.
+ * [GohoMotion.SHEET_CONTENT_MILLIS]. New rows appear in place, or [fadeIn], as rows a search filter
+ * brings back do. A row that doesn't [fade], such as a link its import replaces, leaves at once;
+ * [reduced] motion snaps everything.
  */
 internal fun Modifier.listRowMotion(
     item: LazyItemScope,
     reduced: Boolean,
     fade: Boolean = true,
+    fadeIn: Boolean = false,
 ): Modifier =
     with(item) {
         this@listRowMotion.animateItem(
-            fadeInSpec = null,
+            fadeInSpec = if (reduced || !fadeIn) null else tween(GohoMotion.SHEET_CONTENT_MILLIS),
             placementSpec = if (reduced) null else tween(GohoMotion.SHEET_CONTENT_MILLIS),
             fadeOutSpec = if (reduced || !fade) null else tween(GohoMotion.SHEET_CONTENT_MILLIS),
         )

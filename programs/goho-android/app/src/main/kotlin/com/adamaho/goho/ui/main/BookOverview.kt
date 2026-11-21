@@ -1,7 +1,6 @@
 package com.adamaho.goho.ui.main
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -12,7 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.adamaho.goho.R
 import com.adamaho.goho.api.generated.model.Book
@@ -20,10 +20,13 @@ import com.adamaho.goho.api.generated.model.BookUpload
 import com.adamaho.goho.api.generated.model.BookUploadStatus
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
+import java.text.NumberFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class BookListState(
     val books: List<Book> = emptyList(),
@@ -40,8 +43,9 @@ data class BookListState(
  * sheet on a hold, and failed scans open theirs on a tap or hold; [deleteEntry] returns whether the
  * deletion of the held book or scan was accepted, and [addAuthor] saves the author typed for a held
  * book without one. [uploadToReveal] shows All at the top until that accepted scan, or the book it
- * saved, is listed. While [search] is open its results replace the pages, which keep their filter
- * and scroll positions for its exit.
+ * saved, is listed. Open [search] filters the All page in place once its query has a key: only the
+ * matching saved books stay, under their count, and the list starts at the top whenever the key
+ * changes, including on closing a filtered search.
  */
 @Composable
 internal fun BookOverview(
@@ -95,81 +99,105 @@ internal fun BookOverview(
     val overlay = LocalBookOverlay.current
     // The open overlay and options sheet handle Back first, including while they delete.
     BackHandler(enabled = search.open && overlay?.open != true) { search.close() }
+    // Search filters All in place: opening it leaves Needs attention for All. The move runs in the
+    // screen's scope, so closing search mid-move can't leave the pager between pages.
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(search.open) {
+        if (search.open) scope.launch { pages.select(0, animate = !reduced) }
+    }
+    val searchKey = if (search.open) bookSearchKey(search.query.text.toString()) else ""
+    val matches = rememberBookMatches(entries, searchKey)
+    // A new key, including closing a filtered search, starts All at the top in the same remeasure
+    // that applies the new rows. The request resets item animations, so from further down it cuts
+    // straight to the top; rows fade and slide only when All is already at the top.
+    val shownKey = remember { arrayOf(searchKey) }
+    SideEffect {
+        if (shownKey[0] != searchKey) {
+            shownKey[0] = searchKey
+            allListState.requestScrollToItem(0)
+        }
+    }
     val config = LocalConfiguration.current
     val expanded = config.fontScale >= 1.3f || config.screenWidthDp < GohoSpacing.compactWidth.value
     val optionsKey = optionsEntry?.key
+    val focusManager = LocalFocusManager.current
     val rows =
-        remember(clock, zone, locale, expanded, covers, onBookClick, optionsKey) {
+        remember(
+            clock,
+            zone,
+            locale,
+            expanded,
+            covers,
+            onBookClick,
+            optionsKey,
+            search,
+            focusManager,
+        ) {
+            // While searching, the keyboard goes away before a book's overlay or options open.
+            fun closeKeyboard() {
+                if (search.open) focusManager.clearFocus()
+            }
             BookRowContext(
                 now = clock,
                 zone = zone,
                 locale = locale,
                 expanded = expanded,
                 covers = covers,
-                onBookClick = onBookClick,
-                onBookOptions = { optionsEntry = it },
+                onBookClick = {
+                    closeKeyboard()
+                    onBookClick(it)
+                },
+                onBookOptions = {
+                    closeKeyboard()
+                    optionsEntry = it
+                },
                 optionsKey = optionsKey,
             )
         }
-    val saved = remember(entries) { entries.filterIsInstance<BookListEntry.Saved>() }
-    val contentShift = with(LocalDensity.current) { GohoMotion.searchContentShift.roundToPx() }
-    AnimatedContent(
-        search.open,
+    FilterPager(
+        state = pages,
+        total = entries.size,
+        attention = entries.count { it.needsAttention },
+        showFilters = !state.error && state.hasLoaded,
+        searching = search.open,
+        swipeEnabled =
+            state.hasLoaded &&
+                !state.error &&
+                !state.refreshing &&
+                optionsEntry == null &&
+                !menuOpen &&
+                !search.open,
+        error = state.error,
+        refreshing = state.refreshing,
+        refreshFailed = state.refreshError || state.error,
+        refreshEnabled =
+            !menuOpen &&
+                optionsEntry == null &&
+                !search.open &&
+                !state.loading &&
+                (state.hasLoaded || state.error),
+        onRefresh = onRefresh,
+        refreshLabel = stringResource(R.string.books_refresh),
+        refreshProgressLabel = stringResource(R.string.books_refreshing),
         modifier = modifier,
-        transitionSpec = { searchContentTransform(targetState, contentShift, reduced).using(null) },
-        label = "Book search",
-    ) { searching ->
-        val leaving = searching != search.open
-        // Only the incoming rows lift their covers, so no book's cover is shared twice.
-        CompositionLocalProvider(LocalBookOverlay provides if (leaving) null else overlay) {
-            if (searching)
-                BookSearchResults(
-                    search = search,
-                    saved = saved,
-                    rows = rows,
-                    modifier = Modifier.leaving(leaving),
-                )
-            else
-                FilterPager(
-                    state = pages,
-                    total = entries.size,
-                    attention = entries.count { it.needsAttention },
-                    showFilters = !state.error && state.hasLoaded,
-                    swipeEnabled =
-                        state.hasLoaded &&
-                            !state.error &&
-                            !state.refreshing &&
-                            optionsEntry == null &&
-                            !menuOpen,
-                    error = state.error,
-                    refreshing = state.refreshing,
-                    refreshFailed = state.refreshError || state.error,
-                    refreshEnabled =
-                        !menuOpen &&
-                            optionsEntry == null &&
-                            !state.loading &&
-                            (state.hasLoaded || state.error),
-                    onRefresh = onRefresh,
-                    refreshLabel = stringResource(R.string.books_refresh),
-                    refreshProgressLabel = stringResource(R.string.books_refreshing),
-                    modifier = Modifier.leaving(leaving),
-                ) { attentionOnly, error, animateEntrance, pageModifier ->
-                    BookListPage(
-                        state = state,
-                        entries =
-                            remember(entries, attentionOnly) {
-                                if (attentionOnly) entries.filter { it.needsAttention } else entries
-                            },
-                        attentionOnly = attentionOnly,
-                        error = error,
-                        animateEntrance = animateEntrance,
-                        rows = rows,
-                        listState = if (attentionOnly) attentionListState else allListState,
-                        onRetryClick = onRetryClick,
-                        modifier = pageModifier,
-                    )
-                }
-        }
+    ) { attentionOnly, error, animateEntrance, pageModifier ->
+        val pageEntries =
+            remember(entries, attentionOnly) {
+                if (attentionOnly) entries.filter { it.needsAttention } else entries
+            }
+        BookListPage(
+            state = state,
+            entries = if (attentionOnly) pageEntries else matches ?: pageEntries,
+            attentionOnly = attentionOnly,
+            error = error,
+            animateEntrance = animateEntrance,
+            rows = rows,
+            listState = if (attentionOnly) attentionListState else allListState,
+            onRetryClick = onRetryClick,
+            search = search.takeIf { it.open && !attentionOnly },
+            searchKey = if (attentionOnly) "" else searchKey,
+            modifier = pageModifier,
+        )
     }
     optionsEntry?.let { entry ->
         key(entry.key) {
@@ -191,7 +219,7 @@ internal fun BookOverview(
     }
 }
 
-/** What every Books row shares, on the pages and in the search results. */
+/** What every Books row shares. */
 internal data class BookRowContext(
     val now: Instant,
     val zone: ZoneId,
@@ -206,7 +234,9 @@ internal data class BookRowContext(
 /**
  * One page. Only the visible rows compose, each its own lazy item drawn as a [ListCardSegment] of
  * the one card; a removed row fades out and can't be opened while the rows below slide up, and the
- * empty state waits for the last row to fade.
+ * empty state waits for the last row to fade. While [search] is open the page pads for the keyboard
+ * and dragging it puts the keyboard away; a non-empty [searchKey] means [entries] are its matches,
+ * shown under their count, or the no-matches state. Rows the filter brings back fade in.
  */
 @Composable
 private fun BookListPage(
@@ -219,17 +249,34 @@ private fun BookListPage(
     listState: LazyListState,
     onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
+    search: SectionSearch? = null,
+    searchKey: String = "",
 ) {
     val showLoading = rememberLoadingVisible(state.loading)
     val reduced = rememberReducedMotion()
-    val empty = rememberEmptyShown(entries.isEmpty())
+    val filtering = searchKey.isNotEmpty()
+    // A new key swaps to or from no matches at once; deleting the last match fades its row first.
+    val empty = rememberEmptyShown(entries.isEmpty(), resetKey = searchKey)
     // Rows check the current entries, so a row fading out can't reopen its book.
     val current by rememberUpdatedState(entries)
-    Column(modifier.fillMaxSize()) {
-        if (error || (state.hasLoaded && empty)) {
-            BoxWithConstraints(
-                Modifier.weight(1f).fillMaxWidth().padding(bottom = GohoSpacing.listBottom)
-            ) {
+    // Rows return with a fade while filtering and as a filtered search closes.
+    var filtered by remember { mutableStateOf(filtering) }
+    LaunchedEffect(filtering) {
+        if (!filtering && !reduced) delay(GohoMotion.SHEET_CONTENT_MILLIS.toLong())
+        filtered = filtering
+    }
+    val fadeIn = filtering || filtered
+    val count =
+        pluralStringResource(
+            R.plurals.books_count,
+            entries.size,
+            NumberFormat.getIntegerInstance(rows.locale).format(entries.size),
+        )
+    val noMatches = filtering && empty && !error
+    Box(modifier.fillMaxSize().then(if (search != null) Modifier.imePadding() else Modifier)) {
+        if (noMatches && search != null) NoBookMatches(search)
+        else if (error || (state.hasLoaded && empty)) {
+            BoxWithConstraints(Modifier.fillMaxSize().padding(bottom = GohoSpacing.listBottom)) {
                 Column(
                     Modifier.fillMaxWidth()
                         .verticalScroll(rememberScrollState())
@@ -292,6 +339,10 @@ private fun BookListPage(
                             }
                         }
                     }
+                if (filtering)
+                    item("count", contentType = "count") {
+                        BookSearchCount(count, Modifier.listRowMotion(this, reduced, fadeIn = true))
+                    }
                 itemsIndexed(
                     entries,
                     key = { _, entry -> entry.key },
@@ -300,7 +351,7 @@ private fun BookListPage(
                     ListCardSegment(
                         first = index == 0,
                         last = index == entries.lastIndex,
-                        modifier = Modifier.listRowMotion(this, reduced),
+                        modifier = Modifier.listRowMotion(this, reduced, fadeIn = fadeIn),
                     ) {
                         if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
                         BookRow(
@@ -318,5 +369,16 @@ private fun BookListPage(
                     }
                 }
             }
+        if (search != null) {
+            DismissKeyboardOnDrag(listState.interactionSource)
+            SearchAnnouncement(
+                when {
+                    noMatches -> noMatchesTitle(search)
+                    filtering -> count
+                    else -> ""
+                },
+                search,
+            )
+        }
     }
 }

@@ -8,9 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -36,8 +34,8 @@ import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
 
 /**
- * A section's search, shared by the header that edits it and the content that shows its results:
- * whether it is open, its [query] and the [focus] of its field. [label] names the search button and
+ * A section's search, shared by the header that edits it and the content that it filters: whether
+ * it is open, its [query] and the [focus] of its field. [label] names the search button and
  * [placeholder] fills the empty field.
  */
 @Stable
@@ -52,7 +50,7 @@ class SectionSearch(
 
     val focus = FocusRequester()
 
-    /** Each search starts empty; closing keeps the query so outgoing results don't change. */
+    /** Each search starts empty; closing keeps the query so the outgoing field doesn't change. */
     fun open() {
         query.clearText()
         open = true
@@ -157,29 +155,4 @@ internal fun searchHeaderTransform(
             slideOutHorizontally(tween<IntOffset>(exit, easing = GohoMotion.emphasizedAccelerate)) {
                 toward
             })
-}
-
-/**
- * The content beneath the header crossfades between the filter pages and the results, both drifting
- * [shift] pixels the same way (up while opening, down while closing) so rows stay roughly in
- * register instead of jumping.
- */
-internal fun searchContentTransform(
-    opening: Boolean,
-    shift: Int,
-    reduced: Boolean,
-): ContentTransform {
-    if (reduced) return EnterTransition.None togetherWith ExitTransition.None
-    val toward = if (opening) -shift else shift
-    val exit =
-        if (opening) GohoMotion.SEARCH_CONTENT_OPEN_EXIT_MILLIS else GohoMotion.SEARCH_EXIT_MILLIS
-    val exitEasing = if (opening) GohoMotion.standard else GohoMotion.emphasizedAccelerate
-    val enter = GohoMotion.SEARCH_CONTENT_ENTER_MILLIS
-    val delay = GohoMotion.SEARCH_CONTENT_ENTER_DELAY_MILLIS
-    return (fadeIn(tween(enter, delay, GohoMotion.emphasizedDecelerate)) +
-        slideInVertically(tween(enter, delay, GohoMotion.emphasizedDecelerate)) {
-            -toward
-        }) togetherWith
-        (fadeOut(tween(exit, easing = exitEasing)) +
-            slideOutVertically(tween<IntOffset>(exit, easing = exitEasing)) { toward })
 }

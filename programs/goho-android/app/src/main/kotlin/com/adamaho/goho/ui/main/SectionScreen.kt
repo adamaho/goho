@@ -51,8 +51,8 @@ enum class Section(@StringRes val title: Int, @DrawableRes val icon: Int) {
  * that order on every section; choosing one closes the menu first.
  *
  * A section with a [search] shows its button at the end of the title row while [canSearch]. Open
- * search replaces the title row with Close search and the field, and Add gives way; [content] shows
- * the results. Focus returns to the search button on exit.
+ * search replaces the title row with Close search and the field, and Add gives way; [content]
+ * filters its list in place. Focus returns to the search button on exit.
  */
 @Composable
 fun SectionScreen(
@@ -119,7 +119,7 @@ fun SectionScreen(
     LaunchedEffect(isOpeningScanner) { if (isOpeningScanner) addMenuOpen = false }
     val sections = rememberSaveableStateHolder()
     // Ignore keyboard insets so Add stays anchored to the window, including during cold start
-    // before an outgoing launcher keyboard finishes hiding. Search results pad for the keyboard.
+    // before an outgoing launcher keyboard finishes hiding. A searched list pads for the keyboard.
     Box(modifier.fillMaxSize().background(GohoTheme.colors.background)) {
         Column(
             Modifier.fillMaxSize()
