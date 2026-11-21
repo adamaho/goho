@@ -3,9 +3,6 @@ package com.adamaho.goho.ui.main
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -15,180 +12,110 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import com.adamaho.goho.R
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.*
-import java.text.NumberFormat
 import kotlinx.coroutines.delay
 
 /**
- * Saved books whose title or author contains the open [search] query, in list order (A–Z), with
- * their count, or the no-matches state. Typing filters the loaded [saved] books without a request
- * and returns to the top; refreshes and deletions keep the scroll position, and only deleted rows
- * fade out. Only the visible rows compose, each as a [ListCardSegment] of the one card. Dragging
- * hides the keyboard and returns the field to rest, keeping the query.
+ * The saved books among [entries] whose title or author contains the search [key], in list order
+ * (A–Z), or null for an empty key, which filters nothing. Filtering uses the loaded books, with no
+ * request per keystroke.
  */
 @Composable
-internal fun BookSearchResults(
-    search: SectionSearch,
-    saved: List<BookListEntry.Saved>,
-    rows: BookRowContext,
-    modifier: Modifier = Modifier,
-) {
-    val c = GohoTheme.colors
-    val query = search.query.text.toString()
-    val key = bookSearchKey(query)
+internal fun rememberBookMatches(entries: List<BookListEntry>, key: String): List<BookListEntry>? {
     val keyed =
-        remember(saved) {
-            saved.map {
+        remember(entries) {
+            entries.filterIsInstance<BookListEntry.Saved>().map {
                 Triple(it, bookSearchKey(it.book.title), bookSearchKey(it.book.author.orEmpty()))
             }
         }
-    val matches =
-        remember(keyed, key) {
-            keyed.filter { (_, title, author) -> key in title || key in author }.map { it.first }
-        }
-    val reduced = rememberReducedMotion()
-    // Deleting the last match fades its row out before the no-matches state replaces the list;
-    // typing swaps at once.
-    val noMatches = key.isNotEmpty() && rememberEmptyShown(matches.isEmpty(), resetKey = key)
-    // Rows check the current matches, so a row fading out can't reopen its book.
-    val current by rememberUpdatedState(matches)
-    val focusManager = LocalFocusManager.current
+    return remember(keyed, key) {
+        if (key.isEmpty()) null
+        else keyed.filter { (_, title, author) -> key in title || key in author }.map { it.first }
+    }
+}
+
+/** The visible match count above the filtered rows; [SearchAnnouncement] reads it out. */
+@Composable
+internal fun BookSearchCount(count: String, modifier: Modifier = Modifier) {
+    Text(
+        count,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            modifier
+                .padding(
+                    start = GohoSpacing.textInsetFromMargin,
+                    bottom = GohoSpacing.searchCountBottom,
+                )
+                .clearAndSetSemantics {},
+    )
+}
+
+@Composable
+internal fun noMatchesTitle(search: SectionSearch): String =
+    stringResource(
+        R.string.books_search_empty_title,
+        search.query.text.toString().trim { it.code.isSearchSpace() },
+    )
+
+/**
+ * No saved book matches the [search] query: the magnifying-glass Bram with Clear search, top
+ * aligned so it clears the keyboard. It enters once, not on every keystroke.
+ */
+@Composable
+internal fun NoBookMatches(search: SectionSearch) {
     val keyboard = LocalSoftwareKeyboardController.current
-    // The keyboard goes away before a book's overlay or options sheet opens over the results.
-    val resultRows =
-        remember(rows, focusManager) {
-            rows.copy(
-                onBookClick = {
-                    focusManager.clearFocus()
-                    rows.onBookClick(it)
-                },
-                onBookOptions = {
-                    focusManager.clearFocus()
-                    rows.onBookOptions(it)
-                },
+    val scroll = rememberScrollState()
+    DismissKeyboardOnDrag(scroll.interactionSource)
+    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(GohoSpacing.screenMargin)) {
+        StatusContent(
+            illustration = R.drawable.status_no_search_results,
+            title = noMatchesTitle(search),
+            description = stringResource(R.string.books_search_empty_body),
+        ) {
+            ActionButton(
+                stringResource(R.string.search_clear),
+                { search.clear(keyboard) },
+                variant = 2,
+                color = ButtonColor.Grey,
+                size = ButtonSize.Small,
             )
         }
-    val count =
-        pluralStringResource(
-            R.plurals.books_count,
-            matches.size,
-            NumberFormat.getIntegerInstance(rows.locale).format(matches.size),
-        )
-    val noMatchesTitle =
-        stringResource(R.string.books_search_empty_title, query.trim { it.code.isSearchSpace() })
-    // The count shows at once; it's announced once typing pauses, replacing any pending one. Every
-    // edit restarts the wait, even when the count stays the same.
-    val announcement = if (noMatches) noMatchesTitle else count
+    }
+}
+
+/**
+ * The polite announcement of the count or no-matches [text], over the count line's place, once
+ * typing in [search] pauses; every edit restarts the wait, even when the text stays the same, and
+ * an empty [text] clears it at once. It's drawn transparent rather than faded or zero-sized, since
+ * accessibility skips nodes with zero alpha or no size. It wraps its text, with a hairline minimum
+ * while empty, so it covers little of the row beneath.
+ */
+@Composable
+internal fun BoxScope.SearchAnnouncement(text: String, search: SectionSearch) {
+    val query = search.query.text.toString()
     var announced by remember { mutableStateOf("") }
-    LaunchedEffect(announcement, query) {
-        delay(GohoMotion.SEARCH_ANNOUNCE_DELAY_MILLIS)
-        announced = announcement
+    LaunchedEffect(text, query) {
+        if (text.isNotEmpty()) delay(GohoMotion.SEARCH_ANNOUNCE_DELAY_MILLIS)
+        announced = text
     }
-    Box(modifier.fillMaxSize().imePadding()) {
-        if (noMatches) {
-            val scroll = rememberScrollState()
-            DismissKeyboardOnDrag(scroll.interactionSource)
-            // Top-aligned so it clears the keyboard; it enters once, not on every keystroke.
-            Column(
-                Modifier.fillMaxSize().verticalScroll(scroll).padding(GohoSpacing.screenMargin)
-            ) {
-                StatusContent(
-                    illustration = R.drawable.status_no_search_results,
-                    title = noMatchesTitle,
-                    description = stringResource(R.string.books_search_empty_body),
-                ) {
-                    ActionButton(
-                        stringResource(R.string.search_clear),
-                        { search.clear(keyboard) },
-                        variant = 2,
-                        color = ButtonColor.Grey,
-                        size = ButtonSize.Small,
-                    )
-                }
-            }
-        } else {
-            // A new query key starts a new list at the top, so rows don't fade or slide as it
-            // filters; refreshes and deletions keep the list and its scroll position.
-            key(key) {
-                val listState = rememberLazyListState()
-                DismissKeyboardOnDrag(listState.interactionSource)
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().headerFade(c.background),
-                    contentPadding =
-                        PaddingValues(
-                            start = GohoSpacing.screenMargin,
-                            end = GohoSpacing.screenMargin,
-                            bottom = GohoSpacing.screenMargin,
-                        ),
-                ) {
-                    item("count", contentType = "count") {
-                        Text(
-                            count,
-                            style = GohoTheme.type.section,
-                            color = c.textTertiary,
-                            modifier =
-                                Modifier.padding(
-                                        start = GohoSpacing.textInsetFromMargin,
-                                        top = GohoSpacing.searchCountTop,
-                                        bottom = GohoSpacing.searchCountBottom,
-                                    )
-                                    .clearAndSetSemantics {},
-                        )
-                    }
-                    itemsIndexed(
-                        matches,
-                        key = { _, entry -> entry.key },
-                        contentType = { _, _ -> "book" },
-                    ) { index, entry ->
-                        ListCardSegment(
-                            first = index == 0,
-                            last = index == matches.lastIndex,
-                            modifier = Modifier.listRowMotion(this, reduced),
-                        ) {
-                            if (index > 0) ListDivider(GohoSpacing.bookDividerStart)
-                            BookRow(
-                                entry,
-                                resultRows.now,
-                                resultRows.zone,
-                                resultRows.locale,
-                                resultRows.expanded,
-                                resultRows.covers,
-                                onClick = resultRows.onBookClick,
-                                onOptions = resultRows.onBookOptions,
-                                optionsOpen = entry.key == resultRows.optionsKey,
-                                leaving = { current.none { it.key == entry.key } },
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        // The polite announcement, over the count line's place. It's drawn transparent rather than
-        // faded or zero-sized, since accessibility skips nodes with zero alpha or no size. It wraps
-        // its text, with a hairline minimum while empty, so it covers little of the row beneath.
-        Text(
-            announced,
-            style = GohoTheme.type.section,
-            color = Color.Transparent,
-            modifier =
-                Modifier.align(Alignment.TopStart)
-                    .padding(
-                        start = GohoSpacing.textInset,
-                        top = GohoSpacing.searchCountTop,
-                    )
-                    .widthIn(min = GohoSpacing.hairline)
-                    .clearAndSetSemantics {
-                        liveRegion = LiveRegionMode.Polite
-                        contentDescription = announced
-                    },
-        )
-    }
+    Text(
+        announced,
+        style = GohoTheme.type.section,
+        color = Color.Transparent,
+        modifier =
+            Modifier.align(Alignment.TopStart)
+                .padding(start = GohoSpacing.textInset, top = GohoSpacing.headerFadeHeight)
+                .widthIn(min = GohoSpacing.hairline)
+                .clearAndSetSemantics {
+                    liveRegion = LiveRegionMode.Polite
+                    contentDescription = announced
+                },
+    )
 }
 
 /**
@@ -197,7 +124,7 @@ internal fun BookSearchResults(
  * results.
  */
 @Composable
-private fun DismissKeyboardOnDrag(interactions: InteractionSource) {
+internal fun DismissKeyboardOnDrag(interactions: InteractionSource) {
     val focusManager = LocalFocusManager.current
     LaunchedEffect(interactions, focusManager) {
         interactions.interactions.collect {

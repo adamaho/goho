@@ -43,22 +43,21 @@ object GohoMotion {
     const val REFRESH_FAILURE_MILLIS = 3000L
     const val STATUS_ENTER_MILLIS = 200
     // Search opens and closes along a shared horizontal axis: the outgoing header leaves toward
-    // one side as the incoming one arrives from the other, while the content drifts vertically
-    // through its crossfade and Add steps aside. The result count is announced once typing pauses.
+    // one side as the incoming one arrives from the other, while the filter tabs fold away above
+    // the list and Add steps aside. The result count is announced once typing pauses.
     const val SEARCH_EXIT_MILLIS = 120
     const val SEARCH_HEADER_OPEN_DELAY_MILLIS = 100
     const val SEARCH_HEADER_OPEN_MILLIS = 240
     const val SEARCH_HEADER_CLOSE_DELAY_MILLIS = 120
     const val SEARCH_HEADER_CLOSE_MILLIS = 200
-    const val SEARCH_CONTENT_OPEN_EXIT_MILLIS = 140
-    const val SEARCH_CONTENT_ENTER_DELAY_MILLIS = 100
-    const val SEARCH_CONTENT_ENTER_MILLIS = 300
+    const val SEARCH_FILTERS_OUT_MILLIS = 140
+    const val SEARCH_FILTERS_IN_DELAY_MILLIS = 100
+    const val SEARCH_FILTERS_IN_MILLIS = 300
     const val SEARCH_ADD_OUT_MILLIS = 180
     const val SEARCH_ADD_IN_DELAY_MILLIS = 260
     const val SEARCH_ADD_IN_MILLIS = 200
     const val SEARCH_ADD_SCALE = 0.8f
     val searchAxisShift = 40.dp
-    val searchContentShift = 14.dp
     const val SEARCH_ANNOUNCE_DELAY_MILLIS = 500L
     const val STATUS_CROSSFADE_MILLIS = 200
     val statusEnterTranslation = 6.dp

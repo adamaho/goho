@@ -1,12 +1,15 @@
 package com.adamaho.goho.ui.main
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -46,6 +49,7 @@ internal fun rememberFilterPagerState(): FilterPagerState {
  * Filter tabs above a pull-to-refresh pager. Each page receives its filter, the error state to show
  * (outgoing during recovery), whether status content should animate in, and a modifier that hides
  * inactive pages from accessibility. [attentionBadge] chooses the Needs attention count's style.
+ * While [searching], the tabs fold away above the pages, and return after the title row.
  */
 @Composable
 internal fun FilterPager(
@@ -63,6 +67,7 @@ internal fun FilterPager(
     refreshProgressLabel: String,
     modifier: Modifier = Modifier,
     attentionBadge: Boolean = true,
+    searching: Boolean = false,
     page:
         @Composable
         (
@@ -91,17 +96,29 @@ internal fun FilterPager(
                 .padding(bottom = GohoSpacing.contentGap)
         ) {
             if (showFilters)
-                ListFilter(
-                    total,
-                    attention,
-                    pagerState.currentPage == 1,
-                    { attentionOnly ->
-                        // The tab already supplies its own selection haptic.
-                        scope.launch { state.select(if (attentionOnly) 1 else 0, !reduced) }
-                    },
-                    locale,
-                    attentionBadge = attentionBadge,
-                )
+                AnimatedVisibility(
+                    !searching,
+                    enter =
+                        if (reduced) EnterTransition.None
+                        else fadeIn(filtersIn()) + expandVertically(filtersIn()),
+                    exit =
+                        if (reduced) ExitTransition.None
+                        else fadeOut(filtersOut()) + shrinkVertically(filtersOut()),
+                ) {
+                    ListFilter(
+                        total,
+                        attention,
+                        pagerState.currentPage == 1,
+                        { attentionOnly ->
+                            // The tab already supplies its own selection haptic. Tabs folding away
+                            // for search take no taps.
+                            if (!searching)
+                                scope.launch { state.select(if (attentionOnly) 1 else 0, !reduced) }
+                        },
+                        locale,
+                        attentionBadge = attentionBadge,
+                    )
+                }
         }
         PullToRefresh(
             refreshing = refreshing,
@@ -140,3 +157,13 @@ internal fun FilterPager(
         }
     }
 }
+
+private fun <T> filtersIn() =
+    tween<T>(
+        GohoMotion.SEARCH_FILTERS_IN_MILLIS,
+        GohoMotion.SEARCH_FILTERS_IN_DELAY_MILLIS,
+        GohoMotion.emphasizedDecelerate,
+    )
+
+private fun <T> filtersOut() =
+    tween<T>(GohoMotion.SEARCH_FILTERS_OUT_MILLIS, easing = GohoMotion.standard)

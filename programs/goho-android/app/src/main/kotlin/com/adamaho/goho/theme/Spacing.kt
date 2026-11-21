@@ -140,7 +140,6 @@ object GohoSpacing {
     val searchFocusRing = 2.dp
     val searchClear = 28.dp // Visual clear control, centred in a headerHeight touch target.
     val searchClearIcon = 14.dp
-    val searchCountTop = 10.dp
     val searchCountBottom = 8.dp
     val headerHeight = 44.dp
     val textActionHorizontal = 12.dp // Lavender text actions: Add author, Edit and Try again.
