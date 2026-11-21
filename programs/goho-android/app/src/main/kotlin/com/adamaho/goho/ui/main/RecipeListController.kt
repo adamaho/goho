@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.DpSize
 import com.adamaho.goho.api.generated.RecipeUploadsApi
 import com.adamaho.goho.api.generated.RecipesApi
 import com.adamaho.goho.api.generated.model.CreateRecipeUploadRequest
@@ -21,6 +22,7 @@ import com.adamaho.goho.api.generated.model.RecipeUpload
 import com.adamaho.goho.api.generated.model.RecipeUploadNotFound
 import com.adamaho.goho.api.generated.model.RecipeUploadStatus
 import com.adamaho.goho.api.isNotFound
+import com.adamaho.goho.theme.GohoSpacing
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -141,7 +143,14 @@ internal class RecipeListController(
         }
 
     /** Keeps loaded row photos across section switches; only recipes with a photo request one. */
-    val thumbnails = ThumbnailCache(::decodeRecipeThumbnail, ::loadImage)
+    val thumbnails =
+        ThumbnailCache(
+            // Twice the row box, so the details hero preview isn't too soft until the full photo
+            // loads.
+            DpSize(GohoSpacing.recipeThumb * 2, GohoSpacing.recipeThumb * 2),
+            ::decodeRecipeThumbnail,
+            ::loadImage,
+        )
 
     fun refresh(userInitiated: Boolean = false) {
         if (state.loading) {
@@ -462,7 +471,7 @@ internal class RecipeListController(
      * so it can't take the photo away again. A recipe deleted meanwhile isn't listed again.
      */
     private suspend fun photoAdded(recipeId: String, photo: Bitmap) {
-        thumbnails.put(recipeId, recipeThumbnail(photo))
+        thumbnails.put(recipeId, recipeThumbnail(photo, thumbnails.target))
         changeRevision++
         photosAdded = photosAdded + recipeId
         state =

@@ -35,6 +35,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
@@ -160,7 +161,10 @@ class MainActivity : ComponentActivity() {
 
     private val receiptUploadsApi by lazy { service<ReceiptUploadsApi>() }
     private val receiptsApi by lazy { service<ReceiptsApi>() }
-    private val receiptThumbnails = ThumbnailCache { loadReceiptImage(it) }
+    private val receiptThumbnails =
+        ThumbnailCache(DpSize(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)) {
+            loadReceiptImage(it)
+        }
     private val feedback = Feedback()
     private val deletions by lazy { PendingDeletions(lifecycleScope, feedback) }
     private val books by lazy {

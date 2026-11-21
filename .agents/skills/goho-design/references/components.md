@@ -123,7 +123,7 @@ Shared by Receipts, Books and Recipes through `FilterPager` (below); copy is sec
 - Processing without a photo: `accentContainer` with a receipt outline and scan line in `onAccentContainer`.
 - Failed upload: `attentionContainer` with a receipt outline and attention mark in `attention`.
 - Placeholder icons are decorative; the row and status tag provide the accessible description.
-- Rows load their photo through the shared `ThumbnailCache` once on screen and keep it while off screen. A photo already in the cache shows from the row's first frame, and only a photo still to load watches whether the row is on screen (`ui/main/ThumbnailCache.kt`).
+- Rows load their photo through the shared `ThumbnailCache` once on screen and keep it while off screen. A photo already in the cache shows from the row's first frame, and only a photo still to load watches whether the row is on screen (`ui/main/ThumbnailCache.kt`). Each cache decodes a photo to the smallest size that covers its row's thumbnail box in screen pixels (recipes twice the box, for the details hero preview; never over 384px on its longest side) and holds up to 1/16 of the app's heap limit, so a whole list's thumbnails normally stay loaded across scrolling and section switches.
 
 ## Tag
 

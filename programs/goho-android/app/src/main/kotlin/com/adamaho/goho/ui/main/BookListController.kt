@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.DpSize
 import com.adamaho.goho.api.generated.BookUploadsApi
 import com.adamaho.goho.api.generated.BooksApi
 import com.adamaho.goho.api.generated.model.Book
@@ -16,6 +17,7 @@ import com.adamaho.goho.api.generated.model.BookUploadNotFound
 import com.adamaho.goho.api.generated.model.BookUploadStatus
 import com.adamaho.goho.api.generated.model.PatchBookRequest
 import com.adamaho.goho.api.isNotFound
+import com.adamaho.goho.theme.GohoSpacing
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +80,11 @@ internal class BookListController(
     private var changeRevision = 0L
 
     /** Keeps loaded covers across section switches; only books with a cover request one. */
-    val covers = ThumbnailCache(loadImage = ::loadCover)
+    val covers =
+        ThumbnailCache(
+            DpSize(GohoSpacing.coverWidth, GohoSpacing.coverHeight),
+            loadImage = ::loadCover,
+        )
 
     fun refresh(userInitiated: Boolean = false) {
         if (state.loading) {

@@ -1,5 +1,6 @@
 package com.adamaho.goho.ui.main
 
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -22,8 +23,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntSize
+import androidx.core.graphics.scale
 import com.adamaho.goho.theme.*
 import com.adamaho.goho.ui.components.skeleton
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
@@ -33,15 +38,23 @@ import kotlinx.coroutines.withContext
 /**
  * A bounded receipt-photo, book-cover or recipe-photo cache keyed by record ID. Only decoded images
  * are kept, so a missing, failed or undecodable image is requested again the next time its row
- * needs it. [decode] turns fetched bytes into a list-sized bitmap; recipes pass their own, upright
- * by EXIF orientation.
+ * needs it. [decode] turns fetched bytes into a bitmap that just covers [box], the row's thumbnail
+ * size, on this screen; recipes pass their own, upright by EXIF orientation.
  */
 internal class ThumbnailCache(
-    private val decode: (ByteArray) -> Bitmap? = ::decodeThumbnail,
+    box: DpSize,
+    private val decode: (ByteArray, IntSize) -> Bitmap? = ::decodeThumbnail,
     private val loadImage: suspend (String) -> ByteArray?,
 ) {
+    /** [box] in this screen's pixels, the size decoded and stored thumbnails cover. */
+    val target: IntSize =
+        Resources.getSystem().displayMetrics.density.let {
+            IntSize((box.width.value * it).roundToInt(), (box.height.value * it).roundToInt())
+        }
+    // Each of the three caches (receipts, books, recipes) may use 1/16 of the heap limit, so
+    // together they stay within 3/16; pixels live outside the Java heap, which this only measures.
     private val cache =
-        object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
+        object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 16).toInt()) {
             override fun sizeOf(key: String, value: Bitmap) = value.byteCount
         }
     private val requests = Semaphore(3)
@@ -65,7 +78,7 @@ internal class ThumbnailCache(
                 }
                 val bitmap =
                     try {
-                        loadImage(id)?.let(decode)
+                        loadImage(id)?.let { decode(it, target) }
                     } catch (error: Exception) {
                         if (error is CancellationException) throw error
                         null
@@ -75,14 +88,37 @@ internal class ThumbnailCache(
         }
 }
 
-/** Decodes a receipt photo or book cover for its row, ignoring EXIF orientation as before. */
-private fun decodeThumbnail(bytes: ByteArray): Bitmap? {
+/**
+ * Decodes a receipt photo or book cover for its row at [thumbnailSize], ignoring EXIF orientation
+ * as before: sampled by the largest power of two that stays at least that size, then scaled to it.
+ */
+private fun decodeThumbnail(bytes: ByteArray, target: IntSize): Bitmap? {
     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-    if (options.outWidth <= 0 || options.outHeight <= 0) return null
+    val width = options.outWidth
+    val height = options.outHeight
+    if (width <= 0 || height <= 0) return null
+    val size = thumbnailSize(width, height, target)
+    var sample = 1
+    while (width / (sample * 2) >= size.width && height / (sample * 2) >= size.height) sample *= 2
     options.inJustDecodeBounds = false
-    options.inSampleSize = thumbnailSampleSize(options.outWidth, options.outHeight)
-    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+    options.inSampleSize = sample
+    val sampled = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return null
+    return sampled.scale(size.width, size.height)
+}
+
+/**
+ * The size a [width]×[height] image is decoded to for a row: the smallest that covers [target], as
+ * rows crop to fill, never enlarged and never over 384px on its longest side, so a very long
+ * receipt stays small.
+ */
+internal fun thumbnailSize(width: Int, height: Int, target: IntSize): IntSize {
+    val cover = maxOf(target.width.toFloat() / width, target.height.toFloat() / height)
+    val scale = minOf(1f, cover, 384f / maxOf(width, height))
+    return IntSize(
+        (width * scale).roundToInt().coerceAtLeast(1),
+        (height * scale).roundToInt().coerceAtLeast(1),
+    )
 }
 
 /**
@@ -107,13 +143,6 @@ internal fun photoSampleSize(width: Int, height: Int): Int =
         .first {
             maxOf(width, height) / it <= 4096 && width.toLong() * height / it / it <= 8_000_000
         }
-
-/** Bound the longest decoded side, including extreme receipt and cover aspect ratios. */
-internal fun thumbnailSampleSize(width: Int, height: Int): Int {
-    var sample = 1
-    while (maxOf(width, height) / sample > 384 && sample <= Int.MAX_VALUE / 2) sample *= 2
-    return sample
-}
 
 @Composable
 internal fun ReceiptThumbnail(
