@@ -5,12 +5,14 @@ import android.content.res.Configuration
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
 import androidx.core.view.WindowCompat
 import com.adamaho.goho.api.generated.model.*
 import com.adamaho.goho.api.generated.model.CategoryColor
 import com.adamaho.goho.api.generated.model.ReceiptUploadContentType
 import com.adamaho.goho.api.generated.model.ReceiptUploadFailureCode
 import com.adamaho.goho.api.generated.model.ReceiptUploadStatus
+import com.adamaho.goho.theme.GohoSpacing
 import com.adamaho.goho.theme.GohoTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -110,7 +112,9 @@ internal fun ReceiptsPreviewScreen(state: ReceiptOverviewState, previewTime: Ins
             state,
             {},
             {},
-            remember { ThumbnailCache { null } },
+            remember {
+                ThumbnailCache(DpSize(GohoSpacing.thumbWidth, GohoSpacing.thumbHeight)) { null }
+            },
             menuOpen = menuOpen,
             previewTime = previewTime,
         )

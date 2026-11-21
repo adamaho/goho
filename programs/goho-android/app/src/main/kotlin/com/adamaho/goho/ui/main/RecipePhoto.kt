@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.scale
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -62,42 +63,54 @@ internal suspend fun ContentResolver.recipePhotoType(uri: Uri): String? =
 
 /**
  * Decodes [source] upright by its EXIF orientation, mirrored ones included, as a software bitmap
- * sampled by [sampleSize] from the stored size. Recipe photos are stored as sent, so every recipe
- * decode goes through here to look the same as the picked photo did. Null when it can't be read.
+ * sized by [resize] from the stored size. Recipe photos are stored as sent, so every recipe decode
+ * goes through here to look the same as the picked photo did. Null when it can't be read.
  */
-private fun decodeUpright(source: ImageDecoder.Source, sampleSize: (Int, Int) -> Int): Bitmap? =
+private fun decodeUpright(
+    source: ImageDecoder.Source,
+    resize: ImageDecoder.(width: Int, height: Int) -> Unit,
+): Bitmap? =
     try {
         ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-            decoder.setTargetSampleSize(sampleSize(info.size.width, info.size.height))
+            decoder.resize(info.size.width, info.size.height)
         }
     } catch (error: Exception) {
         null
     }
 
+/** Samples a details photo within [photoSampleSize]'s 4096px and 8MP. */
+private fun ImageDecoder.photoSize(width: Int, height: Int) =
+    setTargetSampleSize(photoSampleSize(width, height))
+
 /** A picked photo for the details hero, within [photoSampleSize]'s 4096px and 8MP. */
 internal suspend fun ContentResolver.decodeRecipePhoto(uri: Uri): Bitmap? =
     withContext(Dispatchers.IO) {
-        decodeUpright(ImageDecoder.createSource(this@decodeRecipePhoto, uri), ::photoSampleSize)
+        decodeUpright(
+            ImageDecoder.createSource(this@decodeRecipePhoto, uri),
+            ImageDecoder::photoSize,
+        )
     }
 
 /** A fetched recipe photo for the details hero, bounded as [decodeRecipePhoto]. */
 internal suspend fun decodeRecipePhoto(bytes: ByteArray): ImageBitmap? =
     withContext(Dispatchers.Default) {
-        decodeUpright(ImageDecoder.createSource(ByteBuffer.wrap(bytes)), ::photoSampleSize)
+        decodeUpright(ImageDecoder.createSource(ByteBuffer.wrap(bytes)), ImageDecoder::photoSize)
             ?.asImageBitmap()
     }
 
-/** A fetched recipe photo for its row, sampled as [ThumbnailCache] samples other thumbnails. */
-internal fun decodeRecipeThumbnail(bytes: ByteArray): Bitmap? =
-    decodeUpright(ImageDecoder.createSource(ByteBuffer.wrap(bytes)), ::thumbnailSampleSize)
+/** A fetched recipe photo for its row at [thumbnailSize]. */
+internal fun decodeRecipeThumbnail(bytes: ByteArray, target: IntSize): Bitmap? =
+    decodeUpright(ImageDecoder.createSource(ByteBuffer.wrap(bytes))) { width, height ->
+        val size = thumbnailSize(width, height, target)
+        setTargetSize(size.width, size.height)
+    }
 
-/** A list-sized copy of a decoded photo, sampled as [ThumbnailCache] samples fetched ones. */
-internal suspend fun recipeThumbnail(photo: Bitmap): Bitmap =
+/** A row-sized copy of a decoded photo, the same size [decodeRecipeThumbnail] decodes. */
+internal suspend fun recipeThumbnail(photo: Bitmap, target: IntSize): Bitmap =
     withContext(Dispatchers.Default) {
-        val sample = thumbnailSampleSize(photo.width, photo.height)
-        if (sample == 1) photo
-        else photo.scale(maxOf(1, photo.width / sample), maxOf(1, photo.height / sample))
+        val size = thumbnailSize(photo.width, photo.height, target)
+        photo.scale(size.width, size.height)
     }
 
 /**
