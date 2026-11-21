@@ -256,6 +256,6 @@ Every style uses Geist with proportional figures. `ingredientMark` is a `SpanSty
 - Details: `recipeHeroHeight` = 300 (edge-to-edge photo or the no-photo `surfaceMuted` block with a `recipeHeroIcon` = 48 utensils mark in `accent`), `recipeSheetOverlap` = 24 under the `recipeSheet` shape, `recipeTitleTop` = 22 at the 16dp `screenMargin`, `recipeStatTop` = 18, `recipeStatGap` = 14 after a stat divider.
 - Headings at the 20dp `textInset`: `sectionTop` = 24 above Ingredients, `recipeSectionTop` = 28 above Steps and Details, `recipeSectionBottom` = 12 below each.
 - Ingredients: `ingredientDot` = 5 round `accent` dot, `ingredientDotGap` = 11, `ingredientGap` = 8 between lines.
-- Steps: `stepNumber` = 20 round number (`accentContainer` / `onAccentContainer`), `stepNumberGap` = 10, `stepGap` = 14.
+- Steps: `stepNumber` = 20 round number (`accentContainer` / `onAccentContainer`), `stepNumberGap` = 10, `stepGap` = 14. Section titles (two or more sections only) reuse `section` in `textTertiary`, with `sectionTop` = 24 above each but the first and `sectionLabelBottom` = 8 below.
 - Source row: `sourceIcon` = 14 for `ic_external_link` in `onAccentContainer`.
 - List rows: `recipeThumb` = 40 square photo or placeholder (`thumb` shape) with the 20dp `coverIcon`: `ic_tag_meals` (utensils) for saved recipes without a photo and `ic_link` for reading or failed links.

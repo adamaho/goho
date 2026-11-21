@@ -230,12 +230,15 @@ private fun RecipeContent(
             .calculateBottomPadding()
     val ingredients =
         remember(recipe, resources) { recipe?.ingredients?.map { ingredientLine(it, resources) } }
-    val steps =
+    // Each section's title, shown only when there are two or more, and its steps.
+    val sections =
         remember(recipe, resources) {
             recipe?.let { saved ->
                 val byId = saved.ingredients.associateBy { it.id }
-                // Sections show as one numbered list until the app gives them titles.
-                saved.sections.flatMap { it.steps }.map { stepParts(it, byId, resources) }
+                saved.sections.map { section ->
+                    section.title?.takeIf { saved.sections.size > 1 } to
+                        section.steps.map { stepParts(it, byId, resources) }
+                }
             }
         }
     val added =
@@ -311,7 +314,7 @@ private fun RecipeContent(
                         IngredientRow(line, sides.ingredientPadding(index))
                     }
             }
-            if (!steps.isNullOrEmpty()) {
+            if (!sections.isNullOrEmpty()) {
                 item("steps") {
                     RecipeHeading(
                         stringResource(R.string.recipe_steps),
@@ -319,17 +322,24 @@ private fun RecipeContent(
                         sides,
                     )
                 }
-                itemsIndexed(steps) { index, parts ->
-                    StepRow(
-                        NumberFormat.getIntegerInstance(locale).format(index + 1),
-                        parts,
-                        sides
-                            .padding(horizontal = GohoSpacing.textInset)
-                            .then(
-                                if (index > 0) Modifier.padding(top = GohoSpacing.stepGap)
-                                else Modifier
-                            ),
-                    )
+                sections.forEachIndexed { sectionIndex, (title, steps) ->
+                    if (title != null)
+                        item("step-section-$sectionIndex") {
+                            StepSectionTitle(title, first = sectionIndex == 0, sides)
+                        }
+                    // Numbers restart in each section.
+                    itemsIndexed(steps) { index, parts ->
+                        StepRow(
+                            NumberFormat.getIntegerInstance(locale).format(index + 1),
+                            parts,
+                            sides
+                                .padding(horizontal = GohoSpacing.textInset)
+                                .then(
+                                    if (index > 0) Modifier.padding(top = GohoSpacing.stepGap)
+                                    else Modifier
+                                ),
+                        )
+                    }
                 }
             }
             if (source != null || added != null)
@@ -435,6 +445,28 @@ private fun RecipeHeading(text: String, top: Dp, modifier: Modifier = Modifier) 
                     bottom = GohoSpacing.recipeSectionBottom,
                 )
                 .skeleton(GohoSpacing.skeletonTitleWidth)
+                .semantics { heading() },
+    )
+}
+
+/**
+ * A section's title above its steps, as a section label under the Steps heading: right below it for
+ * the first section, and [GohoSpacing.sectionTop] after the previous section's steps otherwise.
+ */
+@Composable
+private fun StepSectionTitle(text: String, first: Boolean, modifier: Modifier) {
+    Text(
+        text,
+        style = GohoTheme.type.section,
+        color = GohoTheme.colors.textTertiary,
+        modifier =
+            modifier
+                .padding(
+                    start = GohoSpacing.textInset,
+                    top = if (first) 0.dp else GohoSpacing.sectionTop,
+                    end = GohoSpacing.textInset,
+                    bottom = GohoSpacing.sectionLabelBottom,
+                )
                 .semantics { heading() },
     )
 }

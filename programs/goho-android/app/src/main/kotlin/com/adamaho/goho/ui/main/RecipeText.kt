@@ -105,9 +105,10 @@ private fun markText(ingredient: Ingredient, portion: Fraction, resources: Resou
 
 /**
  * A saved recipe as plain text for Copy recipe, in the order details shows it: the title, “Total:
- * 25 min”, bulleted Ingredients, numbered Steps, then “Source: ” with the address as saved. A time,
- * source, ingredient list or step list the recipe doesn't have is left out with its heading, and
- * blocks are separated by one blank line. Ingredients and steps use [ingredientLine] and
+ * 25 min”, bulleted Ingredients, numbered Steps (with two or more sections, each section's title on
+ * its own line before its steps, numbered from 1), then “Source: ” with the address as saved. A
+ * time, source, ingredient list or step list the recipe doesn't have is left out with its heading,
+ * and blocks are separated by one blank line. Ingredients and steps use [ingredientLine] and
  * [stepParts], so amounts, fractions and step portions read as on screen; step marks are flattened
  * into the sentence, without their fills or pads.
  */
@@ -136,16 +137,21 @@ internal fun recipePlainText(recipe: Recipe, resources: Resources): String {
     val byId = recipe.ingredients.associateBy { it.id }
     val steps =
         recipe.sections
-            .flatMap { it.steps }
             .takeIf { it.isNotEmpty() }
-            ?.withIndex()
             ?.joinToString("\n", prefix = resources.getString(R.string.recipe_steps) + "\n") {
-                (index, step) ->
-                resources.getString(
-                    R.string.recipe_copy_step,
-                    number.format(index + 1),
-                    stepParts(step, byId, resources).joinToString("") { it.text },
-                )
+                section ->
+                // Titles show only with two or more sections, and numbers restart in each.
+                listOfNotNull(section.title?.takeIf { recipe.sections.size > 1 })
+                    .plus(
+                        section.steps.mapIndexed { index, step ->
+                            resources.getString(
+                                R.string.recipe_copy_step,
+                                number.format(index + 1),
+                                stepParts(step, byId, resources).joinToString("") { it.text },
+                            )
+                        }
+                    )
+                    .joinToString("\n")
             }
     val source =
         recipe.source
