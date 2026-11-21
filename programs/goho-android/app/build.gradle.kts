@@ -146,9 +146,13 @@ android {
         release {
             // Uses the local debug key so release installs over an existing debug build.
             signingConfig = signingConfigs.getByName("debug")
-            // TODO: enable R8 once Retrofit, kotlinx.serialization, and generated client rules
-            // are in place.
-            isMinifyEnabled = false
+            // R8 shrinks and optimizes but keeps names, so crash traces in logcat stay readable.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 

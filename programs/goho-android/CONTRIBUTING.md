@@ -77,7 +77,16 @@ For everyday use, build the faster production release variant instead:
 adb install -r app/build/outputs/apk/production/release/app-production-release.apk
 ```
 
-Release builds aren't debuggable and aren't minified. They're signed with your
+Release builds aren't debuggable. R8 removes unused code and resources and
+optimizes what's left, but doesn't rename anything, so logcat crash traces stay
+readable. Libraries bring their own R8 rules; `app/proguard-rules.pro` holds only
+the few the app needs, each with its reason. A Retrofit call whose response body
+the app never reads loses its model class, so add that model there. R8 reports
+what it kept, removed and was configured with in
+`app/build/outputs/mapping/<variant>/`: `seeds.txt`, `usage.txt` and
+`configuration.txt`, plus `missing_rules.txt` when classes are missing.
+
+Release builds are signed with your
 local debug key (`~/.android/debug.keystore`), so the release APK installs over
 a production debug build from the same machine as an update and keeps its data.
 The manifest marks the app profileable from the shell, so frame and trace tools
