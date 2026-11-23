@@ -8,3 +8,8 @@
 # so Retrofit would fail the call. Add any other Retrofit result whose body is never read.
 -keep class com.adamaho.goho.api.generated.model.BookUploadsGet200Response
 -keep class com.adamaho.goho.api.generated.model.RecipeUploadsGet200Response
+
+# ML Kit creates its component registrars by name from manifest metadata. Its own rule keeps the
+# classes without their constructors, and R8 full mode then removes the constructors, so opening
+# the document scanner crashed with a NullPointerException.
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
